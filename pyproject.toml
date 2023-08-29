@@ -1,0 +1,83 @@
+[build-system]
+requires = [
+    "setuptools",
+    "wheel",
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "MeshLODE"
+description = "Particle-mesh based calculation of Long Distance Equivariants"
+authors = [
+    {name = "Melika Honarmand"},
+    {name = "Kevin Kazuki Huguenin-Dumittan"},
+    {name = "Philip Loche"},
+    {name = "Michele Ceriotti"},
+]
+readme = "README.rst"
+requires-python = ">=3.7"
+license = {text = "BSD-3-Clause"}
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: BSD License",
+    "Natural Language :: English",
+    "Operating System :: POSIX",
+    "Operating System :: MacOS :: MacOS X",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering",
+]
+keywords = [
+    "Electrostatics",
+    "Computational Materials Science",
+    "Atomistic Simulations",
+]
+dependencies = [
+    "torch >= 1.11",
+    "equistore-torch @ https://github.com/lab-cosmo/equistore/archive/ee5ab99.zip#subdirectory=python/equistore-torch",
+]
+dynamic = ["version"]
+
+[project.optional-dependencies]
+examples = [
+    "ase",
+    "matplotlib",
+]
+
+[project.urls]
+homepage = "http://meshlode.readthedocs.io"
+documentation = "http://meshlode.readthedocs.io"
+repository = "https://github.com/ceriottm/MeshLODE"
+issues = "https://github.com/ceriottm/MeshLODE/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.dynamic]
+version = {attr = "meshlode.__version__"}
+
+[tool.coverage.run]
+branch = true
+data_file = 'tests/.coverage'
+
+[tool.coverage.report]
+include = [
+    "src/meshlode/*"
+]
+
+[tool.coverage.xml]
+output = 'tests/coverage.xml'
+
+[tool.pytest.ini_options]
+python_files = ["*.py"]
+testpaths = ["tests"]
+
+[tool.isort]
+skip = "__init__.py"
+profile = "black"
+line_length = 88
+indent = 4
+include_trailing_comma = true
+lines_after_imports = 2
+known_first_party = "meshlode"
