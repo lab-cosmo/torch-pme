@@ -35,7 +35,7 @@ keywords = [
 ]
 dependencies = [
     "torch >= 1.11",
-    "equistore-torch @ https://github.com/lab-cosmo/equistore/archive/ee5ab99.zip#subdirectory=python/equistore-torch",
+    "metatensor-torch @ https://github.com/lab-cosmo/metatensor/archive/32ad5bb.zip#subdirectory=python/metatensor-torch",
 ]
 dynamic = ["version"]
 
