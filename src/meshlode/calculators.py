@@ -12,7 +12,7 @@ guidelines to promote usability and interoperability with existing workflows.
 from typing import List, Optional, Union
 
 import torch
-from equistore.torch import Labels, TensorBlock, TensorMap
+from metatensor.torch import Labels, TensorBlock, TensorMap
 
 from .system import System
 
