@@ -1,7 +1,8 @@
-import torch
-
 from typing import Optional
+
+import torch
 from metatensor.torch import TensorBlock
+
 from .system import System
 
 class Mesh:
@@ -190,6 +191,7 @@ class FieldBuilder(torch.nn.Module):
     
 class MeshInterpolate(torch.nn.Module):
     pass
+
 
 class FieldProjector(torch.nn.Module):
     pass
