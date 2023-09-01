@@ -23,17 +23,21 @@ class System:
             non-periodic systems.
         """
 
+        self._species = species
+        self._positions = positions
+        self._cell = cell        
+
     @property
     def species(self) -> torch.Tensor:
         """the species of the atoms/particles in this system"""
 
-        raise NotImplementedError("System.species method is not implemented")
+        return self._species
 
     @property
     def positions(self) -> torch.Tensor:
         """the positions of the atoms/particles in this system"""
 
-        raise NotImplementedError("System.positions method is not implemented")
+        return self._positions
 
     @property
     def cell(self) -> torch.Tensor:
@@ -42,4 +46,4 @@ class System:
         boundary conditions, or a matrix filled with ``0`` for non-periodic systems
         """
 
-        raise NotImplementedError("System.cell method is not implemented")
+        return self._cell
