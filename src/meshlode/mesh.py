@@ -75,7 +75,7 @@ class FieldBuilder(torch.nn.Module):
         # TODO - THIS IS COPIED AND JUST ADAPTED FROM M&k CODE. NEEDS CLEANUP AND COMMENTING (AS WELL AS COPYING OVER HIGHER P AND HANDLING OF PBC)
         positions_cell = torch.div(system.positions, mesh.spacing)
         positions_cell_idx = torch.ceil(positions_cell).long()
-        
+                
         if self.mesh_interpolation_order == 2:
             # TODO - CHECK IF THIS ACTUALLY WORKS, GETTING FISHY RESULTS
             l_dist = positions_cell - positions_cell_idx
@@ -108,43 +108,44 @@ class FieldBuilder(torch.nn.Module):
             dist = positions_cell - positions_cell_idx
             w = mesh.values
             N_mesh = mesh.n_mesh
-            
-            frac_000 = 1/4 * (3 - 4 * dist[:, 0]**2) * 1/4 * (3 - 4 * dist[:, 0]**2) * 1/4 * (3 - 4 * dist[:, 0]**2)
-            frac_001 = 1/8 * (1 + 4 * dist[:, 0] + 4 * dist[:, 0]**2) * 1/4 * (3 - 4 * dist[:, 0]**2) * 1/4 * (3 - 4 * dist[:, 0]**2)
-            frac_00m = 1/8 * (1 - 4 * dist[:, 0] + 4 * dist[:, 0]**2) * 1/4 * (3 - 4 * dist[:, 0]**2) * 1/4 * (3 - 4 * dist[:, 0]**2)
-            
-            frac_010 = 1/4 * (3 - 4 * dist[:, 0]**2) * 1/8 * (1 + 4 * dist[:, 0] + 4 * dist[:, 0]**2) * 1/4 * (3 - 4 * dist[:, 0]**2)
-            frac_011 = 1/8 * (1 + 4 * dist[:, 0] + 4 * dist[:, 0]**2) * 1/8 * (1 + 4 * dist[:, 0] + 4 * dist[:, 0]**2) * 1/4 * (3 - 4 * dist[:, 0]**2)
-            frac_01m = 1/8 * (1 - 4 * dist[:, 0] + 4 * dist[:, 0]**2) * 1/8 * (1 + 4 * dist[:, 0] + 4 * dist[:, 0]**2) * 1/4 * (3 - 4 * dist[:, 0]**2)
-            
-            frac_0m0 = 1/4 * (3 - 4 * dist[:, 0]**2) * 1/8 * (1 - 4 * dist[:, 0] + 4 * dist[:, 0]**2) * 1/4 * (3 - 4 * dist[:, 0]**2)
-            frac_0m1 = 1/8 * (1 + 4 * dist[:, 0] + 4 * dist[:, 0]**2) * 1/8 * (1 - 4 * dist[:, 0] + 4 * dist[:, 0]**2) * 1/4 * (3 - 4 * dist[:, 0]**2)
-            frac_0mm = 1/8 * (1 - 4 * dist[:, 0] + 4 * dist[:, 0]**2) * 1/8 * (1 - 4 * dist[:, 0] + 4 * dist[:, 0]**2) * 1/4 * (3 - 4 * dist[:, 0]**2)
-            
-            frac_100 = 1/4 * (3 - 4 * dist[:, 0]**2) * 1/4 * (3 - 4 * dist[:, 0]**2) * 1/8 * (1 + 4 * dist[:, 0] + 4 * dist[:, 0]**2)
-            frac_101 = 1/8 * (1 + 4 * dist[:, 0] + 4 * dist[:, 0]**2) * 1/4 * (3 - 4 * dist[:, 0]**2) * 1/8 * (1 + 4 * dist[:, 0] + 4 * dist[:, 0]**2)
-            frac_10m = 1/8 * (1 - 4 * dist[:, 0] + 4 * dist[:, 0]**2) * 1/4 * (3 - 4 * dist[:, 0]**2) * 1/8 * (1 + 4 * dist[:, 0] + 4 * dist[:, 0]**2)
-            
-            frac_110 = 1/4 * (3 - 4 * dist[:, 0]**2) * 1/8 * (1 + 4 * dist[:, 0] + 4 * dist[:, 0]**2) * 1/8 * (1 + 4 * dist[:, 0] + 4 * dist[:, 0]**2)
-            frac_111 = 1/8 * (1 + 4 * dist[:, 0] + 4 * dist[:, 0]**2) * 1/8 * (1 + 4 * dist[:, 0] + 4 * dist[:, 0]**2) * 1/8 * (1 + 4 * dist[:, 0] + 4 * dist[:, 0]**2)
-            frac_11m = 1/8 * (1 - 4 * dist[:, 0] + 4 * dist[:, 0]**2) * 1/8 * (1 + 4 * dist[:, 0] + 4 * dist[:, 0]**2) * 1/8 * (1 + 4 * dist[:, 0] + 4 * dist[:, 0]**2)
-            
-            frac_1m0 = 1/4 * (3 - 4 * dist[:, 0]**2) * 1/8 * (1 - 4 * dist[:, 0] + 4 * dist[:, 0]**2) * 1/8 * (1 + 4 * dist[:, 0] + 4 * dist[:, 0]**2)
-            frac_1m1 = 1/8 * (1 + 4 * dist[:, 0] + 4 * dist[:, 0]**2) * 1/8 * (1 - 4 * dist[:, 0] + 4 * dist[:, 0]**2) * 1/8 * (1 + 4 * dist[:, 0] + 4 * dist[:, 0]**2)
-            frac_1mm = 1/8 * (1 - 4 * dist[:, 0] + 4 * dist[:, 0]**2) * 1/8 * (1 - 4 * dist[:, 0] + 4 * dist[:, 0]**2) * 1/8 * (1 + 4 * dist[:, 0] + 4 * dist[:, 0]**2)
-            
-            frac_m00 = 1/4 * (3 - 4 * dist[:, 0]**2) * 1/4 * (3 - 4 * dist[:, 0]**2) * 1/8 * (1 - 4 * dist[:, 0] + 4 * dist[:, 0]**2)
-            frac_m01 = 1/8 * (1 + 4 * dist[:, 0] + 4 * dist[:, 0]**2) * 1/4 * (3 - 4 * dist[:, 0]**2) * 1/8 * (1 - 4 * dist[:, 0] + 4 * dist[:, 0]**2)
-            frac_m0m = 1/8 * (1 - 4 * dist[:, 0] + 4 * dist[:, 0]**2) * 1/4 * (3 - 4 * dist[:, 0]**2) * 1/8 * (1 - 4 * dist[:, 0] + 4 * dist[:, 0]**2)
-            
-            frac_m10 = 1/4 * (3 - 4 * dist[:, 0]**2) * 1/8 * (1 + 4 * dist[:, 0] + 4 * dist[:, 0]**2) * 1/8 * (1 - 4 * dist[:, 0] + 4 * dist[:, 0]**2)
-            frac_m11 = 1/8 * (1 + 4 * dist[:, 0] + 4 * dist[:, 0]**2) * 1/8 * (1 + 4 * dist[:, 0] + 4 * dist[:, 0]**2) * 1/8 * (1 - 4 * dist[:, 0] + 4 * dist[:, 0]**2)
-            frac_m1m = 1/8 * (1 - 4 * dist[:, 0] + 4 * dist[:, 0]**2) * 1/8 * (1 + 4 * dist[:, 0] + 4 * dist[:, 0]**2) * 1/8 * (1 - 4 * dist[:, 0] + 4 * dist[:, 0]**2)
-            
-            frac_mm0 = 1/4 * (3 - 4 * dist[:, 0]**2) * 1/8 * (1 - 4 * dist[:, 0] + 4 * dist[:, 0]**2) * 1/8 * (1 - 4 * dist[:, 0] + 4 * dist[:, 0]**2)
-            frac_mm1 = 1/8 * (1 + 4 * dist[:, 0] + 4 * dist[:, 0]**2) * 1/8 * (1 - 4 * dist[:, 0] + 4 * dist[:, 0]**2) * 1/8 * (1 - 4 * dist[:, 0] + 4 * dist[:, 0]**2)
-            frac_mmm = 1/8 * (1 - 4 * dist[:, 0] + 4 * dist[:, 0]**2) * 1/8 * (1 - 4 * dist[:, 0] + 4 * dist[:, 0]**2) * 1/8 * (1 - 4 * dist[:, 0] + 4 * dist[:, 0]**2)
+            # Define auxilary functions
+            f_m = lambda x: (1 - 4*x*(1+x))/8
+            f_0 = lambda x: (3/4 - x*x)
+            f_1 = lambda x: (1 + 4*x*(1+x))/8
+            weight_m = f_m(dist)
+            weight_0 = f_0(dist)
+            weight_1 = f_1(dist)
 
+            frac_mmm = weight_m[:,0] * weight_m[:,1] * weight_m[:,2]
+            frac_mm0 = weight_m[:,0] * weight_m[:,1] * weight_0[:,2]
+            frac_mm1 = weight_m[:,0] * weight_m[:,1] * weight_1[:,2]
+            frac_m0m = weight_m[:,0] * weight_0[:,1] * weight_m[:,2]
+            frac_m00 = weight_m[:,0] * weight_0[:,1] * weight_0[:,2]
+            frac_m01 = weight_m[:,0] * weight_0[:,1] * weight_1[:,2]
+            frac_m1m = weight_m[:,0] * weight_1[:,1] * weight_m[:,2]
+            frac_m10 = weight_m[:,0] * weight_1[:,1] * weight_0[:,2]
+            frac_m11 = weight_m[:,0] * weight_1[:,1] * weight_1[:,2]
+
+            frac_0mm = weight_0[:,0] * weight_m[:,1] * weight_m[:,2]
+            frac_0m0 = weight_0[:,0] * weight_m[:,1] * weight_0[:,2]
+            frac_0m1 = weight_0[:,0] * weight_m[:,1] * weight_1[:,2]
+            frac_00m = weight_0[:,0] * weight_0[:,1] * weight_m[:,2]
+            frac_000 = weight_0[:,0] * weight_0[:,1] * weight_0[:,2]
+            frac_001 = weight_0[:,0] * weight_0[:,1] * weight_1[:,2]
+            frac_01m = weight_0[:,0] * weight_1[:,1] * weight_m[:,2]
+            frac_010 = weight_0[:,0] * weight_1[:,1] * weight_0[:,2]
+            frac_011 = weight_0[:,0] * weight_1[:,1] * weight_1[:,2]
+
+            frac_1mm = weight_1[:,0] * weight_m[:,1] * weight_m[:,2]
+            frac_1m0 = weight_1[:,0] * weight_m[:,1] * weight_0[:,2]
+            frac_1m1 = weight_1[:,0] * weight_m[:,1] * weight_1[:,2]
+            frac_10m = weight_1[:,0] * weight_0[:,1] * weight_m[:,2]
+            frac_100 = weight_1[:,0] * weight_0[:,1] * weight_0[:,2]
+            frac_101 = weight_1[:,0] * weight_0[:,1] * weight_1[:,2]
+            frac_11m = weight_1[:,0] * weight_1[:,1] * weight_m[:,2]
+            frac_110 = weight_1[:,0] * weight_1[:,1] * weight_0[:,2]
+            frac_111 = weight_1[:,0] * weight_1[:,1] * weight_1[:,2]            
+   
             rp_a_species = positions_cell_idx
             w[:, (rp_a_species[:,0]+0)% N_mesh, (rp_a_species[:,1]+0)% N_mesh, (rp_a_species[:,2]+0) % N_mesh] += frac_000*embeddings.T
             w[:, (rp_a_species[:,0]+1)% N_mesh, (rp_a_species[:,1]+0)% N_mesh, (rp_a_species[:,2]+0) % N_mesh] += frac_001*embeddings.T
@@ -181,6 +182,7 @@ class FieldBuilder(torch.nn.Module):
             w[:, (rp_a_species[:,0]+0)% N_mesh, (rp_a_species[:,1]-1)% N_mesh, (rp_a_species[:,2]-1) % N_mesh] += frac_mm0*embeddings.T
             w[:, (rp_a_species[:,0]+1)% N_mesh, (rp_a_species[:,1]-1)% N_mesh, (rp_a_species[:,2]-1) % N_mesh] += frac_mm1*embeddings.T
             w[:, (rp_a_species[:,0]-1)% N_mesh, (rp_a_species[:,1]-1)% N_mesh, (rp_a_species[:,2]-1) % N_mesh] += frac_mmm*embeddings.T
+
 
         mesh.values /= mesh.spacing**3
         return mesh
