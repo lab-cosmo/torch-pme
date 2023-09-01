@@ -109,9 +109,9 @@ class FieldBuilder(torch.nn.Module):
             w = mesh.values
             N_mesh = mesh.n_mesh
             # Define auxilary functions
-            f_m = lambda x: (1 - 4*x*(1+x))/8
+            f_m = lambda x: (1 - (x+x))**2/8
             f_0 = lambda x: (3/4 - x*x)
-            f_1 = lambda x: (1 + 4*x*(1+x))/8
+            f_1 = lambda x: (1 + (x+x))**2/8
             weight_m = f_m(dist)
             weight_0 = f_0(dist)
             weight_1 = f_1(dist)
