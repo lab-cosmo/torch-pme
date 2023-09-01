@@ -6,6 +6,9 @@ from metatensor.torch import TensorBlock
 from .system import System
 
 class Mesh:
+    """
+    Minimal class to store a tensor on a 3D grid.    
+    """
     def __init__(
             self,
             box: torch.tensor, 
@@ -39,13 +42,16 @@ class Mesh:
         self.grid_z = torch.linspace(0, mesh_size*(n_mesh-1)/n_mesh, n_mesh) 
 
 class FieldBuilder(torch.nn.Module):
+    """
+    Takes a list of points and builds a representation as a density field on a mesh.
+    """
     def __init__(self, 
                  mesh_resolution: float = 0.1,
-                 point_interpolation_order: int =2,
+                 mesh_interpolation_order: int =2,
                  ):
         
         self.mesh_resolution = mesh_resolution
-        self.point_interpolation_order = point_interpolation_order
+        self.mesh_interpolation_order = mesh_interpolation_order
     
     def compute(self, 
                 system : System,
@@ -69,9 +75,8 @@ class FieldBuilder(torch.nn.Module):
         # TODO - THIS IS COPIED AND JUST ADAPTED FROM M&k CODE. NEEDS CLEANUP AND COMMENTING (AS WELL AS COPYING OVER HIGHER P AND HANDLING OF PBC)
         positions_cell = torch.div(system.positions, mesh.spacing)
         positions_cell_idx = torch.ceil(positions_cell).long()
-        print(positions_cell_idx)
-        print(embeddings)
-        if self.point_interpolation_order == 2:
+        
+        if self.mesh_interpolation_order == 2:
             # TODO - CHECK IF THIS ACTUALLY WORKS, GETTING FISHY RESULTS
             l_dist = positions_cell - positions_cell_idx
             r_dist = 1 - l_dist
@@ -98,7 +103,7 @@ class FieldBuilder(torch.nn.Module):
             w[:, (rp_a_species[:,0]+1)% N_mesh, (rp_a_species[:,1]+0)% N_mesh, (rp_a_species[:,2]+1) % N_mesh] += frac_101*embeddings.T
             w[:, (rp_a_species[:,0]+1)% N_mesh, (rp_a_species[:,1]+1)% N_mesh, (rp_a_species[:,2]+0) % N_mesh] += frac_110*embeddings.T
             w[:, (rp_a_species[:,0]+1)% N_mesh, (rp_a_species[:,1]+1)% N_mesh, (rp_a_species[:,2]+1) % N_mesh] += frac_111*embeddings.T
-        elif self.point_interpolation_order == 3:
+        elif self.mesh_interpolation_order == 3:
 
             dist = positions_cell - positions_cell_idx
             w = mesh.values
@@ -188,10 +193,89 @@ class FieldBuilder(torch.nn.Module):
     
         """forward just calls :py:meth:`FieldBuilder.compute`"""
         return self.compute(systems=system, embeddings=embeddings)
+
+
+class MeshInterpolator(torch.nn.Module):
+    """
+    Evaluates a function represented on a mesh at an arbitrary list of points.
+    """
+    def __init__(self,  
+                mesh_interpolation_order: int =2,
+                ):
+        
+        self.mesh_interpolation_order = mesh_interpolation_order
     
-class MeshInterpolate(torch.nn.Module):
-    pass
+    def compute(self, 
+                mesh: Mesh, 
+                points: torch.tensor
+                ):
+        
+        
+        n_points = points.shape[0]
 
+        points_cell = torch.div(points, mesh.spacing)
+        points_cell_idx = torch.ceil(points_cell).long()
+        
+        # TODO rewrite the code below to use the more descriptive variables
+        rp = points_cell_idx
+        rp_0 = (points_cell_idx + 0) % mesh.n_mesh
+        rp_1 = (points_cell_idx + 1) % mesh.n_mesh
+        rp_m = (points_cell_idx - 1 + mesh.n_mesh) % mesh.n_mesh
 
-class FieldProjector(torch.nn.Module):
-    pass
+        interpolated_values = torch.zeros((points.shape[0], mesh.n_channels), 
+                                device=mesh.values.device)
+        if self.mesh_interpolation_order == 3:
+            # Find closest mesh point
+            dist = points_cell - rp
+
+            # Define auxilary functions
+            f_m = lambda x: (1-4*x+4*x**2)/8
+            f_0 = lambda x: (3-4*x**2)/4
+            f_1 = lambda x: (1+4*x+4*x**2)/8
+            weight_m = f_m(dist)
+            weight_0 = f_0(dist)
+            weight_1 = f_1(dist)
+
+            frac_mmm = weight_m[:,0] * weight_m[:,1] * weight_m[:,2]
+            frac_mm0 = weight_m[:,0] * weight_m[:,1] * weight_0[:,2]
+            frac_mm1 = weight_m[:,0] * weight_m[:,1] * weight_1[:,2]
+            frac_m0m = weight_m[:,0] * weight_0[:,1] * weight_m[:,2]
+            frac_m00 = weight_m[:,0] * weight_0[:,1] * weight_0[:,2]
+            frac_m01 = weight_m[:,0] * weight_0[:,1] * weight_1[:,2]
+            frac_m1m = weight_m[:,0] * weight_1[:,1] * weight_m[:,2]
+            frac_m10 = weight_m[:,0] * weight_1[:,1] * weight_0[:,2]
+            frac_m11 = weight_m[:,0] * weight_1[:,1] * weight_1[:,2]
+
+            frac_0mm = weight_0[:,0] * weight_m[:,1] * weight_m[:,2]
+            frac_0m0 = weight_0[:,0] * weight_m[:,1] * weight_0[:,2]
+            frac_0m1 = weight_0[:,0] * weight_m[:,1] * weight_1[:,2]
+            frac_00m = weight_0[:,0] * weight_0[:,1] * weight_m[:,2]
+            frac_000 = weight_0[:,0] * weight_0[:,1] * weight_0[:,2]
+            frac_001 = weight_0[:,0] * weight_0[:,1] * weight_1[:,2]
+            frac_01m = weight_0[:,0] * weight_1[:,1] * weight_m[:,2]
+            frac_010 = weight_0[:,0] * weight_1[:,1] * weight_0[:,2]
+            frac_011 = weight_0[:,0] * weight_1[:,1] * weight_1[:,2]
+
+            frac_1mm = weight_1[:,0] * weight_m[:,1] * weight_m[:,2]
+            frac_1m0 = weight_1[:,0] * weight_m[:,1] * weight_0[:,2]
+            frac_1m1 = weight_1[:,0] * weight_m[:,1] * weight_1[:,2]
+            frac_10m = weight_1[:,0] * weight_0[:,1] * weight_m[:,2]
+            frac_100 = weight_1[:,0] * weight_0[:,1] * weight_0[:,2]
+            frac_101 = weight_1[:,0] * weight_0[:,1] * weight_1[:,2]
+            frac_11m = weight_1[:,0] * weight_1[:,1] * weight_m[:,2]
+            frac_110 = weight_1[:,0] * weight_1[:,1] * weight_0[:,2]
+            frac_111 = weight_1[:,0] * weight_1[:,1] * weight_1[:,2]
+
+            for a in range(mesh.n_channels):
+                # TODO I think the calculation of the channels can be serialized
+                # Add up contributions to the potential from 27 closest mesh poitns
+                for x in ['m', '0', '1']:
+                    for y in ['m', '0', '1']:
+                        for z in ['m', '0', '1']:
+                            # TODO write this out
+                            command = f"""interpolated_values[:,a] += (
+                            mesh.values[a, rp_{x}[:,0], rp_{y}[:,1], rp_{z}[:,2]] 
+                            * frac_{x}{y}{z}).float()"""
+                            exec(command)
+        
+        return interpolated_values

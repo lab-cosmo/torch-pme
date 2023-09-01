@@ -24,7 +24,8 @@ class FourierFilter(torch.nn.Module):
     
     def apply_filter(self, k_mesh: Mesh) -> Mesh:
         # TODO - general filter, possibly defined in __init__?
-        kxs, kys, kzs = torch.meshgrid(k_mesh.grid_x, k_mesh.grid_y, k_mesh.grid_z) 
+        kxs, kys, kzs = torch.meshgrid(k_mesh.grid_x, k_mesh.grid_y, k_mesh.grid_z, 
+                                       indexing="ij") 
 
         k_norm2 = kxs**2 + kys**2 + kzs**2
         k_norm2[0,0,0] = 1.
