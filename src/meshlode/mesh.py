@@ -192,7 +192,7 @@ class FieldBuilder(torch.nn.Module):
     ) -> Mesh:
     
         """forward just calls :py:meth:`FieldBuilder.compute`"""
-        return self.compute(systems=system, embeddings=embeddings)
+        return self.compute(system=system, embeddings=embeddings)
 
 
 class MeshInterpolator(torch.nn.Module):
@@ -210,7 +210,6 @@ class MeshInterpolator(torch.nn.Module):
                 points: torch.tensor
                 ):
         
-        
         n_points = points.shape[0]
 
         points_cell = torch.div(points, mesh.spacing)
@@ -223,7 +222,7 @@ class MeshInterpolator(torch.nn.Module):
         rp_m = (points_cell_idx - 1 + mesh.n_mesh) % mesh.n_mesh
 
         interpolated_values = torch.zeros((points.shape[0], mesh.n_channels), 
-                                device=mesh.values.device)
+                                dtype=points.dtype, device=points.device)
         if self.mesh_interpolation_order == 3:
             # Find closest mesh point
             dist = points_cell - rp
@@ -279,3 +278,9 @@ class MeshInterpolator(torch.nn.Module):
                             exec(command)
         
         return interpolated_values
+    
+    def forward(self, 
+                mesh: Mesh, 
+                points: torch.tensor
+                ):
+        return self.compute(mesh, points)
