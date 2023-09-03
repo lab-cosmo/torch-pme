@@ -15,10 +15,11 @@ class FourierFilter(torch.nn.Module):
         The `kspace_filter` argument defines a R->R function that is applied to the squared norm of the k vectors
         """
 
+        super(FourierFilter, self).__init__()
         self.kzero_value = kzero_value
         if kspace_filter == "coulomb":
             self.kspace_filter = torch.reciprocal
-            self.kzero_value = 1.0
+            self.kzero_value = 0.0
         else:
             self.kspace_filter = kspace_filter        
         pass

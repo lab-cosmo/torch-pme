@@ -50,6 +50,7 @@ class FieldBuilder(torch.nn.Module):
                  mesh_interpolation_order: int =2,
                  ):
         
+        super(FieldBuilder, self).__init__()
         self.mesh_resolution = mesh_resolution
         self.mesh_interpolation_order = mesh_interpolation_order
     
@@ -74,7 +75,7 @@ class FieldBuilder(torch.nn.Module):
 
         # TODO - THIS IS COPIED AND JUST ADAPTED FROM M&k CODE. NEEDS CLEANUP AND COMMENTING (AS WELL AS COPYING OVER HIGHER P AND HANDLING OF PBC)
         positions_cell = torch.div(system.positions, mesh.spacing)
-        positions_cell_idx = torch.ceil(positions_cell).long()
+        positions_cell_idx = torch.round(positions_cell).long()
                 
         if self.mesh_interpolation_order == 2:
             # TODO - CHECK IF THIS ACTUALLY WORKS, GETTING FISHY RESULTS
@@ -206,6 +207,8 @@ class MeshInterpolator(torch.nn.Module):
                 ):
         
         self.mesh_interpolation_order = mesh_interpolation_order
+        super(MeshInterpolator, self).__init__()  
+        # TODO perhaps this does not have to be a nn.Module 
     
     def compute(self, 
                 mesh: Mesh, 
@@ -215,7 +218,7 @@ class MeshInterpolator(torch.nn.Module):
         n_points = points.shape[0]
 
         points_cell = torch.div(points, mesh.spacing)
-        points_cell_idx = torch.ceil(points_cell).long()
+        points_cell_idx = torch.round(points_cell).long()
         
         # TODO rewrite the code below to use the more descriptive variables
         rp = points_cell_idx
@@ -230,9 +233,9 @@ class MeshInterpolator(torch.nn.Module):
             dist = points_cell - rp
 
             # Define auxilary functions
-            f_m = lambda x: (1-4*x+4*x**2)/8
-            f_0 = lambda x: (3-4*x**2)/4
-            f_1 = lambda x: (1+4*x+4*x**2)/8
+            f_m = lambda x: (1 - (x+x))**2/8
+            f_0 = lambda x: (3/4 - x*x)
+            f_1 = lambda x: (1 + (x+x))**2/8
             weight_m = f_m(dist)
             weight_0 = f_0(dist)
             weight_1 = f_1(dist)

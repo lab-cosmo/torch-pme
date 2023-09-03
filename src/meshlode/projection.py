@@ -146,6 +146,7 @@ class FieldProjector(torch.nn.Module):
         dtype=torch.float64,
         device="cpu"
     ):
+        super(FieldProjector, self).__init__()
         # TODO have more lebdev grids implemented
         assert(n_lebdev==9) # this is the only one implemented
         rb = RadialBasis(max_radial, max_angular, radial_basis_radius, radial_basis)
