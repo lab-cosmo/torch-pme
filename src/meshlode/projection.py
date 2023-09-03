@@ -8,6 +8,8 @@ import numpy as np
 from .system import System
 from.mesh import Mesh, MeshInterpolator
 
+
+from metatensor.torch import TensorMap, TensorBlock, Labels
 import sphericart.torch as sph
 
 from.radial import RadialBasis
@@ -180,6 +182,8 @@ class FieldProjector(torch.nn.Module):
 
         self.values = torch.zeros(((max_angular+1)**2,max_radial,  
                                    self.n_grid), dtype=dtype, device=device)
+        
+        self.l_max = max_angular
         for l in range(max_angular+1):
             for n in range(max_radial):            
                 self.values[l**2:(l+1)**2,n] = torch.einsum("i,jm->mij",
@@ -197,7 +201,22 @@ class FieldProjector(torch.nn.Module):
             grid_i = self.grid + position
             values_i = mesh_interpolator.compute(mesh, grid_i)
             feats.append(torch.einsum("ga,kng,g->kan",values_i,self.values,self.weights))
-        return torch.stack(feats)
+        
+        feats = torch.stack(feats)
+        tmap = TensorMap(
+            keys=Labels.range("spherical_harmonics_l", self.l_max+1),
+            blocks=[
+                TensorBlock(
+                    values=feats[:,l**2:(l+1)**2].reshape(len(feats),2*l+1,-1),
+                    samples=Labels.range("center", len(feats)),
+                    components=[Labels.range("spherical_harmonics_m",2*l+1)],
+                    properties=Labels(["channel", "n"],
+                                      torch.tensor([[a, n] for a in range(feats.shape[2]) for n in range(feats.shape[3])])
+                                      )
+                ) for l in range(self.l_max+1)
+            ]
+                )
+        return tmap
     
     def forward(self,
                 mesh, system):
