@@ -196,24 +196,32 @@ class FieldProjector(torch.nn.Module):
 
         mesh_interpolator = MeshInterpolator(mesh_interpolation_order=3)
         
-        feats = []
-        for position in system.positions:
+        species = torch.unique(system.species)
+        feats = {s.item(): [] for s in species}
+        idx = {s.item(): [] for s in species}
+        for i, position in enumerate(system.positions):
             grid_i = self.grid + position
             values_i = mesh_interpolator.compute(mesh, grid_i)
-            feats.append(torch.einsum("ga,kng,g->kan",values_i,self.values,self.weights))
+            feats[system.species[i].item()].append(torch.einsum("ga,kng,g->kan",values_i,self.values,self.weights))
+            idx[system.species[i].item()].append(i)
+    
+        feats = {s: torch.stack(feats[s]) for s in feats }
         
-        feats = torch.stack(feats)
         tmap = TensorMap(
-            keys=Labels.range("spherical_harmonics_l", self.l_max+1),
+            keys=Labels(["center_species", "spherical_harmonics_l"], 
+                        torch.tensor([[s.item(), l] for s in species for l in range(self.l_max+1)])
+            ),
             blocks=[
                 TensorBlock(
-                    values=feats[:,l**2:(l+1)**2].reshape(len(feats),2*l+1,-1),
-                    samples=Labels.range("center", len(feats)),
+                    values=feats[s.item()][:,l**2:(l+1)**2].reshape(len(feats[s.item()]),2*l+1,-1),
+                    samples=Labels("center", torch.tensor(idx[s.item()]).reshape(-1,1)),
                     components=[Labels.range("spherical_harmonics_m",2*l+1)],
                     properties=Labels(["channel", "n"],
-                                      torch.tensor([[a, n] for a in range(feats.shape[2]) for n in range(feats.shape[3])])
+                                      torch.tensor([[a, n] 
+                                                    for a in range(feats[s.item()].shape[2]) 
+                                                    for n in range(feats[s.item()].shape[3])])
                                       )
-                ) for l in range(self.l_max+1)
+                ) for s in species for l in range(self.l_max+1)
             ]
                 )
         return tmap
