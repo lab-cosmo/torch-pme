@@ -208,7 +208,7 @@ class FieldProjector(torch.nn.Module):
         feats = {s: torch.stack(feats[s]) for s in feats }
         
         tmap = TensorMap(
-            keys=Labels(["center_species", "spherical_harmonics_l"], 
+            keys=Labels(["species_center", "spherical_harmonics_l"], 
                         torch.tensor([[s.item(), l] for s in species for l in range(self.l_max+1)])
             ),
             blocks=[
