@@ -188,7 +188,7 @@ class FieldProjector(torch.nn.Module):
             for n in range(max_radial):            
                 self.values[l**2:(l+1)**2,n] = torch.einsum("i,jm->mij",
                     self.values_r[l,n], self.values_lebd[:,l**2:(l+1)**2]
-                ).reshape((2*l+1,-1))                
+                ).reshape((2*l+1,-1))
 
     def compute(self, 
                 mesh:Mesh, 
