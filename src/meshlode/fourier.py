@@ -31,7 +31,10 @@ class FourierFilter(torch.nn.Module):
     def compute_r2k(self, mesh: Mesh) -> Mesh:
         
         k_size = math.pi*2/mesh.spacing
-        k_mesh = Mesh(torch.eye(3)*k_size, n_channels=mesh.n_channels, mesh_resolution=k_size/mesh.n_mesh, dtype=torch.complex64)
+        k_mesh = Mesh(torch.eye(3)*k_size, n_channels=mesh.n_channels, 
+                      mesh_resolution=k_size/mesh.n_mesh, 
+                      mesh_centering="fft",
+                      dtype=torch.complex64)
         
         for i_channel in range(mesh.n_channels):
             k_mesh.values[i_channel] = torch.fft.fftn(mesh.values[i_channel], norm="ortho")

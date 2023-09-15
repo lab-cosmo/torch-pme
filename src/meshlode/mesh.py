@@ -14,6 +14,7 @@ class Mesh:
             box: torch.tensor, 
             n_channels: int = 1,
             mesh_resolution: float = 0.1,
+            mesh_centering: str = "real", 
             dtype = None,
             device = None
             ):
@@ -38,9 +39,19 @@ class Mesh:
         self.n_channels = n_channels
         self.values = torch.zeros(size=(n_channels, n_mesh, n_mesh, n_mesh), device=device, dtype=dtype) 
         
-        self.grid_x = torch.linspace(0, mesh_size*(n_mesh-1)/n_mesh, n_mesh)
-        self.grid_y = torch.linspace(0, mesh_size*(n_mesh-1)/n_mesh, n_mesh)
-        self.grid_z = torch.linspace(0, mesh_size*(n_mesh-1)/n_mesh, n_mesh) 
+        self.mesh_centering = mesh_centering
+        if self.mesh_centering == "real":
+            self.grid_x = torch.linspace(0, mesh_size*(n_mesh-1)/n_mesh, n_mesh)
+            self.grid_y = torch.linspace(0, mesh_size*(n_mesh-1)/n_mesh, n_mesh)
+            self.grid_z = torch.linspace(0, mesh_size*(n_mesh-1)/n_mesh, n_mesh) 
+        elif self.mesh_centering == "fft":
+            self.grid_x = torch.fft.fftfreq(n_mesh)*mesh_size
+            self.grid_y = torch.fft.fftfreq(n_mesh)*mesh_size
+            self.grid_z = torch.fft.fftfreq(n_mesh)*mesh_size
+        else: 
+            raise ValueError(f"Invalid mesh centering mode {mesh_centering}")
+
+
 
 class FieldBuilder(torch.nn.Module):
     """
