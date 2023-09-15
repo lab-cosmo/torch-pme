@@ -30,9 +30,10 @@ class Mesh:
         self.box_size = mesh_size
 
         # Computes mesh parameters
-        n_mesh = torch.ceil(mesh_size/mesh_resolution).long().item()
+        # makes sure mesh size is even, torch.fft is very slow otherwise (possibly needs powers of 2...)
+        n_mesh = 2*torch.round(mesh_size/(2*mesh_resolution)).long().item()
         self.n_mesh = n_mesh
-        self. spacing = mesh_size / n_mesh
+        self.spacing = mesh_size / n_mesh
         
         self.n_channels = n_channels
         self.values = torch.zeros(size=(n_channels, n_mesh, n_mesh, n_mesh), device=device, dtype=dtype) 
@@ -148,41 +149,41 @@ class FieldBuilder(torch.nn.Module):
             frac_ppp = weight_p[:,0] * weight_p[:,1] * weight_p[:,2]            
    
             pci = positions_cell_idx
-            w[:, (pci[:,2]+0)% N_mesh, (pci[:,1]+0)% N_mesh, (pci[:,0]+0) % N_mesh] += frac_000*embeddings.T
-            w[:, (pci[:,2]+1)% N_mesh, (pci[:,1]+0)% N_mesh, (pci[:,0]+0) % N_mesh] += frac_00p*embeddings.T
-            w[:, (pci[:,2]-1)% N_mesh, (pci[:,1]+0)% N_mesh, (pci[:,0]+0) % N_mesh] += frac_00m*embeddings.T
+            w[:, (pci[:,0]+0)% N_mesh, (pci[:,1]+0)% N_mesh, (pci[:,2]+0) % N_mesh] += frac_000*embeddings.T
+            w[:, (pci[:,0]+1)% N_mesh, (pci[:,1]+0)% N_mesh, (pci[:,2]+0) % N_mesh] += frac_p00*embeddings.T
+            w[:, (pci[:,0]-1)% N_mesh, (pci[:,1]+0)% N_mesh, (pci[:,2]+0) % N_mesh] += frac_m00*embeddings.T
             
-            w[:, (pci[:,2]+0)% N_mesh, (pci[:,1]+1)% N_mesh, (pci[:,0]+0) % N_mesh] += frac_0p0*embeddings.T
-            w[:, (pci[:,2]+1)% N_mesh, (pci[:,1]+1)% N_mesh, (pci[:,0]+0) % N_mesh] += frac_0pp*embeddings.T
-            w[:, (pci[:,2]-1)% N_mesh, (pci[:,1]+1)% N_mesh, (pci[:,0]+0) % N_mesh] += frac_0pm*embeddings.T
+            w[:, (pci[:,0]+0)% N_mesh, (pci[:,1]+1)% N_mesh, (pci[:,2]+0) % N_mesh] += frac_0p0*embeddings.T
+            w[:, (pci[:,0]+1)% N_mesh, (pci[:,1]+1)% N_mesh, (pci[:,2]+0) % N_mesh] += frac_pp0*embeddings.T
+            w[:, (pci[:,0]-1)% N_mesh, (pci[:,1]+1)% N_mesh, (pci[:,2]+0) % N_mesh] += frac_mp0*embeddings.T
             
-            w[:, (pci[:,2]+0)% N_mesh, (pci[:,1]-1)% N_mesh, (pci[:,0]+0) % N_mesh] += frac_0m0*embeddings.T
-            w[:, (pci[:,2]+1)% N_mesh, (pci[:,1]-1)% N_mesh, (pci[:,0]+0) % N_mesh] += frac_0mp*embeddings.T
-            w[:, (pci[:,2]-1)% N_mesh, (pci[:,1]-1)% N_mesh, (pci[:,0]+0) % N_mesh] += frac_0mm*embeddings.T
+            w[:, (pci[:,0]+0)% N_mesh, (pci[:,1]-1)% N_mesh, (pci[:,2]+0) % N_mesh] += frac_0m0*embeddings.T
+            w[:, (pci[:,0]+1)% N_mesh, (pci[:,1]-1)% N_mesh, (pci[:,2]+0) % N_mesh] += frac_pm0*embeddings.T
+            w[:, (pci[:,0]-1)% N_mesh, (pci[:,1]-1)% N_mesh, (pci[:,2]+0) % N_mesh] += frac_mm0*embeddings.T
             
-            w[:, (pci[:,2]+0)% N_mesh, (pci[:,1]+0)% N_mesh, (pci[:,0]+1) % N_mesh] += frac_p00*embeddings.T
-            w[:, (pci[:,2]+1)% N_mesh, (pci[:,1]+0)% N_mesh, (pci[:,0]+1) % N_mesh] += frac_p0p*embeddings.T
-            w[:, (pci[:,2]-1)% N_mesh, (pci[:,1]+0)% N_mesh, (pci[:,0]+1) % N_mesh] += frac_p0m*embeddings.T
+            w[:, (pci[:,0]+0)% N_mesh, (pci[:,1]+0)% N_mesh, (pci[:,2]+1) % N_mesh] += frac_00p*embeddings.T
+            w[:, (pci[:,0]+1)% N_mesh, (pci[:,1]+0)% N_mesh, (pci[:,2]+1) % N_mesh] += frac_p0p*embeddings.T
+            w[:, (pci[:,0]-1)% N_mesh, (pci[:,1]+0)% N_mesh, (pci[:,2]+1) % N_mesh] += frac_m0p*embeddings.T
             
-            w[:, (pci[:,2]+0)% N_mesh, (pci[:,1]+1)% N_mesh, (pci[:,0]+1) % N_mesh] += frac_pp0*embeddings.T
-            w[:, (pci[:,2]+1)% N_mesh, (pci[:,1]+1)% N_mesh, (pci[:,0]+1) % N_mesh] += frac_ppp*embeddings.T
-            w[:, (pci[:,2]-1)% N_mesh, (pci[:,1]+1)% N_mesh, (pci[:,0]+1) % N_mesh] += frac_ppm*embeddings.T
+            w[:, (pci[:,0]+0)% N_mesh, (pci[:,1]+1)% N_mesh, (pci[:,2]+1) % N_mesh] += frac_0pp*embeddings.T
+            w[:, (pci[:,0]+1)% N_mesh, (pci[:,1]+1)% N_mesh, (pci[:,2]+1) % N_mesh] += frac_ppp*embeddings.T
+            w[:, (pci[:,0]-1)% N_mesh, (pci[:,1]+1)% N_mesh, (pci[:,2]+1) % N_mesh] += frac_mpp*embeddings.T
             
-            w[:, (pci[:,2]+0)% N_mesh, (pci[:,1]-1)% N_mesh, (pci[:,0]+1) % N_mesh] += frac_pm0*embeddings.T
-            w[:, (pci[:,2]+1)% N_mesh, (pci[:,1]-1)% N_mesh, (pci[:,0]+1) % N_mesh] += frac_pmp*embeddings.T
-            w[:, (pci[:,2]-1)% N_mesh, (pci[:,1]-1)% N_mesh, (pci[:,0]+1) % N_mesh] += frac_pmm*embeddings.T
+            w[:, (pci[:,0]+0)% N_mesh, (pci[:,1]-1)% N_mesh, (pci[:,2]+1) % N_mesh] += frac_0mp*embeddings.T
+            w[:, (pci[:,0]+1)% N_mesh, (pci[:,1]-1)% N_mesh, (pci[:,2]+1) % N_mesh] += frac_pmp*embeddings.T
+            w[:, (pci[:,0]-1)% N_mesh, (pci[:,1]-1)% N_mesh, (pci[:,2]+1) % N_mesh] += frac_mmp*embeddings.T
 
-            w[:, (pci[:,2]+0)% N_mesh, (pci[:,1]+0)% N_mesh, (pci[:,0]-1) % N_mesh] += frac_m00*embeddings.T
-            w[:, (pci[:,2]+1)% N_mesh, (pci[:,1]+0)% N_mesh, (pci[:,0]-1) % N_mesh] += frac_m0p*embeddings.T
-            w[:, (pci[:,2]-1)% N_mesh, (pci[:,1]+0)% N_mesh, (pci[:,0]-1) % N_mesh] += frac_m0m*embeddings.T
+            w[:, (pci[:,0]+0)% N_mesh, (pci[:,1]+0)% N_mesh, (pci[:,2]-1) % N_mesh] += frac_00m*embeddings.T
+            w[:, (pci[:,0]+1)% N_mesh, (pci[:,1]+0)% N_mesh, (pci[:,2]-1) % N_mesh] += frac_p0m*embeddings.T
+            w[:, (pci[:,0]-1)% N_mesh, (pci[:,1]+0)% N_mesh, (pci[:,2]-1) % N_mesh] += frac_m0m*embeddings.T
             
-            w[:, (pci[:,2]+0)% N_mesh, (pci[:,1]+1)% N_mesh, (pci[:,0]-1) % N_mesh] += frac_mp0*embeddings.T
-            w[:, (pci[:,2]+1)% N_mesh, (pci[:,1]+1)% N_mesh, (pci[:,0]-1) % N_mesh] += frac_mpp*embeddings.T
-            w[:, (pci[:,2]-1)% N_mesh, (pci[:,1]+1)% N_mesh, (pci[:,0]-1) % N_mesh] += frac_mpm*embeddings.T
+            w[:, (pci[:,0]+0)% N_mesh, (pci[:,1]+1)% N_mesh, (pci[:,2]-1) % N_mesh] += frac_0pm*embeddings.T
+            w[:, (pci[:,0]+1)% N_mesh, (pci[:,1]+1)% N_mesh, (pci[:,2]-1) % N_mesh] += frac_ppm*embeddings.T
+            w[:, (pci[:,0]-1)% N_mesh, (pci[:,1]+1)% N_mesh, (pci[:,2]-1) % N_mesh] += frac_mpm*embeddings.T
             
-            w[:, (pci[:,2]+0)% N_mesh, (pci[:,1]-1)% N_mesh, (pci[:,0]-1) % N_mesh] += frac_mm0*embeddings.T
-            w[:, (pci[:,2]+1)% N_mesh, (pci[:,1]-1)% N_mesh, (pci[:,0]-1) % N_mesh] += frac_mmp*embeddings.T
-            w[:, (pci[:,2]-1)% N_mesh, (pci[:,1]-1)% N_mesh, (pci[:,0]-1) % N_mesh] += frac_mmm*embeddings.T
+            w[:, (pci[:,0]+0)% N_mesh, (pci[:,1]-1)% N_mesh, (pci[:,2]-1) % N_mesh] += frac_0mm*embeddings.T
+            w[:, (pci[:,0]+1)% N_mesh, (pci[:,1]-1)% N_mesh, (pci[:,2]-1) % N_mesh] += frac_pmm*embeddings.T
+            w[:, (pci[:,0]-1)% N_mesh, (pci[:,1]-1)% N_mesh, (pci[:,2]-1) % N_mesh] += frac_mmm*embeddings.T
 
 
         mesh.values /= mesh.spacing**3
