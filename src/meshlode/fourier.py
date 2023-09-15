@@ -30,11 +30,11 @@ class FourierFilter(torch.nn.Module):
 
     def compute_r2k(self, mesh: Mesh) -> Mesh:
         
-        k_size = math.pi*2/mesh.box_size
-        k_mesh = Mesh(torch.eye(3)*k_size, mesh.n_channels, k_size/mesh.n_mesh, dtype=torch.complex64)
+        k_size = math.pi*2/mesh.spacing
+        k_mesh = Mesh(torch.eye(3)*k_size, n_channels=mesh.n_channels, mesh_resolution=k_size/mesh.n_mesh, dtype=torch.complex64)
         
         for i_channel in range(mesh.n_channels):
-            k_mesh.values[i_channel] = torch.fft.fftn(mesh.values[i_channel])        
+            k_mesh.values[i_channel] = torch.fft.fftn(mesh.values[i_channel], norm="ortho")
         
         return k_mesh
     
@@ -59,11 +59,11 @@ class FourierFilter(torch.nn.Module):
 
     def compute_k2r(self, k_mesh: Mesh) -> Mesh:
 
-        box_size = math.pi*2/k_mesh.box_size
-        mesh = Mesh(torch.eye(3)*box_size, k_mesh.n_channels, box_size/k_mesh.n_mesh, dtype=torch.float64)
+        box_size = math.pi*2/k_mesh.spacing
+        mesh = Mesh(torch.eye(3)*box_size, k_mesh.n_channels, mesh_resolution=box_size/k_mesh.n_mesh, dtype=torch.float64)
         
         for i_channel in range(mesh.n_channels):
-            mesh.values[i_channel] = torch.fft.ifftn(k_mesh.values[i_channel]).real
+            mesh.values[i_channel] = torch.fft.ifftn(k_mesh.values[i_channel], norm="ortho").real
         
         return mesh
     
