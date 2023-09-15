@@ -14,7 +14,7 @@ class Mesh:
             box: torch.tensor, 
             n_channels: int = 1,
             mesh_resolution: float = 0.1,
-            mesh_centering: str = "real", 
+            mesh_style: str = "real_space", 
             dtype = None,
             device = None
             ):
@@ -36,20 +36,29 @@ class Mesh:
         self.n_mesh = n_mesh
         self.spacing = mesh_size / n_mesh
         
-        self.n_channels = n_channels
-        self.values = torch.zeros(size=(n_channels, n_mesh, n_mesh, n_mesh), device=device, dtype=dtype) 
+        self.n_channels = n_channels        
         
-        self.mesh_centering = mesh_centering
-        if self.mesh_centering == "real":
+        self.mesh_style = mesh_style
+        if self.mesh_style == "real_space":
+            # real-space grid, same dimension on all axes
             self.grid_x = torch.linspace(0, mesh_size*(n_mesh-1)/n_mesh, n_mesh)
             self.grid_y = torch.linspace(0, mesh_size*(n_mesh-1)/n_mesh, n_mesh)
             self.grid_z = torch.linspace(0, mesh_size*(n_mesh-1)/n_mesh, n_mesh) 
-        elif self.mesh_centering == "fft":
+            self.values = torch.zeros(size=(n_channels, n_mesh, n_mesh, n_mesh), device=device, dtype=dtype) 
+        elif self.mesh_style == "fft":
+            # full FFT grod
             self.grid_x = torch.fft.fftfreq(n_mesh)*mesh_size
             self.grid_y = torch.fft.fftfreq(n_mesh)*mesh_size
             self.grid_z = torch.fft.fftfreq(n_mesh)*mesh_size
+            self.values = torch.zeros(size=(n_channels, n_mesh, n_mesh, n_mesh), device=device, dtype=dtype) 
+        elif self.mesh_style == "rfft":
+            # real-valued FFT grid (to store FT of a real-valued function)
+            self.grid_x = torch.fft.fftfreq(n_mesh)*mesh_size
+            self.grid_y = torch.fft.fftfreq(n_mesh)*mesh_size
+            self.grid_z = torch.fft.rfftfreq(n_mesh)*mesh_size
+            self.values = torch.zeros(size=(n_channels, n_mesh, n_mesh, len(self.grid_z)), device=device, dtype=dtype) 
         else: 
-            raise ValueError(f"Invalid mesh centering mode {mesh_centering}")
+            raise ValueError(f"Invalid mesh style {mesh_style}")
 
 
 
