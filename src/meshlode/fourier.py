@@ -36,8 +36,7 @@ class FourierFilter(torch.nn.Module):
                       mesh_style="rfft",
                       dtype=torch.complex64)
         
-        for i_channel in range(mesh.n_channels):
-            k_mesh.values[i_channel] = torch.fft.rfftn(mesh.values[i_channel], norm="ortho")
+        k_mesh.values[:] = torch.fft.rfftn(mesh.values, norm="ortho", dim=(1,2,3))
         
         return k_mesh
     
@@ -65,8 +64,7 @@ class FourierFilter(torch.nn.Module):
         box_size = math.pi*2/k_mesh.spacing
         mesh = Mesh(torch.eye(3)*box_size, k_mesh.n_channels, mesh_resolution=box_size/k_mesh.n_mesh, dtype=torch.float64)
         
-        for i_channel in range(mesh.n_channels):
-            mesh.values[i_channel] = torch.fft.irfftn(k_mesh.values[i_channel], norm="ortho")
+        mesh.values[:] = torch.fft.irfftn(k_mesh.values, norm="ortho", dim=(1,2,3))
         
         return mesh
     

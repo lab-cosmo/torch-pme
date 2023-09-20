@@ -243,10 +243,15 @@ class MeshInterpolator(torch.nn.Module):
         
         # TODO rewrite the code below to use the more descriptive variables
         rp = points_cell_idx
+
+        rp_shift = torch.stack([(points_cell_idx - 1 + mesh.n_mesh) % mesh.n_mesh,
+                    (points_cell_idx + 0) % mesh.n_mesh, 
+                    (points_cell_idx + 1) % mesh.n_mesh], dim=0)
+        """
         rp_0 = (points_cell_idx + 0) % mesh.n_mesh
         rp_p = (points_cell_idx + 1) % mesh.n_mesh
         rp_m = (points_cell_idx - 1 + mesh.n_mesh) % mesh.n_mesh
-
+        """
         interpolated_values = torch.zeros((points.shape[0], mesh.n_channels), 
                                 dtype=points.dtype, device=points.device)
         if self.mesh_interpolation_order == 3:
@@ -254,55 +259,25 @@ class MeshInterpolator(torch.nn.Module):
             dist = points_cell - rp
 
             # Define auxilary functions
-            f_m = lambda x: ((x+x)-1)**2/8
-            f_0 = lambda x: (3/4 - x*x)
-            f_p = lambda x: ((x+x)+1)**2/8
-            weight_m = f_m(dist)
-            weight_0 = f_0(dist)
-            weight_p = f_p(dist)
+            " [m, 0, p] "
+            f_shift = [ lambda x: ((x+x)-1)**2/8, lambda x: (3/4 - x*x), lambda x: ((x+x)+1)**2/8 ]
 
-            frac_mmm = weight_m[:,0] * weight_m[:,1] * weight_m[:,2]
-            frac_mm0 = weight_m[:,0] * weight_m[:,1] * weight_0[:,2]
-            frac_mmp = weight_m[:,0] * weight_m[:,1] * weight_p[:,2]
-            frac_m0m = weight_m[:,0] * weight_0[:,1] * weight_m[:,2]
-            frac_m00 = weight_m[:,0] * weight_0[:,1] * weight_0[:,2]
-            frac_m0p = weight_m[:,0] * weight_0[:,1] * weight_p[:,2]
-            frac_mpm = weight_m[:,0] * weight_p[:,1] * weight_m[:,2]
-            frac_mp0 = weight_m[:,0] * weight_p[:,1] * weight_0[:,2]
-            frac_mpp = weight_m[:,0] * weight_p[:,1] * weight_p[:,2]
+            # compute weights for the three shifts
+            weight = torch.stack([f(dist) for f in f_shift], dim=0)
 
-            frac_0mm = weight_0[:,0] * weight_m[:,1] * weight_m[:,2]
-            frac_0m0 = weight_0[:,0] * weight_m[:,1] * weight_0[:,2]
-            frac_0mp = weight_0[:,0] * weight_m[:,1] * weight_p[:,2]
-            frac_00m = weight_0[:,0] * weight_0[:,1] * weight_m[:,2]
-            frac_000 = weight_0[:,0] * weight_0[:,1] * weight_0[:,2]
-            frac_00p = weight_0[:,0] * weight_0[:,1] * weight_p[:,2]
-            frac_0pm = weight_0[:,0] * weight_p[:,1] * weight_m[:,2]
-            frac_0p0 = weight_0[:,0] * weight_p[:,1] * weight_0[:,2]
-            frac_0pp = weight_0[:,0] * weight_p[:,1] * weight_p[:,2]
+            # now compute the product of weights with the mesh points, using index unrolling to make it quick
+            # this builds indices corresponding to three nested loops
+            x_shifts, y_shifts, z_shifts = torch.meshgrid(torch.arange(3), torch.arange(3), torch.arange(3), indexing="ij")
+            x_shifts, y_shifts, z_shifts = x_shifts.flatten(), y_shifts.flatten(), z_shifts.flatten()
 
-            frac_pmm = weight_p[:,0] * weight_m[:,1] * weight_m[:,2]
-            frac_pm0 = weight_p[:,0] * weight_m[:,1] * weight_0[:,2]
-            frac_pmp = weight_p[:,0] * weight_m[:,1] * weight_p[:,2]
-            frac_p0m = weight_p[:,0] * weight_0[:,1] * weight_m[:,2]
-            frac_p00 = weight_p[:,0] * weight_0[:,1] * weight_0[:,2]
-            frac_p0p = weight_p[:,0] * weight_0[:,1] * weight_p[:,2]
-            frac_ppm = weight_p[:,0] * weight_p[:,1] * weight_m[:,2]
-            frac_pp0 = weight_p[:,0] * weight_p[:,1] * weight_0[:,2]
-            frac_ppp = weight_p[:,0] * weight_p[:,1] * weight_p[:,2]
-
-            for a in range(mesh.n_channels):
-                # TODO I think the calculation of the channels can be serialized
-                # Add up contributions to the potential from 27 closest mesh poitns
-                for x in ['m', '0', 'p']:
-                    for y in ['m', '0', 'p']:
-                        for z in ['m', '0', 'p']:
-                            # TODO write this out
-                            command = f"""interpolated_values[:,a] += (
-                            mesh.values[a, rp_{x}[:,0], rp_{y}[:,1], rp_{z}[:,2]] 
-                            * frac_{x}{y}{z}).float()"""
-                            exec(command)
-        
+            # get indices of mesh positions
+            x_indices = rp_shift[x_shifts, :, 0]
+            y_indices = rp_shift[y_shifts, :, 1]
+            z_indices = rp_shift[z_shifts, :, 2]
+            
+            interpolated_values = (mesh.values[:, x_indices, y_indices, z_indices] *
+                                    weight[x_shifts, :, 0] * weight[y_shifts, :, 1] * weight[z_shifts, :, 2]).sum(axis=1).T
+            
         return interpolated_values
     
     def forward(self, 
