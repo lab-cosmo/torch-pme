@@ -98,6 +98,8 @@ class FieldBuilder(torch.nn.Module):
         positions_cell = torch.div(system.positions, mesh.spacing)
         positions_cell_idx = torch.round(positions_cell).long()
         
+        rp = positions_cell_idx
+        
         if self.mesh_interpolation_order == 2:
             # TODO - CHECK IF THIS ACTUALLY WORKS, GETTING FISHY RESULTS
             l_dist = positions_cell - positions_cell_idx
@@ -127,85 +129,39 @@ class FieldBuilder(torch.nn.Module):
             w[:, (rp_a_species[:,0]+1)% N_mesh, (rp_a_species[:,1]+1)% N_mesh, (rp_a_species[:,2]+1) % N_mesh] += frac_111*embeddings.T
         elif self.mesh_interpolation_order == 3:
 
+            rp_shift = torch.stack([(positions_cell_idx - 1 + mesh.n_mesh) % mesh.n_mesh,
+                    (positions_cell_idx + 0) % mesh.n_mesh, 
+                    (positions_cell_idx + 1) % mesh.n_mesh], dim=0)
+        
             dist = positions_cell - positions_cell_idx
-            w = mesh.values
-            N_mesh = mesh.n_mesh
+
             # Define auxilary functions
-            f_m = lambda x: ((x+x)-1)**2/8
-            f_0 = lambda x: (3/4 - x*x)
-            f_p = lambda x: ((x+x)+1)**2/8
-            weight_m = f_m(dist)
-            weight_0 = f_0(dist)
-            weight_p = f_p(dist)
+            " [m, 0, p] "
+            f_shift = [ lambda x: ((x+x)-1)**2/8, lambda x: (3/4 - x*x), lambda x: ((x+x)+1)**2/8 ]
 
-            frac_mmm = weight_m[:,0] * weight_m[:,1] * weight_m[:,2]
-            frac_mm0 = weight_m[:,0] * weight_m[:,1] * weight_0[:,2]
-            frac_mmp = weight_m[:,0] * weight_m[:,1] * weight_p[:,2]
-            frac_m0m = weight_m[:,0] * weight_0[:,1] * weight_m[:,2]
-            frac_m00 = weight_m[:,0] * weight_0[:,1] * weight_0[:,2]
-            frac_m0p = weight_m[:,0] * weight_0[:,1] * weight_p[:,2]
-            frac_mpm = weight_m[:,0] * weight_p[:,1] * weight_m[:,2]
-            frac_mp0 = weight_m[:,0] * weight_p[:,1] * weight_0[:,2]
-            frac_mpp = weight_m[:,0] * weight_p[:,1] * weight_p[:,2]
+            # compute weights for the three shifts
+            weight = torch.stack([f(dist) for f in f_shift], dim=0)
 
-            frac_0mm = weight_0[:,0] * weight_m[:,1] * weight_m[:,2]
-            frac_0m0 = weight_0[:,0] * weight_m[:,1] * weight_0[:,2]
-            frac_0mp = weight_0[:,0] * weight_m[:,1] * weight_p[:,2]
-            frac_00m = weight_0[:,0] * weight_0[:,1] * weight_m[:,2]
-            frac_000 = weight_0[:,0] * weight_0[:,1] * weight_0[:,2]
-            frac_00p = weight_0[:,0] * weight_0[:,1] * weight_p[:,2]
-            frac_0pm = weight_0[:,0] * weight_p[:,1] * weight_m[:,2]
-            frac_0p0 = weight_0[:,0] * weight_p[:,1] * weight_0[:,2]
-            frac_0pp = weight_0[:,0] * weight_p[:,1] * weight_p[:,2]
+            # now compute the product of weights with the mesh points, using index unrolling to make it quick
+            # this builds indices corresponding to three nested loops
+            x_shifts, y_shifts, z_shifts = torch.meshgrid(torch.arange(3), torch.arange(3), torch.arange(3), indexing="ij")
+            x_shifts, y_shifts, z_shifts = x_shifts.flatten(), y_shifts.flatten(), z_shifts.flatten()
 
-            frac_pmm = weight_p[:,0] * weight_m[:,1] * weight_m[:,2]
-            frac_pm0 = weight_p[:,0] * weight_m[:,1] * weight_0[:,2]
-            frac_pmp = weight_p[:,0] * weight_m[:,1] * weight_p[:,2]
-            frac_p0m = weight_p[:,0] * weight_0[:,1] * weight_m[:,2]
-            frac_p00 = weight_p[:,0] * weight_0[:,1] * weight_0[:,2]
-            frac_p0p = weight_p[:,0] * weight_0[:,1] * weight_p[:,2]
-            frac_ppm = weight_p[:,0] * weight_p[:,1] * weight_m[:,2]
-            frac_pp0 = weight_p[:,0] * weight_p[:,1] * weight_0[:,2]
-            frac_ppp = weight_p[:,0] * weight_p[:,1] * weight_p[:,2]            
-   
-            pci = positions_cell_idx
-            w[:, (pci[:,0]+0)% N_mesh, (pci[:,1]+0)% N_mesh, (pci[:,2]+0) % N_mesh] += frac_000*embeddings.T
-            w[:, (pci[:,0]+1)% N_mesh, (pci[:,1]+0)% N_mesh, (pci[:,2]+0) % N_mesh] += frac_p00*embeddings.T
-            w[:, (pci[:,0]-1)% N_mesh, (pci[:,1]+0)% N_mesh, (pci[:,2]+0) % N_mesh] += frac_m00*embeddings.T
+            # get indices of mesh positions
+            x_indices = rp_shift[x_shifts, :, 0]
+            y_indices = rp_shift[y_shifts, :, 1]
+            z_indices = rp_shift[z_shifts, :, 2]
             
-            w[:, (pci[:,0]+0)% N_mesh, (pci[:,1]+1)% N_mesh, (pci[:,2]+0) % N_mesh] += frac_0p0*embeddings.T
-            w[:, (pci[:,0]+1)% N_mesh, (pci[:,1]+1)% N_mesh, (pci[:,2]+0) % N_mesh] += frac_pp0*embeddings.T
-            w[:, (pci[:,0]-1)% N_mesh, (pci[:,1]+1)% N_mesh, (pci[:,2]+0) % N_mesh] += frac_mp0*embeddings.T
-            
-            w[:, (pci[:,0]+0)% N_mesh, (pci[:,1]-1)% N_mesh, (pci[:,2]+0) % N_mesh] += frac_0m0*embeddings.T
-            w[:, (pci[:,0]+1)% N_mesh, (pci[:,1]-1)% N_mesh, (pci[:,2]+0) % N_mesh] += frac_pm0*embeddings.T
-            w[:, (pci[:,0]-1)% N_mesh, (pci[:,1]-1)% N_mesh, (pci[:,2]+0) % N_mesh] += frac_mm0*embeddings.T
-            
-            w[:, (pci[:,0]+0)% N_mesh, (pci[:,1]+0)% N_mesh, (pci[:,2]+1) % N_mesh] += frac_00p*embeddings.T
-            w[:, (pci[:,0]+1)% N_mesh, (pci[:,1]+0)% N_mesh, (pci[:,2]+1) % N_mesh] += frac_p0p*embeddings.T
-            w[:, (pci[:,0]-1)% N_mesh, (pci[:,1]+0)% N_mesh, (pci[:,2]+1) % N_mesh] += frac_m0p*embeddings.T
-            
-            w[:, (pci[:,0]+0)% N_mesh, (pci[:,1]+1)% N_mesh, (pci[:,2]+1) % N_mesh] += frac_0pp*embeddings.T
-            w[:, (pci[:,0]+1)% N_mesh, (pci[:,1]+1)% N_mesh, (pci[:,2]+1) % N_mesh] += frac_ppp*embeddings.T
-            w[:, (pci[:,0]-1)% N_mesh, (pci[:,1]+1)% N_mesh, (pci[:,2]+1) % N_mesh] += frac_mpp*embeddings.T
-            
-            w[:, (pci[:,0]+0)% N_mesh, (pci[:,1]-1)% N_mesh, (pci[:,2]+1) % N_mesh] += frac_0mp*embeddings.T
-            w[:, (pci[:,0]+1)% N_mesh, (pci[:,1]-1)% N_mesh, (pci[:,2]+1) % N_mesh] += frac_pmp*embeddings.T
-            w[:, (pci[:,0]-1)% N_mesh, (pci[:,1]-1)% N_mesh, (pci[:,2]+1) % N_mesh] += frac_mmp*embeddings.T
-
-            w[:, (pci[:,0]+0)% N_mesh, (pci[:,1]+0)% N_mesh, (pci[:,2]-1) % N_mesh] += frac_00m*embeddings.T
-            w[:, (pci[:,0]+1)% N_mesh, (pci[:,1]+0)% N_mesh, (pci[:,2]-1) % N_mesh] += frac_p0m*embeddings.T
-            w[:, (pci[:,0]-1)% N_mesh, (pci[:,1]+0)% N_mesh, (pci[:,2]-1) % N_mesh] += frac_m0m*embeddings.T
-            
-            w[:, (pci[:,0]+0)% N_mesh, (pci[:,1]+1)% N_mesh, (pci[:,2]-1) % N_mesh] += frac_0pm*embeddings.T
-            w[:, (pci[:,0]+1)% N_mesh, (pci[:,1]+1)% N_mesh, (pci[:,2]-1) % N_mesh] += frac_ppm*embeddings.T
-            w[:, (pci[:,0]-1)% N_mesh, (pci[:,1]+1)% N_mesh, (pci[:,2]-1) % N_mesh] += frac_mpm*embeddings.T
-            
-            w[:, (pci[:,0]+0)% N_mesh, (pci[:,1]-1)% N_mesh, (pci[:,2]-1) % N_mesh] += frac_0mm*embeddings.T
-            w[:, (pci[:,0]+1)% N_mesh, (pci[:,1]-1)% N_mesh, (pci[:,2]-1) % N_mesh] += frac_pmm*embeddings.T
-            w[:, (pci[:,0]-1)% N_mesh, (pci[:,1]-1)% N_mesh, (pci[:,2]-1) % N_mesh] += frac_mmm*embeddings.T
-
-
+            # can't seem to be able to avoid the loop over channels
+            for a in range(mesh.n_channels):
+              mesh.values[a].index_put_(
+                 (x_indices, y_indices, z_indices),
+                 weight[x_shifts, :, 0] * weight[y_shifts, :, 1] * weight[z_shifts, :, 2]
+                 * embeddings[:,a] 
+                ,  
+                accumulate=True
+                )
+              
         mesh.values /= mesh.spacing**3
         return mesh
     
