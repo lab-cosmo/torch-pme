@@ -138,7 +138,7 @@ def _angular_nodes_and_weights():
 
 class FieldProjector(torch.nn.Module):
 
-    def __init__(self,        
+    def __init__(self,
         max_radial,
         max_angular,
         radial_basis_radius,
