@@ -34,8 +34,10 @@ keywords = [
     "Atomistic Simulations",
 ]
 dependencies = [
+    "scipy",
     "torch >= 1.11",
     "metatensor[torch]",
+    "sphericart[torch]",
 ]
 dynamic = ["version"]
 

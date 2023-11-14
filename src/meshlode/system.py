@@ -25,7 +25,7 @@ class System:
 
         self._species = species
         self._positions = positions
-        self._cell = cell        
+        self._cell = cell
 
     @property
     def species(self) -> torch.Tensor:
