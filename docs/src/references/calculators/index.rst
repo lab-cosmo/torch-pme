@@ -3,4 +3,4 @@
 .. toctree::
    :maxdepth: 1
 
-   meshlodesphericalexpansion
+   meshpotential

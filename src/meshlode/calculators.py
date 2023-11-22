@@ -17,58 +17,33 @@ from metatensor.torch import Labels, TensorBlock, TensorMap
 from .system import System
 
 
-class MeshLodeSphericalExpansion(torch.nn.Module):
-    """Mesh Long-Distance Equivariant (LODE).
+class MeshPotential(torch.nn.Module):
+    """A species wise long range potential.
 
-    :param cutoff: Spherical real space cutoff to use for atomic environments. Note that
-        this cutoff is only used for the projection of the density. In contrast to SOAP,
-        LODE also takes atoms outside of this cutoff into account for the density.
-    :param max_radial: Number of radial basis function to use in the expansion
-    :param max_angular: Number of spherical harmonics to use in the expansion
     :param atomic_gaussian_width: Width of the atom-centered gaussian used to create the
         atomic density.
-    :param center_atom_weight: Weight of the central atom contribution in the central
-        image to the features. If `1` the center atom contribution is weighted the same
-        as any other contribution. If `0` the central atom does not contribute to the
-        features at all.
-    :param radial_basis: Radial basis to use for the radial integral
-    :param potential_exponent: Potential exponent of the decorated atom density.
+    :param mesh_spacing: Value that determines the umber of Fourier-space grid points
+        that will be used along each axis.
 
     Example
     -------
 
-    >>> calculator = MeshLodeSphericalExpansion(
-    ...     cutoff=2.0,
-    ...     max_radial=8,
-    ...     max_angular=6,
-    ...     atomic_gaussian_width=1,
-    ...     radial_basis={"Gto"},
-    ...     potential_exponent=1,
-    ... )
-
+    >>> calculator = MeshPotential(atomic_gaussian_width=1)
 
     """
 
-    name = "MeshLodeSphericalExpansion"
+    name = "MeshPotential"
 
     def __init__(
         self,
-        cutoff: float,
-        max_radial: int,
-        max_angular: int,
         atomic_gaussian_width: float,
-        potential_exponent: int,
-        radial_basis: dict,
+        mesh_spacing: float = 0.2,
     ):
         super().__init__()
 
         self.parameters = {
-            "cutoff": cutoff,
-            "max_radial": max_radial,
-            "max_angular": max_angular,
             "atomic_gaussian_width": atomic_gaussian_width,
-            "potential_exponent": potential_exponent,
-            "radial_basis": radial_basis,
+            "mesh_spacing": mesh_spacing,
         }
 
     def compute(

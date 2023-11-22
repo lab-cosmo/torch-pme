@@ -14,13 +14,8 @@ def system():
 
 
 def spherical_expansion():
-    return calculators.MeshLodeSphericalExpansion(
-        cutoff=2.0,
-        max_radial=8,
-        max_angular=6,
+    return calculators.MeshPotential(
         atomic_gaussian_width=1,
-        radial_basis={"Gto"},
-        potential_exponent=1,
     )
 
 

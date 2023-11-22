@@ -11,7 +11,7 @@ with MeshLODE.
 # from ase import Atoms
 # from ase.build import make_supercell
 
-# from meshlode import MeshLodeSphericalExpansion
+# from meshlode import MeshPotential
 
 
 ...
