@@ -13,7 +13,7 @@ def system():
     )
 
 
-def spherical_expansion():
+def descriptor():
     return calculators.MeshPotential(
         atomic_gaussian_width=1,
     )
@@ -31,9 +31,9 @@ def check_operation(calculator):
 
 
 def test_operation_as_python():
-    check_operation(spherical_expansion())
+    check_operation(descriptor())
 
 
 def test_operation_as_torch_script():
-    scripted = torch.jit.script(spherical_expansion())
+    scripted = torch.jit.script(descriptor())
     check_operation(scripted)

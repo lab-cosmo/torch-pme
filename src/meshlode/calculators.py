@@ -24,6 +24,8 @@ class MeshPotential(torch.nn.Module):
         atomic density.
     :param mesh_spacing: Value that determines the umber of Fourier-space grid points
         that will be used along each axis.
+    :param interpolation_order: Interpolation order for mapping onto the grid.
+        ``4`` equals cubic interpolation.
 
     Example
     -------
@@ -38,12 +40,14 @@ class MeshPotential(torch.nn.Module):
         self,
         atomic_gaussian_width: float,
         mesh_spacing: float = 0.2,
+        interpolation_order: float = 4,
     ):
         super().__init__()
 
         self.parameters = {
             "atomic_gaussian_width": atomic_gaussian_width,
             "mesh_spacing": mesh_spacing,
+            "interpolation_order": interpolation_order,
         }
 
     def compute(
