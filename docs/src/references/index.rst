@@ -12,3 +12,5 @@ functions toegther you might take a look at the :ref:`userdoc-how-to` section.
     :maxdepth: 1
 
     calculators/index
+    fourier_convolution
+    mesh_interpolator

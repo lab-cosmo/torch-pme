@@ -60,14 +60,11 @@ class FourierSpaceConvolution:
         :param mesh_values: torch.tensor of shape (n_channels, nx, ny, nz)
             The values of the density defined on a mesh.
         :param kernel_func: function
-            The kernel function takes k**2 as an argument and should
-            output the Fourier transform of the potential.
-            For the standard Ewald summation using the Coulomb potential 
-            of a Gaussian charge density:
-                G(k) = 4pi / k**2 * exp(-0.5*(sigma*k)**2)
-            and hence
-                kernel_func(x) = 4pi / x * exp(-0.5*sigma**2 * x)
-            since x=k**2.
+            The kernel function takes k**2 as an argument and should output the Fourier
+            transform of the potential. For the standard Ewald summation using the
+            Coulomb potential of a Gaussian charge density:
+            :math:`G(k) = 4pi / k**2 * exp(-0.5*(sigma*k)**2)` and hence
+            :math:`kernel_func(x) = 4pi / x * exp(-0.5*sigma**2 * x)` since x=k**2.
         :param value_at_origin: float
             For some kernel functions like the one above, the value
             at k=0 is singular. In such cases, it is possible to
