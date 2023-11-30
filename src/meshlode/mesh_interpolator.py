@@ -32,14 +32,27 @@ class MeshInterpolator:
         the interpolation order (once one moves to the 3D case).
     """
     def __init__(
-        self, cell: torch.tensor, ns_mesh: torch.tensor, interpolation_order: int
+        self, cell: torch.Tensor, ns_mesh: torch.Tensor, interpolation_order: int
     ):
 
         self.cell = cell
         self.ns_mesh = ns_mesh
         self.interpolation_order = interpolation_order
 
-    def compute_1d_weights(self, x: torch.tensor) -> torch.tensor:
+        # Initialize the variables in which to store the intermediate
+        # interpolation nodes and weights
+        self.interpolation_weights: torch.Tensor = torch.tensor(0.)
+        self.x_shifts: torch.Tensor = torch.tensor(0)
+        self.y_shifts: torch.Tensor = torch.tensor(0)
+        self.z_shifts: torch.Tensor = torch.tensor(0)
+        self.x_indices: torch.Tensor = torch.tensor(0)
+        self.y_indices: torch.Tensor = torch.tensor(0)
+        self.z_indices: torch.Tensor = torch.tensor(0)
+        
+        
+
+        
+    def compute_1d_weights(self, x: torch.Tensor) -> torch.Tensor:
         """
         Generate the smooth interpolation weights used to smear the particles onto a
         mesh.
@@ -95,7 +108,7 @@ class MeshInterpolator:
         else:
             raise ValueError("Only `interpolation_order` from 1 to 5 are allowed")
 
-    def compute_interpolation_weights(self, positions: torch.tensor):
+    def compute_interpolation_weights(self, positions: torch.Tensor):
         """
         Compute the interpolation weights of each atom for a given cell (specified
         during initialization of this class). The weights are not returned, but are used
@@ -154,7 +167,7 @@ class MeshInterpolator:
         self.y_indices = indices_to_interpolate[self.y_shifts, :, 1]
         self.z_indices = indices_to_interpolate[self.z_shifts, :, 2]
 
-    def points_to_mesh(self, particle_weights: torch.tensor) -> torch.tensor:
+    def points_to_mesh(self, particle_weights: torch.Tensor) -> torch.Tensor:
         """
         Generate a discretized density from interpolation weights. It assumes that
         "compute_interpolation_weights" has been called before to compute all the
@@ -171,8 +184,10 @@ class MeshInterpolator:
         """
         # Update mesh values by combining particle weights and interpolation weights
         n_channels = particle_weights.shape[1]
-        nx, ny, nz = self.ns_mesh
-        rho_mesh = torch.zeros((n_channels, nx, ny, nz))
+        nx = int(self.ns_mesh[0])
+        ny = int(self.ns_mesh[1])
+        nz = int(self.ns_mesh[2])
+        rho_mesh = torch.zeros((n_channels,nx,ny,nz))
         for a in range(n_channels):
             rho_mesh[a].index_put_(
                 (self.x_indices, self.y_indices, self.z_indices),
@@ -187,7 +202,7 @@ class MeshInterpolator:
 
         return rho_mesh
 
-    def mesh_to_points(self, mesh_vals: torch.tensor) -> torch.tensor:
+    def mesh_to_points(self, mesh_vals: torch.Tensor) -> torch.Tensor:
         """
         Take a function defined on a mesh and interpolate
         its values on arbitrary positions.
@@ -211,7 +226,7 @@ class MeshInterpolator:
                 * self.interpolation_weights[self.y_shifts, :, 1]
                 * self.interpolation_weights[self.z_shifts, :, 2]
             )
-            .sum(axis=1)
+            .sum(dim=1)
             .T
         )
 
