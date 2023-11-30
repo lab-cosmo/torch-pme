@@ -216,7 +216,7 @@ class MeshInterpolator:
             Absolute positions of particles in Cartesian coordinates, onto whose
             locations we wish to interpolate the mesh values.
 
-        :returns: interpolated_values: torch.tensor of shape (n_channels, n_points)
+        :returns: interpolated_values: torch.tensor of shape (n_points, n_channels)
             Values of the interpolated function.
         """
         interpolated_values = (
