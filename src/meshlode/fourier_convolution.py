@@ -56,6 +56,17 @@ class FourierSpaceConvolution:
     def kernel_func(self, ksq : torch.Tensor,
                     potential_exponent: int = 1,
                     smearing: float = 0.2) -> torch.Tensor:
+        """
+        Fourier transform of the Coulomb potential or more general effective 1/r**p
+        potentials with additional smearing to remove the singularity at the origin.
+        
+        :param ksq: torch.tensor of shape (N_k,) Squared norm of the k-vectors
+        :param potential_exponent: Exponent of the effective 1/r**p decay
+        :param smearing: Broadening of the 1/r**p decay close to the origin
+
+        :returns: torch.tensor of shape (N_k,) with the values of the kernel function
+        G(k) evaluated at the provided (squared norms of the) k-vectors
+        """
         if potential_exponent == 1:
             return 4*torch.pi / ksq * torch.exp(-0.5*smearing**2*ksq)
         elif potential_exponent == 0:
@@ -64,6 +75,15 @@ class FourierSpaceConvolution:
             raise ValueError('Only potential exponents 0 and 1 are supported')
 
     def value_at_origin(self, potential_exponent: int = 1, smearing: float = 0.2) -> float:
+        """
+        Since the kernel function in reciprocal space typically has a (removable)
+        singularity at k=0, the value at that point needs to be specified explicitly.
+        
+        :param potential_exponent: Exponent of the effective 1/r**p decay
+        :param smearing: Broadening of the 1/r**p decay close to the origin
+
+        :returns: float of G(k=0), the value of the kernel function at the origin.
+        """
         if potential_exponent in [1,2,3]:
             return 0.
         elif potential_exponent == 0:

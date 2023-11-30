@@ -238,8 +238,6 @@ class MeshPotential(torch.nn.Module):
         # Remove self contribution
         if subtract_self:
             self_contrib = torch.sqrt(torch.tensor(2./torch.pi)) / smearing
-            for i in range(n_atoms):
-                interpolated_potential[i] -= charges[i,0] * self_contrib
+            interpolated_potential -= charges * self_contrib
 
         return interpolated_potential
-

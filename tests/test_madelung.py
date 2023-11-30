@@ -5,6 +5,7 @@ import torch
 import pytest
 from torch.testing import assert_close
 
+from meshlode.system import System
 from meshlode import MeshPotential
 
 class TestMadelung:
@@ -37,6 +38,7 @@ class TestMadelung:
         # closest Na-Cl pair is exactly 1. The cubic unit cell
         # in these units would have a length of 2.
         d["NaCl"]["symbols"] = ['Na', 'Cl']
+        d["NaCl"]["atomic_numbers"] = torch.tensor([11, 17])
         d["NaCl"]["charges"] = torch.tensor([[1., -1]]).T
         d["NaCl"]["positions"] = torch.tensor([[0, 0, 0], [1., 0, 0]])
         d["NaCl"]["cell"] = torch.tensor([[0, 1., 1], [1, 0, 1], [1, 1, 0]])
@@ -47,7 +49,8 @@ class TestMadelung:
         # is just the usual cubic cell with side length set to one.
         # The closest Cs-Cl distance is sqrt(3)/2. We thus divide
         # the Madelung constant by this value to match the reference.
-        d["CsCl"]["symbols"] = ["Cl", "Cs"]
+        d["CsCl"]["symbols"] = ["Cs", "Cl"]
+        d["CsCl"]["atomic_numbers"] = torch.tensor([55, 17])
         d["CsCl"]["charges"] = torch.tensor([[1., -1]]).T
         d["CsCl"]["positions"] = torch.tensor([[0, 0, 0], [.5, .5, .5]])
         d["CsCl"]["cell"] = torch.eye(3)
@@ -62,6 +65,7 @@ class TestMadelung:
         # If, on the other han_pylode_without_centerd, we set the lattice constant of
         # the cubic cell equal to 1, the Zn-S distance is sqrt(3)/4.
         d["ZnS"]["symbols"] = ["S", "Zn"]
+        d["ZnS"]["atomic_numbers"] = torch.tensor([16, 30])
         d["ZnS"]["charges"] = torch.tensor([[1., -1]]).T
         d["ZnS"]["positions"] = torch.tensor([[0, 0, 0], [.5, .5, .5]])
         d["ZnS"]["cell"] = torch.tensor([[0, 1., 1], [1, 0, 1], [1, 1, 0]])
@@ -70,8 +74,8 @@ class TestMadelung:
         # ZnS (O4) in wurtzite structure (triclinic cell)
         u = torch.tensor([3 / 8])
         c = torch.sqrt(1 / u)
-
         d["ZnSO4"]["symbols"] = ["S", "Zn", "S", "Zn"]
+        d["ZnSO4"]["atomic_numbers"] = torch.tensor([16, 30, 16, 30])
         d["ZnSO4"]["charges"] = torch.tensor([[1., -1, 1, -1]]).T
         d["ZnSO4"]["positions"] = torch.tensor([[.5, .5 / SQRT3, 0.],
                                             [.5, .5 / SQRT3, u * c],
@@ -111,6 +115,7 @@ class TestMadelung:
         energies_target = -torch.ones_like(energies)*madelung
         assert_close(energies, energies_target, rtol=1e-4, atol=1e-6)
 
+
     @pytest.mark.parametrize("crystal_name", crystal_list)
     @pytest.mark.parametrize("smearing", [0.2, 0.12])
     @pytest.mark.parametrize("interpolation_order", [3,4,5])
@@ -138,3 +143,42 @@ class TestMadelung:
         energies = potentials_mesh * charges
         energies_target = -torch.ones_like(energies)*madelung
         assert_close(energies, energies_target, rtol=1e-2, atol=1e-3)
+
+
+    @pytest.mark.parametrize("crystal_name", crystal_list_powers_of_2)
+    @pytest.mark.parametrize("smearing", [0.1, 0.05])
+    @pytest.mark.parametrize("interpolation_order", [1,2])
+    @pytest.mark.parametrize("scaling_factor", scaling_factors)
+    def test_madelung_low_order_metatensor(self, crystal_dictionary, crystal_name,
+                                           smearing, scaling_factor,
+                                           interpolation_order):
+        """
+        Same test as above but now using the main compute function of the class that is
+        actually facing the user and outputting in metatensor format.
+        """
+        dic = crystal_dictionary[crystal_name]
+        positions = dic['positions'] * scaling_factor
+        cell = dic['cell'] * scaling_factor
+        atomic_numbers = dic['atomic_numbers']
+        charges = dic['charges']
+        madelung = dic['madelung'] / scaling_factor
+        mesh_spacing = smearing / 2 * scaling_factor
+        smearing_eff = smearing * scaling_factor
+        n_atoms = len(positions)
+        frame = System(species=atomic_numbers, positions=positions, cell=cell)
+        MP = MeshPotential(atomic_gaussian_width=smearing_eff,
+                           mesh_spacing=mesh_spacing,
+                           interpolation_order=interpolation_order)
+        potentials_mesh = MP.compute(frame, subtract_self=True)
+
+        # Compute the actual potential from the features
+        n_species = charges.shape[1]
+        energies = torch.zeros((n_atoms,1))
+        for idx_c, c in enumerate(atomic_numbers):
+            for idx_n, n in enumerate(atomic_numbers):
+                block = potentials_mesh.block({'species_center':int(c),
+                                               'species_neighbor':int(n)})
+                energies[idx_c] += charges[idx_c] * charges[idx_n] * block.values[0,0]
+        
+        energies_ref = -madelung * torch.ones((n_atoms,1))
+        assert_close(energies, energies_ref, rtol=1e-4, atol=1e-6)
