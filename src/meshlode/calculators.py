@@ -9,15 +9,22 @@ machine learning.
 Our calculator API follows the `rascaline <https://luthaf.fr/rascaline>`_ API and coding
 guidelines to promote usability and interoperability with existing workflows.
 """
-from typing import List, Optional, Union
+from typing import List, Union, Tuple, Dict
 
+# import numpy as np
 import torch
+from torch import Tensor
 from metatensor.torch import Labels, TensorBlock, TensorMap
 
 from meshlode.mesh_interpolator import MeshInterpolator
 from meshlode.fourier_convolution import FourierSpaceConvolution
 from .system import System
 
+def my_1d_tolist(x: torch.Tensor):
+    result: List[int] = []
+    for i in x:
+        result.append(i.item())
+    return result
 
 class MeshPotential(torch.nn.Module):
     """A species wise long range potential.
@@ -46,19 +53,30 @@ class MeshPotential(torch.nn.Module):
     ):
         super().__init__()
 
-        self.parameters = {
-            "atomic_gaussian_width": atomic_gaussian_width,
-            "mesh_spacing": mesh_spacing,
-            "interpolation_order": interpolation_order,
-        }
+        self.atomic_gaussian_width = atomic_gaussian_width
+        self.mesh_spacing = mesh_spacing
+        self.interpolation_order = interpolation_order
 
+    # This function is kept to keep MeshLODE compatible with the broader pytorch
+    # infrastructure, which require a "forward" function. We name this function
+    # "compute" instead, for compatibility with other COSMO software.
+    def forward(
+            self,
+            systems: Union[List[System],System],
+        ) -> TensorMap:
+            """forward just calls :py:meth:`CalculatorModule.compute`"""
+            res = self.compute(frames=systems)
+            return res
+            # return 0.
+
+    #@torch.jit.export
     def compute(
         self,
-        systems: Union[System, List[System]],
-        gradients: Optional[List[str]] = None,
-    ) -> TensorMap:
+        frames: Union[List[System],System],
+        subtract_self: bool = False,
+        ) -> TensorMap:
         """Runs a calculation with this calculator on the given ``systems``.
-
+        TODO update this
         :param systems: single system or list of systems on which to run the
             calculation. If any of the systems' ``positions`` or ``cell`` has
             ``requires_grad`` set to :py:obj:`True`, then the corresponding gradients
@@ -69,27 +87,87 @@ class MeshPotential(torch.nn.Module):
             Some gradients might still be computed at runtime to allow for backward
             propagation.
         """
+        # Make sure that the compute function also works if only a single frame is
+        # provided as input (for convenience of users testing out the code)
+        if not isinstance(frames, list):
+            frames = [frames]
+        
+        # Generate a dictionary to map atomic species to array indices
+        # In general, the species are sorted according to atomic number
+        # and assigned the array indices 0, 1, 2,...
+        # Example: for H2O: H is mapped to 0 and O is mapped to 1.
+        all_species = []
+        n_atoms_tot = 0
+        for frame in frames:
+            n_atoms_tot += len(frame)
+            all_species.append(frame.species)
+        all_species = torch.hstack(all_species)
+        atomic_numbers = my_1d_tolist(torch.unique(all_species))
+        n_species = len(atomic_numbers)
 
-        # Do actual calculations here...
-        block = TensorBlock(
-            samples=Labels.single(),
+        # Initialize dictionary for sparse storage of the features
+        n_species_sq = n_species * n_species
+        feat_dic: Dict[int, List[torch.Tensor]] = {a:[] for a in range(n_species_sq)}
+
+        for frame in frames:
+            # One-hot encoding of charge information
+            n_atoms = len(frame)
+            species = frame.species
+            charges = torch.zeros((n_atoms, n_species), dtype=torch.float)
+            for i_specie, atomic_number in enumerate(atomic_numbers):
+                charges[species == atomic_number, i_specie] = 1.
+
+            # Compute the potentials
+            potential = self._compute_single_frame(frame.cell, frame.positions,
+                                                    charges, subtract_self)
+        
+            # Reorder data into Metatensor format
+            for spec_center, at_num_center in enumerate(atomic_numbers):
+                for spec_neighbor in range(len(atomic_numbers)):
+                    a_pair = spec_center * n_species + spec_neighbor
+                    feat_dic[a_pair] += [potential[species==at_num_center,spec_neighbor]]
+
+        # Assemble all computed potential values into TensorBlocks for each combination
+        # of species_center and species_neighbor
+        blocks: List[TensorBlock] = []
+        for keys, values in feat_dic.items():
+            spec_center = atomic_numbers[keys // n_species]
+
+            # Generate the Labels objects for the samples and properties of the
+            # TensorBlock.
+            samples_vals: List[List[int]] = []
+            for i_frame, frame in enumerate(frames):
+                for i_atom in range(len(frame)):
+                    if frame.species[i_atom] == spec_center:
+                        samples_vals.append([i_frame, i_atom])
+            samples_vals_tensor = torch.tensor((samples_vals), dtype=torch.int32)
+            labels_samples = Labels(["structure", "center"], samples_vals_tensor)
+            
+            labels_properties = Labels(["potential"], torch.tensor([[0]]))
+            
+            block = TensorBlock(
+            samples=labels_samples,
             components=[],
-            properties=Labels.single(),
-            values=torch.tensor([[1.0]]),
-        )
-        return TensorMap(keys=Labels.single(), blocks=[block])
+            properties=labels_properties,
+            values=torch.hstack(values).reshape((-1,1)),
+            )
 
-    def forward(
-        self,
-        systems: List[System],
-        gradients: Optional[List[str]] = None,
-    ) -> TensorMap:
-        """forward just calls :py:meth:`CalculatorModule.compute`"""
-        return self.compute(systems=systems, gradients=gradients)
+            blocks.append(block)
+        
+        # Generate TensorMap from TensorBlocks by defining suitable keys
+        key_values: List[torch.Tensor] = []
+        for spec_center in atomic_numbers:
+            for spec_neighbor in atomic_numbers:
+                key_values.append(torch.tensor([spec_center, spec_neighbor]))
+        key_values = torch.vstack(key_values)
+        labels_keys = Labels(["species_center", "species_neighbor"], key_values)
+
+        return TensorMap(keys=labels_keys, blocks=blocks)    
+
     
-    def _compute_single_frame(self, cell: torch.tensor,
-                              positions: torch.tensor, charges: torch.tensor,
-                              subtract_self=False) -> torch.tensor:
+    def _compute_single_frame(self, cell: torch.Tensor,
+                              positions: torch.Tensor, charges: torch.Tensor,
+                              subtract_self: bool = False ) -> torch.Tensor:
         """
         Compute the "electrostatic" potential at the position of all atoms in a
         structure.
@@ -120,14 +198,15 @@ class MeshPotential(torch.nn.Module):
         :returns: torch.tensor of shape (n_atoms, n_channels) containing the potential
         at the position of each atom for the n_channels independent meshes separately.
         """
-        smearing = self.parameters['atomic_gaussian_width']
-        mesh_resolution = self.parameters['mesh_spacing']
-        interpolation_order = self.parameters['interpolation_order']
+        smearing = self.atomic_gaussian_width
+        mesh_resolution = self.mesh_spacing
+        interpolation_order = self.interpolation_order
 
         # Initializations
         n_atoms = len(positions)
+        n_channels = charges.shape[1]
         assert positions.shape == (n_atoms,3)
-        assert charges.shape == (n_atoms, 1)
+        assert charges.shape[0] == n_atoms
 
         # Define k-vectors
         if mesh_resolution is None:
@@ -138,7 +217,7 @@ class MeshPotential(torch.nn.Module):
         # Compute number of times each basis vector of the
         # reciprocal space can be scaled until the cutoff
         # is reached
-        basis_norms = torch.linalg.norm(cell, axis=1)
+        basis_norms = torch.linalg.norm(cell, dim=1)
         ns_approx = k_cutoff * basis_norms / 2 / torch.pi
         ns_actual_approx = 2 * ns_approx + 1 # actual number of mesh points
         ns = 2**torch.ceil(torch.log2(ns_actual_approx)).long() # [nx, ny, nz]
@@ -147,12 +226,11 @@ class MeshPotential(torch.nn.Module):
         MI = MeshInterpolator(cell, ns, interpolation_order=interpolation_order)
         MI.compute_interpolation_weights(positions)
         rho_mesh = MI.points_to_mesh(particle_weights=charges)
-
+    
         # Step 2: Perform Fourier space convolution (FSC)
         FSC = FourierSpaceConvolution(cell)
-        kernel_func = lambda ksq: 4*torch.pi / ksq * torch.exp(-0.5*smearing**2*ksq)
         value_at_origin = 0. # charge neutrality
-        potential_mesh = FSC.compute(rho_mesh, kernel_func, value_at_origin)
+        potential_mesh = FSC.compute(rho_mesh, potential_exponent=1, smearing=smearing)
 
         # Step 3: Back interpolation
         interpolated_potential = MI.mesh_to_points(potential_mesh)
