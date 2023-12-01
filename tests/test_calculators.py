@@ -2,10 +2,10 @@ from typing import List
 
 import pytest
 import torch
-from metatensor.torch import Labels, TensorBlock, TensorMap
+from metatensor.torch import Labels
 from packaging import version
 
-from meshlode import MeshPotential, calculators
+from meshlode import MeshPotential
 from meshlode.system import System
 
 

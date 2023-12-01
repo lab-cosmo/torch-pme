@@ -119,7 +119,6 @@ class TestMadelung:
         madelung = dic["madelung"] / scaling_factor
         mesh_spacing = smearing / 2 * scaling_factor
         smearing_eff = smearing * scaling_factor
-        n_atoms = len(positions)
         MP = MeshPotential(smearing_eff, mesh_spacing, interpolation_order)
         potentials_mesh = MP._compute_single_frame(
             cell, positions, charges, subtract_self=True
@@ -154,7 +153,6 @@ class TestMadelung:
         madelung = dic["madelung"] / scaling_factor
         mesh_spacing = smearing / 10 * scaling_factor
         smearing_eff = smearing * scaling_factor
-        n_atoms = len(positions)
         MP = MeshPotential(smearing_eff, mesh_spacing, interpolation_order)
         potentials_mesh = MP._compute_single_frame(
             cell, positions, charges, subtract_self=True
@@ -197,7 +195,6 @@ class TestMadelung:
         potentials_mesh = MP.compute(frame, subtract_self=True)
 
         # Compute the actual potential from the features
-        n_species = charges.shape[1]
         energies = torch.zeros((n_atoms, 1))
         for idx_c, c in enumerate(atomic_numbers):
             for idx_n, n in enumerate(atomic_numbers):

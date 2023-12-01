@@ -225,7 +225,6 @@ class TestMeshInterpolatorBackward:
         # Define some basic parameteres for this test
         # While we could also loop over these, we are instead varying these
         # parameters across the various tests to reduce the number of calls
-        n_particles = 13
         n_channels = 3
         L = torch.tensor(1.7320508)  # sqrt(3)
 
