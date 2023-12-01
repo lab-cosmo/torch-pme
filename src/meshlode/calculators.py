@@ -19,7 +19,7 @@ from meshlode.mesh_interpolator import MeshInterpolator
 from meshlode.system import System
 
 
-def my_1d_tolist(x: torch.Tensor):
+def _my_1d_tolist(x: torch.Tensor):
     """Auxilary function to convert torch tensor to list of integers"""
     result: List[int] = []
     for i in x:
