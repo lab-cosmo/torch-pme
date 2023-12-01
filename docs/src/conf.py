@@ -48,6 +48,19 @@ sphinx_gallery_conf = {
     "reference_url": {"meshlode": None},
     "prefer_full_module": ["meshlode"],
 }
+
+autoclass_content = "both"
+autodoc_member_order = "bysource"
+autodoc_typehints = "both"
+autodoc_typehints_format = "short"
+
+intersphinx_mapping = {
+    "python": ("https://docs.python.org/3", None),
+    "numpy": ("https://numpy.org/doc/stable/", None),
+    "torch": ("https://pytorch.org/docs/stable/", None),
+    "metatensor": ("https://lab-cosmo.github.io/metatensor/latest/", None),
+}
+
 # -- Options for HTML output -------------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for

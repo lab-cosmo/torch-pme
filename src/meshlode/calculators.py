@@ -36,7 +36,7 @@ class MeshPotential(torch.nn.Module):
         that will be used along each axis.
     :param interpolation_order: Interpolation order for mapping onto the grid, where an
         interpolation order of p corresponds to interpolation by a polynomial of degree
-        p-1 (e.g. p=4 for cubic interpolation).
+        ``p-1`` (e.g. ``p=4`` for cubic interpolation).
     :param subtract_self: bool. If set to true, subtract from the features of an atom
         the contributions to the potential arising from that atom itself (but not the
         periodic images).
@@ -47,19 +47,35 @@ class MeshPotential(torch.nn.Module):
     >>> import torch
     >>> from meshlode import MeshPotential, System
 
-    >>> # Define simple example structure having the CsCl structure
+    Define simple example structure having the CsCl structure
+
     >>> positions = torch.tensor([[0, 0, 0], [0.5, 0.5, 0.5]])
     >>> atomic_numbers = torch.tensor([55, 17])  # Cs and Cl
     >>> frame = System(species=atomic_numbers, positions=positions, cell=torch.eye(3))
 
-    >>> # Compute features
+    Compute features
+
     >>> MP = MeshPotential(
     ...     atomic_gaussian_width=0.2, mesh_spacing=0.1, interpolation_order=4
     ... )
     >>> features = MP.compute(frame)
-    >>> keys = features.keys  # print to see all species combinations
+
+    All species combinations
+
+    >>> features.keys
+    Labels(
+        species_center  species_neighbor
+              17               17
+              17               55
+              55               17
+              55               55
+    )
     >>> block_ClCl = features.block({"species_center": 17, "species_neighbor": 17})
-    >>> values = block_ClCl.values  # the Cl-potential at the position of the Cl atom
+
+    The Cl-potential at the position of the Cl atom
+
+    >>> block_ClCl.values
+    tensor([[1.3755]])
 
     """
 
@@ -91,7 +107,6 @@ class MeshPotential(torch.nn.Module):
         return res
         # return 0.
 
-    # @torch.jit.export
     def compute(
         self,
         frames: Union[List[System], System],
