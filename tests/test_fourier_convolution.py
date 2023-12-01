@@ -13,13 +13,12 @@ class TestKvectorGeneration:
     Tests for the subroutine that generates all reciprocal space vectors.
     """
 
+    # Generate random cells and mesh parameters
     cells = []
-    for i in range(6):
+    ns_list = []
+    for _i in range(6):
         L = torch.rand((1,)) * 20 + 1.0
         cells.append(torch.randn((3, 3)) * L)
-
-    ns_list = []
-    for i in range(6):
         ns_list.append(torch.randint(1, 20, size=(3,)))
 
     @pytest.mark.parametrize("ns", ns_list)
@@ -77,13 +76,12 @@ class TestConvolution:
     Test the subroutine that performs the actual convolution in reciprocal space
     """
 
+    # Generate random cell and mesh parameters
     cells = []
-    for i in range(6):
+    mesh_vals_list = []
+    for _i in range(6):
         L = torch.rand((1,)) * 20 + 1.0
         cells.append(torch.randn((3, 3)) * L)
-
-    mesh_vals_list = []
-    for i in range(6):
         ns = torch.randint(1, 20, size=(4,))
         n_channels, nx, ny, nz = ns
         nz *= 2  # for now, last dimension needs to be even
