@@ -21,7 +21,7 @@ def toy_system_single_frame() -> System:
 # Initialize the calculators. For now, only the MeshPotential is implemented.
 def descriptor() -> MeshPotential:
     return MeshPotential(
-        atomic_gaussian_width=1.0,
+        atomic_smearing=1.0,
     )
 
 
@@ -87,11 +87,11 @@ class TestMultiFrameToySystem:
     # extreme values.
     tensormaps_list = []
     frames = toy_system_2()
-    for atomic_gaussian_width in [0.01, 0.3, 3.7]:
+    for atomic_smearing in [0.01, 0.3, 3.7]:
         for mesh_spacing in [15.3, 0.19]:
             for interpolation_order in [1, 2, 3, 4, 5]:
                 MP = MeshPotential(
-                    atomic_gaussian_width=atomic_gaussian_width,
+                    atomic_smearing=atomic_smearing,
                     mesh_spacing=mesh_spacing,
                     interpolation_order=interpolation_order,
                     subtract_self=False,

@@ -10,20 +10,21 @@ class MeshInterpolator:
     Class for handling all steps related to interpolations in the context of a mesh
     based Ewald summation.
 
-    In particular, this includes two core functionalities: 1. "forwards"
-    interpolation, in which the "charges" or more general "particle weights" of
-    atoms are assigned to grid points of a mesh. This is done in the
-    "points_to_mesh" function. 2. "backwards" interpolation, in which values defined
+    In particular, this includes two core functionalities:
+    1. "forwards" interpolation, in which the "charges" or more general
+    "particle weights" of atoms are assigned to grid points of a mesh.
+    This is done in the :func:`points_to_mesh` function.
+    2. "backwards" interpolation, in which values defined
     on a mesh are interpolated to arbitrary positions typically lying between mesh
-    points. This is done in the "mesh_to_points" function.
+    points. This is done in the :func:`mesh_to_points` function.
 
     Since the computation of the interpolation weights for both of the above types
     of calculations is identical, this is performed in a separate function called
-    "compute_interpolation_weights".
+    :func:`compute_interpolation_weights`.
 
-    :param cell: torch.tensor of shape (3,3)
-        cell[i] is the i-th basis vector of the unit cell
-    :param ns_mesh: list of tuple of size 3
+    :param cell: torch.tensor of shape ``(3,3)``, where ``cell[i]`` is the i-th basis
+        vector of the unit cell
+    :param ns_mesh: toch.tensor of shape ``(3,)``
         Number of mesh points to use along each of the three axes
     :param interpolation_order: int
         The degree of the polynomials used for interpolation. A higher order leads
@@ -34,6 +35,14 @@ class MeshInterpolator:
     def __init__(
         self, cell: torch.Tensor, ns_mesh: torch.Tensor, interpolation_order: int
     ):
+        # Check that the provided parameters match the specifications
+        if cell.shape != (3, 3):
+            raise ValueError(f"cell of shape {cell.shape} should be of shape (3,3)")
+        if ns_mesh.shape != (3,):
+            raise ValueError(f"shape {ns_mesh.shape} of `ns_mesh` has to be (3,)")
+        if interpolation_order not in [1, 2, 3, 4, 5]:
+            raise ValueError("Only `interpolation_order` from 1 to 5 are allowed")
+
         self.cell = cell
         self.ns_mesh = ns_mesh
         self.interpolation_order = interpolation_order
@@ -48,19 +57,18 @@ class MeshInterpolator:
         self.y_indices: torch.Tensor = torch.tensor(0)
         self.z_indices: torch.Tensor = torch.tensor(0)
 
-    def compute_1d_weights(self, x: torch.Tensor) -> torch.Tensor:
+    def _compute_1d_weights(self, x: torch.Tensor) -> torch.Tensor:
         """
         Generate the smooth interpolation weights used to smear the particles onto a
         mesh.
 
         The details of the method are described in
-        J. Chem. Phys. 109, 7678–7693 (1998)
-        https://doi.org/10.1063/1.477414
+        `J. Chem. Phys. 109, 7678–7693 (1998) <https://doi.org/10.1063/1.477414>`_
 
-        :param x: torch.tensor of shape (n,)
+        :param x: torch.tensor of shape ``(n,)``
             Set of relative positions in the interval [-1/2, 1/2].
 
-        :return: torch.tensor of shape (interpolation_order, n)
+        :return: torch.tensor of shape ``(interpolation_order, n)``
             Interpolation weights
         """
         # Compute weights based on the given order
@@ -108,12 +116,16 @@ class MeshInterpolator:
         """
         Compute the interpolation weights of each atom for a given cell (specified
         during initialization of this class). The weights are not returned, but are used
-        when calling the forward (points_to_mesh) and backward (mesh_to_points)
-        interpolation functions.
+        when calling the forward (:func:`points_to_mesh`) and backward
+        (:func:`mesh_to_points`) interpolation functions.
 
-        :param positions: torch.tensor of shape (N,3)
+        :param positions: torch.tensor of shape ``(N,3)``
             Absolute positions of atoms in Cartesian coordinates
         """
+        n_positions = len(positions)
+        if positions.shape != (n_positions, 3):
+            raise ValueError(f"shape {positions.shape} of `positions` has to be (N,3)")
+
         # Compute positions relative to the mesh basis vectors
         positions_rel = torch.linalg.solve(self.cell.T, positions.T).T
         positions_rel *= self.ns_mesh
@@ -127,7 +139,7 @@ class MeshInterpolator:
             offsets = positions_rel - positions_rel_idx
 
         # Compute weights based on distances and interpolation order
-        self.interpolation_weights = self.compute_1d_weights(offsets)
+        self.interpolation_weights = self._compute_1d_weights(offsets)
 
         # Calculate indices of mesh points on which
         # the particle weights are interpolated
@@ -166,18 +178,21 @@ class MeshInterpolator:
     def points_to_mesh(self, particle_weights: torch.Tensor) -> torch.Tensor:
         """
         Generate a discretized density from interpolation weights. It assumes that
-        "compute_interpolation_weights" has been called before to compute all the
+        :func:`compute_interpolation_weights` has been called before to compute all the
         necessary weights and indices.
 
-        :param particle_weights: torch.tensor of shape (n_atoms, n_channels)
-            particle_weights[i,a] is the "weight" or "charge" that atom i has to
+        :param particle_weights: torch.tensor of shape ``(n_points, n_channels)``
+            ``particle_weights[i,a]`` is the weight (charge) that point (atom) i has to
             generate the "a-th" potential. In practice, this can be used to compute e.g.
             the Na and Cl contributions to the potential separately by using a one-hot
             encoding of the species.
 
-        :return: torch.tensor of shape (n_channels, n_mesh, n_mesh, n_mesh)
+        :return: torch.tensor of shape ``(n_channels, n_mesh, n_mesh, n_mesh)``
             Discrete density
         """
+        if particle_weights.dim() != 2:
+            raise ValueError("`particle_weights` needs to be a tensor of dimension 2")
+
         # Update mesh values by combining particle weights and interpolation weights
         n_channels = particle_weights.shape[1]
         nx = int(self.ns_mesh[0])
@@ -203,18 +218,19 @@ class MeshInterpolator:
         Take a function defined on a mesh and interpolate
         its values on arbitrary positions.
 
-        :param mesh_vals: torch.tensor of shape (n_channels, nx, ny, nz)
+        :param mesh_vals: torch.tensor of shape ``(n_channels, nx, ny, nz)``
             The tensor contains the values of a function evaluated on a
-            three-dimensional mesh. (nx, ny, nz) are the number of points along each of
-            the three directions, while n_channels provides the number of such functions
+            three-dimensional mesh. ``(nx, ny, nz)`` are the number of
+            points along each of the three directions, while ``n_channels``
+            provides the number of such functions
             that are treated simulateously for the present system.
-        :param positions: torch.tensor of shape (n_points,3)
-            Absolute positions of particles in Cartesian coordinates, onto whose
-            locations we wish to interpolate the mesh values.
 
-        :return: interpolated_values: torch.tensor of shape (n_points, n_channels)
+        :return: interpolated_values: torch.tensor of shape ``(n_points, n_channels)``
             Values of the interpolated function.
         """
+        if mesh_vals.dim() != 4:
+            raise ValueError("`mesh_vals` must be a tensor of dimension 4")
+
         interpolated_values = (
             (
                 mesh_vals[:, self.x_indices, self.y_indices, self.z_indices]

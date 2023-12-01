@@ -6,9 +6,10 @@ __pycache__
 *.swo
 *DS_Store
 *coverage*
+sg_execution_times.rst
+*.gz
 
 .tox/
 build/
 dist/
 docs/src/examples
-playground/

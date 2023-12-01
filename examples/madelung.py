@@ -7,13 +7,15 @@ energy of atomic structures using MeshLODE.
 """
 
 import torch
+
 from meshlode import MeshPotential, System
 
+
 # Define simple example structure having the CsCl structure
-positions = torch.tensor([[0,0,0],[0.5,0.5,0.5]])
-atomic_numbers = torch.tensor([55,17]) # Cs and Cl
+positions = torch.tensor([[0, 0, 0], [0.5, 0.5, 0.5]])
+atomic_numbers = torch.tensor([55, 17])  # Cs and Cl
 cell = torch.eye(3)
-charges = torch.tensor([1.,-1.])
+charges = torch.tensor([1.0, -1.0])
 frame = System(species=atomic_numbers, positions=positions, cell=torch.eye(3))
 
 # Define parameters in MeshLODE
@@ -23,10 +25,12 @@ mesh_spacing = atomic_smearing / 4
 interpolation_order = 2
 
 # Compute features
-MP = MeshPotential(atomic_smearing=atomic_smearing,
-                   mesh_spacing=mesh_spacing,
-                   interpolation_order=interpolation_order,
-                   subtract_self=True)
+MP = MeshPotential(
+    atomic_smearing=atomic_smearing,
+    mesh_spacing=mesh_spacing,
+    interpolation_order=interpolation_order,
+    subtract_self=True,
+)
 potentials_mesh = MP.compute(frame)
 
 # The ``potentials'' that have been computed so far are not the actual electrostatic
@@ -55,6 +59,6 @@ total_energy = torch.sum(atomic_energies)
 # Compare against reference Madelung constant:
 madelung = 2 * 1.7626 / torch.sqrt(torch.tensor(3))
 energies_ref = -madelung * torch.ones((n_atoms, 1))
-print('Computed energies on each atom = \n', atomic_energies)
-print('Reference Madelung constant = \n', madelung)
-print('Total energy = \n', total_energy)
+print("Computed energies on each atom = \n", atomic_energies)
+print("Reference Madelung constant = \n", madelung)
+print("Total energy = \n", total_energy)

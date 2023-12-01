@@ -9,7 +9,7 @@ machine learning.
 Our calculator API follows the `rascaline <https://luthaf.fr/rascaline>`_ API and coding
 guidelines to promote usability and interoperability with existing workflows.
 """
-from typing import Dict, List, Union
+from typing import Dict, List, Optional, Union
 
 import torch
 from metatensor.torch import Labels, TensorBlock, TensorMap
@@ -30,10 +30,11 @@ def _my_1d_tolist(x: torch.Tensor):
 class MeshPotential(torch.nn.Module):
     """A species wise long range potential.
 
-    :param atomic_gaussian_width: Width of the atom-centered gaussian used to create the
+    :param atomic_smearing: Width of the atom-centered gaussian used to create the
         atomic density.
     :param mesh_spacing: Value that determines the umber of Fourier-space grid points
-        that will be used along each axis.
+        that will be used along each axis. If set to None, it will automatically
+        be set to half of ``atomic_smearing``
     :param interpolation_order: Interpolation order for mapping onto the grid, where an
         interpolation order of p corresponds to interpolation by a polynomial of degree
         ``p-1`` (e.g. ``p=4`` for cubic interpolation).
@@ -47,7 +48,7 @@ class MeshPotential(torch.nn.Module):
     >>> import torch
     >>> from meshlode import MeshPotential, System
 
-    Define simple example structure having the CsCl structure
+    Define simple example structure having the CsCl (Cesium Chloride) structure
 
     >>> positions = torch.tensor([[0, 0, 0], [0.5, 0.5, 0.5]])
     >>> atomic_numbers = torch.tensor([55, 17])  # Cs and Cl
@@ -55,9 +56,7 @@ class MeshPotential(torch.nn.Module):
 
     Compute features
 
-    >>> MP = MeshPotential(
-    ...     atomic_gaussian_width=0.2, mesh_spacing=0.1, interpolation_order=4
-    ... )
+    >>> MP = MeshPotential(atomic_smearing=0.2, mesh_spacing=0.1, interpolation_order=4)
     >>> features = MP.compute(frame)
 
     All species combinations
@@ -70,10 +69,10 @@ class MeshPotential(torch.nn.Module):
               55               17
               55               55
     )
-    >>> block_ClCl = features.block({"species_center": 17, "species_neighbor": 17})
 
     The Cl-potential at the position of the Cl atom
 
+    >>> block_ClCl = features.block({"species_center": 17, "species_neighbor": 17})
     >>> block_ClCl.values
     tensor([[1.3755]])
 
@@ -83,14 +82,26 @@ class MeshPotential(torch.nn.Module):
 
     def __init__(
         self,
-        atomic_gaussian_width: float,
-        mesh_spacing: float = 0.2,
-        interpolation_order: float = 4,
-        subtract_self: bool = False,
+        atomic_smearing: float,
+        mesh_spacing: Optional[float] = None,
+        interpolation_order: Optional[float] = 4,
+        subtract_self: Optional[bool] = False,
     ):
         super().__init__()
 
-        self.atomic_gaussian_width = atomic_gaussian_width
+        # Check that all provided values are correct
+        if interpolation_order not in [1, 2, 3, 4, 5]:
+            raise ValueError("Only `interpolation_order` from 1 to 5 are allowed")
+        if atomic_smearing <= 0:
+            raise ValueError(f"`atomic_smearing` {atomic_smearing} has to be positive")
+
+        # If no explicit mesh_spacing is given, set it such that it can resolve
+        # the smeared potentials.
+        if mesh_spacing is None:
+            mesh_spacing = atomic_smearing / 2
+
+        # Store provided parameters
+        self.atomic_smearing = atomic_smearing
         self.mesh_spacing = mesh_spacing
         self.interpolation_order = interpolation_order
         self.subtract_self = subtract_self
@@ -105,7 +116,6 @@ class MeshPotential(torch.nn.Module):
         """forward just calls :py:meth:`CalculatorModule.compute`"""
         res = self.compute(frames=systems)
         return res
-        # return 0.
 
     def compute(
         self,
@@ -211,12 +221,12 @@ class MeshPotential(torch.nn.Module):
         Compute the "electrostatic" potential at the position of all atoms in a
         structure.
 
-        :param cell: torch.tensor of shape (3,3). Describes the unit cell of the
+        :param cell: torch.tensor of shape `(3,3)`. Describes the unit cell of the
             structure, where cell[i] is the i-th basis vector.
         :param positions: torch.tensor of shape (n_atoms, 3). Contains the Cartesian
             coordinates of the atoms. The implementation also works if the positions
             are not contained within the unit cell.
-        :param charges: torch.tensor of shape (n_atoms, n_channels). In the simplest
+        :param charges: torch.tensor of shape `(n_atoms, n_channels)`. In the simplest
             case, this would be a tensor of shape (n_atoms, 1) where charges[i,0] is the
             charge of atom i. More generally, the potential for the same atom positions
             is computed for n_channels independent meshes, and one can specify the
@@ -229,11 +239,10 @@ class MeshPotential(torch.nn.Module):
             standard electrostatic potential in which Na and Cl have charges of +1 and
             -1, respectively.
 
-        :returns: torch.tensor of shape (n_atoms, n_channels) containing the potential
-        at the position of each atom for the n_channels independent meshes separately.
+        :returns: torch.tensor of shape `(n_atoms, n_channels)` containing the potential
+        at the position of each atom for the `n_channels` independent meshes separately.
         """
-        smearing = self.atomic_gaussian_width
-        mesh_resolution = self.mesh_spacing
+        smearing = self.atomic_smearing
         interpolation_order = self.interpolation_order
 
         # Initializations
@@ -241,11 +250,8 @@ class MeshPotential(torch.nn.Module):
         assert positions.shape == (n_atoms, 3)
         assert charges.shape[0] == n_atoms
 
-        # Define k-vectors
-        if mesh_resolution is None:
-            k_cutoff = 2 * torch.pi / (smearing / 2)
-        else:
-            k_cutoff = 2 * torch.pi / mesh_resolution
+        # Define cutoff in reciprocal space
+        k_cutoff = 2 * torch.pi / self.mesh_spacing
 
         # Compute number of times each basis vector of the
         # reciprocal space can be scaled until the cutoff
