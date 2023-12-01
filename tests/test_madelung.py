@@ -119,10 +119,10 @@ class TestMadelung:
         madelung = dic["madelung"] / scaling_factor
         mesh_spacing = smearing / 2 * scaling_factor
         smearing_eff = smearing * scaling_factor
-        MP = MeshPotential(smearing_eff, mesh_spacing, interpolation_order)
-        potentials_mesh = MP._compute_single_frame(
-            cell, positions, charges, subtract_self=True
+        MP = MeshPotential(
+            smearing_eff, mesh_spacing, interpolation_order, subtract_self=True
         )
+        potentials_mesh = MP._compute_single_frame(cell, positions, charges)
         energies = potentials_mesh * charges
         energies_target = -torch.ones_like(energies) * madelung
         assert_close(energies, energies_target, rtol=1e-4, atol=1e-6)
@@ -153,10 +153,10 @@ class TestMadelung:
         madelung = dic["madelung"] / scaling_factor
         mesh_spacing = smearing / 10 * scaling_factor
         smearing_eff = smearing * scaling_factor
-        MP = MeshPotential(smearing_eff, mesh_spacing, interpolation_order)
-        potentials_mesh = MP._compute_single_frame(
-            cell, positions, charges, subtract_self=True
+        MP = MeshPotential(
+            smearing_eff, mesh_spacing, interpolation_order, subtract_self=True
         )
+        potentials_mesh = MP._compute_single_frame(cell, positions, charges)
         energies = potentials_mesh * charges
         energies_target = -torch.ones_like(energies) * madelung
         assert_close(energies, energies_target, rtol=1e-2, atol=1e-3)
@@ -191,8 +191,9 @@ class TestMadelung:
             atomic_gaussian_width=smearing_eff,
             mesh_spacing=mesh_spacing,
             interpolation_order=interpolation_order,
+            subtract_self=True,
         )
-        potentials_mesh = MP.compute(frame, subtract_self=True)
+        potentials_mesh = MP.compute(frame)
 
         # Compute the actual potential from the features
         energies = torch.zeros((n_atoms, 1))

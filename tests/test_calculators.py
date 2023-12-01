@@ -94,8 +94,9 @@ class TestMultiFrameToySystem:
                     atomic_gaussian_width=atomic_gaussian_width,
                     mesh_spacing=mesh_spacing,
                     interpolation_order=interpolation_order,
+                    subtract_self=False,
                 )
-                tensormaps_list.append(MP.compute(frames, subtract_self=False))
+                tensormaps_list.append(MP.compute(frames))
 
     @pytest.mark.parametrize("features", tensormaps_list)
     def test_tensormap_labels(self, features):
