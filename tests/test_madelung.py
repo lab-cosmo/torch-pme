@@ -188,7 +188,7 @@ class TestMadelung:
         n_atoms = len(positions)
         frame = System(species=atomic_numbers, positions=positions, cell=cell)
         MP = MeshPotential(
-            atomic_gaussian_width=smearing_eff,
+            atomic_smearing=smearing_eff,
             mesh_spacing=mesh_spacing,
             interpolation_order=interpolation_order,
             subtract_self=True,

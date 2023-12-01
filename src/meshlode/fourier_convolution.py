@@ -2,6 +2,8 @@
 Fourier Convolution
 ===================
 """
+from typing import Optional
+
 import torch
 
 
@@ -10,11 +12,13 @@ class FourierSpaceConvolution:
     Class for handling all the steps necessary to compute the convolution f*G between
     two functions f and G, where the values of f are provided on a discrete mesh.
 
-    :param cell: torch.tensor of shape (3,3) Tensor specifying the real space unit
+    :param cell: torch.tensor of shape ``(3,3)`` Tensor specifying the real space unit
         cell of a structure, where cell[i] is the i-th basis vector
     """
 
     def __init__(self, cell: torch.Tensor):
+        if cell.shape != (3, 3):
+            raise ValueError(f"cell of shape {cell.shape} should be of shape (3,3)")
         self.cell: torch.Tensor = cell
 
     def generate_kvectors(self, ns: torch.Tensor) -> torch.Tensor:
@@ -22,20 +26,20 @@ class FourierSpaceConvolution:
         For a given unit cell, compute all reciprocal space vectors that are used to
         perform sums in the Fourier transformed space.
 
-        :param cell: torch.tensor of shape (3,3)
-            Tensor specifying the real space unit cell of a structure, where cell[i] is
-            the i-th basis vector
-        :param ns: torch.tensor of shape (3,)
-            ns = [nx, ny, nz] contains the number of mesh points in the x-, y- and
+        :param ns: torch.tensor of shape ``(3,)``
+            ``ns = [nx, ny, nz]`` contains the number of mesh points in the x-, y- and
             z-direction, respectively. For faster performance during the Fast Fourier
             Transform (FFT) it is recommended to use values of nx, ny and nz that are
             powers of 2.
 
-        :return: torch.tensor of shape [N_k,3] Contains all reciprocal space vectors
-            that will be used during Ewald summation (or related approaches). The number
-            N_k of such vectors is given by N_k = nx * ny * nz. k_vectors[i] contains
-            the i-th vector, where the order has no special significance.
+        :return: torch.tensor of shape ``(N,3)`` Contains all reciprocal space vectors
+            that will be used during Ewald summation (or related approaches).
+            ``k_vectors[i]`` contains the i-th vector, where the order has no special
+            significance.
         """
+        if ns.shape != (3,):
+            raise ValueError(f"ns of shape {ns.shape} should be of shape (3,)")
+
         # Define basis vectors of the reciprocal cell
         reciprocal_cell = 2 * torch.pi * self.cell.inverse().T
         bx = reciprocal_cell[0]
@@ -58,36 +62,37 @@ class FourierSpaceConvolution:
         self, ksq: torch.Tensor, potential_exponent: int = 1, smearing: float = 0.2
     ) -> torch.Tensor:
         """
-        Fourier transform of the Coulomb potential or more general effective 1/r**p
-        potentials with additional smearing to remove the singularity at the origin.
+        Fourier transform of the Coulomb potential or more general
+        effective :math:`1/r^p` potentials with additional smearing to remove the
+        singularity at the origin.
 
-        :param ksq: torch.tensor of shape (N_k,) Squared norm of the k-vectors
-        :param potential_exponent: Exponent of the effective 1/r**p decay
-        :param smearing: Broadening of the 1/r**p decay close to the origin
+        :param ksq: torch.tensor of shape ``(N,)`` Squared norm of the k-vectors
+        :param potential_exponent: Exponent of the effective :math:`1/r^p` decay
+        :param smearing: Broadening of the :math:`1/r^p` decay close to the origin
 
-        :return: torch.tensor of shape (N_k,) with the values of the kernel function
+        :return: torch.tensor of shape ``(N,)`` with the values of the kernel function
             G(k) evaluated at the provided (squared norms of the) k-vectors
         """
         if potential_exponent == 1:
             return 4 * torch.pi / ksq * torch.exp(-0.5 * smearing**2 * ksq)
         elif potential_exponent == 0:
-            return torch.ones_like(ksq)
+            return torch.exp(-0.5 * smearing**2 * ksq)
         else:
             raise ValueError("Only potential exponents 0 and 1 are supported")
 
     def value_at_origin(
-        self, potential_exponent: int = 1, smearing: float = 0.2
+        self, potential_exponent: int = 1, smearing: Optional[float] = 0.2
     ) -> float:
         """
         Since the kernel function in reciprocal space typically has a (removable)
         singularity at k=0, the value at that point needs to be specified explicitly.
 
-        :param potential_exponent: Exponent of the effective 1/r**p decay
-        :param smearing: Broadening of the 1/r**p decay close to the origin
+        :param potential_exponent: Exponent of the effective :math:`1/r^p` decay
+        :param smearing: Broadening of the :math:`1/r^p` decay close to the origin
 
         :return: float of G(k=0), the value of the kernel function at the origin.
         """
-        if potential_exponent in [1, 2, 3]:
+        if potential_exponent == 1:
             return 0.0
         elif potential_exponent == 0:
             return 1.0
@@ -104,18 +109,22 @@ class FourierSpaceConvolution:
         Compute the "electrostatic potential" from the density defined
         on a discrete mesh.
 
-        :param mesh_values: torch.tensor of shape (n_channels, nx, ny, nz)
+        :param mesh_values: torch.tensor of shape ``(n_channels, nx, ny, nz)``
             The values of the density defined on a mesh.
         :param potential_exponent: int
-            The exponent in the 1/r**p decay of the effective potential, where p=1
-            corresponds to the Coulomb potential, and p=0 is set as a delta-potential.
+            The exponent in the :math:`1/r^p` decay of the effective potential,
+            where :math:`p=1` corresponds to the Coulomb potential,
+            and :math:`p=0` is set as Gaussian smearing.
         :param smearing: float
             Width of the Gaussian smearing (for the Coulomb potential).
 
-        :returns: torch.tensor of shape (n_channels, nx, ny, nz)
+        :returns: torch.tensor of shape ``(n_channels, nx, ny, nz)``
             The potential evaluated on the same mesh points as the provided
             density.
         """
+        if mesh_values.dim() != 4:
+            raise ValueError("`mesh_values`` needs to be a 4 dimensional tensor")
+
         # Get shape information from mesh
         n_channels, nx, ny, nz = mesh_values.shape
         ns = torch.tensor([nx, ny, nz])

@@ -94,6 +94,8 @@ class TestConvolution:
         n_channels, nx, ny, nz = mesh_vals.shape
         n_fft = nx * ny * nz
         FSC = FourierSpaceConvolution(cell)
-        mesh_vals_new = FSC.compute(mesh_vals, potential_exponent=0) * volume / n_fft
+        mesh_vals_new = (
+            FSC.compute(mesh_vals, potential_exponent=0, smearing=0.0) * volume / n_fft
+        )
 
         assert_close(mesh_vals, mesh_vals_new, rtol=1e-4, atol=1e-6)
