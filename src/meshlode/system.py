@@ -46,7 +46,7 @@ class System:
         """
 
         return self._cell
-    
+
     def __len__(self) -> int:
         """
         Return the number of atoms

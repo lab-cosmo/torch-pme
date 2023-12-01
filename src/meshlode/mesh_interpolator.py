@@ -2,7 +2,6 @@
 Mesh Interpolator
 =================
 """
-
 import torch
 
 
@@ -31,27 +30,24 @@ class MeshInterpolator:
         to smoother interpolation, at a computational cost that grows cubically with
         the interpolation order (once one moves to the 3D case).
     """
+
     def __init__(
         self, cell: torch.Tensor, ns_mesh: torch.Tensor, interpolation_order: int
     ):
-
         self.cell = cell
         self.ns_mesh = ns_mesh
         self.interpolation_order = interpolation_order
 
         # Initialize the variables in which to store the intermediate
         # interpolation nodes and weights
-        self.interpolation_weights: torch.Tensor = torch.tensor(0.)
+        self.interpolation_weights: torch.Tensor = torch.tensor(0.0)
         self.x_shifts: torch.Tensor = torch.tensor(0)
         self.y_shifts: torch.Tensor = torch.tensor(0)
         self.z_shifts: torch.Tensor = torch.tensor(0)
         self.x_indices: torch.Tensor = torch.tensor(0)
         self.y_indices: torch.Tensor = torch.tensor(0)
         self.z_indices: torch.Tensor = torch.tensor(0)
-        
-        
 
-        
     def compute_1d_weights(self, x: torch.Tensor) -> torch.Tensor:
         """
         Generate the smooth interpolation weights used to smear the particles onto a
@@ -64,7 +60,7 @@ class MeshInterpolator:
         :param x: torch.tensor of shape (n,)
             Set of relative positions in the interval [-1/2, 1/2].
 
-        :returns: torch.tensor of shape (interpolation_order, n)
+        :return: torch.tensor of shape (interpolation_order, n)
             Interpolation weights
         """
         # Compute weights based on the given order
@@ -179,7 +175,7 @@ class MeshInterpolator:
             the Na and Cl contributions to the potential separately by using a one-hot
             encoding of the species.
 
-        :returns: torch.tensor of shape (n_channels, n_mesh, n_mesh, n_mesh)
+        :return: torch.tensor of shape (n_channels, n_mesh, n_mesh, n_mesh)
             Discrete density
         """
         # Update mesh values by combining particle weights and interpolation weights
@@ -187,7 +183,7 @@ class MeshInterpolator:
         nx = int(self.ns_mesh[0])
         ny = int(self.ns_mesh[1])
         nz = int(self.ns_mesh[2])
-        rho_mesh = torch.zeros((n_channels,nx,ny,nz))
+        rho_mesh = torch.zeros((n_channels, nx, ny, nz))
         for a in range(n_channels):
             rho_mesh[a].index_put_(
                 (self.x_indices, self.y_indices, self.z_indices),
@@ -216,7 +212,7 @@ class MeshInterpolator:
             Absolute positions of particles in Cartesian coordinates, onto whose
             locations we wish to interpolate the mesh values.
 
-        :returns: interpolated_values: torch.tensor of shape (n_points, n_channels)
+        :return: interpolated_values: torch.tensor of shape (n_points, n_channels)
             Values of the interpolated function.
         """
         interpolated_values = (
