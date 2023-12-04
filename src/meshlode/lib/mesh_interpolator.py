@@ -1,7 +1,3 @@
-"""
-Mesh Interpolator
-=================
-"""
 import torch
 
 

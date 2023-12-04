@@ -5,8 +5,8 @@ import torch
 from metatensor.torch import Labels
 from packaging import version
 
-from meshlode import MeshPotential
-from meshlode.system import System
+from meshlode.lib import System
+from meshlode.metatensor import MeshPotential
 
 
 # Define toy system consisting of a single structure for testing

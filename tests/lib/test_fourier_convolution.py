@@ -5,7 +5,7 @@ import pytest
 import torch
 from torch.testing import assert_close
 
-from meshlode.fourier_convolution import FourierSpaceConvolution
+from meshlode.lib import FourierSpaceConvolution
 
 
 class TestKvectorGeneration:

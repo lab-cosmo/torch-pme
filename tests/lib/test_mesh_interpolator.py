@@ -5,7 +5,7 @@ import pytest
 import torch
 from torch.testing import assert_close
 
-from meshlode.mesh_interpolator import MeshInterpolator
+from meshlode.lib import MeshInterpolator
 
 
 class TestMeshInterpolatorForward:

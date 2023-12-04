@@ -5,8 +5,8 @@ import pytest
 import torch
 from torch.testing import assert_close
 
-from meshlode import MeshPotential
-from meshlode.system import System
+from meshlode.lib import System
+from meshlode.metatensor import MeshPotential
 
 
 class TestMadelung:
