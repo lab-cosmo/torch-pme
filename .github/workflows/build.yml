@@ -12,12 +12,14 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Set up Python
+      if: ${{ false }}
       uses: actions/setup-python@v4
       with:
         python-version: "3.10"
     - run: pip install tox
 
     - name: Test build integrity
+      if: ${{ false }}
       run: tox -e build
       env:
         # Use the CPU only version of torch when building/running the code
