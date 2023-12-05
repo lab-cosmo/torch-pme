@@ -49,7 +49,7 @@ def sliceplot(mesh, sz=12, cmap="viridis", vmin=None, vmax=None):
 # --------------------
 #
 # Builds a CsCl structure by replicating the primitive cell using ase and convert it to
-# a :py:class:`List` of :py:class:`meshlode.lib.System`. We add a bit of noise to make
+# a :py:class:`List` of :py:class:`meshlode.System`. We add a bit of noise to make
 # it less boring!
 #
 
@@ -61,7 +61,7 @@ ase_frame = ase.Atoms(positions=positions, cell=cell, numbers=atomic_numbers).re
 )
 ase_frame.positions[:] += np.random.normal(size=ase_frame.positions.shape) * 0.1
 charges = torch.tensor([1.0, -1.0] * 8)
-frame = meshlode.lib.System(
+frame = meshlode.System(
     species=torch.tensor(ase_frame.numbers),
     positions=torch.tensor(np.array(ase_frame.positions)),
     cell=torch.tensor(ase_frame.cell),

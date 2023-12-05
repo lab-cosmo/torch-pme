@@ -5,7 +5,7 @@ import torch
 from metatensor.torch import Labels
 from packaging import version
 
-from meshlode.lib import System
+from meshlode import System
 from meshlode.metatensor import MeshPotential
 
 

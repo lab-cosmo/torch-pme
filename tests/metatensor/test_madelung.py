@@ -5,7 +5,7 @@ import pytest
 import torch
 from torch.testing import assert_close
 
-from meshlode.lib import System
+from meshlode import System
 from meshlode.metatensor import MeshPotential
 
 

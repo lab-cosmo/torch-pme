@@ -23,7 +23,7 @@ positions = torch.tensor([[0, 0, 0], [0.5, 0.5, 0.5]])
 atomic_numbers = torch.tensor([55, 17])  # Cs and Cl
 cell = torch.eye(3)
 charges = torch.tensor([1.0, -1.0])
-frame = meshlode.lib.System(
+frame = meshlode.System(
     species=atomic_numbers, positions=positions, cell=torch.eye(3)
 )
 
@@ -77,10 +77,10 @@ total_energy = torch.sum(atomic_energies)
 
 # %%
 # Compare against reference Madelung constant and reference energy:
-
+print("Using the torch version")
 print(f"Computed energies on each atom = {atomic_energies.tolist()}")
 print(f"Reference Madelung constant = {madelung:.3f}")
-print(f"Total energy = {total_energy:.3f}")
+print(f"Total energy = {total_energy:.3f}\n")
 
 
 # %%
@@ -122,7 +122,7 @@ total_energy = torch.sum(atomic_energies)
 
 # %%
 # Compare against reference Madelung constant and reference energy:
-
+print("Using the metatensor version")
 print(f"Computed energies on each atom = {atomic_energies.tolist()}")
 print(f"Reference Madelung constant = {madelung:.3f}")
 print(f"Total energy = {total_energy:.3f}")
