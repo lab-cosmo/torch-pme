@@ -72,7 +72,7 @@ html_theme_options = {
     "footer_icons": [
         {
             "name": "GitHub",
-            "url": "https://github.com/ceriottm/MeshLODE",
+            "url": project_dict["urls"]["repository"],
             "html": "",
             "class": "fa-brands fa-github fa-2x",
         },
