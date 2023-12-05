@@ -1,7 +1,7 @@
 Fourier Convolution
 ===================
 
-.. automodule:: meshlode.lib.fourier_convolution
+.. autoclass:: meshlode.lib.FourierSpaceConvolution
     :members:
     :undoc-members:
     :show-inheritance:

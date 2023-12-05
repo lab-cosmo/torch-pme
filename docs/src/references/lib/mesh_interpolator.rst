@@ -1,7 +1,8 @@
 Mesh Interpolator
 =================
 
-.. automodule:: meshlode.lib.mesh_interpolator
+.. autoclass:: meshlode.lib.MeshInterpolator
     :members:
     :undoc-members:
     :show-inheritance:
+    

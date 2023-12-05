@@ -1,7 +1,7 @@
 System
 ======
 
-.. automodule:: meshlode.lib.system
+.. autoclass:: meshlode.System
     :members:
     :undoc-members:
     :show-inheritance:
