@@ -2,11 +2,13 @@ from typing import List
 
 import pytest
 import torch
-from metatensor.torch import Labels
 from packaging import version
 
 from meshlode import System
-from meshlode.metatensor import MeshPotential
+
+
+metatensor_torch = pytest.importorskip("metatensor.torch")
+meshlode_metatensor = pytest.importorskip("meshlode.metatensor")
 
 
 # Define toy system consisting of a single structure for testing
@@ -18,9 +20,10 @@ def toy_system_single_frame() -> System:
     )
 
 
-# Initialize the calculators. For now, only the MeshPotential is implemented.
-def descriptor() -> MeshPotential:
-    return MeshPotential(
+# Initialize the calculators. For now, only the meshlode_metatensor.MeshPotential is
+# implemented.
+def descriptor() -> meshlode_metatensor.MeshPotential:
+    return meshlode_metatensor.MeshPotential(
         atomic_smearing=1.0,
     )
 
@@ -90,7 +93,7 @@ class TestMultiFrameToySystem:
     for atomic_smearing in [0.01, 0.3, 3.7]:
         for mesh_spacing in [15.3, 0.19]:
             for interpolation_order in [1, 2, 3, 4, 5]:
-                MP = MeshPotential(
+                MP = meshlode_metatensor.MeshPotential(
                     atomic_smearing=atomic_smearing,
                     mesh_spacing=mesh_spacing,
                     interpolation_order=interpolation_order,
@@ -115,7 +118,7 @@ class TestMultiFrameToySystem:
             ]
         )
         label_names = ["species_center", "species_neighbor"]
-        labels_ref = Labels(names=label_names, values=label_values)
+        labels_ref = metatensor_torch.Labels(names=label_names, values=label_values)
 
         assert labels_ref == features.keys
 

@@ -6,7 +6,9 @@ import torch
 from torch.testing import assert_close
 
 from meshlode import System
-from meshlode.metatensor import MeshPotential
+
+
+meshlode_metatensor = pytest.importorskip("meshlode.metatensor")
 
 
 class TestMadelung:
@@ -119,7 +121,7 @@ class TestMadelung:
         madelung = dic["madelung"] / scaling_factor
         mesh_spacing = smearing / 2 * scaling_factor
         smearing_eff = smearing * scaling_factor
-        MP = MeshPotential(
+        MP = meshlode_metatensor.MeshPotential(
             smearing_eff, mesh_spacing, interpolation_order, subtract_self=True
         )
         potentials_mesh = MP._compute_single_frame(cell, positions, charges)
@@ -153,7 +155,7 @@ class TestMadelung:
         madelung = dic["madelung"] / scaling_factor
         mesh_spacing = smearing / 10 * scaling_factor
         smearing_eff = smearing * scaling_factor
-        MP = MeshPotential(
+        MP = meshlode_metatensor.MeshPotential(
             smearing_eff, mesh_spacing, interpolation_order, subtract_self=True
         )
         potentials_mesh = MP._compute_single_frame(cell, positions, charges)
@@ -187,7 +189,7 @@ class TestMadelung:
         smearing_eff = smearing * scaling_factor
         n_atoms = len(positions)
         frame = System(species=atomic_numbers, positions=positions, cell=cell)
-        MP = MeshPotential(
+        MP = meshlode_metatensor.MeshPotential(
             atomic_smearing=smearing_eff,
             mesh_spacing=mesh_spacing,
             interpolation_order=interpolation_order,

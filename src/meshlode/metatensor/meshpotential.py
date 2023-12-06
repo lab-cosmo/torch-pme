@@ -1,7 +1,15 @@
 from typing import Dict, List, Union
 
 import torch
-from metatensor.torch import Labels, TensorBlock, TensorMap
+
+
+try:
+    from metatensor.torch import Labels, TensorBlock, TensorMap
+except ImportError:
+    raise ImportError(
+        "metatensor.torch is required for meshlode.metatensor but is not installed. "
+        "Try installing it with:\npip install metatensor[torch]"
+    )
 
 from meshlode.lib.system import System
 
