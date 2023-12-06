@@ -1,7 +1,3 @@
-"""
-Mesh Interpolator
-=================
-"""
 import torch
 
 
@@ -127,7 +123,7 @@ class MeshInterpolator:
             raise ValueError(f"shape {positions.shape} of `positions` has to be (N,3)")
 
         # Compute positions relative to the mesh basis vectors
-        positions_rel = torch.linalg.solve(self.cell.T, positions.T).T
+        positions_rel = torch.matmul(positions, torch.inverse(self.cell))
         positions_rel *= self.ns_mesh
 
         # Calculate positions and distances based on interpolation order

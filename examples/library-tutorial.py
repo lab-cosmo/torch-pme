@@ -1,17 +1,16 @@
 """
-Basic Tutorial
-==============
+Basic Tutorial for Library functions
+====================================
 
-This examples provides an illustration of the functioning of
-``meshlode`` and the construction LODE descriptors (`Grisafi
-2019 <https://doi.org/10.1063/1.5128375>`__, `Grisafi
-2021 <https://doi.org/10.1039/D0SC04934D>`__, `Huguenin
-2023 <10.1021/acs.jpclett.3c02375>`__). It builds the (simple and
-weighted) atom density for a CsCl-type structure, computes a smeared
-version and the Coulomb potential, and projects on a separate set of
-points.
-
+This examples provides an illustration of the functioning of the underlaying library
+functions of ``meshlode`` and the construction LODE descriptors (`Grisafi 2019
+<https://doi.org/10.1063/1.5128375>`__, `Grisafi 2021
+<https://doi.org/10.1039/D0SC04934D>`__, `Huguenin 2023
+<10.1021/acs.jpclett.3c02375>`__). It builds the (simple and weighted) atom density for
+a CsCl-type structure, computes a smeared version and the Coulomb potential, and
+projects on a separate set of points.
 """
+# %%
 
 import ase
 import chemiscope
@@ -32,7 +31,7 @@ def sliceplot(mesh, sz=12, cmap="viridis", vmin=None, vmax=None):
         vmin = mesh.min()
     if vmax is None:
         vmax = mesh.max()
-    fig, ax = plt.subplots(
+    _, ax = plt.subplots(
         1,
         mesh.shape[-1],
         figsize=(sz, sz / mesh.shape[-1]),
@@ -49,8 +48,9 @@ def sliceplot(mesh, sz=12, cmap="viridis", vmin=None, vmax=None):
 # Builds the structure
 # --------------------
 #
-# Nothing special to see here. Builds a CsCl structure by replicating the
-# primitive cell. Add a bit of noise to make it less boring!
+# Builds a CsCl structure by replicating the primitive cell using ase and convert it to
+# a :py:class:`List` of :py:class:`meshlode.System`. We add a bit of noise to make
+# it less boring!
 #
 
 positions = torch.tensor([[0, 0, 0], [0.5, 0.5, 0.5]]) * 4
@@ -93,7 +93,7 @@ else:
 # list of atom weights to yield the mesh values.
 #
 
-interpol = meshlode.mesh_interpolator.MeshInterpolator(
+interpol = meshlode.lib.mesh_interpolator.MeshInterpolator(
     frame.cell, torch.tensor([16, 16, 16]), interpolation_order=3
 )
 
@@ -131,7 +131,7 @@ sliceplot(mesh[1, :, :, :5], cmap="seismic", vmax=1, vmin=-1)
 # be easily extended to compute an arbitrary filter
 #
 
-fsc = meshlode.fourier_convolution.FourierSpaceConvolution(frame.cell)
+fsc = meshlode.lib.fourier_convolution.FourierSpaceConvolution(frame.cell)
 
 # %%
 # plain smearing
@@ -169,7 +169,7 @@ potentials
 # ``interpolation_order``, if wanted.
 #
 
-interpol_slice = meshlode.mesh_interpolator.MeshInterpolator(
+interpol_slice = meshlode.lib.mesh_interpolator.MeshInterpolator(
     frame.cell, torch.tensor([16, 16, 16]), interpolation_order=4
 )
 

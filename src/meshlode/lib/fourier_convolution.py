@@ -1,7 +1,3 @@
-"""
-Fourier Convolution
-===================
-"""
 from typing import Optional
 
 import torch

@@ -1,26 +1,14 @@
-"""
-Available Calculators
-=====================
-
-Below is a list of all calculators available. Calculators are the core of MeshLODE and
-are algorithms for transforming Cartesian coordinates into representations suitable for
-machine learning.
-
-Our calculator API follows the `rascaline <https://luthaf.fr/rascaline>`_ API and coding
-guidelines to promote usability and interoperability with existing workflows.
-"""
-from typing import Dict, List, Optional, Union
+from typing import List, Optional, Union
 
 import torch
-from metatensor.torch import Labels, TensorBlock, TensorMap
 
-from meshlode.fourier_convolution import FourierSpaceConvolution
-from meshlode.mesh_interpolator import MeshInterpolator
-from meshlode.system import System
+from meshlode.lib.fourier_convolution import FourierSpaceConvolution
+from meshlode.lib.mesh_interpolator import MeshInterpolator
+from meshlode.lib.system import System
 
 
 def _my_1d_tolist(x: torch.Tensor):
-    """Auxilary function to convert torch tensor to list of integers"""
+    """Auxilary function to convert torch tensor to list of integers."""
     result: List[int] = []
     for i in x:
         result.append(i.item())
@@ -28,7 +16,7 @@ def _my_1d_tolist(x: torch.Tensor):
 
 
 class MeshPotential(torch.nn.Module):
-    """A species wise long range potential.
+    """A specie-wise long-range potential.
 
     :param atomic_smearing: Width of the atom-centered gaussian used to create the
         atomic density.
@@ -46,36 +34,21 @@ class MeshPotential(torch.nn.Module):
     -------
 
     >>> import torch
-    >>> from meshlode import MeshPotential, System
+    >>> from meshlode.lib import System
+    >>> from meshlode import MeshPotential
 
     Define simple example structure having the CsCl (Cesium Chloride) structure
 
     >>> positions = torch.tensor([[0, 0, 0], [0.5, 0.5, 0.5]])
     >>> atomic_numbers = torch.tensor([55, 17])  # Cs and Cl
-    >>> frame = System(species=atomic_numbers, positions=positions, cell=torch.eye(3))
+    >>> system = System(species=atomic_numbers, positions=positions, cell=torch.eye(3))
 
     Compute features
 
     >>> MP = MeshPotential(atomic_smearing=0.2, mesh_spacing=0.1, interpolation_order=4)
-    >>> features = MP.compute(frame)
-
-    All species combinations
-
-    >>> features.keys
-    Labels(
-        species_center  species_neighbor
-              17               17
-              17               55
-              55               17
-              55               55
-    )
-
-    The Cl-potential at the position of the Cl atom
-
-    >>> block_ClCl = features.block({"species_center": 17, "species_neighbor": 17})
-    >>> block_ClCl.values
-    tensor([[1.3755]])
-
+    >>> MP.compute(system)
+    tensor([[-0.5467,  1.3755],
+            [ 1.3755, -0.5467]])
     """
 
     name = "MeshPotential"
@@ -112,104 +85,66 @@ class MeshPotential(torch.nn.Module):
     def forward(
         self,
         systems: Union[List[System], System],
-    ) -> TensorMap:
+    ) -> Union[torch.Tensor, List[torch.Tensor]]:
         """forward just calls :py:meth:`CalculatorModule.compute`"""
-        res = self.compute(frames=systems)
-        return res
+        return self.compute(systems=systems)
 
     def compute(
         self,
-        frames: Union[List[System], System],
-    ) -> TensorMap:
+        systems: Union[List[System], System],
+    ) -> Union[torch.Tensor, List[torch.Tensor]]:
         """Compute the potential at the position of each atom for all Systems provided
         in "frames".
 
-        :param frames: single System or list of Systems on which to run the
+        :param systems: single System or list of Systems on which to run the
             calculation. If any of the systems' ``positions`` or ``cell`` has
             ``requires_grad`` set to :py:obj:`True`, then the corresponding gradients
             are computed and registered as a custom node in the computational graph, to
             allow backward propagation of the gradients later.
 
-        :return: TensorMap containing the potential of all atoms. The keys of the
-            tensormap are "species_center" and "species_neighbor".
+        :return: List of torch Tensors containing the potentials for all frames and all
+            atoms. Each tensor in the list is of shape (n_atoms,n_species), where
+            n_species is the number of species in all systems combined. If the input was
+            a single system only a single torch tensor with the potentials is returned.
+
+            IMPORTANT: If multiple species are present, the different "species-channels"
+            are ordered according to atomic number. For example, if a structure contains
+            a water molecule with atoms 0,1,2 being of species O,H,H, then for this
+            system, the feature tensor will be of shape (3,2) = (n_atoms,n_species),
+            where `features[0,0]` is the potential at the position of the Oxygen atom
+            (atom 0, first index) generated by the HYDROGEN(!) atoms, while
+            `features[0,1]` is the potential at the position of the Oxygen atom
+            generated by the Oxygen atom(s).
         """
         # Make sure that the compute function also works if only a single frame is
         # provided as input (for convenience of users testing out the code)
-        if not isinstance(frames, list):
-            frames = [frames]
+        if not isinstance(systems, list):
+            systems = [systems]
 
-        # Generate a dictionary to map atomic species to array indices
-        # In general, the species are sorted according to atomic number
-        # and assigned the array indices 0, 1, 2,...
-        # Example: for H2O: H is mapped to 0 and O is mapped to 1.
-        all_species = []
-        n_atoms_tot = 0
-        for frame in frames:
-            n_atoms_tot += len(frame)
-            all_species.append(frame.species)
+        # Extract all species/atomic_numbers from the list of systems
+        all_species = [system.species for system in systems]
         all_species = torch.hstack(all_species)
         atomic_numbers = _my_1d_tolist(torch.unique(all_species))
         n_species = len(atomic_numbers)
 
-        # Initialize dictionary for sparse storage of the features
-        n_species_sq = n_species * n_species
-        feat_dic: Dict[int, List[torch.Tensor]] = {a: [] for a in range(n_species_sq)}
-
-        for frame in frames:
+        potentials = []
+        for system in systems:
             # One-hot encoding of charge information
-            n_atoms = len(frame)
-            species = frame.species
+            n_atoms = len(system)
+            species = system.species
             charges = torch.zeros((n_atoms, n_species), dtype=torch.float)
             for i_specie, atomic_number in enumerate(atomic_numbers):
                 charges[species == atomic_number, i_specie] = 1.0
 
             # Compute the potentials
-            potential = self._compute_single_frame(frame.cell, frame.positions, charges)
-
-            # Reorder data into Metatensor format
-            for spec_center, at_num_center in enumerate(atomic_numbers):
-                for spec_neighbor in range(len(atomic_numbers)):
-                    a_pair = spec_center * n_species + spec_neighbor
-                    feat_dic[a_pair] += [
-                        potential[species == at_num_center, spec_neighbor]
-                    ]
-
-        # Assemble all computed potential values into TensorBlocks for each combination
-        # of species_center and species_neighbor
-        blocks: List[TensorBlock] = []
-        for keys, values in feat_dic.items():
-            spec_center = atomic_numbers[keys // n_species]
-
-            # Generate the Labels objects for the samples and properties of the
-            # TensorBlock.
-            samples_vals: List[List[int]] = []
-            for i_frame, frame in enumerate(frames):
-                for i_atom in range(len(frame)):
-                    if frame.species[i_atom] == spec_center:
-                        samples_vals.append([i_frame, i_atom])
-            samples_vals_tensor = torch.tensor((samples_vals), dtype=torch.int32)
-            labels_samples = Labels(["structure", "center"], samples_vals_tensor)
-
-            labels_properties = Labels(["potential"], torch.tensor([[0]]))
-
-            block = TensorBlock(
-                samples=labels_samples,
-                components=[],
-                properties=labels_properties,
-                values=torch.hstack(values).reshape((-1, 1)),
+            potentials.append(
+                self._compute_single_frame(system.cell, system.positions, charges)
             )
 
-            blocks.append(block)
-
-        # Generate TensorMap from TensorBlocks by defining suitable keys
-        key_values: List[torch.Tensor] = []
-        for spec_center in atomic_numbers:
-            for spec_neighbor in atomic_numbers:
-                key_values.append(torch.tensor([spec_center, spec_neighbor]))
-        key_values = torch.vstack(key_values)
-        labels_keys = Labels(["species_center", "species_neighbor"], key_values)
-
-        return TensorMap(keys=labels_keys, blocks=blocks)
+        if len(systems) == 1:
+            return potentials[0]
+        else:
+            return potentials
 
     def _compute_single_frame(
         self,
