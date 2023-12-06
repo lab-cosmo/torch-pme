@@ -49,7 +49,7 @@ def sliceplot(mesh, sz=12, cmap="viridis", vmin=None, vmax=None):
 # --------------------
 #
 # Builds a CsCl structure by replicating the primitive cell using ase and convert it to
-# a :py:class:`List` of :py:class:`meshlode.System`. We add a bit of noise to make
+# a :py:class:`list` of :py:class:`meshlode.System`. We add a bit of noise to make
 # it less boring!
 #
 
