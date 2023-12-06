@@ -5,8 +5,7 @@ import math
 import torch
 from torch.testing import assert_close
 
-from meshlode import MeshPotential
-from meshlode import System
+from meshlode import MeshPotential, System
 
 
 MADELUNG_CSCL = torch.tensor(2 * 1.7626 / math.sqrt(3))

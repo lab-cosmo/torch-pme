@@ -17,16 +17,17 @@ import meshlode
 
 # %%
 # Define simple example structure having the CsCl structure and compute the reference
-# values
-
-positions = torch.tensor([[0, 0, 0], [0.5, 0.5, 0.5]])
-atomic_numbers = torch.tensor([55, 17])  # Cs and Cl
+# values. MeshPotential by default outputs the species sorted according to the atomic
+# number. Thus, we input the compound "CsCl" and "ClCs" since Cl and Cs have atomic
+# numbers 17 and 55, respectively.
+atomic_numbers = torch.tensor([17, 55])  # Cl and Cs
+charges = torch.tensor([-1.0, 1.0])
 cell = torch.eye(3)
-charges = torch.tensor([1.0, -1.0])
-frame = meshlode.System(
-    species=atomic_numbers, positions=positions, cell=torch.eye(3)
-)
+positions = torch.tensor([[0, 0, 0], [0.5, 0.5, 0.5]])
+frame = meshlode.System(species=atomic_numbers, positions=positions, cell=torch.eye(3))
 
+# %%
+# Define the expected values of the energy
 n_atoms = len(positions)
 madelung = 2 * 1.7626 / math.sqrt(3)
 energies_ref = -madelung * torch.ones((n_atoms, 1))
@@ -78,8 +79,8 @@ total_energy = torch.sum(atomic_energies)
 # %%
 # Compare against reference Madelung constant and reference energy:
 print("Using the torch version")
-print(f"Computed energies on each atom = {atomic_energies.tolist()}")
-print(f"Reference Madelung constant = {madelung:.3f}")
+print(f"Madelung constant (= minus the energy per atom) = {madelung:.3f}")
+print(f"Computed potentials on each atom = {atomic_energies.tolist()}")
 print(f"Total energy = {total_energy:.3f}\n")
 
 
@@ -123,6 +124,6 @@ total_energy = torch.sum(atomic_energies)
 # %%
 # Compare against reference Madelung constant and reference energy:
 print("Using the metatensor version")
-print(f"Computed energies on each atom = {atomic_energies.tolist()}")
-print(f"Reference Madelung constant = {madelung:.3f}")
+print(f"Madelung constant (= minus the energy per atom) = {madelung:.3f}")
+print(f"Computed potentials on each atom = {atomic_energies.tolist()}")
 print(f"Total energy = {total_energy:.3f}")
