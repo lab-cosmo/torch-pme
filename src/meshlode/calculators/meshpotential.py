@@ -121,15 +121,8 @@ class MeshPotential(torch.nn.Module):
         if not isinstance(systems, list):
             systems = [systems]
 
-        # Generate a dictionary to map atomic species to array indices
-        # In general, the species are sorted according to atomic number
-        # and assigned the array indices 0, 1, 2,...
-        # Example: for H2O: H is mapped to 0 and O is mapped to 1.
-        all_species = []
-        n_atoms_tot = 0
-        for system in systems:
-            n_atoms_tot += len(system)
-            all_species.append(system.species)
+        # Extract all species/atomic_numbers from the list of systems
+        all_species = [system.species for system in systems]
         all_species = torch.hstack(all_species)
         atomic_numbers = _my_1d_tolist(torch.unique(all_species))
         n_species = len(atomic_numbers)

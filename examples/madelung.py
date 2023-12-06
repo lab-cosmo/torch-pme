@@ -52,7 +52,7 @@ MP = meshlode.MeshPotential(
     interpolation_order=interpolation_order,
     subtract_self=True,
 )
-potentials_mesh = MP.compute(frame)
+potentials_torch = MP.compute(frame)
 
 # %%
 # The "potentials" that have been computed so far are not the actual electrostatic
@@ -61,27 +61,28 @@ potentials_mesh = MP.compute(frame)
 # separately. Thus, to get the Madelung constant, we need to take a linear combination
 # of these "potentials" weighted by the charges of the atoms.
 
-atomic_energies = torch.zeros((n_atoms, 1))
+atomic_energies_torch = torch.zeros((n_atoms, 1))
 for idx_c in range(n_atoms):
     for idx_n in range(n_atoms):
         # The coulomb potential between atoms i and j is charge_i * charge_j / d_ij
         # The features are simply computing a pure 1/r potential with no prefactors.
         # Thus, to compute the energy between atoms of species i and j, we need to
         # multiply by the charges of i and j.
-        atomic_energies[idx_c] += (
-            charges[idx_c] * charges[idx_n] * potentials_mesh[idx_c, idx_n]
+        print(charges[idx_c] * charges[idx_n], potentials_torch[idx_n, idx_c])
+        atomic_energies_torch[idx_c] += (
+            charges[idx_c] * charges[idx_n] * potentials_torch[idx_c, idx_n]
         )
 
 # %%
 # The total energy is just the sum of all atomic energies
-total_energy = torch.sum(atomic_energies)
+total_energy_torch = torch.sum(atomic_energies_torch)
 
 # %%
 # Compare against reference Madelung constant and reference energy:
 print("Using the torch version")
-print(f"Madelung constant (= minus the energy per atom) = {madelung:.3f}")
-print(f"Computed potentials on each atom = {atomic_energies.tolist()}")
-print(f"Total energy = {total_energy:.3f}\n")
+print(f"Computed energies on each atom = {atomic_energies_torch.tolist()}")
+print(f"Reference Madelung constant = {madelung:.3f}")
+print(f"Total energy = {total_energy_torch:.3f}\n")
 
 
 # %%
@@ -96,18 +97,18 @@ MP = meshlode.metatensor.MeshPotential(
     interpolation_order=interpolation_order,
     subtract_self=True,
 )
-potentials_mesh = MP.compute(frame)
+potential_metatensor = MP.compute(frame)
 
 
 # %%
 # To get the Madelung constant, we again need to take a linear combination
 # of the "potentials" weighted by the charges of the atoms.
 
-atomic_energies = torch.zeros((n_atoms, 1))
+atomic_energies_metatensor = torch.zeros((n_atoms, 1))
 for idx_c, c in enumerate(atomic_numbers):
     for idx_n, n in enumerate(atomic_numbers):
         # Take the coefficients with the correct center atom and neighbor atom species
-        block = potentials_mesh.block(
+        block = potential_metatensor.block(
             {"species_center": int(c), "species_neighbor": int(n)}
         )
 
@@ -115,15 +116,18 @@ for idx_c, c in enumerate(atomic_numbers):
         # The features are simply computing a pure 1/r potential with no prefactors.
         # Thus, to compute the energy between atoms of species i and j, we need to
         # multiply by the charges of i and j.
-        atomic_energies[idx_c] += charges[idx_c] * charges[idx_n] * block.values[0, 0]
+        print(c, n, charges[idx_c] * charges[idx_n], block.values[0, 0])
+        atomic_energies_metatensor[idx_c] += (
+            charges[idx_c] * charges[idx_n] * block.values[0, 0]
+        )
 
 # %%
 # The total energy is just the sum of all atomic energies
-total_energy = torch.sum(atomic_energies)
+total_energy_metatensor = torch.sum(atomic_energies_metatensor)
 
 # %%
 # Compare against reference Madelung constant and reference energy:
 print("Using the metatensor version")
-print(f"Madelung constant (= minus the energy per atom) = {madelung:.3f}")
-print(f"Computed potentials on each atom = {atomic_energies.tolist()}")
-print(f"Total energy = {total_energy:.3f}")
+print(f"Computed energies on each atom = {atomic_energies_metatensor.tolist()}")
+print(f"Reference Madelung constant = {madelung:.3f}")
+print(f"Total energy = {total_energy_metatensor:.3f}")
