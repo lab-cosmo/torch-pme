@@ -53,27 +53,17 @@ documentation = "http://meshlode.readthedocs.io"
 repository = "https://github.com/ceriottm/MeshLODE"
 issues = "https://github.com/ceriottm/MeshLODE/issues"
 
-[tool.setuptools.packages.find]
-where = ["src"]
-
-[tool.setuptools.dynamic]
-version = {attr = "meshlode.__version__"}
-
-[tool.coverage.run]
-branch = true
-data_file = 'tests/.coverage'
-
 [tool.coverage.report]
 include = [
     "src/meshlode/*"
 ]
 
+[tool.coverage.run]
+branch = true
+data_file = 'tests/.coverage'
+
 [tool.coverage.xml]
 output = 'tests/coverage.xml'
-
-[tool.pytest.ini_options]
-python_files = ["*.py"]
-testpaths = ["tests"]
 
 [tool.isort]
 skip = "__init__.py"
@@ -83,3 +73,16 @@ indent = 4
 include_trailing_comma = true
 lines_after_imports = 2
 known_first_party = "meshlode"
+
+[tool.mypy]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+python_files = ["*.py"]
+testpaths = ["tests"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.dynamic]
+version = {attr = "meshlode.__version__"}

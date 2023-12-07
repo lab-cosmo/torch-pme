@@ -57,7 +57,7 @@ class MeshPotential(torch.nn.Module):
         self,
         atomic_smearing: float,
         mesh_spacing: Optional[float] = None,
-        interpolation_order: Optional[float] = 4,
+        interpolation_order: Optional[int] = 4,
         subtract_self: Optional[bool] = False,
     ):
         super().__init__()
