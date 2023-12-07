@@ -180,9 +180,6 @@ class MeshPotential(torch.nn.Module):
         :returns: torch.tensor of shape `(n_atoms, n_channels)` containing the potential
         at the position of each atom for the `n_channels` independent meshes separately.
         """
-        smearing = self.atomic_smearing
-        interpolation_order = self.interpolation_order
-
         # Initializations
         n_atoms = len(positions)
         assert positions.shape == (n_atoms, 3)
@@ -200,7 +197,7 @@ class MeshPotential(torch.nn.Module):
         ns = 2 ** torch.ceil(torch.log2(ns_actual_approx)).long()  # [nx, ny, nz]
 
         # Step 1: Smear particles onto mesh
-        MI = MeshInterpolator(cell, ns, interpolation_order=interpolation_order)
+        MI = MeshInterpolator(cell, ns, interpolation_order=self.interpolation_order)
         MI.compute_interpolation_weights(positions)
         rho_mesh = MI.points_to_mesh(particle_weights=charges)
 
@@ -209,7 +206,7 @@ class MeshPotential(torch.nn.Module):
             mesh_values=rho_mesh,
             cell=cell,
             potential_exponent=1,
-            smearing=smearing,
+            atomic_smearing=self.atomic_smearing,
         )
 
         # Step 3: Back interpolation
@@ -217,7 +214,9 @@ class MeshPotential(torch.nn.Module):
 
         # Remove self contribution
         if self.subtract_self:
-            self_contrib = torch.sqrt(torch.tensor(2.0 / torch.pi)) / smearing
+            self_contrib = (
+                torch.sqrt(torch.tensor(2.0 / torch.pi)) / self.atomic_smearing
+            )
             interpolated_potential -= charges * self_contrib
 
         return interpolated_potential

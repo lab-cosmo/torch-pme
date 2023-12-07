@@ -93,7 +93,10 @@ class TestConvolution:
         n_fft = nx * ny * nz
         mesh_vals_new = (
             FourierSpaceConvolution().compute(
-                mesh_values=mesh_vals, cell=cell, potential_exponent=0, smearing=0.0
+                mesh_values=mesh_vals,
+                cell=cell,
+                potential_exponent=0,
+                atomic_smearing=0.0,
             )
             * volume
             / n_fft
@@ -109,7 +112,9 @@ class TestConvolution:
         """
         fsc = FourierSpaceConvolution()
 
-        compute_kwargs = dict(mesh_values=mesh_vals, cell=cell, potential_exponent=0, smearing=0.0)
+        compute_kwargs = dict(
+            mesh_values=mesh_vals, cell=cell, potential_exponent=0, atomic_smearing=0.0
+        )
         calculated = fsc.compute(**compute_kwargs)
         cached = fsc.compute(**compute_kwargs)
 

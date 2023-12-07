@@ -134,17 +134,17 @@ sliceplot(mesh[1, :, :, :5], cmap="seismic", vmax=1, vmin=-1)
 fsc = meshlode.lib.fourier_convolution.FourierSpaceConvolution()
 
 # %%
-# plain smearing
+# plain atomic_smearing
 rho_mesh = fsc.compute(
-    mesh_values=mesh, cell=frame.cell, potential_exponent=0, smearing=1
+    mesh_values=mesh, cell=frame.cell, potential_exponent=0, atomic_smearing=1
 )
 
 sliceplot(rho_mesh[0, :, :, :5])
 
 # %%
-# coulomb-like potential, no smearing
+# coulomb-like potential, no atomic_smearing
 coulomb_mesh = fsc.compute(
-    mesh_values=mesh, cell=frame.cell, potential_exponent=1, smearing=0
+    mesh_values=mesh, cell=frame.cell, potential_exponent=1, atomic_smearing=0
 )
 
 sliceplot(coulomb_mesh[1, :, :, :5], cmap="seismic")

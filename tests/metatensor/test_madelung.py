@@ -98,29 +98,29 @@ class TestMadelung:
         return d
 
     @pytest.mark.parametrize("crystal_name", crystal_list_powers_of_2)
-    @pytest.mark.parametrize("smearing", [0.1, 0.05])
+    @pytest.mark.parametrize("atomic_smearing", [0.1, 0.05])
     @pytest.mark.parametrize("interpolation_order", [1, 2])
     @pytest.mark.parametrize("scaling_factor", scaling_factors)
     def test_madelung_low_order(
         self,
         crystal_dictionary,
         crystal_name,
-        smearing,
+        atomic_smearing,
         scaling_factor,
         interpolation_order,
     ):
         """
         For low interpolation orders, if the atoms already lie exactly on a mesh point,
-        there are no additional errors due to smearing the charges. Thus, we can reach
-        a relatively high accuracy.
+        there are no additional errors due to atomic_smearing the charges. Thus, we can
+        reach a relatively high accuracy.
         """
         dic = crystal_dictionary[crystal_name]
         positions = dic["positions"] * scaling_factor
         cell = dic["cell"] * scaling_factor
         charges = dic["charges"]
         madelung = dic["madelung"] / scaling_factor
-        mesh_spacing = smearing / 2 * scaling_factor
-        smearing_eff = smearing * scaling_factor
+        mesh_spacing = atomic_smearing / 2 * scaling_factor
+        smearing_eff = atomic_smearing * scaling_factor
         MP = meshlode_metatensor.MeshPotential(
             smearing_eff, mesh_spacing, interpolation_order, subtract_self=True
         )
@@ -130,14 +130,14 @@ class TestMadelung:
         assert_close(energies, energies_target, rtol=1e-4, atol=1e-6)
 
     @pytest.mark.parametrize("crystal_name", crystal_list)
-    @pytest.mark.parametrize("smearing", [0.2, 0.12])
+    @pytest.mark.parametrize("atomic_smearing", [0.2, 0.12])
     @pytest.mark.parametrize("interpolation_order", [3, 4, 5])
     @pytest.mark.parametrize("scaling_factor", scaling_factors)
     def test_madelung_high_order(
         self,
         crystal_dictionary,
         crystal_name,
-        smearing,
+        atomic_smearing,
         scaling_factor,
         interpolation_order,
     ):
@@ -153,8 +153,8 @@ class TestMadelung:
         cell = dic["cell"] * scaling_factor
         charges = dic["charges"]
         madelung = dic["madelung"] / scaling_factor
-        mesh_spacing = smearing / 10 * scaling_factor
-        smearing_eff = smearing * scaling_factor
+        mesh_spacing = atomic_smearing / 10 * scaling_factor
+        smearing_eff = atomic_smearing * scaling_factor
         MP = meshlode_metatensor.MeshPotential(
             smearing_eff, mesh_spacing, interpolation_order, subtract_self=True
         )
@@ -164,14 +164,14 @@ class TestMadelung:
         assert_close(energies, energies_target, rtol=1e-2, atol=1e-3)
 
     @pytest.mark.parametrize("crystal_name", crystal_list_powers_of_2)
-    @pytest.mark.parametrize("smearing", [0.1, 0.05])
+    @pytest.mark.parametrize("atomic_smearing", [0.1, 0.05])
     @pytest.mark.parametrize("interpolation_order", [1, 2])
     @pytest.mark.parametrize("scaling_factor", scaling_factors)
     def test_madelung_low_order_metatensor(
         self,
         crystal_dictionary,
         crystal_name,
-        smearing,
+        atomic_smearing,
         scaling_factor,
         interpolation_order,
     ):
@@ -185,8 +185,8 @@ class TestMadelung:
         atomic_numbers = dic["atomic_numbers"]
         charges = dic["charges"]
         madelung = dic["madelung"] / scaling_factor
-        mesh_spacing = smearing / 2 * scaling_factor
-        smearing_eff = smearing * scaling_factor
+        mesh_spacing = atomic_smearing / 2 * scaling_factor
+        smearing_eff = atomic_smearing * scaling_factor
         n_atoms = len(positions)
         frame = System(species=atomic_numbers, positions=positions, cell=cell)
         MP = meshlode_metatensor.MeshPotential(

@@ -83,7 +83,10 @@ class FourierSpaceConvolution:
         return k_vectors
 
     def kernel_func(
-        self, ksq: torch.Tensor, potential_exponent: int = 1, smearing: float = 0.2
+        self,
+        ksq: torch.Tensor,
+        potential_exponent: int = 1,
+        atomic_smearing: float = 0.2,
     ) -> torch.Tensor:
         """
         Fourier transform of the Coulomb potential or more general effective
@@ -92,27 +95,29 @@ class FourierSpaceConvolution:
 
         :param ksq: torch.tensor of shape ``(N,)`` Squared norm of the k-vectors
         :param potential_exponent: Exponent of the effective :math:`1/r^p` decay
-        :param smearing: Broadening of the :math:`1/r^p` decay close to the origin
+        :param atomic_smearing: Broadening of the :math:`1/r^p` decay close to the
+            origin
 
         :return: torch.tensor of shape ``(N,)`` with the values of the kernel function
             G(k) evaluated at the provided (squared norms of the) k-vectors
         """
         if potential_exponent == 1:
-            return 4 * torch.pi / ksq * torch.exp(-0.5 * smearing**2 * ksq)
+            return 4 * torch.pi / ksq * torch.exp(-0.5 * atomic_smearing**2 * ksq)
         elif potential_exponent == 0:
-            return torch.exp(-0.5 * smearing**2 * ksq)
+            return torch.exp(-0.5 * atomic_smearing**2 * ksq)
         else:
             raise ValueError("Only potential exponents 0 and 1 are supported")
 
     def value_at_origin(
-        self, potential_exponent: int = 1, smearing: Optional[float] = 0.2
+        self, potential_exponent: int = 1, atomic_smearing: Optional[float] = 0.2
     ) -> float:
         """
         Since the kernel function in reciprocal space typically has a (removable)
         singularity at k=0, the value at that point needs to be specified explicitly.
 
         :param potential_exponent: Exponent of the effective :math:`1/r^p` decay
-        :param smearing: Broadening of the :math:`1/r^p` decay close to the origin
+        :param atomic_smearing: Broadening of the :math:`1/r^p` decay close to the
+            origin
 
         :return: float of G(k=0), the value of the kernel function at the origin.
         """
@@ -128,7 +133,7 @@ class FourierSpaceConvolution:
         mesh_values: torch.Tensor,
         cell: torch.Tensor,
         potential_exponent: int = 1,
-        smearing: float = 0.2,
+        atomic_smearing: float = 0.2,
     ) -> torch.Tensor:
         """
         Compute the "electrostatic potential" from the density defined
@@ -141,9 +146,9 @@ class FourierSpaceConvolution:
         :param potential_exponent: int
             The exponent in the :math:`1/r^p` decay of the effective potential,
             where :math:`p=1` corresponds to the Coulomb potential,
-            and :math:`p=0` is set as Gaussian smearing.
-        :param smearing: float
-            Width of the Gaussian smearing (for the Coulomb potential).
+            and :math:`p=0` is set as Gaussian atomic_smearing.
+        :param atomic_smearing: float
+            Width of the Gaussian atomic_smearing (for the Coulomb potential).
 
         :returns: torch.tensor of shape ``(n_channels, nx, ny, nz)``
             The potential evaluated on the same mesh points as the provided
@@ -182,10 +187,12 @@ class FourierSpaceConvolution:
         # to the requirement that the net charge of the cell is zero.
         # G = kernel_func(knorm_sq)
         G = self.kernel_func(
-            knorm_sq, potential_exponent=potential_exponent, smearing=smearing
+            knorm_sq,
+            potential_exponent=potential_exponent,
+            atomic_smearing=atomic_smearing,
         )
         G[0, 0, 0] = self.value_at_origin(
-            potential_exponent=potential_exponent, smearing=smearing
+            potential_exponent=potential_exponent, atomic_smearing=atomic_smearing
         )
 
         # Fourier transforms consisting of the following substeps:
