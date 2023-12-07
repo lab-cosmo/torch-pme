@@ -131,17 +131,21 @@ sliceplot(mesh[1, :, :, :5], cmap="seismic", vmax=1, vmin=-1)
 # be easily extended to compute an arbitrary filter
 #
 
-fsc = meshlode.lib.fourier_convolution.FourierSpaceConvolution(frame.cell)
+fsc = meshlode.lib.fourier_convolution.FourierSpaceConvolution()
 
 # %%
 # plain smearing
-rho_mesh = fsc.compute(mesh, potential_exponent=0, smearing=1)
+rho_mesh = fsc.compute(
+    mesh_values=mesh, cell=frame.cell, potential_exponent=0, smearing=1
+)
 
 sliceplot(rho_mesh[0, :, :, :5])
 
 # %%
 # coulomb-like potential, no smearing
-coulomb_mesh = fsc.compute(mesh, potential_exponent=1, smearing=0)
+coulomb_mesh = fsc.compute(
+    mesh_values=mesh, cell=frame.cell, potential_exponent=1, smearing=0
+)
 
 sliceplot(coulomb_mesh[1, :, :, :5], cmap="seismic")
 

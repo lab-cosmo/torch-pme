@@ -79,6 +79,9 @@ class MeshPotential(torch.nn.Module):
         self.interpolation_order = interpolation_order
         self.subtract_self = subtract_self
 
+        # Initilize auxiliary objects
+        self.fourier_space_convolution = FourierSpaceConvolution()
+
     # This function is kept to keep MeshLODE compatible with the broader pytorch
     # infrastructure, which require a "forward" function. We name this function
     # "compute" instead, for compatibility with other COSMO software.
@@ -156,7 +159,7 @@ class MeshPotential(torch.nn.Module):
         Compute the "electrostatic" potential at the position of all atoms in a
         structure.
 
-        :param cell: torch.tensor of shape `(3,3)`. Describes the unit cell of the
+        :param cell: torch.tensor of shape `(3, 3)`. Describes the unit cell of the
             structure, where cell[i] is the i-th basis vector.
         :param positions: torch.tensor of shape (n_atoms, 3). Contains the Cartesian
             coordinates of the atoms. The implementation also works if the positions
@@ -202,8 +205,12 @@ class MeshPotential(torch.nn.Module):
         rho_mesh = MI.points_to_mesh(particle_weights=charges)
 
         # Step 2: Perform Fourier space convolution (FSC)
-        FSC = FourierSpaceConvolution(cell)
-        potential_mesh = FSC.compute(rho_mesh, potential_exponent=1, smearing=smearing)
+        potential_mesh = self.fourier_space_convolution.compute(
+            mesh_values=rho_mesh,
+            cell=cell,
+            potential_exponent=1,
+            smearing=smearing,
+        )
 
         # Step 3: Back interpolation
         interpolated_potential = MI.mesh_to_points(potential_mesh)

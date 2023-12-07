@@ -29,10 +29,9 @@ class TestKvectorGeneration:
         b_j the corresponding basis vectors of the reciprocal cell, the inner product
         between them needs to satisfy a_j*b_l=2pi*delta_jl.
         """
-        FSC = FourierSpaceConvolution(cell)
         # ns = torch.tensor([3,4,7])
         nx, ny, nz = ns
-        kvectors = FSC.generate_kvectors(ns)
+        kvectors = FourierSpaceConvolution().generate_kvectors(ns=ns, cell=cell)
 
         # Define frequencies with the same convention as in FFT
         # This is essentially a manual implementation of torch.fft.fftfreq
@@ -65,8 +64,7 @@ class TestKvectorGeneration:
         norm_bound = torch.sum(norms_basisvecs * ns)
 
         # Compute the norms of all kvectors and check that they satisfy the bound
-        FSC = FourierSpaceConvolution(cell)
-        kvectors = FSC.generate_kvectors(ns)
+        kvectors = FourierSpaceConvolution().generate_kvectors(ns=ns, cell=cell)
         norms_all = torch.linalg.norm(kvectors, dim=3).flatten()
         assert torch.all(norms_all < norm_bound)
 
@@ -91,11 +89,28 @@ class TestConvolution:
     @pytest.mark.parametrize("cell", cells)
     def test_convolution_for_delta(self, cell, mesh_vals):
         volume = cell.det()
-        n_channels, nx, ny, nz = mesh_vals.shape
+        _, nx, ny, nz = mesh_vals.shape
         n_fft = nx * ny * nz
-        FSC = FourierSpaceConvolution(cell)
         mesh_vals_new = (
-            FSC.compute(mesh_vals, potential_exponent=0, smearing=0.0) * volume / n_fft
+            FourierSpaceConvolution().compute(
+                mesh_values=mesh_vals, cell=cell, potential_exponent=0, smearing=0.0
+            )
+            * volume
+            / n_fft
         )
 
         assert_close(mesh_vals, mesh_vals_new, rtol=1e-4, atol=1e-6)
+
+    @pytest.mark.parametrize("mesh_vals", mesh_vals_list)
+    @pytest.mark.parametrize("cell", cells)
+    def test_caching(self, cell, mesh_vals):
+        """Test that values for a second time calling compute (when cache is used) are
+        the same.
+        """
+        fsc = FourierSpaceConvolution()
+
+        compute_kwargs = dict(mesh_values=mesh_vals, cell=cell, potential_exponent=0, smearing=0.0)
+        calculated = fsc.compute(**compute_kwargs)
+        cached = fsc.compute(**compute_kwargs)
+
+        assert_close(cached, calculated, rtol=0, atol=0)
