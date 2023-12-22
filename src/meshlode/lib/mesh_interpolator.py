@@ -18,7 +18,7 @@ class MeshInterpolator:
     of calculations is identical, this is performed in a separate function called
     :func:`compute_interpolation_weights`.
 
-    :param cell: torch.tensor of shape ``(3,3)``, where ``cell[i]`` is the i-th basis
+    :param cell: torch.tensor of shape ``(3, 3)``, where ``cell[i]`` is the i-th basis
         vector of the unit cell
     :param ns_mesh: toch.tensor of shape ``(3,)``
         Number of mesh points to use along each of the three axes
@@ -33,7 +33,7 @@ class MeshInterpolator:
     ):
         # Check that the provided parameters match the specifications
         if cell.shape != (3, 3):
-            raise ValueError(f"cell of shape {cell.shape} should be of shape (3,3)")
+            raise ValueError(f"cell of shape {cell.shape} should be of shape (3, 3)")
         if ns_mesh.shape != (3,):
             raise ValueError(f"shape {ns_mesh.shape} of `ns_mesh` has to be (3,)")
         if interpolation_order not in [1, 2, 3, 4, 5]:
@@ -115,12 +115,12 @@ class MeshInterpolator:
         when calling the forward (:func:`points_to_mesh`) and backward
         (:func:`mesh_to_points`) interpolation functions.
 
-        :param positions: torch.tensor of shape ``(N,3)``
+        :param positions: torch.tensor of shape ``(N, 3)``
             Absolute positions of atoms in Cartesian coordinates
         """
         n_positions = len(positions)
         if positions.shape != (n_positions, 3):
-            raise ValueError(f"shape {positions.shape} of `positions` has to be (N,3)")
+            raise ValueError(f"shape {positions.shape} of `positions` has to be (N, 3)")
 
         # Compute positions relative to the mesh basis vectors
         positions_rel = torch.matmul(positions, torch.inverse(self.cell))

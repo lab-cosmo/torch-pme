@@ -79,6 +79,9 @@ class MeshPotential(torch.nn.Module):
         self.interpolation_order = interpolation_order
         self.subtract_self = subtract_self
 
+        # Initilize auxiliary objects
+        self.fourier_space_convolution = FourierSpaceConvolution()
+
     # This function is kept to keep MeshLODE compatible with the broader pytorch
     # infrastructure, which require a "forward" function. We name this function
     # "compute" instead, for compatibility with other COSMO software.
@@ -156,7 +159,7 @@ class MeshPotential(torch.nn.Module):
         Compute the "electrostatic" potential at the position of all atoms in a
         structure.
 
-        :param cell: torch.tensor of shape `(3,3)`. Describes the unit cell of the
+        :param cell: torch.tensor of shape `(3, 3)`. Describes the unit cell of the
             structure, where cell[i] is the i-th basis vector.
         :param positions: torch.tensor of shape (n_atoms, 3). Contains the Cartesian
             coordinates of the atoms. The implementation also works if the positions
@@ -177,9 +180,6 @@ class MeshPotential(torch.nn.Module):
         :returns: torch.tensor of shape `(n_atoms, n_channels)` containing the potential
         at the position of each atom for the `n_channels` independent meshes separately.
         """
-        smearing = self.atomic_smearing
-        interpolation_order = self.interpolation_order
-
         # Initializations
         n_atoms = len(positions)
         assert positions.shape == (n_atoms, 3)
@@ -197,20 +197,26 @@ class MeshPotential(torch.nn.Module):
         ns = 2 ** torch.ceil(torch.log2(ns_actual_approx)).long()  # [nx, ny, nz]
 
         # Step 1: Smear particles onto mesh
-        MI = MeshInterpolator(cell, ns, interpolation_order=interpolation_order)
+        MI = MeshInterpolator(cell, ns, interpolation_order=self.interpolation_order)
         MI.compute_interpolation_weights(positions)
         rho_mesh = MI.points_to_mesh(particle_weights=charges)
 
         # Step 2: Perform Fourier space convolution (FSC)
-        FSC = FourierSpaceConvolution(cell)
-        potential_mesh = FSC.compute(rho_mesh, potential_exponent=1, smearing=smearing)
+        potential_mesh = self.fourier_space_convolution.compute(
+            mesh_values=rho_mesh,
+            cell=cell,
+            potential_exponent=1,
+            atomic_smearing=self.atomic_smearing,
+        )
 
         # Step 3: Back interpolation
         interpolated_potential = MI.mesh_to_points(potential_mesh)
 
         # Remove self contribution
         if self.subtract_self:
-            self_contrib = torch.sqrt(torch.tensor(2.0 / torch.pi)) / smearing
+            self_contrib = (
+                torch.sqrt(torch.tensor(2.0 / torch.pi)) / self.atomic_smearing
+            )
             interpolated_potential -= charges * self_contrib
 
         return interpolated_potential
