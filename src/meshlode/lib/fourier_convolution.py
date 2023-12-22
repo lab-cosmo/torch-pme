@@ -8,11 +8,12 @@ class FourierSpaceConvolution:
     """
     Class for handling all the steps necessary to compute the convolution :math:`f*G`
     between two functions :math:`f` and :math:`G`, where the values of :math:`f` are
-    provided on a discrete mesh.
+    provided on a discrete mesh. In practice, the convolution is performed in
+    reciprocal space using the fast Fourier transform algorithm.
 
-    For compuating the convolution, reciprocal space vectors that only depend on the
-    cell and the mesh will be calculated. Since this is a demanding calculation the
-    vectors will be cached.
+    Since the reciprocal space vectors used for the calculations only depend on the
+    cell for a given set of hypers, the vectors are cached to reduce the computational
+    cost in case multiple structures use identical cells.
 
     Example
     -------
@@ -166,7 +167,8 @@ class FourierSpaceConvolution:
 
         # Use chached values if cell and number of mesh points have not changed since
         # last call.
-        if torch.all(ns == self._ns_cache) and torch.all(cell == self._cell_cache):
+        same_cell = torch.allclose(cell, self._cell_cache, atol=1e-15, rtol=1e-15)
+        if torch.all(ns == self._ns_cache) and same_cell:
             knorm_sq = self._knorm_sq_cache
         else:
             # Get the relevant reciprocal space vectors (k-vectors)
