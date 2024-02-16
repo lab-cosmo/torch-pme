@@ -109,7 +109,7 @@ for idx_c, c in enumerate(atomic_numbers):
     for idx_n, n in enumerate(atomic_numbers):
         # Take the coefficients with the correct center atom and neighbor atom species
         block = potential_metatensor.block(
-            {"species_center": int(c), "species_neighbor": int(n)}
+            {"center_type": int(c), "neighbor_type": int(n)}
         )
 
         # The coulomb potential between atoms i and j is charge_i * charge_j / d_ij

@@ -44,16 +44,16 @@ class MeshPotential(calculators.MeshPotential):
 
     >>> features.keys
     Labels(
-        species_center  species_neighbor
-              17               17
-              17               55
-              55               17
-              55               55
+        center_type  neighbor_type
+            17            17
+            17            55
+            55            17
+            55            55
     )
 
     The Cl-potential at the position of the Cl atom
 
-    >>> block_ClCl = features.block({"species_center": 17, "species_neighbor": 17})
+    >>> block_ClCl = features.block({"center_type": 17, "neighbor_type": 17})
     >>> block_ClCl.values
     tensor([[1.3755]])
 
@@ -80,7 +80,7 @@ class MeshPotential(calculators.MeshPotential):
             allow backward propagation of the gradients later.
 
         :return: TensorMap containing the potential of all atoms. The keys of the
-            tensormap are "species_center" and "species_neighbor".
+            tensormap are "center_type" and "neighbor_type".
         """
         # Make sure that the compute function also works if only a single frame is
         # provided as input (for convenience of users testing out the code)
@@ -126,7 +126,7 @@ class MeshPotential(calculators.MeshPotential):
                     ]
 
         # Assemble all computed potential values into TensorBlocks for each combination
-        # of species_center and species_neighbor
+        # of center_type and neighbor_type
         blocks: List[TensorBlock] = []
         for keys, values in feat_dic.items():
             spec_center = atomic_numbers[keys // n_species]
@@ -139,7 +139,7 @@ class MeshPotential(calculators.MeshPotential):
                     if system.species[i_atom] == spec_center:
                         samples_vals.append([i_frame, i_atom])
             samples_vals_tensor = torch.tensor((samples_vals), dtype=torch.int32)
-            labels_samples = Labels(["structure", "center"], samples_vals_tensor)
+            labels_samples = Labels(["system", "atom"], samples_vals_tensor)
 
             labels_properties = Labels(["potential"], torch.tensor([[0]]))
 
@@ -158,6 +158,6 @@ class MeshPotential(calculators.MeshPotential):
             for spec_neighbor in atomic_numbers:
                 key_values.append(torch.tensor([spec_center, spec_neighbor]))
         key_values = torch.vstack(key_values)
-        labels_keys = Labels(["species_center", "species_neighbor"], key_values)
+        labels_keys = Labels(["center_type", "neighbor_type"], key_values)
 
         return TensorMap(keys=labels_keys, blocks=blocks)
