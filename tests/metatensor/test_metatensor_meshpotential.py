@@ -117,7 +117,7 @@ class TestMultiFrameToySystem:
                 [17, 17],
             ]
         )
-        label_names = ["species_center", "species_neighbor"]
+        label_names = ["center_type", "neighbor_type"]
         labels_ref = metatensor_torch.Labels(names=label_names, values=label_values)
 
         assert labels_ref == features.keys
@@ -129,12 +129,12 @@ class TestMultiFrameToySystem:
         for i in [11, 17]:
             # For structures in which Nitrogen is present, there will be no Na or Cl
             # neighbors. There are six such center atoms in total.
-            block = features.block({"species_center": 7, "species_neighbor": i})
+            block = features.block({"center_type": 7, "neighbor_type": i})
             assert torch.equal(block.values, torch.zeros((6, 1)))
 
             # For structures in which Na or Cl are present, there will be no Nitrogen
             # neighbors.
-            block = features.block({"species_center": i, "species_neighbor": 7})
+            block = features.block({"center_type": i, "neighbor_type": 7})
             assert torch.equal(block.values, torch.zeros((1, 1)))
 
     @pytest.mark.parametrize("features", tensormaps_list)
@@ -145,7 +145,7 @@ class TestMultiFrameToySystem:
         # - the third frame contains three atoms at the origin
         # Thus, the features should almost be identical, up to a global factor
         # that is the number of atoms (that are exactly on the same position).
-        block = features.block({"species_center": 7, "species_neighbor": 7})
+        block = features.block({"center_type": 7, "neighbor_type": 7})
         values = block.values[:, 0]  # flatten to 1d
         values_ref = torch.tensor([1.0, 2, 2, 3, 3, 3])
 
@@ -158,10 +158,10 @@ class TestMultiFrameToySystem:
         # an equivalent structure (up to global translation). This leads to symmetry
         # in the features: the Na-density around Cl is the same as the Cl-density around
         # Na and so on.
-        block_nana = features.block({"species_center": 11, "species_neighbor": 11})
-        block_nacl = features.block({"species_center": 11, "species_neighbor": 17})
-        block_clna = features.block({"species_center": 17, "species_neighbor": 11})
-        block_clcl = features.block({"species_center": 17, "species_neighbor": 17})
+        block_nana = features.block({"center_type": 11, "neighbor_type": 11})
+        block_nacl = features.block({"center_type": 11, "neighbor_type": 17})
+        block_clna = features.block({"center_type": 17, "neighbor_type": 11})
+        block_clcl = features.block({"center_type": 17, "neighbor_type": 17})
         torch.testing.assert_close(
             block_nacl.values, block_clna.values, rtol=1e-15, atol=0.0
         )

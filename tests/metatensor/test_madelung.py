@@ -202,7 +202,7 @@ class TestMadelung:
         for idx_c, c in enumerate(atomic_numbers):
             for idx_n, n in enumerate(atomic_numbers):
                 block = potentials_mesh.block(
-                    {"species_center": int(c), "species_neighbor": int(n)}
+                    {"center_type": int(c), "neighbor_type": int(n)}
                 )
                 energies[idx_c] += charges[idx_c] * charges[idx_n] * block.values[0, 0]
 
