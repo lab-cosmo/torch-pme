@@ -10,6 +10,7 @@ functions of ``meshlode`` and the construction LODE descriptors (`Grisafi 2019
 a CsCl-type structure, computes a smeared version and the Coulomb potential, and
 projects on a separate set of points.
 """
+
 # %%
 
 import ase
