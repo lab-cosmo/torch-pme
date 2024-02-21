@@ -1,6 +1,7 @@
 """
 Tests for Fourier space convolution class
 """
+
 import pytest
 import torch
 from torch.testing import assert_close
