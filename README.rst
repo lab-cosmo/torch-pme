@@ -18,7 +18,7 @@ You can install *MeshLode* using pip with
 
 .. code-block:: bash
 
-    git clone https://github.com/ceriottm/MeshLODE
+    git clone https://github.com/lab-cosmo/MeshLODE
     cd MeshLODE
     pip install .
 
@@ -38,10 +38,10 @@ Having problems or ideas?
 -------------------------
 
 Having a problem with MeshLODE? Please let us know by `submitting an issue
-<https://github.com/ceriottm/MeshLODE/issues>`_.
+<https://github.com/lab-cosmo/MeshLODE/issues>`_.
 
 Submit new features or bug fixes through a `pull request
-<https://github.com/ceriottm/MeshLODE/pulls>`_.
+<https://github.com/lab-cosmo/MeshLODE/pulls>`_.
 
 .. marker-contributing
 
@@ -50,17 +50,17 @@ Contributors
 
 Thanks goes to all people that make MeshLODE possible:
 
-.. image:: https://contrib.rocks/image?repo=ceriottm/MeshLODE
-   :target: https://github.com/ceriottm/MeshLODE/graphs/contributors
+.. image:: https://contrib.rocks/image?repo=lab-cosmo/MeshLODE
+   :target: https://github.com/lab-cosmo/MeshLODE/graphs/contributors
 
-.. |tests| image:: https://github.com/ceriottm/MeshLODE/workflows/Test/badge.svg
+.. |tests| image:: https://github.com/lab-cosmo/MeshLODE/workflows/Test/badge.svg
    :alt: Github Actions Tests Job Status
-   :target: (https://github.com/ceriottm/MeshLODE/\
+   :target: (https://github.com/lab-cosmo/MeshLODE/\
                 actions?query=workflow%3ATests)
 
-.. |codecov| image:: https://codecov.io/gh/ceriottm/meshlode/branch/main/graph/badge.svg?token=UZJPJG34SM
+.. |codecov| image:: https://codecov.io/gh/lab-cosmo/meshlode/branch/main/graph/badge.svg?token=UZJPJG34SM
    :alt: Code coverage
-   :target: https://codecov.io/gh/ceriottm/meshlode/
+   :target: https://codecov.io/gh/lab-cosmo/meshlode/
 
 .. |docs| image:: https://img.shields.io/badge/documentation-latest-sucess
    :alt: Python
