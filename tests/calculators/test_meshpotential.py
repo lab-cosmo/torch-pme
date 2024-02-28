@@ -3,6 +3,7 @@ for the metatensor calculator."""
 
 import math
 
+import pytest
 import torch
 from torch.testing import assert_close
 
@@ -31,6 +32,29 @@ def descriptor() -> MeshPotential:
         interpolation_order=2,
         subtract_self=True,
     )
+
+
+def test_atomic_smearing_error():
+    with pytest.raises(ValueError, match="has to be positive"):
+        MeshPotential(atomic_smearing=-1.0)
+
+
+def test_interpolation_order_error():
+    with pytest.raises(ValueError, match="Only `interpolation_order` from 1 to 5"):
+        MeshPotential(atomic_smearing=1, interpolation_order=10)
+
+
+def test_all_atomic_numbers():
+    descriptor = MeshPotential(atomic_smearing=0.1, all_atomic_numbers=[8, 55, 17])
+    values = descriptor.compute(cscl_system())
+    assert values.shape == (2, 3)
+    assert torch.equal(values[:, 0], torch.zeros(2))
+
+
+def test_all_atomic_numbers_error():
+    descriptor = MeshPotential(atomic_smearing=0.1, all_atomic_numbers=[17])
+    with pytest.raises(ValueError, match="Global list of atomic numbers"):
+        descriptor.compute(cscl_system())
 
 
 # Make sure that the calculators are computing the features without raising errors,

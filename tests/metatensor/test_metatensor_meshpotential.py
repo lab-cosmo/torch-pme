@@ -28,6 +28,24 @@ def descriptor() -> meshlode_metatensor.MeshPotential:
     )
 
 
+# Test correct filling of zero and empty blocks when setting global atomic numbers
+def test_all_atomic_numbers():
+    all_atomic_numbers = [9, 1, 8]
+    descriptor = meshlode_metatensor(
+        atomic_smearing=1, all_atomic_numbers=all_atomic_numbers
+    )
+    values = descriptor.compute(toy_system_single_frame())
+
+    for n in all_atomic_numbers:
+        assert len(values.block({"center_type": 9, "neighbor_type": n}).values) == 0
+
+    for n in [1, 8]:
+        assert torch.equal(
+            values.block({"center_type": n, "neighbor_type": 9}).values,
+            torch.tensor([[0], [0]]),
+        )
+
+
 # Make sure that the calculators are computing the features without raising errors,
 # and returns the correct output format (TensorMap)
 def check_operation(calculator):

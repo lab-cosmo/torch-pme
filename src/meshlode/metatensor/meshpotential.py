@@ -14,7 +14,6 @@ except ImportError:
 from meshlode.lib.system import System
 
 from .. import calculators
-from ..calculators.meshpotential import _my_1d_tolist
 
 
 class MeshPotential(calculators.MeshPotential):
@@ -24,7 +23,6 @@ class MeshPotential(calculators.MeshPotential):
 
     Example
     -------
-
     >>> import torch
     >>> from meshlode.lib import System
     >>> from meshlode.metatensor import MeshPotential
@@ -56,7 +54,6 @@ class MeshPotential(calculators.MeshPotential):
     >>> block_ClCl = features.block({"center_type": 17, "neighbor_type": 17})
     >>> block_ClCl.values
     tensor([[1.3755]])
-
     """
 
     def forward(
@@ -87,20 +84,13 @@ class MeshPotential(calculators.MeshPotential):
         if not isinstance(systems, list):
             systems = [systems]
 
-        # Generate a dictionary to map atomic species to array indices
-        # In general, the species are sorted according to atomic number
-        # and assigned the array indices 0, 1, 2,...
-        # Example: for H2O: H is mapped to 0 and O is mapped to 1.
-        all_species = []
-        n_atoms_tot = 0
-        for system in systems:
-            n_atoms_tot += len(system)
-            all_species.append(system.species)
-        all_species = torch.hstack(all_species)
-        atomic_numbers = _my_1d_tolist(torch.unique(all_species))
+        atomic_numbers = self._get_atomic_numbers(systems)
         n_species = len(atomic_numbers)
 
-        # Initialize dictionary for sparse storage of the features
+        # Initialize dictionary for sparse storage of the features Generate a dictionary
+        # to map atomic species to array indices In general, the species are sorted
+        # according to atomic number and assigned the array indices 0, 1, 2,...
+        # Example: for H2O: `H` is mapped to `0` and `O` is mapped to `1`.
         n_species_sq = n_species * n_species
         feat_dic: Dict[int, List[torch.Tensor]] = {a: [] for a in range(n_species_sq)}
 
@@ -133,14 +123,21 @@ class MeshPotential(calculators.MeshPotential):
 
             # Generate the Labels objects for the samples and properties of the
             # TensorBlock.
-            samples_vals: List[List[int]] = []
+            values_samples: List[List[int]] = []
             for i_frame, system in enumerate(systems):
                 for i_atom in range(len(system)):
                     if system.species[i_atom] == spec_center:
-                        samples_vals.append([i_frame, i_atom])
-            samples_vals_tensor = torch.tensor((samples_vals), dtype=torch.int32)
-            labels_samples = Labels(["system", "atom"], samples_vals_tensor)
+                        values_samples.append([i_frame, i_atom])
 
+            samples_vals_tensor = torch.tensor(values_samples, dtype=torch.int32)
+
+            # If no atoms are found that match the species pair `samples_vals_tensor`
+            # will be empty. We have to reshape the empty tensor to be a valid input for
+            # `Labels`.
+            if len(samples_vals_tensor) == 0:
+                samples_vals_tensor = samples_vals_tensor.reshape(-1, 2)
+
+            labels_samples = Labels(["system", "atom"], samples_vals_tensor)
             labels_properties = Labels(["potential"], torch.tensor([[0]]))
 
             block = TensorBlock(
