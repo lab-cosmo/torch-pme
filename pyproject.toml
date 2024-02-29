@@ -54,6 +54,7 @@ repository = "https://github.com/lab-cosmo/MeshLODE"
 issues = "https://github.com/lab-cosmo/MeshLODE/issues"
 
 [tool.coverage.report]
+show_missing = true
 include = [
     "src/meshlode/*"
 ]

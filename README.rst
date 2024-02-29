@@ -7,7 +7,7 @@ Particle-mesh based calculation of Long Distance Equivariants.
 
 For details, tutorials, and examples, please have a look at our `documentation`_.
 
-.. _`documentation`: https://meshlode.readthedocs.io
+.. _`documentation`: https://lab-cosmo.github.io/MeshLODE/latest
 
 .. marker-installation
 
@@ -53,15 +53,14 @@ Thanks goes to all people that make MeshLODE possible:
 .. image:: https://contrib.rocks/image?repo=lab-cosmo/MeshLODE
    :target: https://github.com/lab-cosmo/MeshLODE/graphs/contributors
 
-.. |tests| image:: https://github.com/lab-cosmo/MeshLODE/workflows/Test/badge.svg
+.. |tests| image:: https://github.com/lab-cosmo/MeshLODE/workflows/Tests/badge.svg
    :alt: Github Actions Tests Job Status
-   :target: (https://github.com/lab-cosmo/MeshLODE/\
-                actions?query=workflow%3ATests)
+   :target: https://github.com/lab-cosmo/MeshLODE/actions?query=workflow%3ATests
 
-.. |codecov| image:: https://codecov.io/gh/lab-cosmo/meshlode/branch/main/graph/badge.svg?token=UZJPJG34SM
+.. |codecov| image:: https://codecov.io/gh/lab-cosmo/meshlode/branch/main/graph/badge.svg
    :alt: Code coverage
    :target: https://codecov.io/gh/lab-cosmo/meshlode/
 
 .. |docs| image:: https://img.shields.io/badge/documentation-latest-sucess
-   :alt: Python
-   :target: https://meshlode.readthedocs.io
+   :alt: Documentation
+   :target: https://lab-cosmo.github.io/MeshLODE/latest/
