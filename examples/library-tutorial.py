@@ -55,9 +55,9 @@ def sliceplot(mesh, sz=12, cmap="viridis", vmin=None, vmax=None):
 #
 
 positions = torch.tensor([[0, 0, 0], [0.5, 0.5, 0.5]]) * 4
-atomic_numbers = torch.tensor([55, 17])  # Cs and Cl
+atomic_types = torch.tensor([55, 17])  # Cs and Cl
 cell = torch.eye(3) * 4
-ase_frame = ase.Atoms(positions=positions, cell=cell, numbers=atomic_numbers).repeat(
+ase_frame = ase.Atoms(positions=positions, cell=cell, numbers=atomic_types).repeat(
     [2, 2, 2]
 )
 ase_frame.positions[:] += np.random.normal(size=ase_frame.positions.shape) * 0.1

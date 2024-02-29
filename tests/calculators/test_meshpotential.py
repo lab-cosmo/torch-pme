@@ -44,15 +44,15 @@ def test_interpolation_order_error():
         MeshPotential(atomic_smearing=1, interpolation_order=10)
 
 
-def test_all_atomic_numbers():
-    descriptor = MeshPotential(atomic_smearing=0.1, all_atomic_numbers=[8, 55, 17])
+def test_all_atomic_types():
+    descriptor = MeshPotential(atomic_smearing=0.1, all_atomic_types=[8, 55, 17])
     values = descriptor.compute(cscl_system())
     assert values.shape == (2, 3)
     assert torch.equal(values[:, 0], torch.zeros(2))
 
 
-def test_all_atomic_numbers_error():
-    descriptor = MeshPotential(atomic_smearing=0.1, all_atomic_numbers=[17])
+def test_all_atomic_types_error():
+    descriptor = MeshPotential(atomic_smearing=0.1, all_atomic_types=[17])
     with pytest.raises(ValueError, match="Global list of atomic numbers"):
         descriptor.compute(cscl_system())
 

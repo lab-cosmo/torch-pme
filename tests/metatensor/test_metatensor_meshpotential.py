@@ -29,14 +29,14 @@ def descriptor() -> meshlode_metatensor.MeshPotential:
 
 
 # Test correct filling of zero and empty blocks when setting global atomic numbers
-def test_all_atomic_numbers():
-    all_atomic_numbers = [9, 1, 8]
-    descriptor = meshlode_metatensor(
-        atomic_smearing=1, all_atomic_numbers=all_atomic_numbers
+def test_all_atomic_types():
+    all_atomic_types = [9, 1, 8]
+    descriptor = meshlode_metatensor.MeshPotential(
+        atomic_smearing=1, all_atomic_types=all_atomic_types
     )
     values = descriptor.compute(toy_system_single_frame())
 
-    for n in all_atomic_numbers:
+    for n in all_atomic_types:
         assert len(values.block({"center_type": 9, "neighbor_type": n}).values) == 0
 
     for n in [1, 8]:

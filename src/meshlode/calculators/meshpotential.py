@@ -34,10 +34,10 @@ class MeshPotential(torch.nn.Module):
     :param subtract_self: bool. If set to true, subtract from the features of an atom
         the contributions to the potential arising from that atom itself (but not the
         periodic images).
-    :param all_atomic_numbers: Optional global list of all atomic numbers that should be
+    :param all_atomic_types: Optional global list of all atomic types that should be
         considered for the computation. This option might be useful when running the
         calculation on subset of a whole dataset and it required to keep the shape of
-        the output consistent. If this is not set the possible number of species will be
+        the output consistent. If this is not set the possible atomic types will be
         determined when calling the :meth:`compute()`.
 
     Example
@@ -49,8 +49,8 @@ class MeshPotential(torch.nn.Module):
     Define simple example structure having the CsCl (Cesium Chloride) structure
 
     >>> positions = torch.tensor([[0, 0, 0], [0.5, 0.5, 0.5]])
-    >>> atomic_numbers = torch.tensor([55, 17])  # Cs and Cl
-    >>> system = System(species=atomic_numbers, positions=positions, cell=torch.eye(3))
+    >>> atomic_types = torch.tensor([55, 17])  # Cs and Cl
+    >>> system = System(species=atomic_types, positions=positions, cell=torch.eye(3))
 
     Compute features
 
@@ -68,7 +68,7 @@ class MeshPotential(torch.nn.Module):
         mesh_spacing: Optional[float] = None,
         interpolation_order: Optional[int] = 4,
         subtract_self: Optional[bool] = False,
-        all_atomic_numbers: Optional[List[int]] = None,
+        all_atomic_types: Optional[List[int]] = None,
     ):
         super().__init__()
 
@@ -89,11 +89,11 @@ class MeshPotential(torch.nn.Module):
         self.interpolation_order = interpolation_order
         self.subtract_self = subtract_self
 
-        if all_atomic_numbers is None:
-            self.all_atomic_numbers = None
+        if all_atomic_types is None:
+            self.all_atomic_types = None
         else:
-            self.all_atomic_numbers = _1d_tolist(
-                torch.unique(torch.tensor(all_atomic_numbers))
+            self.all_atomic_types = _1d_tolist(
+                torch.unique(torch.tensor(all_atomic_types))
             )
 
         # Initilize auxiliary objects
@@ -140,8 +140,8 @@ class MeshPotential(torch.nn.Module):
         if not isinstance(systems, list):
             systems = [systems]
 
-        atomic_numbers = self._get_atomic_numbers(systems)
-        n_species = len(atomic_numbers)
+        atomic_types = self._get_atomic_types(systems)
+        n_species = len(atomic_types)
 
         potentials = []
         for system in systems:
@@ -149,8 +149,8 @@ class MeshPotential(torch.nn.Module):
             n_atoms = len(system)
             species = system.species
             charges = torch.zeros((n_atoms, n_species), dtype=torch.float)
-            for i_specie, atomic_number in enumerate(atomic_numbers):
-                charges[species == atomic_number, i_specie] = 1.0
+            for i_specie, atomic_type in enumerate(atomic_types):
+                charges[species == atomic_type, i_specie] = 1.0
 
             # Compute the potentials
             potentials.append(
@@ -162,22 +162,22 @@ class MeshPotential(torch.nn.Module):
         else:
             return potentials
 
-    def _get_atomic_numbers(self, systems: List[System]) -> List[int]:
-        """Extract all species/atomic_numbers from the list of systems."""
+    def _get_atomic_types(self, systems: List[System]) -> List[int]:
+        """Extract a list of all present atomic from the list of systems."""
         all_species = [system.species for system in systems]
         all_species = torch.hstack(all_species)
-        atomic_numbers_requested = _1d_tolist(torch.unique(all_species))
+        atomic_types_requested = _1d_tolist(torch.unique(all_species))
 
-        if self.all_atomic_numbers is not None:
-            if not _is_subset(atomic_numbers_requested, self.all_atomic_numbers):
+        if self.all_atomic_types is not None:
+            if not _is_subset(atomic_types_requested, self.all_atomic_types):
                 raise ValueError(
-                    f"Global list of atomic numbers {self.all_atomic_numbers} does not "
+                    f"Global list of atomic numbers {self.all_atomic_types} does not "
                     "contain all atomic numbers for the provided systems "
-                    f"{atomic_numbers_requested}."
+                    f"{atomic_types_requested}."
                 )
-            return self.all_atomic_numbers
+            return self.all_atomic_types
         else:
-            return atomic_numbers_requested
+            return atomic_types_requested
 
     def _compute_single_frame(
         self,
