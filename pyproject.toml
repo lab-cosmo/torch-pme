@@ -50,8 +50,8 @@ metatensor = [
 [project.urls]
 homepage = "http://meshlode.readthedocs.io"
 documentation = "http://meshlode.readthedocs.io"
-repository = "https://github.com/ceriottm/MeshLODE"
-issues = "https://github.com/ceriottm/MeshLODE/issues"
+repository = "https://github.com/lab-cosmo/MeshLODE"
+issues = "https://github.com/lab-cosmo/MeshLODE/issues"
 
 [tool.coverage.report]
 include = [
