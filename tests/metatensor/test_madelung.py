@@ -44,7 +44,7 @@ class TestMadelung:
         # closest Na-Cl pair is exactly 1. The cubic unit cell
         # in these units would have a length of 2.
         d["NaCl"]["symbols"] = ["Na", "Cl"]
-        d["NaCl"]["atomic_numbers"] = torch.tensor([11, 17])
+        d["NaCl"]["atomic_types"] = torch.tensor([11, 17])
         d["NaCl"]["charges"] = torch.tensor([[1.0, -1]]).T
         d["NaCl"]["positions"] = torch.tensor([[0, 0, 0], [1.0, 0, 0]])
         d["NaCl"]["cell"] = torch.tensor([[0, 1.0, 1], [1, 0, 1], [1, 1, 0]])
@@ -56,7 +56,7 @@ class TestMadelung:
         # The closest Cs-Cl distance is sqrt(3)/2. We thus divide
         # the Madelung constant by this value to match the reference.
         d["CsCl"]["symbols"] = ["Cs", "Cl"]
-        d["CsCl"]["atomic_numbers"] = torch.tensor([55, 17])
+        d["CsCl"]["atomic_types"] = torch.tensor([55, 17])
         d["CsCl"]["charges"] = torch.tensor([[1.0, -1]]).T
         d["CsCl"]["positions"] = torch.tensor([[0, 0, 0], [0.5, 0.5, 0.5]])
         d["CsCl"]["cell"] = torch.eye(3)
@@ -70,7 +70,7 @@ class TestMadelung:
         # If, on the other han_pylode_without_centerd, we set the lattice constant of
         # the cubic cell equal to 1, the Zn-S distance is sqrt(3)/4.
         d["ZnS"]["symbols"] = ["S", "Zn"]
-        d["ZnS"]["atomic_numbers"] = torch.tensor([16, 30])
+        d["ZnS"]["atomic_types"] = torch.tensor([16, 30])
         d["ZnS"]["charges"] = torch.tensor([[1.0, -1]]).T
         d["ZnS"]["positions"] = torch.tensor([[0, 0, 0], [0.5, 0.5, 0.5]])
         d["ZnS"]["cell"] = torch.tensor([[0, 1.0, 1], [1, 0, 1], [1, 1, 0]])
@@ -80,7 +80,7 @@ class TestMadelung:
         u = torch.tensor([3 / 8])
         c = torch.sqrt(1 / u)
         d["ZnSO4"]["symbols"] = ["S", "Zn", "S", "Zn"]
-        d["ZnSO4"]["atomic_numbers"] = torch.tensor([16, 30, 16, 30])
+        d["ZnSO4"]["atomic_types"] = torch.tensor([16, 30, 16, 30])
         d["ZnSO4"]["charges"] = torch.tensor([[1.0, -1, 1, -1]]).T
         d["ZnSO4"]["positions"] = torch.tensor(
             [
@@ -183,13 +183,13 @@ class TestMadelung:
         dic = crystal_dictionary[crystal_name]
         positions = dic["positions"] * scaling_factor
         cell = dic["cell"] * scaling_factor
-        atomic_numbers = dic["atomic_numbers"]
+        atomic_types = dic["atomic_types"]
         charges = dic["charges"]
         madelung = dic["madelung"] / scaling_factor
         mesh_spacing = atomic_smearing / 2 * scaling_factor
         smearing_eff = atomic_smearing * scaling_factor
         n_atoms = len(positions)
-        frame = System(species=atomic_numbers, positions=positions, cell=cell)
+        frame = System(species=atomic_types, positions=positions, cell=cell)
         MP = meshlode_metatensor.MeshPotential(
             atomic_smearing=smearing_eff,
             mesh_spacing=mesh_spacing,
@@ -200,8 +200,8 @@ class TestMadelung:
 
         # Compute the actual potential from the features
         energies = torch.zeros((n_atoms, 1))
-        for idx_c, c in enumerate(atomic_numbers):
-            for idx_n, n in enumerate(atomic_numbers):
+        for idx_c, c in enumerate(atomic_types):
+            for idx_n, n in enumerate(atomic_types):
                 block = potentials_mesh.block(
                     {"center_type": int(c), "neighbor_type": int(n)}
                 )

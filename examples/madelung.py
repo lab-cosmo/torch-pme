@@ -20,11 +20,11 @@ import meshlode
 # values. MeshPotential by default outputs the species sorted according to the atomic
 # number. Thus, we input the compound "CsCl" and "ClCs" since Cl and Cs have atomic
 # numbers 17 and 55, respectively.
-atomic_numbers = torch.tensor([17, 55])  # Cl and Cs
+atomic_types = torch.tensor([17, 55])  # Cl and Cs
 charges = torch.tensor([-1.0, 1.0])
 cell = torch.eye(3)
 positions = torch.tensor([[0, 0, 0], [0.5, 0.5, 0.5]])
-frame = meshlode.System(species=atomic_numbers, positions=positions, cell=torch.eye(3))
+frame = meshlode.System(species=atomic_types, positions=positions, cell=torch.eye(3))
 
 # %%
 # Define the expected values of the energy
@@ -105,8 +105,8 @@ potential_metatensor = MP.compute(frame)
 # of the "potentials" weighted by the charges of the atoms.
 
 atomic_energies_metatensor = torch.zeros((n_atoms, 1))
-for idx_c, c in enumerate(atomic_numbers):
-    for idx_n, n in enumerate(atomic_numbers):
+for idx_c, c in enumerate(atomic_types):
+    for idx_n, n in enumerate(atomic_types):
         # Take the coefficients with the correct center atom and neighbor atom species
         block = potential_metatensor.block(
             {"center_type": int(c), "neighbor_type": int(n)}
