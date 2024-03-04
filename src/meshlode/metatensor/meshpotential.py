@@ -5,13 +5,13 @@ import torch
 
 try:
     from metatensor.torch import Labels, TensorBlock, TensorMap
+    from metatensor.torch.atomistic import System
 except ImportError:
     raise ImportError(
         "metatensor.torch is required for meshlode.metatensor but is not installed. "
         "Try installing it with:\npip install metatensor[torch]"
     )
 
-from metatensor.torch.atomistic import System
 
 from .. import calculators
 
@@ -99,9 +99,12 @@ class MeshPotential(calculators.MeshPotential):
 
                 if system.device != systems[0].device:
                     raise ValueError(
-                        "`device of all systems must be the same, got "
+                        "`device` of all systems must be the same, got "
                         f"{system.device} and {systems[0].device}`"
                     )
+
+        dtype = systems[0].positions.dtype
+        device = systems[0].positions.device
 
         requested_types = self._get_requested_types(
             [system.types for system in systems]
@@ -118,7 +121,7 @@ class MeshPotential(calculators.MeshPotential):
         for system in systems:
             # One-hot encoding of charge information
             types = system.types
-            charges = torch.zeros((len(system), n_types), dtype=system.positions.dtype)
+            charges = torch.zeros((len(system), n_types), dtype=dtype, device=device)
             for i_specie, atomic_type in enumerate(requested_types):
                 charges[types == atomic_type, i_specie] = 1.0
 
@@ -149,7 +152,9 @@ class MeshPotential(calculators.MeshPotential):
                     if system.types[i_atom] == spec_center:
                         values_samples.append([i_frame, i_atom])
 
-            samples_vals_tensor = torch.tensor(values_samples, dtype=torch.int32)
+            samples_vals_tensor = torch.tensor(
+                values_samples, dtype=torch.int32, device=device
+            )
 
             # If no atoms are found that match the types pair `samples_vals_tensor`
             # will be empty. We have to reshape the empty tensor to be a valid input for
@@ -158,7 +163,9 @@ class MeshPotential(calculators.MeshPotential):
                 samples_vals_tensor = samples_vals_tensor.reshape(-1, 2)
 
             labels_samples = Labels(["system", "atom"], samples_vals_tensor)
-            labels_properties = Labels(["potential"], torch.tensor([[0]]))
+            labels_properties = Labels(
+                ["potential"], torch.tensor([[0]], device=device)
+            )
 
             block = TensorBlock(
                 samples=labels_samples,
@@ -173,7 +180,9 @@ class MeshPotential(calculators.MeshPotential):
         key_values: List[torch.Tensor] = []
         for spec_center in requested_types:
             for spec_neighbor in requested_types:
-                key_values.append(torch.tensor([spec_center, spec_neighbor]))
+                key_values.append(
+                    torch.tensor([spec_center, spec_neighbor], device=device)
+                )
         key_values = torch.vstack(key_values)
         labels_keys = Labels(["center_type", "neighbor_type"], key_values)
 

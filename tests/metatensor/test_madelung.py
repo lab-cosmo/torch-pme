@@ -4,11 +4,11 @@ Madelung tests
 
 import pytest
 import torch
-from metatensor.torch.atomistic import System
 from torch.testing import assert_close
 
 
 meshlode_metatensor = pytest.importorskip("meshlode.metatensor")
+mts_atomistic = pytest.importorskip("metatensor.torch.atomistic")
 
 
 class TestMadelung:
@@ -192,7 +192,7 @@ class TestMadelung:
         mesh_spacing = atomic_smearing / 2 * scaling_factor
         smearing_eff = atomic_smearing * scaling_factor
         n_atoms = len(positions)
-        system = System(types=types, positions=positions, cell=cell)
+        system = mts_atomistic.System(types=types, positions=positions, cell=cell)
         MP = meshlode_metatensor.MeshPotential(
             atomic_smearing=smearing_eff,
             mesh_spacing=mesh_spacing,

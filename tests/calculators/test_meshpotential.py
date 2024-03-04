@@ -34,6 +34,14 @@ def descriptor() -> MeshPotential:
     )
 
 
+def test_forward():
+    mp = descriptor()
+    descriptor_compute = mp.compute(*cscl_system())
+    descriptor_forward = mp.forward(*cscl_system())
+
+    assert torch.equal(descriptor_forward, descriptor_compute)
+
+
 def test_atomic_smearing_error():
     with pytest.raises(ValueError, match="has to be positive"):
         MeshPotential(atomic_smearing=-1.0)
@@ -153,3 +161,51 @@ def test_positions_cell_dtype_error():
     )
     with pytest.raises(ValueError, match=match):
         descriptor().compute(types=types, positions=positions, cell=cell)
+
+
+def test_dtype_device():
+    """Test that the output dtype and device are the same as the input."""
+    device = "cpu"
+    dtype = torch.float64
+
+    types = torch.tensor([1], dtype=dtype, device=device)
+    positions = torch.tensor([[0.0, 0.0, 0.0]], dtype=dtype, device=device)
+    cell = torch.eye(3, dtype=dtype, device=device)
+
+    MP = MeshPotential(atomic_smearing=0.2)
+    potential = MP.compute(types=types, positions=positions, cell=cell)
+
+    assert potential.dtype == dtype
+    assert potential.device.type == device
+
+
+def test_inconsistent_dtype():
+    """Test if the cell and positions have inconsistent dtype and error is raised."""
+    types = torch.tensor([1], dtype=torch.float32)
+    positions = torch.tensor([[0.0, 0.0, 0.0]], dtype=torch.float64)  # Different dtype
+    cell = torch.eye(3, dtype=torch.float32)
+
+    MP = MeshPotential(atomic_smearing=0.2)
+
+    match = (
+        "`cell` must be have the same dtype as `positions`, got torch.float32 and "
+        "torch.float64"
+    )
+    with pytest.raises(ValueError, match=match):
+        MP.compute(types=types, positions=positions, cell=cell)
+
+
+def test_inconsistent_device():
+    """Test if the cell and positions have inconsistent device and error is raised."""
+    types = torch.tensor([1], device="cpu")
+    positions = torch.tensor([[0.0, 0.0, 0.0]], device="cpu")
+    cell = torch.eye(3, device="meta")  # different device
+
+    MP = MeshPotential(atomic_smearing=0.2)
+
+    match = (
+        "`types`, `positions`, and `cell` must be on the same device, got cpu, "
+        "cpu and meta."
+    )
+    with pytest.raises(ValueError, match=match):
+        MP.compute(types=types, positions=positions, cell=cell)
