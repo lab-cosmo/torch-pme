@@ -8,11 +8,8 @@ version: 2
 # Set the version of Python and other tools we need
 build:
   os: ubuntu-22.04
-  apt_packages:
-    - cmake
   tools:
-    python: "3.10"
-    rust: "1.64"
+    python: "3.12"
   
 # Build documentation in the docs/ directory with Sphinx
 sphinx:
@@ -28,5 +25,4 @@ python:
     - method: pip
       path: .
       extra_requirements:
-        # The documentation runs "examples" to produce outputs via sphinx-gallery.
-        - examples
+        - metatensor
