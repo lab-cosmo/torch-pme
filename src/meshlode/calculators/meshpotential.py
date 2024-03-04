@@ -23,39 +23,38 @@ def _is_subset(tensor1: torch.tensor, tensor2: torch.tensor) -> bool:
 class MeshPotential(torch.nn.Module):
     """A specie-wise long-range potential.
 
-    :param atomic_smearing: Width of the atom-centered gaussian used to create the
+    :param atomic_smearing: Width of the atom-centered Gaussian used to create the
         atomic density.
     :param mesh_spacing: Value that determines the umber of Fourier-space grid points
-        that will be used along each axis. If set to None, it will automatically
-        be set to half of ``atomic_smearing``
+        that will be used along each axis. If set to None, it will automatically be set
+        to half of ``atomic_smearing``.
     :param interpolation_order: Interpolation order for mapping onto the grid, where an
         interpolation order of p corresponds to interpolation by a polynomial of degree
-        ``p-1`` (e.g. ``p=4`` for cubic interpolation).
-    :param subtract_self: bool. If set to true, subtract from the features of an atom
-        the contributions to the potential arising from that atom itself (but not the
-        periodic images).
-    :param all_atomic_types: Optional global list of all atomic types that should be
-        considered for the computation. This option might be useful when running the
-        calculation on subset of a whole dataset and it required to keep the shape of
-        the output consistent. If this is not set the possible atomic types will be
-        determined when calling the :meth:`compute()`.
+        ``p - 1`` (e.g. ``p = 4`` for cubic interpolation).
+    :param subtract_self: If set to :py:obj:`True`, subtract from the features of an
+        atom the contributions to the potential arising from that atom itself (but not
+        the periodic images).
+    :param all_types: Optional global list of all atomic types that should be considered
+        for the computation. This option might be useful when running the calculation on
+        subset of a whole dataset and it required to keep the shape of the output
+        consistent. If this is not set the possible atomic types will be determined when
+        calling the :meth:`compute()`.
 
     Example
     -------
     >>> import torch
-    >>> from meshlode.lib import System
     >>> from meshlode import MeshPotential
 
     Define simple example structure having the CsCl (Cesium Chloride) structure
 
-    >>> positions = torch.tensor([[0, 0, 0], [0.5, 0.5, 0.5]])
     >>> atomic_types = torch.tensor([55, 17])  # Cs and Cl
-    >>> system = System(species=atomic_types, positions=positions, cell=torch.eye(3))
+    >>> positions = torch.tensor([[0, 0, 0], [0.5, 0.5, 0.5]])
+    >>> cell = torch.eye(3)
 
     Compute features
 
     >>> MP = MeshPotential(atomic_smearing=0.2, mesh_spacing=0.1, interpolation_order=4)
-    >>> MP.compute(system)
+    >>> MP.compute(atomic_types=atomic_types, positions=positions, cell=cell)
     tensor([[-0.5467,  1.3755],
             [ 1.3755, -0.5467]])
     """
@@ -68,7 +67,7 @@ class MeshPotential(torch.nn.Module):
         mesh_spacing: Optional[float] = None,
         interpolation_order: Optional[int] = 4,
         subtract_self: Optional[bool] = False,
-        all_atomic_types: Optional[List[int]] = None,
+        all_types: Optional[List[int]] = None,
     ):
         super().__init__()
 
@@ -89,11 +88,11 @@ class MeshPotential(torch.nn.Module):
         self.interpolation_order = interpolation_order
         self.subtract_self = subtract_self
 
-        if all_atomic_types is None:
-            self.all_atomic_types = None
+        if all_types is None:
+            self.all_types = None
         else:
-            self.all_atomic_types = _1d_tolist(
-                torch.unique(torch.tensor(all_atomic_types))
+            self.all_types = _1d_tolist(
+                torch.unique(torch.tensor(all_types))
             )
 
         # Initilize auxiliary objects
@@ -104,22 +103,24 @@ class MeshPotential(torch.nn.Module):
     # "compute" instead, for compatibility with other COSMO software.
     def forward(
         self,
-        systems: Union[List[System], System],
+        types: Union[List[torch.Tensor], torch.Tensor],
+        positions: Union[List[torch.Tensor], torch.Tensor],
+        cell: Union[List[torch.Tensor], torch.Tensor],
     ) -> Union[torch.Tensor, List[torch.Tensor]]:
         """forward just calls :py:meth:`CalculatorModule.compute`"""
-        return self.compute(systems=systems)
+        return self.compute(types=types, positions=positions, cell=cell)
 
     def compute(
         self,
-        systems: Union[List[System], System],
+        types: Union[List[torch.Tensor], torch.Tensor],
+        positions: Union[List[torch.Tensor], torch.Tensor],
+        cell: Union[List[torch.Tensor], torch.Tensor],
     ) -> Union[torch.Tensor, List[torch.Tensor]]:
         """Compute the potential at the position of each atom for all provided systems.
 
-        :param systems: single System or list of Systems on which to run the
-            calculation. If any of the systems' ``positions`` or ``cell`` has
-            ``requires_grad`` set to :py:obj:`True`, then the corresponding gradients
-            are computed and registered as a custom node in the computational graph, to
-            allow backward propagation of the gradients later.
+        :param types: TODO
+        :param positions: TODO
+        :param cell: TODO
 
         :return: List of torch Tensors containing the potentials for all frames and all
             atoms. Each tensor in the list is of shape (n_atoms,n_species), where
@@ -137,60 +138,61 @@ class MeshPotential(torch.nn.Module):
         """
         # Make sure that the compute function also works if only a single frame is
         # provided as input (for convenience of users testing out the code)
-        if not isinstance(systems, list):
-            systems = [systems]
+        if not isinstance(types, list):
+            types = [types]
+        if not isinstance(species, list):
+            positions = [positions]
+        if not isinstance(species, list):
+            cell = [cell]
 
-        atomic_types = self._get_atomic_types(systems)
-        n_species = len(atomic_types)
+        # TODO check that all inputs are on the same device and that positions and cell
+        # have the same dtype!
+
+        requested_types = self._get_requested_types(types)
+        n_types = len(atomic_types)
 
         potentials = []
-        for system in systems:
+        for types_single, positions_single, cell_single in zip(types, positions, cell):
             # One-hot encoding of charge information
-            n_atoms = len(system)
-            species = system.species
-            charges = torch.zeros((n_atoms, n_species), dtype=torch.float)
-            for i_specie, atomic_type in enumerate(atomic_types):
-                charges[species == atomic_type, i_specie] = 1.0
+            charges = torch.zeros((len(types_single), n_types), dtype=positions_single.dtype)
+            for i_type, atomic_type in enumerate(requested_types):
+                charges[types_single == atomic_type, i_type] = 1.0
 
             # Compute the potentials
             potentials.append(
-                self._compute_single_frame(system.cell, system.positions, charges)
+                self._compute_single_frame(positions=positions_single, charges=charges, cell=cell_single)
             )
 
-        if len(systems) == 1:
+        if len(species) == 1:
             return potentials[0]
         else:
             return potentials
 
-    def _get_atomic_types(self, systems: List[System]) -> List[int]:
-        """Extract a list of all present atomic from the list of systems."""
-        all_species = [system.species for system in systems]
-        all_species = torch.hstack(all_species)
-        atomic_types_requested = _1d_tolist(torch.unique(all_species))
+    def _get_requested_types(self, types: List[torch.Tensor]) -> List[int]:
+        """Extract a list of all present types from the list of types."""
+        all_types = torch.hstack(types)
+        types_requested = _1d_tolist(torch.unique(all_types))
 
-        if self.all_atomic_types is not None:
-            if not _is_subset(atomic_types_requested, self.all_atomic_types):
+        if self.all_types is not None:
+            if not _is_subset(types_requested, self.all_types):
                 raise ValueError(
-                    f"Global list of atomic numbers {self.all_atomic_types} does not "
-                    "contain all atomic numbers for the provided systems "
-                    f"{atomic_types_requested}."
+                    f"Global list of types {self.all_types} does not contain all "
+                    f"types for the provided systems {types_requested}."
                 )
-            return self.all_atomic_types
+            return self.all_types
         else:
-            return atomic_types_requested
+            return types_requested
 
     def _compute_single_frame(
         self,
-        cell: torch.Tensor,
         positions: torch.Tensor,
         charges: torch.Tensor,
+        cell: torch.Tensor,
     ) -> torch.Tensor:
         """
         Compute the "electrostatic" potential at the position of all atoms in a
         structure.
 
-        :param cell: torch.tensor of shape `(3, 3)`. Describes the unit cell of the
-            structure, where cell[i] is the i-th basis vector.
         :param positions: torch.tensor of shape (n_atoms, 3). Contains the Cartesian
             coordinates of the atoms. The implementation also works if the positions
             are not contained within the unit cell.
@@ -206,6 +208,8 @@ class MeshPotential(torch.nn.Module):
             potential. Subtracting these from each other, one could recover the more
             standard electrostatic potential in which Na and Cl have charges of +1 and
             -1, respectively.
+        :param cell: torch.tensor of shape `(3, 3)`. Describes the unit cell of the
+            structure, where cell[i] is the i-th basis vector.
 
         :returns: torch.tensor of shape `(n_atoms, n_channels)` containing the potential
         at the position of each atom for the `n_channels` independent meshes separately.

@@ -11,7 +11,7 @@ except ImportError:
         "Try installing it with:\npip install metatensor[torch]"
     )
 
-from meshlode.lib.system import System
+from metatensor.torch.atomistic import System
 
 from .. import calculators
 
@@ -104,7 +104,7 @@ class MeshPotential(calculators.MeshPotential):
 
             # Compute the potentials
             potential = self._compute_single_frame(
-                system.cell, system.positions, charges
+                system.positions, charges, system.cell
             )
 
             # Reorder data into Metatensor format
