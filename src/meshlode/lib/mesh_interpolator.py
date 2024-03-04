@@ -181,7 +181,7 @@ class MeshInterpolator:
             ``particle_weights[i,a]`` is the weight (charge) that point (atom) i has to
             generate the "a-th" potential. In practice, this can be used to compute e.g.
             the Na and Cl contributions to the potential separately by using a one-hot
-            encoding of the species.
+            encoding of the types.
 
         :return: torch.tensor of shape ``(n_channels, n_mesh, n_mesh, n_mesh)``
             Discrete density

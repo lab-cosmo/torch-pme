@@ -1,7 +1,6 @@
 """
 Basic Tutorial for Library functions
 ====================================
-
 This examples provides an illustration of the functioning of the underlaying library
 functions of ``meshlode`` and the construction LODE descriptors (`Grisafi 2019
 <https://doi.org/10.1063/1.5128375>`__, `Grisafi 2021
@@ -18,6 +17,7 @@ import chemiscope
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+from metatensor.torch.atomistic import System
 
 import meshlode
 
@@ -48,22 +48,19 @@ def sliceplot(mesh, sz=12, cmap="viridis", vmin=None, vmax=None):
 # %%
 # Builds the structure
 # --------------------
-#
 # Builds a CsCl structure by replicating the primitive cell using ase and convert it to
-# a :py:class:`list` of :py:class:`meshlode.System`. We add a bit of noise to make
-# it less boring!
+# a :py:class:`list` of :py:class:`metatensor.torch.atomistic.System`. We add a bit of
+# noise to make it less boring!
 #
 
 positions = torch.tensor([[0, 0, 0], [0.5, 0.5, 0.5]]) * 4
-atomic_types = torch.tensor([55, 17])  # Cs and Cl
+types = torch.tensor([55, 17])  # Cs and Cl
 cell = torch.eye(3) * 4
-ase_frame = ase.Atoms(positions=positions, cell=cell, numbers=atomic_types).repeat(
-    [2, 2, 2]
-)
+ase_frame = ase.Atoms(positions=positions, cell=cell, numbers=types).repeat([2, 2, 2])
 ase_frame.positions[:] += np.random.normal(size=ase_frame.positions.shape) * 0.1
 charges = torch.tensor([1.0, -1.0] * 8)
-frame = meshlode.System(
-    species=torch.tensor(ase_frame.numbers),
+system = System(
+    types=torch.tensor(ase_frame.numbers),
     positions=torch.tensor(np.array(ase_frame.positions)),
     cell=torch.tensor(ase_frame.cell),
 )
@@ -85,7 +82,6 @@ else:
 # %%
 # MeshInterpolator
 # ----------------
-#
 # ``MeshInterpolator`` serves as a utility class to compute a mesh
 # representation of points, and/or to project a function defined on the
 # mesh on a set of points. Computing the mesh representation is a two-step
@@ -95,15 +91,15 @@ else:
 #
 
 interpol = meshlode.lib.mesh_interpolator.MeshInterpolator(
-    frame.cell, torch.tensor([16, 16, 16]), interpolation_order=3
+    system.cell, torch.tensor([16, 16, 16]), interpolation_order=3
 )
 
-interpol.compute_interpolation_weights(frame.positions)
+interpol.compute_interpolation_weights(system.positions)
 
 
 # %%
 # We use two sets of weights: ones (giving the atom density irrespective
-# of the species) and charges (giving a smooth representation of the point
+# of the types) and charges (giving a smooth representation of the point
 # charges).
 #
 
@@ -126,7 +122,6 @@ sliceplot(mesh[1, :, :, :5], cmap="seismic", vmax=1, vmin=-1)
 # %%
 # Fourier filter
 # --------------
-#
 # This module computes a Fourier-domain filter, that can be used e.g. to
 # smear the density and/or compute a 1/r^p potential field. This can also
 # be easily extended to compute an arbitrary filter
@@ -137,7 +132,7 @@ fsc = meshlode.lib.fourier_convolution.FourierSpaceConvolution()
 # %%
 # plain atomic_smearing
 rho_mesh = fsc.compute(
-    mesh_values=mesh, cell=frame.cell, potential_exponent=0, atomic_smearing=1
+    mesh_values=mesh, cell=system.cell, potential_exponent=0, atomic_smearing=1
 )
 
 sliceplot(rho_mesh[0, :, :, :5])
@@ -145,7 +140,7 @@ sliceplot(rho_mesh[0, :, :, :5])
 # %%
 # coulomb-like potential, no atomic_smearing
 coulomb_mesh = fsc.compute(
-    mesh_values=mesh, cell=frame.cell, potential_exponent=1, atomic_smearing=0
+    mesh_values=mesh, cell=system.cell, potential_exponent=1, atomic_smearing=0
 )
 
 sliceplot(coulomb_mesh[1, :, :, :5], cmap="seismic")
@@ -154,7 +149,6 @@ sliceplot(coulomb_mesh[1, :, :, :5], cmap="seismic")
 # %%
 # Back-interpolation (on the same points)
 # ---------------------------------------
-#
 # The same ``MeshInterpolator`` object can be used to compute a field on
 # the same points used initially to generate the atom density
 #
@@ -167,7 +161,6 @@ potentials
 # %%
 # Back-interpolation (on different points)
 # ----------------------------------------
-#
 # In order to compute the field on a different set of points, it is
 # sufficient to build another ``MeshInterpolator`` object and to compute
 # it with the desired field. One can also use a different
@@ -175,13 +168,13 @@ potentials
 #
 
 interpol_slice = meshlode.lib.mesh_interpolator.MeshInterpolator(
-    frame.cell, torch.tensor([16, 16, 16]), interpolation_order=4
+    system.cell, torch.tensor([16, 16, 16]), interpolation_order=4
 )
 
 # Compute a denser grid on a 2D slice
 n_points = 50
-x = torch.linspace(0, frame.cell[0, 0], n_points + 1)[:n_points]
-y = torch.linspace(0, frame.cell[1, 1], n_points + 1)[:n_points]
+x = torch.linspace(0, system.cell[0, 0], n_points + 1)[:n_points]
+y = torch.linspace(0, system.cell[1, 1], n_points + 1)[:n_points]
 xx, yy = torch.meshgrid(x, y, indexing="ij")
 
 # Flatten xx and yy, and concatenate with a zero column for the z-coordinate

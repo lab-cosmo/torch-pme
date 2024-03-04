@@ -34,7 +34,7 @@ keywords = [
     "Atomistic Simulations",
 ]
 dependencies = [
-    "torch >= 1.11",
+    "torch >=1.11",
 ]
 dynamic = ["version"]
 
@@ -44,7 +44,7 @@ examples = [
     "matplotlib",
 ]
 metatensor = [
-    "metatensor[torch]",
+    "metatensor-torch >=0.3",
 ]
 
 [project.urls]

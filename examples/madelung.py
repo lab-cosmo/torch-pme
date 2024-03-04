@@ -1,7 +1,6 @@
 """
 Compute Madelung Constants
 ==========================
-
 In this tutorial we show how to calculate the Madelung constants and total electrostatic
 energy of atomic structures using the :py:class:`meshlode.MeshPotential` and
 :py:class:`meshlode.metatensor.MeshPotential` calculator.
@@ -11,24 +10,24 @@ energy of atomic structures using the :py:class:`meshlode.MeshPotential` and
 import math
 
 import torch
+from metatensor.torch.atomistic import System
 
 import meshlode
 
 
 # %%
 # Define simple example structure having the CsCl structure and compute the reference
-# values. MeshPotential by default outputs the species sorted according to the atomic
+# values. MeshPotential by default outputs the types sorted according to the atomic
 # number. Thus, we input the compound "CsCl" and "ClCs" since Cl and Cs have atomic
 # numbers 17 and 55, respectively.
-atomic_types = torch.tensor([17, 55])  # Cl and Cs
+types = torch.tensor([17, 55])  # Cl and Cs
+positions = torch.tensor([[0, 0, 0], [0.5, 0.5, 0.5]])
 charges = torch.tensor([-1.0, 1.0])
 cell = torch.eye(3)
-positions = torch.tensor([[0, 0, 0], [0.5, 0.5, 0.5]])
-frame = meshlode.System(species=atomic_types, positions=positions, cell=torch.eye(3))
 
 # %%
 # Define the expected values of the energy
-n_atoms = len(positions)
+n_atoms = len(types)
 madelung = 2 * 1.7626 / math.sqrt(3)
 energies_ref = -madelung * torch.ones((n_atoms, 1))
 
@@ -43,7 +42,6 @@ interpolation_order = 2
 # %%
 # Computation using ``meshlode``
 # ------------------------------
-#
 # Compute features using
 
 MP = meshlode.MeshPotential(
@@ -52,7 +50,7 @@ MP = meshlode.MeshPotential(
     interpolation_order=interpolation_order,
     subtract_self=True,
 )
-potentials_torch = MP.compute(frame)
+potentials_torch = MP.compute(types=types, positions=positions, cell=cell)
 
 # %%
 # The "potentials" that have been computed so far are not the actual electrostatic
@@ -66,7 +64,7 @@ for idx_c in range(n_atoms):
     for idx_n in range(n_atoms):
         # The coulomb potential between atoms i and j is charge_i * charge_j / d_ij
         # The features are simply computing a pure 1/r potential with no prefactors.
-        # Thus, to compute the energy between atoms of species i and j, we need to
+        # Thus, to compute the energy between atoms of types i and j, we need to
         # multiply by the charges of i and j.
         print(charges[idx_c] * charges[idx_n], potentials_torch[idx_n, idx_c])
         atomic_energies_torch[idx_c] += (
@@ -88,8 +86,11 @@ print(f"Total energy = {total_energy_torch:.3f}\n")
 # %%
 # Computation using ``meshlode.metatensor``
 # -----------------------------------------
-#
-# We now compute the same constants using the metatensor based calculator
+# We now compute the same constants using the metatensor based calculator. To achieve
+# this we first store our system parameters like the ``types``, ``positions`` and the
+# ``cell`` defined above into a :py:class:`metatensor.torch.atomistic.System` class.
+
+system = System(types=types, positions=positions, cell=cell)
 
 MP = meshlode.metatensor.MeshPotential(
     atomic_smearing=atomic_smearing,
@@ -97,7 +98,7 @@ MP = meshlode.metatensor.MeshPotential(
     interpolation_order=interpolation_order,
     subtract_self=True,
 )
-potential_metatensor = MP.compute(frame)
+potential_metatensor = MP.compute(system)
 
 
 # %%
@@ -105,16 +106,16 @@ potential_metatensor = MP.compute(frame)
 # of the "potentials" weighted by the charges of the atoms.
 
 atomic_energies_metatensor = torch.zeros((n_atoms, 1))
-for idx_c, c in enumerate(atomic_types):
-    for idx_n, n in enumerate(atomic_types):
-        # Take the coefficients with the correct center atom and neighbor atom species
+for idx_c, c in enumerate(types):
+    for idx_n, n in enumerate(types):
+        # Take the coefficients with the correct center atom and neighbor atom types
         block = potential_metatensor.block(
             {"center_type": int(c), "neighbor_type": int(n)}
         )
 
         # The coulomb potential between atoms i and j is charge_i * charge_j / d_ij
         # The features are simply computing a pure 1/r potential with no prefactors.
-        # Thus, to compute the energy between atoms of species i and j, we need to
+        # Thus, to compute the energy between atoms of types i and j, we need to
         # multiply by the charges of i and j.
         print(c, n, charges[idx_c] * charges[idx_n], block.values[0, 0])
         atomic_energies_metatensor[idx_c] += (

@@ -16,29 +16,35 @@ from metatensor.torch.atomistic import System
 from .. import calculators
 
 
+# We are breaking the Liskov substitution principle here by changing the signature of
+# "compute" compated to the supertype of "MeshPotential".
+# mypy: disable-error-code="override"
+
+
 class MeshPotential(calculators.MeshPotential):
-    """A species wise long range potential.
+    """An (atomic) type wise long range potential.
 
     Refer to :class:`meshlode.MeshPotential` for full documentation.
 
     Example
     -------
     >>> import torch
-    >>> from meshlode.lib import System
+    >>> from metatensor.torch.atomistic import System
     >>> from meshlode.metatensor import MeshPotential
 
     Define simple example structure having the CsCl (Cesium Chloride) structure
 
+    >>> types = torch.tensor([55, 17])  # Cs and Cl
     >>> positions = torch.tensor([[0, 0, 0], [0.5, 0.5, 0.5]])
-    >>> atomic_types = torch.tensor([55, 17])  # Cs and Cl
-    >>> frame = System(species=atomic_types, positions=positions, cell=torch.eye(3))
+    >>> cell = torch.eye(3)
+    >>> system = System(types=types, positions=positions, cell=cell)
 
     Compute features
 
     >>> MP = MeshPotential(atomic_smearing=0.2, mesh_spacing=0.1, interpolation_order=4)
-    >>> features = MP.compute(frame)
+    >>> features = MP.compute(system)
 
-    All species combinations
+    All (atomic) type combinations
 
     >>> features.keys
     Labels(
@@ -67,16 +73,15 @@ class MeshPotential(calculators.MeshPotential):
         self,
         systems: Union[List[System], System],
     ) -> TensorMap:
-        """Compute the potential at the position of each atom for all Systems provided
-        in "frames".
+        """Compute potential for all provided ``systems``.
 
-        :param systems: single System or list of Systems on which to run the
-            calculation. If any of the systems' ``positions`` or ``cell`` has
-            ``requires_grad`` set to :py:obj:`True`, then the corresponding gradients
-            are computed and registered as a custom node in the computational graph, to
-            allow backward propagation of the gradients later.
+        All ``systems`` must have the same ``dtype`` and the same ``device``.
 
-        :return: TensorMap containing the potential of all atoms. The keys of the
+        :param systems: single System or list of
+            :py:class:`metatensor.torch.atomisic.System` on which to run the
+            calculation.
+
+        :return: TensorMap containing the potential of all types. The keys of the
             tensormap are "center_type" and "neighbor_type".
         """
         # Make sure that the compute function also works if only a single frame is
@@ -84,54 +89,69 @@ class MeshPotential(calculators.MeshPotential):
         if not isinstance(systems, list):
             systems = [systems]
 
-        atomic_types = self._get_atomic_types(systems)
-        n_species = len(atomic_types)
+        if len(systems) > 1:
+            for system in systems[1:]:
+                if system.dtype != systems[0].dtype:
+                    raise ValueError(
+                        "`dtype` of all systems must be the same, got "
+                        f"{system.dtype} and {systems[0].dtype}`"
+                    )
 
-        # Initialize dictionary for sparse storage of the features Generate a dictionary
-        # to map atomic species to array indices In general, the species are sorted
-        # according to atomic number and assigned the array indices 0, 1, 2,...
-        # Example: for H2O: `H` is mapped to `0` and `O` is mapped to `1`.
-        n_species_sq = n_species * n_species
-        feat_dic: Dict[int, List[torch.Tensor]] = {a: [] for a in range(n_species_sq)}
+                if system.device != systems[0].device:
+                    raise ValueError(
+                        "`device of all systems must be the same, got "
+                        f"{system.device} and {systems[0].device}`"
+                    )
+
+        requested_types = self._get_requested_types(
+            [system.types for system in systems]
+        )
+        n_types = len(requested_types)
+
+        # Initialize dictionary for sparse storage of the features to map atomic types
+        # to array indices. In general, the types are sorted according to their
+        # (integer) type and assigned the array indices 0, 1, 2,... Example: for H2O:
+        # `H` is mapped to `0` and `O` is mapped to `1`.
+        n_types_sq = n_types * n_types
+        feat_dic: Dict[int, List[torch.Tensor]] = {a: [] for a in range(n_types_sq)}
 
         for system in systems:
             # One-hot encoding of charge information
-            n_atoms = len(system)
-            species = system.species
-            charges = torch.zeros((n_atoms, n_species), dtype=torch.float)
-            for i_specie, atomic_type in enumerate(atomic_types):
-                charges[species == atomic_type, i_specie] = 1.0
+            types = system.types
+            charges = torch.zeros((len(system), n_types), dtype=system.positions.dtype)
+            for i_specie, atomic_type in enumerate(requested_types):
+                charges[types == atomic_type, i_specie] = 1.0
 
             # Compute the potentials
-            potential = self._compute_single_frame(
+            potential = self._compute_single_system(
                 system.positions, charges, system.cell
             )
 
             # Reorder data into Metatensor format
-            for spec_center, at_num_center in enumerate(atomic_types):
-                for spec_neighbor in range(len(atomic_types)):
-                    a_pair = spec_center * n_species + spec_neighbor
+            for spec_center, at_num_center in enumerate(requested_types):
+                for spec_neighbor in range(len(requested_types)):
+                    a_pair = spec_center * n_types + spec_neighbor
                     feat_dic[a_pair] += [
-                        potential[species == at_num_center, spec_neighbor]
+                        potential[types == at_num_center, spec_neighbor]
                     ]
 
         # Assemble all computed potential values into TensorBlocks for each combination
         # of center_type and neighbor_type
         blocks: List[TensorBlock] = []
         for keys, values in feat_dic.items():
-            spec_center = atomic_types[keys // n_species]
+            spec_center = requested_types[keys // n_types]
 
             # Generate the Labels objects for the samples and properties of the
             # TensorBlock.
             values_samples: List[List[int]] = []
             for i_frame, system in enumerate(systems):
                 for i_atom in range(len(system)):
-                    if system.species[i_atom] == spec_center:
+                    if system.types[i_atom] == spec_center:
                         values_samples.append([i_frame, i_atom])
 
             samples_vals_tensor = torch.tensor(values_samples, dtype=torch.int32)
 
-            # If no atoms are found that match the species pair `samples_vals_tensor`
+            # If no atoms are found that match the types pair `samples_vals_tensor`
             # will be empty. We have to reshape the empty tensor to be a valid input for
             # `Labels`.
             if len(samples_vals_tensor) == 0:
@@ -151,8 +171,8 @@ class MeshPotential(calculators.MeshPotential):
 
         # Generate TensorMap from TensorBlocks by defining suitable keys
         key_values: List[torch.Tensor] = []
-        for spec_center in atomic_types:
-            for spec_neighbor in atomic_types:
+        for spec_center in requested_types:
+            for spec_neighbor in requested_types:
                 key_values.append(torch.tensor([spec_center, spec_neighbor]))
         key_values = torch.vstack(key_values)
         labels_keys = Labels(["center_type", "neighbor_type"], key_values)

@@ -2,9 +2,8 @@ from typing import List
 
 import pytest
 import torch
+from metatensor.torch.atomistic import System
 from packaging import version
-
-from meshlode import System
 
 
 metatensor_torch = pytest.importorskip("metatensor.torch")
@@ -12,11 +11,13 @@ meshlode_metatensor = pytest.importorskip("meshlode.metatensor")
 
 
 # Define toy system consisting of a single structure for testing
-def toy_system_single_frame() -> System:
+def toy_system_single_frame(dtype=torch.float32) -> System:
     return System(
-        species=torch.tensor([1, 1, 8, 8]),
-        positions=torch.tensor([[0.0, 0, 0], [0, 0, 1], [0, 0, 2], [0, 0, 3]]),
-        cell=torch.tensor([[10.0, 0, 0], [0, 10, 0], [0, 0, 10]]),
+        types=torch.tensor([1, 1, 8, 8]),
+        positions=torch.tensor(
+            [[0.0, 0, 0], [0, 0, 1], [0, 0, 2], [0, 0, 3]], dtype=dtype
+        ),
+        cell=torch.tensor([[10.0, 0, 0], [0, 10, 0], [0, 0, 10]], dtype=dtype),
     )
 
 
@@ -46,6 +47,17 @@ def test_all_types():
         )
 
 
+def test_wrong_dtype_between_systems():
+    match = "`dtype` of all systems must be the same, got 7 and 6"
+    with pytest.raises(ValueError, match=match):
+        descriptor().compute(
+            [
+                toy_system_single_frame(dtype=torch.float32),
+                toy_system_single_frame(dtype=torch.float64),
+            ]
+        )
+
+
 # Make sure that the calculators are computing the features without raising errors,
 # and returns the correct output format (TensorMap)
 def check_operation(calculator):
@@ -66,28 +78,28 @@ def test_operation_as_torch_script():
     check_operation(scripted)
 
 
-# Define a more complex toy system consisting of multiple frames, mixing three species.
+# Define a more complex toy system consisting of multiple frames, mixing three types.
 def toy_system_2() -> List[System]:
     # First few frames containing Nitrogen
     L = 2.0
     frames = []
     frames.append(
         System(
-            species=torch.tensor([7]),
+            types=torch.tensor([7]),
             positions=torch.zeros((1, 3)),
             cell=L * 2 * torch.eye(3),
         )
     )
     frames.append(
         System(
-            species=torch.tensor([7, 7]),
+            types=torch.tensor([7, 7]),
             positions=torch.zeros((2, 3)),
             cell=L * 2 * torch.eye(3),
         )
     )
     frames.append(
         System(
-            species=torch.tensor([7, 7, 7]),
+            types=torch.tensor([7, 7, 7]),
             positions=torch.zeros((3, 3)),
             cell=L * 2 * torch.eye(3),
         )
@@ -96,9 +108,7 @@ def toy_system_2() -> List[System]:
     # One more frame containing Na and Cl
     positions = torch.tensor([[0, 0, 0], [1.0, 0, 0]])
     cell = torch.tensor([[0, 1.0, 1], [1, 0, 1], [1, 1, 0]])
-    frames.append(
-        System(species=torch.tensor([11, 17]), positions=positions, cell=cell)
-    )
+    frames.append(System(types=torch.tensor([11, 17]), positions=positions, cell=cell))
 
     return frames
 
