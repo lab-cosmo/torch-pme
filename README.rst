@@ -1,6 +1,5 @@
 MeshLODE
 ========
-
 |tests| |codecov| |docs|
 
 Particle-mesh based calculation of Long Distance Equivariants.
@@ -13,7 +12,6 @@ For details, tutorials, and examples, please have a look at our `documentation`_
 
 Installation
 ------------
-
 You can install *MeshLode* using pip with
 
 .. code-block:: bash
@@ -36,7 +34,6 @@ together and used as ``meshlode.metatensor`` via
 
 Having problems or ideas?
 -------------------------
-
 Having a problem with MeshLODE? Please let us know by `submitting an issue
 <https://github.com/lab-cosmo/MeshLODE/issues>`_.
 
@@ -47,7 +44,6 @@ Submit new features or bug fixes through a `pull request
 
 Contributors
 ------------
-
 Thanks goes to all people that make MeshLODE possible:
 
 .. image:: https://contrib.rocks/image?repo=lab-cosmo/MeshLODE
@@ -57,9 +53,9 @@ Thanks goes to all people that make MeshLODE possible:
    :alt: Github Actions Tests Job Status
    :target: https://github.com/lab-cosmo/MeshLODE/actions?query=workflow%3ATests
 
-.. |codecov| image:: https://codecov.io/gh/lab-cosmo/meshlode/branch/main/graph/badge.svg
+.. |codecov| image:: https://codecov.io/gh/lab-cosmo/MeshLODE/graph/badge.svg?token=srVKRy7r6m
    :alt: Code coverage
-   :target: https://codecov.io/gh/lab-cosmo/meshlode/
+   :target: https://codecov.io/gh/lab-cosmo/MeshLODE
 
 .. |docs| image:: https://img.shields.io/badge/documentation-latest-sucess
    :alt: Documentation
