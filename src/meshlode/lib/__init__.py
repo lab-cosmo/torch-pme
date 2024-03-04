@@ -1,5 +1,4 @@
-from .system import System
 from .fourier_convolution import FourierSpaceConvolution
 from .mesh_interpolator import MeshInterpolator
 
-__all__ = ["FourierSpaceConvolution", "MeshInterpolator", "System"]
+__all__ = ["FourierSpaceConvolution", "MeshInterpolator"]
