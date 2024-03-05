@@ -8,6 +8,7 @@ import torch
 from torch.testing import assert_close
 
 from meshlode import MeshPotential
+from meshlode.calculators.meshpotential import _1d_tolist, _is_subset
 
 
 MADELUNG_CSCL = torch.tensor(2 * 1.7626 / math.sqrt(3))
@@ -209,3 +210,21 @@ def test_inconsistent_device():
     )
     with pytest.raises(ValueError, match=match):
         MP.compute(types=types, positions=positions, cell=cell)
+
+
+def test_1d_tolist():
+    in_list = [1, 2, 7, 3, 4, 42]
+    in_tensor = torch.tensor(in_list)
+    assert _1d_tolist(in_tensor) == in_list
+
+
+def test_is_subset_true():
+    subset_candidate = [1, 2]
+    superset = [1, 2, 3, 4, 5]
+    assert _is_subset(subset_candidate, superset)
+
+
+def test_is_subset_false():
+    subset_candidate = [1, 2, 8]
+    superset = [1, 2, 3, 4, 5]
+    assert not _is_subset(subset_candidate, superset)

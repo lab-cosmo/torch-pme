@@ -6,6 +6,7 @@ from meshlode.lib.fourier_convolution import FourierSpaceConvolution
 from meshlode.lib.mesh_interpolator import MeshInterpolator
 
 
+@torch.jit.script
 def _1d_tolist(x: torch.Tensor) -> List[int]:
     """Auxilary function to convert 1d torch tensor to list of integers."""
     result: List[int] = []
@@ -14,9 +15,13 @@ def _1d_tolist(x: torch.Tensor) -> List[int]:
     return result
 
 
-def _is_subset(tensor1: List[int], tensor2: List[int]) -> bool:
-    """Checks wether if all elements of tensor1 are part of tensor2."""
-    return torch.all(torch.tensor([i in tensor2 for i in tensor1]))
+@torch.jit.script
+def _is_subset(subset_candidate: List[int], superset: List[int]) -> bool:
+    """Checks whether all elements of `subset_candidate` are part of `superset`."""
+    for element in subset_candidate:
+        if element not in superset:
+            return False
+    return True
 
 
 class MeshPotential(torch.nn.Module):

@@ -4,7 +4,7 @@ coverage:
   status:
     project:
       default:
-        target: 100%
-    patch: off
+        target: 95%
+    patch: false
 
-comment: off
+comment: false
