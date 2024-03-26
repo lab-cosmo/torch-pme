@@ -261,3 +261,103 @@ class TestMeshInterpolatorBackward:
         weight_before = torch.sum(mesh_values, dim=(1, 2, 3))
         weight_after = torch.sum(interpolated_values, dim=0)
         torch.testing.assert_close(weight_before, weight_after, rtol=1e-5, atol=1e-6)
+
+
+def test_cell_wrong_shape():
+    ns_mesh = torch.tensor([2, 2, 2])
+    cell = torch.randn(size=(2, 3))  # incorrect shape
+    interpolation_order = 3
+    match = "cell of shape \\[2, 3\\] should be of shape \\(3, 3\\)"
+
+    with pytest.raises(ValueError, match=match):
+        MeshInterpolator(cell, ns_mesh, interpolation_order)
+
+
+def test_ns_mesh_wrong_shape():
+    cell = torch.eye(3)
+    ns_mesh = torch.tensor([2, 2])  # incorrect shape
+    interpolation_order = 3
+    match = "shape \\[2\\] of `ns_mesh` has to be \\(3,\\)"
+
+    with pytest.raises(ValueError, match=match):
+        MeshInterpolator(cell, ns_mesh, interpolation_order)
+
+
+def test_interpolation_order_not_allowed():
+    cell = torch.eye(3)
+    ns_mesh = torch.tensor([2, 2, 2])
+    interpolation_order = 6  # not allowed
+    match = "Only `interpolation_order` from 1 to 5 are allowed"
+
+    with pytest.raises(ValueError, match=match):
+        MeshInterpolator(cell, ns_mesh, interpolation_order)
+
+
+def test_interpolation_order_not_allowed_private():
+    cell = torch.eye(3)
+    ns_mesh = torch.tensor([2, 2, 2])
+
+    mi = MeshInterpolator(cell, ns_mesh, interpolation_order=5)
+    mi.interpolation_order = 6  # not allowed
+    match = "Only `interpolation_order` from 1 to 5 are allowed"
+
+    with pytest.raises(ValueError, match=match):
+        mi._compute_1d_weights(torch.tensor([0]))
+
+
+def test_different_devices_cell_ns_mesh():
+    cell = torch.eye(3, device="cpu")
+    ns_mesh = torch.tensor([2, 2, 2], device="meta")  # different device
+    interpolation_order = 3
+    match = "`cell` and `ns_mesh` are on different devices, got cpu and meta"
+
+    with pytest.raises(ValueError, match=match):
+        MeshInterpolator(cell, ns_mesh, interpolation_order)
+
+
+@pytest.fixture
+def mesh_interpolator():
+    cell = torch.eye(3)
+    ns_mesh = torch.tensor([2, 2, 2])
+    interpolation_order = 3
+    return MeshInterpolator(cell, ns_mesh, interpolation_order)
+
+
+def test_positions_wrong_device(mesh_interpolator):
+    positions = torch.randn(size=(10, 3), device="meta")  # different device
+    match = "`positions` device meta is not the same as instance device cpu"
+
+    with pytest.raises(ValueError, match=match):
+        mesh_interpolator.compute_interpolation_weights(positions)
+
+
+def test_positions_wrong_shape(mesh_interpolator):
+    positions = torch.randn(size=(10, 2))  # incorrect shape
+    match = "shape \\[10, 2\\] of `positions` has to be \\(N, 3\\)"
+
+    with pytest.raises(ValueError, match=match):
+        mesh_interpolator.compute_interpolation_weights(positions)
+
+
+def test_particle_weights_wrong_device(mesh_interpolator):
+    particle_weights = torch.randn(size=(10, 1), device="meta")  # different device
+    match = "`particle_weights` device meta is not the same as instance device cpu"
+
+    with pytest.raises(ValueError, match=match):
+        mesh_interpolator.points_to_mesh(particle_weights)
+
+
+def test_particle_weights_wrong_dim(mesh_interpolator):
+    particle_weights = torch.randn(size=(10,))  # missing one dimension
+    match = "`particle_weights` of dimension 1 has to be of dimension 2"
+
+    with pytest.raises(ValueError, match=match):
+        mesh_interpolator.points_to_mesh(particle_weights)
+
+
+def test_mesh_to_points_wrong_dim(mesh_interpolator):
+    mesh_vals = torch.randn(size=(10,))  # missing one dimension
+    match = "`mesh_vals` of dimension 1 has to be of dimension 4"
+
+    with pytest.raises(ValueError, match=match):
+        mesh_interpolator.mesh_to_points(mesh_vals)

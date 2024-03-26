@@ -33,25 +33,37 @@ class MeshInterpolator:
     ):
         # Check that the provided parameters match the specifications
         if cell.shape != (3, 3):
-            raise ValueError(f"cell of shape {cell.shape} should be of shape (3, 3)")
+            raise ValueError(
+                f"cell of shape {list(cell.shape)} should be of shape (3, 3)"
+            )
         if ns_mesh.shape != (3,):
-            raise ValueError(f"shape {ns_mesh.shape} of `ns_mesh` has to be (3,)")
+            raise ValueError(f"shape {list(ns_mesh.shape)} of `ns_mesh` has to be (3,)")
         if interpolation_order not in [1, 2, 3, 4, 5]:
             raise ValueError("Only `interpolation_order` from 1 to 5 are allowed")
+        if cell.device != ns_mesh.device:
+            raise ValueError(
+                "`cell` and `ns_mesh` are on different devices, got "
+                f"{cell.device} and {ns_mesh.device}"
+            )
 
         self.cell = cell
         self.ns_mesh = ns_mesh
         self.interpolation_order = interpolation_order
 
+        self._dtype = cell.dtype
+        self._device = cell.device
+
         # Initialize the variables in which to store the intermediate
         # interpolation nodes and weights
-        self.interpolation_weights: torch.Tensor = torch.tensor(0.0)
-        self.x_shifts: torch.Tensor = torch.tensor(0)
-        self.y_shifts: torch.Tensor = torch.tensor(0)
-        self.z_shifts: torch.Tensor = torch.tensor(0)
-        self.x_indices: torch.Tensor = torch.tensor(0)
-        self.y_indices: torch.Tensor = torch.tensor(0)
-        self.z_indices: torch.Tensor = torch.tensor(0)
+        self.interpolation_weights: torch.Tensor = torch.tensor(
+            0, device=self._device, dtype=self._dtype
+        )
+        self.x_shifts: torch.Tensor = torch.tensor(0, device=self._device)
+        self.y_shifts: torch.Tensor = torch.tensor(0, device=self._device)
+        self.z_shifts: torch.Tensor = torch.tensor(0, device=self._device)
+        self.x_indices: torch.Tensor = torch.tensor(0, device=self._device)
+        self.y_indices: torch.Tensor = torch.tensor(0, device=self._device)
+        self.z_indices: torch.Tensor = torch.tensor(0, device=self._device)
 
     def _compute_1d_weights(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -69,7 +81,9 @@ class MeshInterpolator:
         """
         # Compute weights based on the given order
         if self.interpolation_order == 1:
-            return torch.ones((1, x.shape[0], x.shape[1]))
+            return torch.ones(
+                (1, x.shape[0], x.shape[1]), dtype=self._dtype, device=self._device
+            )
         elif self.interpolation_order == 2:
             return torch.stack([0.5 * (1 - 2 * x), 0.5 * (1 + 2 * x)])
         elif self.interpolation_order == 3:
@@ -118,9 +132,18 @@ class MeshInterpolator:
         :param positions: torch.tensor of shape ``(N, 3)``
             Absolute positions of atoms in Cartesian coordinates
         """
+
+        if positions.device != self._device:
+            raise ValueError(
+                f"`positions` device {positions.device} is not the same as instance "
+                f"device {self._device}"
+            )
+
         n_positions = len(positions)
         if positions.shape != (n_positions, 3):
-            raise ValueError(f"shape {positions.shape} of `positions` has to be (N, 3)")
+            raise ValueError(
+                f"shape {list(positions.shape)} of `positions` has to be (N, 3)"
+            )
 
         # Compute positions relative to the mesh basis vectors
         positions_rel = torch.matmul(positions, torch.inverse(self.cell))
@@ -155,9 +178,9 @@ class MeshInterpolator:
 
         # Generate shifts for x, y, z axes and flatten for indexing
         x_shifts, y_shifts, z_shifts = torch.meshgrid(
-            torch.arange(self.interpolation_order),
-            torch.arange(self.interpolation_order),
-            torch.arange(self.interpolation_order),
+            torch.arange(self.interpolation_order, device=self._device),
+            torch.arange(self.interpolation_order, device=self._device),
+            torch.arange(self.interpolation_order, device=self._device),
             indexing="ij",
         )
         self.x_shifts = x_shifts.flatten()
@@ -186,15 +209,26 @@ class MeshInterpolator:
         :return: torch.tensor of shape ``(n_channels, n_mesh, n_mesh, n_mesh)``
             Discrete density
         """
+        if particle_weights.device != self._device:
+            raise ValueError(
+                f"`particle_weights` device {particle_weights.device} is not the same "
+                f"as instance device {self._device}"
+            )
+
         if particle_weights.dim() != 2:
-            raise ValueError("`particle_weights` needs to be a tensor of dimension 2")
+            raise ValueError(
+                f"`particle_weights` of dimension {particle_weights.dim()} has to be "
+                "of dimension 2"
+            )
 
         # Update mesh values by combining particle weights and interpolation weights
         n_channels = particle_weights.shape[1]
         nx = int(self.ns_mesh[0])
         ny = int(self.ns_mesh[1])
         nz = int(self.ns_mesh[2])
-        rho_mesh = torch.zeros((n_channels, nx, ny, nz))
+        rho_mesh = torch.zeros(
+            (n_channels, nx, ny, nz), dtype=self._dtype, device=self._device
+        )
         for a in range(n_channels):
             rho_mesh[a].index_put_(
                 (self.x_indices, self.y_indices, self.z_indices),
@@ -225,7 +259,10 @@ class MeshInterpolator:
             Values of the interpolated function.
         """
         if mesh_vals.dim() != 4:
-            raise ValueError("`mesh_vals` must be a tensor of dimension 4")
+            raise ValueError(
+                f"`mesh_vals` of dimension {mesh_vals.dim()} has to be of "
+                "dimension 4"
+            )
 
         interpolated_values = (
             (

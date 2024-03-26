@@ -6,6 +6,7 @@ from meshlode.lib.fourier_convolution import FourierSpaceConvolution
 from meshlode.lib.mesh_interpolator import MeshInterpolator
 
 
+@torch.jit.script
 def _1d_tolist(x: torch.Tensor) -> List[int]:
     """Auxilary function to convert 1d torch tensor to list of integers."""
     result: List[int] = []
@@ -14,9 +15,13 @@ def _1d_tolist(x: torch.Tensor) -> List[int]:
     return result
 
 
-def _is_subset(tensor1: torch.tensor, tensor2: torch.tensor) -> bool:
-    """Checks wether if all elements of tensor1 are part of tensor2."""
-    return torch.all(torch.tensor([i in tensor2 for i in tensor1]))
+@torch.jit.script
+def _is_subset(subset_candidate: List[int], superset: List[int]) -> bool:
+    """Checks whether all elements of `subset_candidate` are part of `superset`."""
+    for element in subset_candidate:
+        if element not in superset:
+            return False
+    return True
 
 
 class MeshPotential(torch.nn.Module):
@@ -115,6 +120,9 @@ class MeshPotential(torch.nn.Module):
     ) -> Union[torch.Tensor, List[torch.Tensor]]:
         """Compute potential for all provided "systems" stacked inside list.
 
+        The computation is performed on the same ``device`` as ``systems`` is stored on.
+        The ``dtype`` of the output tensors will be the same as the input.
+
         :param types: single or list of 1D tensor of integer representing the
             particles identity. For atoms, this is typically their atomic numbers.
         :param positions: single or 2D tensor of shape (len(types), 3) containing the
@@ -191,7 +199,9 @@ class MeshPotential(torch.nn.Module):
         for types_single, positions_single, cell_single in zip(types, positions, cell):
             # One-hot encoding of charge information
             charges = torch.zeros(
-                (len(types_single), n_types), dtype=positions_single.dtype
+                (len(types_single), n_types),
+                dtype=positions_single.dtype,
+                device=positions_single.device,
             )
             for i_type, atomic_type in enumerate(requested_types):
                 charges[types_single == atomic_type, i_type] = 1.0
@@ -259,6 +269,9 @@ class MeshPotential(torch.nn.Module):
         assert positions.shape == (n_atoms, 3)
         assert charges.shape[0] == n_atoms
 
+        assert positions.dtype == cell.dtype and charges.dtype == cell.dtype
+        assert positions.device == cell.device and charges.device == cell.device
+
         # Define cutoff in reciprocal space
         k_cutoff = 2 * torch.pi / self.mesh_spacing
 
@@ -289,7 +302,12 @@ class MeshPotential(torch.nn.Module):
         # Remove self contribution
         if self.subtract_self:
             self_contrib = (
-                torch.sqrt(torch.tensor(2.0 / torch.pi)) / self.atomic_smearing
+                torch.sqrt(
+                    torch.tensor(
+                        2.0 / torch.pi, dtype=positions.dtype, device=positions.device
+                    ),
+                )
+                / self.atomic_smearing
             )
             interpolated_potential -= charges * self_contrib
 

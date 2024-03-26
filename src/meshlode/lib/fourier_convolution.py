@@ -17,7 +17,6 @@ class FourierSpaceConvolution:
 
     Example
     -------
-
     To compute the "electrostatic potential" we first have to define the cell as
     well as the grid points where we want to evaluate the potential:
 
@@ -59,11 +58,19 @@ class FourierSpaceConvolution:
             ``k_vectors[i]`` contains the i-th vector, where the order has no special
             significance.
         """
+        if ns.device != cell.device:
+            raise ValueError(
+                f"`ns` and `cell` are not on the same device, got {ns.device} and "
+                f"{cell.device}."
+            )
+
         if ns.shape != (3,):
-            raise ValueError(f"ns of shape {ns.shape} should be of shape (3, )")
+            raise ValueError(f"ns of shape {list(ns.shape)} should be of shape (3, )")
 
         if cell.shape != (3, 3):
-            raise ValueError(f"cell of shape {cell.shape} should be of shape (3, 3)")
+            raise ValueError(
+                f"cell of shape {list(cell.shape)} should be of shape (3, 3)"
+            )
 
         # Define basis vectors of the reciprocal cell
         reciprocal_cell = 2 * torch.pi * cell.inverse().T
@@ -72,9 +79,9 @@ class FourierSpaceConvolution:
         bz = reciprocal_cell[2]
 
         # Generate all reciprocal space vectors
-        nxs_1d = torch.fft.fftfreq(ns[0]) * ns[0]
-        nys_1d = torch.fft.fftfreq(ns[1]) * ns[1]
-        nzs_1d = torch.fft.rfftfreq(ns[2]) * ns[2]  # real FFT
+        nxs_1d = ns[0] * torch.fft.fftfreq(ns[0], device=ns.device)
+        nys_1d = ns[1] * torch.fft.fftfreq(ns[1], device=ns.device)
+        nzs_1d = ns[2] * torch.fft.rfftfreq(ns[2], device=ns.device)  # real FFT
         nxs, nys, nzs = torch.meshgrid(nxs_1d, nys_1d, nzs_1d, indexing="ij")
         nxs = nxs.reshape((int(ns[0]), int(ns[1]), len(nzs_1d), 1))
         nys = nys.reshape((int(ns[0]), int(ns[1]), len(nzs_1d), 1))
@@ -107,7 +114,7 @@ class FourierSpaceConvolution:
         elif potential_exponent == 0:
             return torch.exp(-0.5 * atomic_smearing**2 * ksq)
         else:
-            raise ValueError("Only potential exponents 0 and 1 are supported")
+            raise ValueError("Only potential exponents 0 and 1 are supported!")
 
     def value_at_origin(
         self, potential_exponent: int = 1, atomic_smearing: Optional[float] = 0.2
@@ -156,20 +163,37 @@ class FourierSpaceConvolution:
             density.
         """
         if mesh_values.dim() != 4:
-            raise ValueError("`mesh_values`` needs to be a 4 dimensional tensor")
+            raise ValueError(
+                "`mesh_values` needs to be a 4 dimensional tensor, got "
+                f"{mesh_values.dim()}"
+            )
 
         if cell.shape != (3, 3):
-            raise ValueError(f"cell of shape {cell.shape} should be of shape (3, 3)")
+            raise ValueError(
+                f"cell of shape {list(cell.shape)} should be of shape (3, 3)"
+            )
+
+        if mesh_values.device != cell.device:
+            raise ValueError(
+                "`mesh_values` and `cell` are on different devices, got "
+                f"{mesh_values.device} and {cell.device}"
+            )
+
+        dtype = cell.dtype
+        device = cell.device
 
         # Get shape information from mesh
         _, nx, ny, nz = mesh_values.shape
-        ns = torch.tensor([nx, ny, nz])
+        ns = torch.tensor([nx, ny, nz], device=mesh_values.device)
 
         # Use chached values if cell and number of mesh points have not changed since
         # last call.
+        self._cell_cache = self._cell_cache.to(dtype=dtype, device=device)
+        self._ns_cache = self._ns_cache.to(dtype=dtype, device=device)
+
         same_cell = torch.allclose(cell, self._cell_cache, atol=1e-15, rtol=1e-15)
         if torch.all(ns == self._ns_cache) and same_cell:
-            knorm_sq = self._knorm_sq_cache
+            knorm_sq = self._knorm_sq_cache.to(dtype=dtype, device=device)
         else:
             # Get the relevant reciprocal space vectors (k-vectors)
             # and compute their norm.

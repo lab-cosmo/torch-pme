@@ -120,3 +120,72 @@ class TestConvolution:
         cached = fsc.compute(**compute_kwargs)
 
         assert_close(cached, calculated, rtol=0, atol=0)
+
+
+def test_different_devices_ns_cell():
+    fsc = FourierSpaceConvolution()
+    ns = torch.tensor([2, 2, 2], device="cpu")
+    cell = torch.tensor([[1, 0, 0], [0, 1, 0], [0, 0, 1]], device="meta")
+    match = "`ns` and `cell` are not on the same device, got cpu and meta."
+    with pytest.raises(ValueError, match=match):
+        fsc.generate_kvectors(ns, cell)
+
+
+def test_ns_wrong_shape():
+    fsc = FourierSpaceConvolution()
+    ns = torch.tensor([2, 2])
+    cell = torch.tensor([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+    match = "ns of shape \\[2\\] should be of shape \\(3, \\)"
+    with pytest.raises(ValueError, match=match):
+        fsc.generate_kvectors(ns, cell)
+
+
+def test_cell_wrong_shape():
+    fsc = FourierSpaceConvolution()
+    ns = torch.tensor([2, 2, 2])
+    cell = torch.tensor([[1, 0, 0], [0, 1, 0]])
+    match = "cell of shape \\[2, 3\\] should be of shape \\(3, 3\\)"
+    with pytest.raises(ValueError, match=match):
+        fsc.generate_kvectors(ns, cell)
+
+
+def test_mesh_values_wrong_dim():
+    fsc = FourierSpaceConvolution()
+    mesh_values = torch.randn(size=(2, 2, 2))  # Missing one dimension
+    cell = torch.eye(3)
+    match = "`mesh_values` needs to be a 4 dimensional tensor, got 3"
+    with pytest.raises(ValueError, match=match):
+        fsc.compute(mesh_values=mesh_values, cell=cell)
+
+
+def test_compute_cell_wrong_shape():
+    fsc = FourierSpaceConvolution()
+    mesh_values = torch.randn(size=(1, 2, 2, 2))
+    cell = torch.randn(size=(2, 3))  # incorrect shape
+    match = "cell of shape \\[2, 3\\] should be of shape \\(3, 3\\)"
+    with pytest.raises(ValueError, match=match):
+        fsc.compute(mesh_values=mesh_values, cell=cell)
+
+
+def test_different_devices_mesh_values_cell():
+    fsc = FourierSpaceConvolution()
+    mesh_values = torch.randn(size=(1, 2, 2, 2), device="cpu")
+    cell = torch.eye(3, device="meta")  # different device
+    match = "`mesh_values` and `cell` are on different devices, got cpu and meta"
+    with pytest.raises(ValueError, match=match):
+        fsc.compute(mesh_values=mesh_values, cell=cell)
+
+
+def test_unsupported_potential_exponent_kernel_func():
+    fsc = FourierSpaceConvolution()
+    ksq = torch.tensor([1.0])
+    match = "Only potential exponents 0 and 1 are supported!"
+    with pytest.raises(ValueError, match=match):
+        fsc.kernel_func(ksq, potential_exponent=2)
+
+
+def test_unsupported_potential_exponent_value_at_origin():
+    fsc = FourierSpaceConvolution()
+    match = "Only potential exponents 0 and 1 are supported"
+    with pytest.raises(ValueError, match=match):
+        fsc.value_at_origin(potential_exponent=2)

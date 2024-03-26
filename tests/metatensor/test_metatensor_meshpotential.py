@@ -2,7 +2,6 @@ from typing import List
 
 import pytest
 import torch
-from metatensor.torch.atomistic import System
 from packaging import version
 
 
@@ -11,13 +10,21 @@ meshlode_metatensor = pytest.importorskip("meshlode.metatensor")
 
 
 # Define toy system consisting of a single structure for testing
-def toy_system_single_frame(dtype=torch.float32) -> System:
-    return System(
-        types=torch.tensor([1, 1, 8, 8]),
+def toy_system_single_frame(
+    dtype=None, device=None
+) -> metatensor_torch.atomistic.System:
+    return metatensor_torch.atomistic.System(
+        types=torch.tensor([1, 1, 8, 8], device=device),
         positions=torch.tensor(
-            [[0.0, 0, 0], [0, 0, 1], [0, 0, 2], [0, 0, 3]], dtype=dtype
+            [[0.0, 0, 0], [0, 0, 1], [0, 0, 2], [0, 0, 3]],
+            dtype=dtype,
+            device=device,
         ),
-        cell=torch.tensor([[10.0, 0, 0], [0, 10, 0], [0, 0, 10]], dtype=dtype),
+        cell=torch.tensor(
+            [[10.0, 0, 0], [0, 10, 0], [0, 0, 10]],
+            dtype=dtype,
+            device=device,
+        ),
     )
 
 
@@ -27,6 +34,14 @@ def descriptor() -> meshlode_metatensor.MeshPotential:
     return meshlode_metatensor.MeshPotential(
         atomic_smearing=1.0,
     )
+
+
+def test_forward():
+    mp = descriptor()
+    descriptor_compute = mp.compute(toy_system_single_frame())
+    descriptor_forward = mp.forward(toy_system_single_frame())
+
+    metatensor_torch.equal_raise(descriptor_forward, descriptor_compute)
 
 
 # Test correct filling of zero and empty blocks when setting global atomic numbers
@@ -47,6 +62,18 @@ def test_all_types():
         )
 
 
+def test_dtype_device():
+    """Test that the output dtype and device are the same as the input."""
+    device = "cpu"
+    dtype = torch.float64
+
+    mp = descriptor()
+    potential = mp.compute(toy_system_single_frame(dtype=torch.float64, device=device))
+
+    assert potential[0].values.dtype == dtype
+    assert potential[0].values.device.type == device
+
+
 def test_wrong_dtype_between_systems():
     match = "`dtype` of all systems must be the same, got 7 and 6"
     with pytest.raises(ValueError, match=match):
@@ -54,6 +81,17 @@ def test_wrong_dtype_between_systems():
             [
                 toy_system_single_frame(dtype=torch.float32),
                 toy_system_single_frame(dtype=torch.float64),
+            ]
+        )
+
+
+def test_wrong_device_between_systems():
+    match = "`device` of all systems must be the same, got meta and cpu"
+    with pytest.raises(ValueError, match=match):
+        descriptor().compute(
+            [
+                toy_system_single_frame(device="cpu"),
+                toy_system_single_frame(device="meta"),
             ]
         )
 
@@ -79,26 +117,26 @@ def test_operation_as_torch_script():
 
 
 # Define a more complex toy system consisting of multiple frames, mixing three types.
-def toy_system_2() -> List[System]:
+def toy_system_2() -> List[metatensor_torch.atomistic.System]:
     # First few frames containing Nitrogen
     L = 2.0
     frames = []
     frames.append(
-        System(
+        metatensor_torch.atomistic.System(
             types=torch.tensor([7]),
             positions=torch.zeros((1, 3)),
             cell=L * 2 * torch.eye(3),
         )
     )
     frames.append(
-        System(
+        metatensor_torch.atomistic.System(
             types=torch.tensor([7, 7]),
             positions=torch.zeros((2, 3)),
             cell=L * 2 * torch.eye(3),
         )
     )
     frames.append(
-        System(
+        metatensor_torch.atomistic.System(
             types=torch.tensor([7, 7, 7]),
             positions=torch.zeros((3, 3)),
             cell=L * 2 * torch.eye(3),
@@ -108,7 +146,11 @@ def toy_system_2() -> List[System]:
     # One more frame containing Na and Cl
     positions = torch.tensor([[0, 0, 0], [1.0, 0, 0]])
     cell = torch.tensor([[0, 1.0, 1], [1, 0, 1], [1, 1, 0]])
-    frames.append(System(types=torch.tensor([11, 17]), positions=positions, cell=cell))
+    frames.append(
+        metatensor_torch.atomistic.System(
+            types=torch.tensor([11, 17]), positions=positions, cell=cell
+        )
+    )
 
     return frames
 

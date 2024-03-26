@@ -32,6 +32,7 @@ jobs:
 
     - name: run Python tests
       run: |
+        tox -e tests-min
         tox -e tests
         coverage xml
       env:
