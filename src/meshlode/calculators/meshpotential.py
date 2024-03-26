@@ -111,7 +111,9 @@ class MeshPotential(torch.nn.Module):
         charges: Optional[Union[List[torch.Tensor], torch.Tensor]] = None,
     ) -> Union[torch.Tensor, List[torch.Tensor]]:
         """forward just calls :py:meth:`CalculatorModule.compute`"""
-        return self.compute(types=types, positions=positions, cell=cell, charges=charges)
+        return self.compute(
+            types=types, positions=positions, cell=cell, charges=charges
+        )
 
     def compute(
         self,
@@ -156,9 +158,7 @@ class MeshPotential(torch.nn.Module):
             positions = [positions]
         if not isinstance(cell, list):
             cell = [cell]
-        if charges is not None and not isinstance(charges, list):
-            charges = [charges]
-        
+
         # Check that all inputs are consistent
         for types_single, positions_single, cell_single in zip(types, positions, cell):
             if len(types_single.shape) != 1:
@@ -194,21 +194,29 @@ class MeshPotential(torch.nn.Module):
                     f"{types_single.device}, {positions_single.device} and "
                     f"{cell_single.device}."
                 )
-        
+
         requested_types = self._get_requested_types(types)
         n_types = len(requested_types)
 
+        # If charges are not provided, we assume that all types are treated separately
         if charges is None:
-             charges = []
-             for types_single in types:
-                charges = torch.zeros(
-                (len(types_single), n_types),
-                dtype=positions_single.dtype,
-                device=positions_single.device,
+            charges = []
+            for types_single, positions_single in zip(types, positions):
+                charges_single = torch.zeros(
+                    (len(types_single), n_types),
+                    dtype=positions_single.dtype,
+                    device=positions_single.device,
                 )
                 for i_type, atomic_type in enumerate(requested_types):
-                    charges[types_single == atomic_type, i_type] = 1.0
+                    charges_single[types_single == atomic_type, i_type] = 1.0
+                charges.append(charges_single)
+
+        # If charges are provided, we need to make sure that they are consistent with
+        # the provided types
+
         else:
+            if not isinstance(charges, list):
+                charges = [charges]
             if len(charges) != len(types):
                 raise ValueError(
                     "The number of `types` and `charges` tensors must be the same, "
@@ -220,12 +228,6 @@ class MeshPotential(torch.nn.Module):
                         "The first dimension of `charges` must be the same as the "
                         f"length of `types`, got {charges_single.shape[0]} and "
                         f"{len(types_single)}."
-                    )
-                if charges_single.shape[1] != n_types:
-                    raise ValueError(
-                        "The second dimension of `charges` must be the same as the "
-                        f"number of `requested_types`, got {charges_single.shape[1]} and "
-                        f"{n_types}."
                     )
             if charges[0].dtype != positions[0].dtype:
                 raise ValueError(
@@ -239,12 +241,10 @@ class MeshPotential(torch.nn.Module):
                 )
         # We don't require and test that all dtypes and devices are consistent if a list
         # of inputs. Each "frame" is processed independently.
-
         potentials = []
-        for types_single, positions_single, cell_single, charges_single in zip(types, 
-                                                                               positions, 
-                                                                               cell, 
-                                                                               charges):
+        for types_single, positions_single, cell_single, charges_single in zip(
+            types, positions, cell, charges
+        ):
             # Compute the potentials
             potentials.append(
                 self._compute_single_system(

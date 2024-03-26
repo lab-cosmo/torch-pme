@@ -24,6 +24,15 @@ def cscl_system():
     return types, positions, cell
 
 
+def cscl_system_with_charges():
+    """CsCl crystal. Same as in the madelung test"""
+    types = torch.tensor([55, 17])
+    positions = torch.tensor([[0, 0, 0], [0.5, 0.5, 0.5]])
+    cell = torch.eye(3)
+
+    return types, positions, cell, torch.tensor([[0.0, 1.0], [1.0, 0]])
+
+
 # Initialize the calculators. For now, only the MeshPotential is implemented.
 def descriptor() -> MeshPotential:
     atomic_smearing = 0.1
@@ -87,6 +96,19 @@ def test_operation_as_torch_script():
 def test_single_frame():
     values = descriptor().compute(*cscl_system())
     print(values)
+    assert_close(
+        MADELUNG_CSCL,
+        CHARGES_CSCL[0] * values[0, 0] + CHARGES_CSCL[1] * values[0, 1],
+        atol=1e4,
+        rtol=1e-5,
+    )
+
+
+def test_single_frame_with_charges():
+    values = descriptor().compute(*cscl_system_with_charges())
+    print(values)
+    print(MADELUNG_CSCL),
+    print(CHARGES_CSCL[0] * values[0, 0] + CHARGES_CSCL[1] * values[0, 1])
     assert_close(
         MADELUNG_CSCL,
         CHARGES_CSCL[0] * values[0, 0] + CHARGES_CSCL[1] * values[0, 1],
