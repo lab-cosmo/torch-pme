@@ -106,9 +106,6 @@ def test_single_frame():
 
 def test_single_frame_with_charges():
     values = descriptor().compute(*cscl_system_with_charges())
-    print(values)
-    print(MADELUNG_CSCL),
-    print(CHARGES_CSCL[0] * values[0, 0] + CHARGES_CSCL[1] * values[0, 1])
     assert_close(
         MADELUNG_CSCL,
         CHARGES_CSCL[0] * values[0, 0] + CHARGES_CSCL[1] * values[0, 1],

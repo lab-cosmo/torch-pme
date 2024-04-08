@@ -242,8 +242,8 @@ class MeshPotential(torch.nn.Module):
         # We don't require and test that all dtypes and devices are consistent if a list
         # of inputs. Each "frame" is processed independently.
         potentials = []
-        for types_single, positions_single, cell_single, charges_single in zip(
-            types, positions, cell, charges
+        for positions_single, cell_single, charges_single in zip(
+            positions, cell, charges
         ):
             # Compute the potentials
             potentials.append(

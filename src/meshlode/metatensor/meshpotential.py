@@ -75,14 +75,22 @@ class MeshPotential(calculators.MeshPotential):
     ) -> TensorMap:
         """Compute potential for all provided ``systems``.
 
-        All ``systems`` must have the same ``dtype`` and the same ``device``.
+        All ``systems`` must have the same ``dtype`` and the same ``device``. If each
+        system contains a custom data field `charges` the potential will be calculated
+        for each "charges-channel". The number of `charges-channels` must be same in all
+        ``systems``. If no "explicit" charges are set the potential will be calculated
+        for each "types-channels".
+
+        Refer to :meth:`meshlode.MeshPotential.compute()` for additional details on how
+        "charges-channel" and "types-channels" are computed.
 
         :param systems: single System or list of
             :py:class:`metatensor.torch.atomisic.System` on which to run the
-            calculation.
+            calculations.
 
         :return: TensorMap containing the potential of all types. The keys of the
-            tensormap are "center_type" and "neighbor_type".
+            TensorMap are "center_type" and "neighbor_type" if no charges are asociated
+            with
         """
         # Make sure that the compute function also works if only a single frame is
         # provided as input (for convenience of users testing out the code)
@@ -111,35 +119,71 @@ class MeshPotential(calculators.MeshPotential):
         )
         n_types = len(requested_types)
 
-        # Initialize dictionary for sparse storage of the features to map atomic types
-        # to array indices. In general, the types are sorted according to their
-        # (integer) type and assigned the array indices 0, 1, 2,... Example: for H2O:
-        # `H` is mapped to `0` and `O` is mapped to `1`.
-        n_types_sq = n_types * n_types
-        feat_dic: Dict[int, List[torch.Tensor]] = {a: [] for a in range(n_types_sq)}
+        has_charges = torch.tensor(["charges" in s.known_data() for s in systems])
+        all_charges = torch.all(has_charges)
+        any_charges = torch.any(has_charges)
+
+        if any_charges and not all_charges:
+            raise ValueError("`systems` do not consistently contain `charges` data")
+        if all_charges:
+            use_explicit_charges = True
+            n_charges_channels = systems[0].get_data("charges").values.shape[1]
+            spec_channels = list(range(n_charges_channels))
+            key_names = ["center_type", "charges_channel"]
+            
+
+            for i_system, system in enumerate(systems):
+                n_channels = system.get_data("charges").values.shape[1]
+                if n_channels != n_charges_channels:
+                    raise ValueError(
+                        f"number of charges-channels in system index {i_system} "
+                        f"({n_channels}) is inconsistent with first system "
+                        f"({n_charges_channels})"
+                    )
+        else:
+            # Use one hot encoded type channel per species for charges channel
+            use_explicit_charges = False
+            n_charges_channels = n_types
+            spec_channels = requested_types
+            key_names = ["center_type", "neighbor_type"]
+
+        # Initialize dictionary for TensorBlock storage.
+        #
+        # If `use_explicit_charges=False`, the blocks are sorted according to the
+        # (integer) center_type and neighbor_type. Blocks are assigned the array indices
+        # 0, 1, 2,... Example: for H2O: `H` is mapped to `0` and `O` is mapped to `1`.
+        #
+        # For `use_explicit_charges=True` the blocks are stored according to the
+        # center_type and charge_channel
+        n_blocks = n_types * n_charges_channels
+        feat_dic: Dict[int, List[torch.Tensor]] = {a: [] for a in range(n_blocks)}
 
         for system in systems:
-            # One-hot encoding of charge information
-            types = system.types
-            charges = torch.zeros((len(system), n_types), dtype=dtype, device=device)
-            for i_specie, atomic_type in enumerate(requested_types):
-                charges[types == atomic_type, i_specie] = 1.0
+            if use_explicit_charges:
+                charges = system.get_data("charges").values
+            else:
+                # One-hot encoding of charge information
+                charges = torch.zeros(
+                    (len(system), n_types), dtype=dtype, device=device
+                )
+                for i_specie, atomic_type in enumerate(requested_types):
+                    charges[system.types == atomic_type, i_specie] = 1.0
 
             # Compute the potentials
             potential = self._compute_single_system(
                 system.positions, charges, system.cell
             )
 
-            # Reorder data into Metatensor format
+            # Reorder data into metatensor format
             for spec_center, at_num_center in enumerate(requested_types):
-                for spec_neighbor in range(len(requested_types)):
-                    a_pair = spec_center * n_types + spec_neighbor
+                for spec_channel in range(len(spec_channels)):
+                    a_pair = spec_center * n_types + spec_channel
                     feat_dic[a_pair] += [
-                        potential[types == at_num_center, spec_neighbor]
+                        potential[system.types == at_num_center, spec_channel]
                     ]
 
         # Assemble all computed potential values into TensorBlocks for each combination
-        # of center_type and neighbor_type
+        # of center_type and neighbor_type/charge_channel
         blocks: List[TensorBlock] = []
         for keys, values in feat_dic.items():
             spec_center = requested_types[keys // n_types]
@@ -176,14 +220,17 @@ class MeshPotential(calculators.MeshPotential):
 
             blocks.append(block)
 
+        assert len(blocks) == n_blocks
+
         # Generate TensorMap from TensorBlocks by defining suitable keys
         key_values: List[torch.Tensor] = []
         for spec_center in requested_types:
-            for spec_neighbor in requested_types:
+            for spec_channel in spec_channels:
                 key_values.append(
-                    torch.tensor([spec_center, spec_neighbor], device=device)
+                    torch.tensor([spec_center, spec_channel], device=device)
                 )
         key_values = torch.vstack(key_values)
-        labels_keys = Labels(["center_type", "neighbor_type"], key_values)
+
+        labels_keys = Labels(key_names, key_values)
 
         return TensorMap(keys=labels_keys, blocks=blocks)
