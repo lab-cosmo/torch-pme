@@ -28,6 +28,30 @@ def toy_system_single_frame(
     )
 
 
+def toy_system_single_frame_charges():
+    system = toy_system_single_frame()
+
+    # Create system with "hand" written one hot charges
+    charges = torch.tensor([[1.0, 0.0], [1.0, 0.0], [0.0, 1.0], [0.0, 1.0]])
+
+    # create a metatensor.TensorBlock wich and to add it to the system
+    samples = metatensor_torch.Labels("atom", torch.arange(len(system)).reshape(-1, 1))
+    properties = metatensor_torch.Labels(
+        "charge", torch.arange(charges.shape[1]).reshape(-1, 1)
+    )
+
+    charges_block = metatensor_torch.TensorBlock(
+        samples=samples,
+        components=[],
+        properties=properties,
+        values=charges,
+    )
+
+    system.add_data("charges", charges_block)
+
+    return system
+
+
 # Initialize the calculators. For now, only the meshlode_metatensor.MeshPotential is
 # implemented.
 def descriptor() -> meshlode_metatensor.MeshPotential:
@@ -94,6 +118,69 @@ def test_wrong_device_between_systems():
                 toy_system_single_frame(device="meta"),
             ]
         )
+
+
+def test_explicit_charges():
+    mp = descriptor()
+    potential = mp.compute(toy_system_single_frame())
+    potential_charges = mp.compute(toy_system_single_frame_charges())
+
+    # Test metatdata
+    assert potential_charges.keys.names == ["center_type", "charges_channel"]
+    assert torch.all(
+        potential_charges.keys.values == torch.tensor([[1, 0], [1, 1], [8, 0], [8, 1]])
+    )
+
+    # Test values
+    for block, block_charges in zip(potential, potential_charges):
+        assert block_charges.samples == block.samples
+        assert block_charges.components == block.components
+        assert block_charges.properties == block.properties
+        assert torch.all(block_charges.values == block.values)
+
+
+def test_error_raise_charges_no_charges():
+    systems = [toy_system_single_frame(), toy_system_single_frame_charges()]
+    match = "`systems` do not consistently contain `charges` data"
+
+    with pytest.raises(ValueError, match=match):
+        descriptor().compute(systems)
+
+
+def test_error_raise_charge_shape():
+    system = toy_system_single_frame()
+
+    # Create system with "hand" written one hot charges
+    charges = torch.tensor(
+        [[1.0, 0.0, 2.0], [1.0, 0.0, 2.0], [0.0, 1.0, 2.0], [0.0, 1.0, 2.0]]
+    )
+
+    # create a metatensor.TensorBlock wich and to add it to the system
+    samples = metatensor_torch.Labels(
+        "atom", torch.arange(charges.shape[0]).reshape(-1, 1)
+    )
+    properties = metatensor_torch.Labels(
+        "charge", torch.arange(charges.shape[1]).reshape(-1, 1)
+    )
+
+    charges_block = metatensor_torch.TensorBlock(
+        samples=samples,
+        components=[],
+        properties=properties,
+        values=charges,
+    )
+
+    system.add_data("charges", charges_block)
+
+    systems = [system, toy_system_single_frame_charges()]
+
+    match = (
+        r"number of charges-channels in system index 1 \(2\) is inconsistent with "
+        r"first system \(3\)"
+    )
+
+    with pytest.raises(ValueError, match=match):
+        descriptor().compute(systems)
 
 
 # Make sure that the calculators are computing the features without raising errors,

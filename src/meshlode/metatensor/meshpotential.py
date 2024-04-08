@@ -130,7 +130,6 @@ class MeshPotential(calculators.MeshPotential):
             n_charges_channels = systems[0].get_data("charges").values.shape[1]
             spec_channels = list(range(n_charges_channels))
             key_names = ["center_type", "charges_channel"]
-            
 
             for i_system, system in enumerate(systems):
                 n_channels = system.get_data("charges").values.shape[1]
