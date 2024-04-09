@@ -202,6 +202,7 @@ class MeshPotential(torch.nn.Module):
         if charges is None:
             charges = []
             for types_single, positions_single in zip(types, positions):
+                # One-hot encoding of charge information
                 charges_single = torch.zeros(
                     (len(types_single), n_types),
                     dtype=positions_single.dtype,
@@ -232,12 +233,12 @@ class MeshPotential(torch.nn.Module):
             if charges[0].dtype != positions[0].dtype:
                 raise ValueError(
                     "`charges` must be have the same dtype as `positions`, got "
-                    f"{charges[0].dtype} and {positions[0].dtype}"
+                    f"{charges[0].dtype} and {positions[0].dtype}."
                 )
             if charges[0].device != positions[0].device:
                 raise ValueError(
                     "`charges` must be on the same device as `positions`, got "
-                    f"{charges[0].device} and {positions[0].device}"
+                    f"{charges[0].device} and {positions[0].device}."
                 )
         # We don't require and test that all dtypes and devices are consistent if a list
         # of inputs. Each "frame" is processed independently.
