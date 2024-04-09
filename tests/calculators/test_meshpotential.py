@@ -25,12 +25,9 @@ def cscl_system():
 
 
 def cscl_system_with_charges():
-    """CsCl crystal. Same as in the madelung test. Version with explicit charges"""
-    types = torch.tensor([55, 17])
-    positions = torch.tensor([[0, 0, 0], [0.5, 0.5, 0.5]])
-    cell = torch.eye(3)
-
-    return types, positions, cell, torch.tensor([[0.0, 1.0], [1.0, 0]])
+    """CsCl crystal with charges."""
+    charges = torch.tensor([[0.0, 1.0], [1.0, 0]])
+    return cscl_system() + (charges,)
 
 
 # Initialize the calculators. For now, only the MeshPotential is implemented.
@@ -102,6 +99,7 @@ def test_single_frame():
         rtol=1e-5,
     )
 
+
 # Test with explicit charges
 def test_single_frame_with_charges():
     values = descriptor().compute(*cscl_system_with_charges())
@@ -155,6 +153,7 @@ def test_positions_error():
     with pytest.raises(ValueError, match=match):
         descriptor().compute(types=types, positions=positions, cell=cell)
 
+
 def test_charges_error_dimension_mismatch():
     types = torch.tensor([1, 2])
     positions = torch.zeros((2, 3))
@@ -162,23 +161,28 @@ def test_charges_error_dimension_mismatch():
     charges = torch.zeros((1, 2))  # This should have the same first dimension as types
 
     match = (
-        "The first dimension of `charges` must be the same as the length of `types`, got 1 and 2."
+        "The first dimension of `charges` must be the same as the length "
+        "of `types`, got 1 and 2."
     )
 
     with pytest.raises(ValueError, match=match):
-        descriptor().compute(types=types, positions=positions, cell=cell, charges=charges)
+        descriptor().compute(
+            types=types, positions=positions, cell=cell, charges=charges
+        )
+
 
 def test_charges_error_length_mismatch():
     types = [torch.tensor([1, 2]), torch.tensor([1, 2, 3])]
     positions = [torch.zeros((2, 3)), torch.zeros((3, 3))]
     cell = torch.eye(3)
-    charges = [torch.zeros(2,1)]  # This should have the same length as types 
-    match = (
-        "The number of `types` and `charges` tensors must be the same, got 2 and 1."
-    )
+    charges = [torch.zeros(2, 1)]  # This should have the same length as types
+    match = "The number of `types` and `charges` tensors must be the same, got 2 and 1."
 
     with pytest.raises(ValueError, match=match):
-        descriptor().compute(types=types, positions=positions, cell=cell, charges=charges)
+        descriptor().compute(
+            types=types, positions=positions, cell=cell, charges=charges
+        )
+
 
 def test_cell_error():
     types = torch.tensor([1, 2, 3])
@@ -253,6 +257,7 @@ def test_inconsistent_device():
     with pytest.raises(ValueError, match=match):
         MP.compute(types=types, positions=positions, cell=cell)
 
+
 def test_inconsistent_device_charges():
     """Test if the cell and positions have inconsistent device and error is raised."""
     types = torch.tensor([1], device="cpu")
@@ -262,11 +267,10 @@ def test_inconsistent_device_charges():
 
     MP = MeshPotential(atomic_smearing=0.2)
 
-    match = (
-        "`charges` must be on the same device as `positions`, got meta and cpu."
-    )
+    match = "`charges` must be on the same device as `positions`, got meta and cpu."
     with pytest.raises(ValueError, match=match):
         MP.compute(types=types, positions=positions, cell=cell, charges=charges)
+
 
 def test_inconsistent_dtype_charges():
     """Test if the cell and positions have inconsistent dtype and error is raised."""

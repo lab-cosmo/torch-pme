@@ -203,13 +203,13 @@ class MeshPotential(torch.nn.Module):
             charges = []
             for types_single, positions_single in zip(types, positions):
                 # One-hot encoding of charge information
-                charges_single = torch.zeros(
-                    (len(types_single), n_types),
-                    dtype=positions_single.dtype,
-                    device=positions_single.device,
+                charges_single = self._one_hot_charges(
+                    types_single,
+                    requested_types,
+                    n_types,
+                    positions_single.dtype,
+                    positions_single.device,
                 )
-                for i_type, atomic_type in enumerate(requested_types):
-                    charges_single[types_single == atomic_type, i_type] = 1.0
                 charges.append(charges_single)
 
         # If charges are provided, we need to make sure that they are consistent with
@@ -352,3 +352,17 @@ class MeshPotential(torch.nn.Module):
             interpolated_potential -= charges * self_contrib
 
         return interpolated_potential
+
+    def _one_hot_charges(
+        self,
+        types: torch.Tensor,
+        requested_types: List[int],
+        n_types: int,
+        dtype: torch.dtype,
+        device: torch.device,
+    ) -> torch.Tensor:
+        one_hot_charges = torch.zeros((len(types), n_types), dtype=dtype, device=device)
+        for i_type, atomic_type in enumerate(requested_types):
+            one_hot_charges[types == atomic_type, i_type] = 1.0
+
+        return one_hot_charges

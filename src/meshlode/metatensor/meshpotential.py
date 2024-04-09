@@ -162,11 +162,9 @@ class MeshPotential(calculators.MeshPotential):
                 charges = system.get_data("charges").values
             else:
                 # One-hot encoding of charge information
-                charges = torch.zeros(
-                    (len(system), n_types), dtype=dtype, device=device
+                charges = self._one_hot_charges(
+                    system.types, requested_types, n_types, dtype, device
                 )
-                for i_specie, atomic_type in enumerate(requested_types):
-                    charges[system.types == atomic_type, i_specie] = 1.0
 
             # Compute the potentials
             potential = self._compute_single_system(
