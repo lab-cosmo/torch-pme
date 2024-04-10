@@ -174,7 +174,7 @@ class MeshPotential(calculators.MeshPotential):
             # Reorder data into metatensor format
             for spec_center, at_num_center in enumerate(requested_types):
                 for spec_channel in range(len(spec_channels)):
-                    a_pair = spec_center * n_types + spec_channel
+                    a_pair = spec_center * n_charges_channels + spec_channel
                     feat_dic[a_pair] += [
                         potential[system.types == at_num_center, spec_channel]
                     ]
@@ -183,7 +183,7 @@ class MeshPotential(calculators.MeshPotential):
         # of center_type and neighbor_type/charge_channel
         blocks: List[TensorBlock] = []
         for keys, values in feat_dic.items():
-            spec_center = requested_types[keys // n_types]
+            spec_center = requested_types[keys // n_charges_channels]
 
             # Generate the Labels objects for the samples and properties of the
             # TensorBlock.

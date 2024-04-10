@@ -52,6 +52,30 @@ def toy_system_single_frame_charges():
     return system
 
 
+def toy_system_single_frame_charges_arbitrary_charges():
+    system = toy_system_single_frame()
+
+    # Create system with "hand" written random charges with 4 samples and 5 channels
+    charges = torch.rand(4, 5)
+
+    # create a metatensor.TensorBlock wich and to add it to the system
+    samples = metatensor_torch.Labels("atom", torch.arange(len(system)).reshape(-1, 1))
+    properties = metatensor_torch.Labels(
+        "charge", torch.arange(charges.shape[1]).reshape(-1, 1)
+    )
+
+    charges_block = metatensor_torch.TensorBlock(
+        samples=samples,
+        components=[],
+        properties=properties,
+        values=charges,
+    )
+
+    system.add_data("charges", charges_block)
+
+    return system
+
+
 # Initialize the calculators. For now, only the meshlode_metatensor.MeshPotential is
 # implemented.
 def descriptor() -> meshlode_metatensor.MeshPotential:
@@ -137,6 +161,31 @@ def test_explicit_charges():
         assert block_charges.components == block.components
         assert block_charges.properties == block.properties
         assert torch.all(block_charges.values == block.values)
+
+
+def test_explicit_arbitrarycharges():
+    mp = descriptor()
+    potential_charges = mp.compute(toy_system_single_frame_charges_arbitrary_charges())
+
+    # Test metatdata
+    assert potential_charges.keys.names == ["center_type", "charges_channel"]
+    assert torch.all(
+        potential_charges.keys.values
+        == torch.tensor(
+            [
+                [1, 0],
+                [1, 1],
+                [1, 2],
+                [1, 3],
+                [1, 4],
+                [8, 0],
+                [8, 1],
+                [8, 2],
+                [8, 3],
+                [8, 4],
+            ]
+        )
+    )
 
 
 def test_error_raise_charges_no_charges():
