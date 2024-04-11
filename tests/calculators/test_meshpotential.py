@@ -24,6 +24,12 @@ def cscl_system():
     return types, positions, cell
 
 
+def cscl_system_with_charges():
+    """CsCl crystal with charges."""
+    charges = torch.tensor([[0.0, 1.0], [1.0, 0]])
+    return cscl_system() + (charges,)
+
+
 # Initialize the calculators. For now, only the MeshPotential is implemented.
 def descriptor() -> MeshPotential:
     atomic_smearing = 0.1
@@ -86,7 +92,17 @@ def test_operation_as_torch_script():
 
 def test_single_frame():
     values = descriptor().compute(*cscl_system())
-    print(values)
+    assert_close(
+        MADELUNG_CSCL,
+        CHARGES_CSCL[0] * values[0, 0] + CHARGES_CSCL[1] * values[0, 1],
+        atol=1e4,
+        rtol=1e-5,
+    )
+
+
+# Test with explicit charges
+def test_single_frame_with_charges():
+    values = descriptor().compute(*cscl_system_with_charges())
     assert_close(
         MADELUNG_CSCL,
         CHARGES_CSCL[0] * values[0, 0] + CHARGES_CSCL[1] * values[0, 1],
@@ -136,6 +152,36 @@ def test_positions_error():
 
     with pytest.raises(ValueError, match=match):
         descriptor().compute(types=types, positions=positions, cell=cell)
+
+
+def test_charges_error_dimension_mismatch():
+    types = torch.tensor([1, 2])
+    positions = torch.zeros((2, 3))
+    cell = torch.eye(3)
+    charges = torch.zeros((1, 2))  # This should have the same first dimension as types
+
+    match = (
+        "The first dimension of `charges` must be the same as the length "
+        "of `types`, got 1 and 2."
+    )
+
+    with pytest.raises(ValueError, match=match):
+        descriptor().compute(
+            types=types, positions=positions, cell=cell, charges=charges
+        )
+
+
+def test_charges_error_length_mismatch():
+    types = [torch.tensor([1, 2]), torch.tensor([1, 2, 3])]
+    positions = [torch.zeros((2, 3)), torch.zeros((3, 3))]
+    cell = torch.eye(3)
+    charges = [torch.zeros(2, 1)]  # This should have the same length as types
+    match = "The number of `types` and `charges` tensors must be the same, got 2 and 1."
+
+    with pytest.raises(ValueError, match=match):
+        descriptor().compute(
+            types=types, positions=positions, cell=cell, charges=charges
+        )
 
 
 def test_cell_error():
@@ -210,6 +256,37 @@ def test_inconsistent_device():
     )
     with pytest.raises(ValueError, match=match):
         MP.compute(types=types, positions=positions, cell=cell)
+
+
+def test_inconsistent_device_charges():
+    """Test if the cell and positions have inconsistent device and error is raised."""
+    types = torch.tensor([1], device="cpu")
+    positions = torch.tensor([[0.0, 0.0, 0.0]], device="cpu")
+    cell = torch.eye(3, device="cpu")
+    charges = torch.tensor([0.0], device="meta")  # different device
+
+    MP = MeshPotential(atomic_smearing=0.2)
+
+    match = "`charges` must be on the same device as `positions`, got meta and cpu."
+    with pytest.raises(ValueError, match=match):
+        MP.compute(types=types, positions=positions, cell=cell, charges=charges)
+
+
+def test_inconsistent_dtype_charges():
+    """Test if the cell and positions have inconsistent dtype and error is raised."""
+    types = torch.tensor([1], dtype=torch.float32)
+    positions = torch.tensor([[0.0, 0.0, 0.0]], dtype=torch.float32)
+    cell = torch.eye(3, dtype=torch.float32)
+    charges = torch.tensor([0.0], dtype=torch.float64)  # Different dtype
+
+    MP = MeshPotential(atomic_smearing=0.2)
+
+    match = (
+        "`charges` must be have the same dtype as `positions`, got torch.float64 and "
+        "torch.float32"
+    )
+    with pytest.raises(ValueError, match=match):
+        MP.compute(types=types, positions=positions, cell=cell, charges=charges)
 
 
 def test_1d_tolist():

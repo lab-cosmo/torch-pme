@@ -108,15 +108,19 @@ class MeshPotential(torch.nn.Module):
         types: Union[List[torch.Tensor], torch.Tensor],
         positions: Union[List[torch.Tensor], torch.Tensor],
         cell: Union[List[torch.Tensor], torch.Tensor],
+        charges: Optional[Union[List[torch.Tensor], torch.Tensor]] = None,
     ) -> Union[torch.Tensor, List[torch.Tensor]]:
         """forward just calls :py:meth:`CalculatorModule.compute`"""
-        return self.compute(types=types, positions=positions, cell=cell)
+        return self.compute(
+            types=types, positions=positions, cell=cell, charges=charges
+        )
 
     def compute(
         self,
         types: Union[List[torch.Tensor], torch.Tensor],
         positions: Union[List[torch.Tensor], torch.Tensor],
         cell: Union[List[torch.Tensor], torch.Tensor],
+        charges: Optional[Union[List[torch.Tensor], torch.Tensor]] = None,
     ) -> Union[torch.Tensor, List[torch.Tensor]]:
         """Compute potential for all provided "systems" stacked inside list.
 
@@ -131,6 +135,7 @@ class MeshPotential(torch.nn.Module):
             box/unit cell of the system. Each row should be one of the bounding box
             vector; and columns should contain the x, y, and z components of these
             vectors (i.e. the cell should be given in row-major order).
+        :param charges: Optional single or list of 2D tensor of shape (len(types), n),
 
         :return: List of torch Tensors containing the potentials for all frames and all
             atoms. Each tensor in the list is of shape (n_atoms, n_types), where
@@ -154,6 +159,7 @@ class MeshPotential(torch.nn.Module):
         if not isinstance(cell, list):
             cell = [cell]
 
+        # Check that all inputs are consistent
         for types_single, positions_single, cell_single in zip(types, positions, cell):
             if len(types_single.shape) != 1:
                 raise ValueError(
@@ -189,27 +195,59 @@ class MeshPotential(torch.nn.Module):
                     f"{cell_single.device}."
                 )
 
+        requested_types = self._get_requested_types(types)
+
+        # If charges are not provided, we assume that all types are treated separately
+        if charges is None:
+            charges = []
+            for types_single, positions_single in zip(types, positions):
+                # One-hot encoding of charge information
+                charges_single = self._one_hot_charges(
+                    types=types_single,
+                    requested_types=requested_types,
+                    dtype=positions_single.dtype,
+                    device=positions_single.device,
+                )
+                charges.append(charges_single)
+
+        # If charges are provided, we need to make sure that they are consistent with
+        # the provided types
+
+        else:
+            if not isinstance(charges, list):
+                charges = [charges]
+            if len(charges) != len(types):
+                raise ValueError(
+                    "The number of `types` and `charges` tensors must be the same, "
+                    f"got {len(types)} and {len(charges)}."
+                )
+            for charges_single, types_single in zip(charges, types):
+                if charges_single.shape[0] != len(types_single):
+                    raise ValueError(
+                        "The first dimension of `charges` must be the same as the "
+                        f"length of `types`, got {charges_single.shape[0]} and "
+                        f"{len(types_single)}."
+                    )
+            if charges[0].dtype != positions[0].dtype:
+                raise ValueError(
+                    "`charges` must be have the same dtype as `positions`, got "
+                    f"{charges[0].dtype} and {positions[0].dtype}."
+                )
+            if charges[0].device != positions[0].device:
+                raise ValueError(
+                    "`charges` must be on the same device as `positions`, got "
+                    f"{charges[0].device} and {positions[0].device}."
+                )
         # We don't require and test that all dtypes and devices are consistent if a list
         # of inputs. Each "frame" is processed independently.
-
-        requested_types = self._get_requested_types(types)
-        n_types = len(requested_types)
-
         potentials = []
-        for types_single, positions_single, cell_single in zip(types, positions, cell):
-            # One-hot encoding of charge information
-            charges = torch.zeros(
-                (len(types_single), n_types),
-                dtype=positions_single.dtype,
-                device=positions_single.device,
-            )
-            for i_type, atomic_type in enumerate(requested_types):
-                charges[types_single == atomic_type, i_type] = 1.0
-
+        for positions_single, cell_single, charges_single in zip(
+            positions, cell, charges
+        ):
             # Compute the potentials
             potentials.append(
                 self._compute_single_system(
-                    positions=positions_single, charges=charges, cell=cell_single
+                    positions=positions_single, charges=charges_single, cell=cell_single
                 )
             )
 
@@ -232,6 +270,21 @@ class MeshPotential(torch.nn.Module):
             return self.all_types
         else:
             return types_requested
+
+    def _one_hot_charges(
+        self,
+        types: torch.Tensor,
+        requested_types: List[int],
+        dtype: Optional[torch.dtype] = None,
+        device: Optional[torch.device] = None,
+    ) -> torch.Tensor:
+        n_types = len(requested_types)
+        one_hot_charges = torch.zeros((len(types), n_types), dtype=dtype, device=device)
+
+        for i_type, atomic_type in enumerate(requested_types):
+            one_hot_charges[types == atomic_type, i_type] = 1.0
+
+        return one_hot_charges
 
     def _compute_single_system(
         self,
