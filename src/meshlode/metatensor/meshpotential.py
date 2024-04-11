@@ -163,7 +163,7 @@ class MeshPotential(calculators.MeshPotential):
             else:
                 # One-hot encoding of charge information
                 charges = self._one_hot_charges(
-                    system.types, requested_types, n_types, dtype, device
+                    system.types, requested_types, dtype, device
                 )
 
             # Compute the potentials

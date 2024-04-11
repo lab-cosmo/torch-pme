@@ -196,7 +196,6 @@ class MeshPotential(torch.nn.Module):
                 )
 
         requested_types = self._get_requested_types(types)
-        n_types = len(requested_types)
 
         # If charges are not provided, we assume that all types are treated separately
         if charges is None:
@@ -204,11 +203,10 @@ class MeshPotential(torch.nn.Module):
             for types_single, positions_single in zip(types, positions):
                 # One-hot encoding of charge information
                 charges_single = self._one_hot_charges(
-                    types_single,
-                    requested_types,
-                    n_types,
-                    positions_single.dtype,
-                    positions_single.device,
+                    types=types_single,
+                    requested_types=requested_types,
+                    dtype=positions_single.dtype,
+                    device=positions_single.device,
                 )
                 charges.append(charges_single)
 
@@ -272,6 +270,21 @@ class MeshPotential(torch.nn.Module):
             return self.all_types
         else:
             return types_requested
+
+    def _one_hot_charges(
+        self,
+        types: torch.Tensor,
+        requested_types: List[int],
+        dtype: Optional[torch.dtype] = None,
+        device: Optional[torch.device] = None,
+    ) -> torch.Tensor:
+        n_types = len(requested_types)
+        one_hot_charges = torch.zeros((len(types), n_types), dtype=dtype, device=device)
+
+        for i_type, atomic_type in enumerate(requested_types):
+            one_hot_charges[types == atomic_type, i_type] = 1.0
+
+        return one_hot_charges
 
     def _compute_single_system(
         self,
@@ -352,17 +365,3 @@ class MeshPotential(torch.nn.Module):
             interpolated_potential -= charges * self_contrib
 
         return interpolated_potential
-
-    def _one_hot_charges(
-        self,
-        types: torch.Tensor,
-        requested_types: List[int],
-        n_types: int,
-        dtype: torch.dtype,
-        device: torch.device,
-    ) -> torch.Tensor:
-        one_hot_charges = torch.zeros((len(types), n_types), dtype=dtype, device=device)
-        for i_type, atomic_type in enumerate(requested_types):
-            one_hot_charges[types == atomic_type, i_type] = 1.0
-
-        return one_hot_charges
