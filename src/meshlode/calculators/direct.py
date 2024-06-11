@@ -66,7 +66,13 @@ class DirectPotential(CalculatorBase):
         distances_sq = squared_norms_matrix + squared_norms_matrix.T - 2 * gram_matrix
 
         # Add terms to diagonal in order to avoid division by zero
-        distances_sq[diagonal_indices, diagonal_indices] += 1e30
+        # Since these components in the target tensor need to be set to zero, we add
+        # a huge number such that after taking the inverse (since we evaluate 1/r^p),
+        # the components will effectively be set to zero.
+        # This is not the most elegant solution, but I am doing this since the more
+        # obvious alternative of setting the same components to zero after the division
+        # had issues with autograd. I would appreciate any better alternatives.
+        distances_sq[diagonal_indices, diagonal_indices] += 1e50
         
         # Compute potential
         potentials_by_pair = distances_sq.pow(-self.exponent / 2.)
