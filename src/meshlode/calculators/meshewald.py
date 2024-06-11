@@ -59,13 +59,8 @@ class MeshEwaldPotential(CalculatorBasePeriodic):
         # Check that all provided values are correct
         if interpolation_order not in [1, 2, 3, 4, 5]:
             raise ValueError("Only `interpolation_order` from 1 to 5 are allowed")
-        if atomic_smearing <= 0:
+        if atomic_smearing is not None and atomic_smearing <= 0:
             raise ValueError(f"`atomic_smearing` {atomic_smearing} has to be positive")
-
-        # If no explicit mesh_spacing is given, set it such that it can resolve
-        # the smeared potentials.
-        if mesh_spacing is None:
-            mesh_spacing = atomic_smearing / 2
 
         # Store provided parameters
         self.atomic_smearing = atomic_smearing
