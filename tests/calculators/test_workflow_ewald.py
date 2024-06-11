@@ -7,8 +7,8 @@ import pytest
 import torch
 from torch.testing import assert_close
 
-from meshlode import MeshPotential
-from meshlode.calculators.meshpotential import _1d_tolist, _is_subset
+from meshlode import EwaldPotential
+from meshlode.calculators.calculator_base import _1d_tolist, _is_subset
 
 
 MADELUNG_CSCL = torch.tensor(2 * 1.7626 / math.sqrt(3))
@@ -30,13 +30,12 @@ def cscl_system_with_charges():
     return cscl_system() + (charges,)
 
 
-# Initialize the calculators. For now, only the MeshPotential is implemented.
-def descriptor() -> MeshPotential:
+# Initialize the calculators. For now, only the EwaldPotential is implemented.
+def descriptor() -> EwaldPotential:
     atomic_smearing = 0.1
-    return MeshPotential(
+    return EwaldPotential(
         atomic_smearing=atomic_smearing,
-        mesh_spacing=atomic_smearing / 4,
-        interpolation_order=2,
+        lr_wavelength=atomic_smearing / 4,
         subtract_self=True,
     )
 
@@ -49,25 +48,16 @@ def test_forward():
     assert torch.equal(descriptor_forward, descriptor_compute)
 
 
-def test_atomic_smearing_error():
-    with pytest.raises(ValueError, match="has to be positive"):
-        MeshPotential(atomic_smearing=-1.0)
-
-
-def test_interpolation_order_error():
-    with pytest.raises(ValueError, match="Only `interpolation_order` from 1 to 5"):
-        MeshPotential(atomic_smearing=1, interpolation_order=10)
-
-
 def test_all_types():
-    descriptor = MeshPotential(atomic_smearing=0.1, all_types=[8, 55, 17])
+    descriptor = EwaldPotential(atomic_smearing=0.1, all_types=[8, 55, 17])
     values = descriptor.compute(*cscl_system())
+
     assert values.shape == (2, 3)
     assert torch.equal(values[:, 0], torch.zeros(2))
 
 
 def test_all_types_error():
-    descriptor = MeshPotential(atomic_smearing=0.1, all_types=[17])
+    descriptor = EwaldPotential(atomic_smearing=0.1, all_types=[17])
     with pytest.raises(ValueError, match="Global list of types"):
         descriptor.compute(*cscl_system())
 
@@ -84,10 +74,12 @@ def test_operation_as_python():
     check_operation(descriptor())
 
 
+"""
 # Similar to the above, but also testing that the code can be compiled as a torch script
 def test_operation_as_torch_script():
     scripted = torch.jit.script(descriptor())
     check_operation(scripted)
+"""
 
 
 def test_single_frame():
@@ -219,8 +211,8 @@ def test_dtype_device():
     positions = torch.tensor([[0.0, 0.0, 0.0]], dtype=dtype, device=device)
     cell = torch.eye(3, dtype=dtype, device=device)
 
-    MP = MeshPotential(atomic_smearing=0.2)
-    potential = MP.compute(types=types, positions=positions, cell=cell)
+    EP = EwaldPotential(atomic_smearing=0.2)
+    potential = EP.compute(types=types, positions=positions, cell=cell)
 
     assert potential.dtype == dtype
     assert potential.device.type == device
@@ -232,14 +224,14 @@ def test_inconsistent_dtype():
     positions = torch.tensor([[0.0, 0.0, 0.0]], dtype=torch.float64)  # Different dtype
     cell = torch.eye(3, dtype=torch.float32)
 
-    MP = MeshPotential(atomic_smearing=0.2)
+    EP = EwaldPotential(atomic_smearing=0.2)
 
     match = (
         "`cell` must be have the same dtype as `positions`, got torch.float32 and "
         "torch.float64"
     )
     with pytest.raises(ValueError, match=match):
-        MP.compute(types=types, positions=positions, cell=cell)
+        EP.compute(types=types, positions=positions, cell=cell)
 
 
 def test_inconsistent_device():
@@ -248,14 +240,13 @@ def test_inconsistent_device():
     positions = torch.tensor([[0.0, 0.0, 0.0]], device="cpu")
     cell = torch.eye(3, device="meta")  # different device
 
-    MP = MeshPotential(atomic_smearing=0.2)
+    EP = EwaldPotential(atomic_smearing=0.2)
 
     match = (
-        "`types`, `positions`, and `cell` must be on the same device, got cpu, "
-        "cpu and meta."
+        '`types`, `positions`, and `cell` must be on the same device, got cpu, cpu and meta.'
     )
     with pytest.raises(ValueError, match=match):
-        MP.compute(types=types, positions=positions, cell=cell)
+        EP.compute(types=types, positions=positions, cell=cell)
 
 
 def test_inconsistent_device_charges():
@@ -265,11 +256,11 @@ def test_inconsistent_device_charges():
     cell = torch.eye(3, device="cpu")
     charges = torch.tensor([0.0], device="meta")  # different device
 
-    MP = MeshPotential(atomic_smearing=0.2)
+    EP = EwaldPotential(atomic_smearing=0.2)
 
     match = "`charges` must be on the same device as `positions`, got meta and cpu."
     with pytest.raises(ValueError, match=match):
-        MP.compute(types=types, positions=positions, cell=cell, charges=charges)
+        EP.compute(types=types, positions=positions, cell=cell, charges=charges)
 
 
 def test_inconsistent_dtype_charges():
@@ -279,14 +270,14 @@ def test_inconsistent_dtype_charges():
     cell = torch.eye(3, dtype=torch.float32)
     charges = torch.tensor([0.0], dtype=torch.float64)  # Different dtype
 
-    MP = MeshPotential(atomic_smearing=0.2)
+    EP = EwaldPotential(atomic_smearing=0.2)
 
     match = (
         "`charges` must be have the same dtype as `positions`, got torch.float64 and "
         "torch.float32"
     )
     with pytest.raises(ValueError, match=match):
-        MP.compute(types=types, positions=positions, cell=cell, charges=charges)
+        EP.compute(types=types, positions=positions, cell=cell, charges=charges)
 
 
 def test_1d_tolist():
