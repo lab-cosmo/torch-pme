@@ -1,11 +1,14 @@
-import torch
 from typing import List, Optional
 
-from .calculator_base_periodic import CalculatorBasePeriodic
+import torch
 
 # extra imports for neighbor list
 from ase import Atoms
 from ase.neighborlist import neighbor_list
+
+from .calculator_base import default_exponent
+from .calculator_base_periodic import CalculatorBasePeriodic
+
 
 class EwaldPotential(CalculatorBasePeriodic):
     """A specie-wise long-range potential computed using the Ewald sum, scaling as
@@ -62,12 +65,12 @@ class EwaldPotential(CalculatorBasePeriodic):
     def __init__(
         self,
         all_types: Optional[List[int]] = None,
-        exponent: Optional[torch.Tensor] = torch.tensor(1., dtype=torch.float64),
-        sr_cutoff: Optional[float] = None,
+        exponent: Optional[torch.Tensor] = default_exponent,
+        sr_cutoff: Optional[torch.Tensor] = None,
         atomic_smearing: Optional[float] = None,
         lr_wavelength: Optional[float] = None,
         subtract_self: Optional[bool] = True,
-        subtract_interior: Optional[bool] = False
+        subtract_interior: Optional[bool] = False,
     ):
         super().__init__(all_types=all_types, exponent=exponent)
 
@@ -120,7 +123,7 @@ class EwaldPotential(CalculatorBasePeriodic):
         cutoff_max = torch.min(cell_dimensions) / 2 - 1e-6
         if self.sr_cutoff is not None:
             if self.sr_cutoff > torch.min(cell_dimensions) / 2:
-                raise ValueError(f"sr_cutoff {sr_cutoff} needs to be > {cutoff_max}")
+                raise ValueError(f"sr_cutoff {self.sr_cutoff} has to be > {cutoff_max}")
 
         # Set the defaut values of convergence parameters
         # The total computational cost = cost of SR part + cost of LR part
@@ -154,8 +157,6 @@ class EwaldPotential(CalculatorBasePeriodic):
             sr_cutoff=sr_cutoff,
         )
 
-         ##return charges * torch.sum(positions, dim=1) * self.exponent + potential_sr
-    
         potential_lr = self._compute_lr(
             positions=positions,
             charges=charges,
@@ -164,11 +165,9 @@ class EwaldPotential(CalculatorBasePeriodic):
             lr_wavelength=lr_wavelength,
         )
 
-        #return potential_lr
-
         potential_ewald = potential_sr + potential_lr
         return potential_ewald
-        
+
     def _generate_kvectors(self, ns: torch.Tensor, cell: torch.Tensor) -> torch.Tensor:
         """
         For a given unit cell, compute all reciprocal space vectors that are used to
@@ -189,9 +188,9 @@ class EwaldPotential(CalculatorBasePeriodic):
             that will be used during Ewald summation (or related approaches).
             ``k_vectors[i]`` contains the i-th vector, where the order has no special
             significance.
-            The total number N of k-vectors is NOT simply nx*ny*nz, and roughly corresponds
-            to nx*ny*nz/2 due since the vectors +k and -k can be grouped together during
-            summation.
+            The total number N of k-vectors is NOT simply nx*ny*nz, and roughly
+            corresponds to nx*ny*nz/2 due since the vectors +k and -k can be grouped
+            together during summation.
         """
         # Check that the shapes of all inputs are correct
         if ns.shape != (3,):
@@ -239,9 +238,9 @@ class EwaldPotential(CalculatorBasePeriodic):
             structure, where cell[i] is the i-th basis vector.
         :param smearing: torch.Tensor smearing paramter determining the splitting
             between the SR and LR parts.
-        :param lr_wavelength: Spatial resolution used for the long-range (reciprocal space)
-            part of the Ewald sum. More conretely, all Fourier space vectors with a
-            wavelength >= this value will be kept.
+        :param lr_wavelength: Spatial resolution used for the long-range (reciprocal
+            space) part of the Ewald sum. More conretely, all Fourier space vectors with
+            a wavelength >= this value will be kept.
 
         :returns: torch.tensor of shape `(n_atoms, n_channels)` containing the potential
         at the position of each atom for the `n_channels` independent meshes separately.
@@ -249,8 +248,8 @@ class EwaldPotential(CalculatorBasePeriodic):
         # Define k-space cutoff from required real-space resolution
         k_cutoff = 2 * torch.pi / lr_wavelength
 
-        # Compute number of times each basis vector of the reciprocal space can be scaled
-        # until the cutoff is reached
+        # Compute number of times each basis vector of the reciprocal space can be
+        # scaled until the cutoff is reached
         basis_norms = torch.linalg.norm(cell, dim=1)
         ns_float = k_cutoff * basis_norms / 2 / torch.pi
         ns = torch.ceil(ns_float).long()
@@ -346,7 +345,9 @@ class EwaldPotential(CalculatorBasePeriodic):
         # Compute energy
         potential = torch.zeros_like(charges)
         for i, j, shift in zip(atom_is, atom_js, shifts):
-            dist = torch.linalg.norm(positions[j] - positions[i] + torch.tensor(shift.dot(struc.cell)))
+            dist = torch.linalg.norm(
+                positions[j] - positions[i] + torch.tensor(shift.dot(struc.cell))
+            )
 
             # If the contribution from all atoms within the cutoff is to be subtracted
             # this short-range part will simply use -V_LR as the potential

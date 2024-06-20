@@ -242,9 +242,8 @@ def test_inconsistent_device():
 
     EP = EwaldPotential(atomic_smearing=0.2)
 
-    match = (
-        '`types`, `positions`, and `cell` must be on the same device, got cpu, cpu and meta.'
-    )
+    match = "`types`, `positions`, and `cell` must be on the same device, "
+    match += "got cpu, cpu and meta."
     with pytest.raises(ValueError, match=match):
         EP.compute(types=types, positions=positions, cell=cell)
 

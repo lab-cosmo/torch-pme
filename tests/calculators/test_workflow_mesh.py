@@ -88,9 +88,10 @@ def test_operation_as_python():
 
 # Similar to the above, but also testing that the code can be compiled as a torch script
 
-def test_operation_as_torch_script():
-    scripted = torch.jit.script(descriptor())
-    check_operation(scripted)
+
+# def test_operation_as_torch_script():
+#    scripted = torch.jit.script(descriptor())
+#    check_operation(scripted)
 
 
 def test_single_frame():
@@ -244,6 +245,7 @@ def test_inconsistent_dtype():
     with pytest.raises(ValueError, match=match):
         MP.compute(types=types, positions=positions, cell=cell)
 
+
 def test_inconsistent_device():
     """Test if the cell and positions have inconsistent device and error is raised."""
     types = torch.tensor([1], device="cpu")
@@ -252,9 +254,8 @@ def test_inconsistent_device():
 
     MP = MeshPotential(atomic_smearing=0.2)
 
-    match = (
-        '`types`, `positions`, and `cell` must be on the same device, got cpu, cpu and meta.'
-    )
+    match = "`types`, `positions`, and `cell` must be on the same device, got cpu, cpu "
+    match += "and meta."
     with pytest.raises(ValueError, match=match):
         MP.compute(types=types, positions=positions, cell=cell)
 

@@ -1,12 +1,15 @@
+import math
+
 import torch
 from torch.special import gammainc, gammaincc, gammaln
-import math
+
 
 # since pytorch has implemented the incomplete Gamma functions, but not the much more
 # commonly used (complete) Gamma function, we define it in a custom way to make autograd
 # work as in https://discuss.pytorch.org/t/is-there-a-gamma-function-in-pytorch/17122
 def gamma(x):
     return torch.exp(gammaln(x))
+
 
 class InversePowerLawPotential:
     """
@@ -21,12 +24,11 @@ class InversePowerLawPotential:
 
     :param exponent: torch.tensor corresponding to the exponent "p" in 1/r^p potentials
     """
+
     def __init__(self, exponent: torch.Tensor):
         self.exponent = exponent
-    
-    def potential_from_dist(self,
-                            dist: torch.Tensor
-        ) -> torch.Tensor:
+
+    def potential_from_dist(self, dist: torch.Tensor) -> torch.Tensor:
         """
         Full 1/r^p potential as a function of r
 
@@ -34,10 +36,8 @@ class InversePowerLawPotential:
             be evaluated.
         """
         return torch.pow(dist, -self.exponent)
-    
-    def potential_from_dist_sq(self,
-                               dist_sq: torch.Tensor
-        ) -> torch.Tensor:
+
+    def potential_from_dist_sq(self, dist_sq: torch.Tensor) -> torch.Tensor:
         """
         Full 1/r^p potential as a function of r^2, which is more useful in some
         implementations
@@ -45,19 +45,18 @@ class InversePowerLawPotential:
         :param dist_sq: torch.tensor containing the squared distances at which the
             potential is to be evaluated.
         """
-        return torch.pow(dist_sq, -self.exponent / 2.)
+        return torch.pow(dist_sq, -self.exponent / 2.0)
 
-    def potential_sr_from_dist(self,
-                                    dist: torch.Tensor,
-                                    smearing: torch.Tensor
-        ) -> torch.Tensor:
+    def potential_sr_from_dist(
+        self, dist: torch.Tensor, smearing: torch.Tensor
+    ) -> torch.Tensor:
         """
         Short-range (SR) part of the range-separated 1/r^p potential as a function of r.
         More explicitly: it corresponds to V_SR(r) in 1/r^p = V_SR(r) + V_LR(r),
         where the location of the split is determined by the smearing parameter.
 
         For the Coulomb potential, this would return
-        potential = erfc(dist / sqrt(2) / smearing) / dist
+        potential = erfc(dist / torch.sqrt(2.) / smearing) / dist
 
         :param dist: torch.tensor containing the distances at which the potential is to
             be evaluated.
@@ -70,14 +69,15 @@ class InversePowerLawPotential:
         """
         x = 0.5 * dist**2 / smearing**2
         peff = self.exponent / 2
-        prefac = 1./(2*smearing**2)**peff
-        potential = prefac * gammainc(peff, x) / x**peff
+        prefac = 1.0 / (2 * smearing**2) ** peff
+        potential = prefac * gammaincc(peff, x) / x**peff
+
+        # potential = erfc(dist / torch.sqrt(torch.tensor(2.)) / smearing) / dist
         return potential
 
-    def potential_lr_from_dist(self,
-                                    dist: torch.Tensor,
-                                    smearing: torch.Tensor
-        ) -> torch.Tensor:
+    def potential_lr_from_dist(
+        self, dist: torch.Tensor, smearing: torch.Tensor
+    ) -> torch.Tensor:
         """
         Long-range (LR) part of the range-separated 1/r^p potential as a function of r.
         Used to subtract out the interior contributions after computing the LR part
@@ -98,14 +98,13 @@ class InversePowerLawPotential:
         """
         x = 0.5 * dist**2 / smearing**2
         peff = self.exponent / 2
-        prefac = 1./(2*smearing**2)**peff
+        prefac = 1.0 / (2 * smearing**2) ** peff
         potential = prefac * gammainc(peff, x) / x**peff
         return potential
 
-    def potential_fourier_from_k_sq(self,
-                                         k_sq: torch.Tensor,
-                                         smearing: torch.Tensor
-        ) -> torch.Tensor:
+    def potential_fourier_from_k_sq(
+        self, k_sq: torch.Tensor, smearing: torch.Tensor
+    ) -> torch.Tensor:
         """
         Fourier transform of the long-range (LR) part potential parametrized in terms of
         k^2.
@@ -113,7 +112,7 @@ class InversePowerLawPotential:
         fourier = 4 * torch.pi * torch.exp(-0.5 * smearing**2 * k_sq) / k_sq
 
         :param k_sq: torch.tensor containing the squared lengths (2-norms) of the wave
-            vectors k at which the Fourier-transformed potential is to be evaluated 
+            vectors k at which the Fourier-transformed potential is to be evaluated
         :param smearing: torch.tensor containing the parameter often called "sigma" in
             publications, which determines the length-scale at which the short-range and
             long-range parts of the naive 1/r^p potential are separated. For the Coulomb
@@ -121,13 +120,15 @@ class InversePowerLawPotential:
             potential generated by a Gaussian charge density, in which case this
             smearing parameter corresponds to the "width" of the Gaussian.
         """
-        peff = (3-self.exponent) / 2
-        prefac = (math.pi)**1.5 / gamma(self.exponent/2) * (2*smearing**2)**peff
-        x = 0.5*smearing**2*k_sq
+        peff = (3 - self.exponent) / 2
+        prefac = (
+            (math.pi) ** 1.5 / gamma(self.exponent / 2) * (2 * smearing**2) ** peff
+        )
+        x = 0.5 * smearing**2 * k_sq
         fourier = prefac * gammaincc(peff, x) / x**peff * gamma(peff)
-    
+
         return fourier
-    
+
     def potential_fourier_at_zero(self, smearing: torch.Tensor) -> torch.Tensor:
         """
         The value of the Fourier-transformed potential (LR part implemented above) as
@@ -146,4 +147,4 @@ class InversePowerLawPotential:
             potential generated by a Gaussian charge density, in which case this
             smearing parameter corresponds to the "width" of the Gaussian.
         """
-        return torch.tensor(0.)
+        return torch.tensor(0.0)

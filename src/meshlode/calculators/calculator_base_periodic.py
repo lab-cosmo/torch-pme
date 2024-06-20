@@ -81,6 +81,10 @@ class CalculatorBasePeriodic(CalculatorBase):
             positions = [positions]
         if not isinstance(cell, list):
             cell = [cell]
+        if (neighbor_indices is not None) and not isinstance(neighbor_indices, list):
+            neighbor_indices = [neighbor_indices]
+        if (neighbor_shifts is not None) and not isinstance(neighbor_shifts, list):
+            neighbor_shifts = [neighbor_shifts]
 
         # Check that all inputs are consistent
         for types_single, positions_single, cell_single in zip(types, positions, cell):
@@ -164,7 +168,7 @@ class CalculatorBasePeriodic(CalculatorBase):
         # of inputs. Each "frame" is processed independently.
         potentials = []
 
-        if neighbor_indices is None:
+        if neighbor_indices is None or neighbor_shifts is None:
             for positions_single, cell_single, charges_single in zip(
                 positions, cell, charges
             ):

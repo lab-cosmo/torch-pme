@@ -20,7 +20,6 @@ def cscl_system():
     """CsCl crystal. Same as in the madelung test"""
     types = torch.tensor([55, 17])
     positions = torch.tensor([[0, 0, 0], [0.5, 0.5, 0.5]])
-    cell = torch.eye(3)
 
     return types, positions
 
@@ -33,8 +32,7 @@ def cscl_system_with_charges():
 
 # Initialize the calculators. For now, only the DirectPotential is implemented.
 def descriptor() -> DirectPotential:
-    return DirectPotential(
-    )
+    return DirectPotential()
 
 
 def test_forward():
@@ -77,7 +75,6 @@ def test_operation_as_torch_script():
     check_operation(scripted)
 
 
-
 def test_single_frame():
     values = descriptor().compute(*cscl_system())
     assert_close(
@@ -102,7 +99,8 @@ def test_single_frame_with_charges():
 def test_multi_frame():
     types, positions = cscl_system()
     l_values = descriptor().compute(
-        types=[types, types], positions=[positions, positions])
+        types=[types, types], positions=[positions, positions]
+    )
     for values in l_values:
         assert_close(
             MADELUNG_CSCL,
@@ -123,6 +121,7 @@ def test_types_error():
     with pytest.raises(ValueError, match=match):
         descriptor().compute(types=types, positions=positions)
 
+
 def test_positions_error():
     types = torch.tensor([1, 2])
     positions = torch.zeros(
@@ -138,11 +137,9 @@ def test_positions_error():
         descriptor().compute(types=types, positions=positions)
 
 
-
 def test_charges_error_dimension_mismatch():
     types = torch.tensor([1, 2])
     positions = torch.zeros((2, 3))
-    cell = torch.eye(3)
     charges = torch.zeros((1, 2))  # This should have the same first dimension as types
 
     match = (
@@ -151,22 +148,17 @@ def test_charges_error_dimension_mismatch():
     )
 
     with pytest.raises(ValueError, match=match):
-        descriptor().compute(
-            types=types, positions=positions, charges=charges
-        )
+        descriptor().compute(types=types, positions=positions, charges=charges)
 
 
 def test_charges_error_length_mismatch():
     types = [torch.tensor([1, 2]), torch.tensor([1, 2, 3])]
     positions = [torch.zeros((2, 3)), torch.zeros((3, 3))]
-    cell = torch.eye(3)
     charges = [torch.zeros(2, 1)]  # This should have the same length as types
     match = "The number of `types` and `charges` tensors must be the same, got 2 and 1."
 
     with pytest.raises(ValueError, match=match):
-        descriptor().compute(
-            types=types, positions=positions, charges=charges
-        )
+        descriptor().compute(types=types, positions=positions, charges=charges)
 
 
 def test_dtype_device():
@@ -182,6 +174,7 @@ def test_dtype_device():
 
     assert potential.dtype == dtype
     assert potential.device.type == device
+
 
 def test_inconsistent_device_charges():
     """Test if the chages and positions have inconsistent device and error is raised."""

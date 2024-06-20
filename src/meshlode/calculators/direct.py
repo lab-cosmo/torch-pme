@@ -1,6 +1,6 @@
-from .calculator_base import CalculatorBase
-
 import torch
+
+from .calculator_base import CalculatorBase
 
 
 class DirectPotential(CalculatorBase):
@@ -46,10 +46,6 @@ class DirectPotential(CalculatorBase):
             potential. Subtracting these from each other, one could recover the more
             standard electrostatic potential in which Na and Cl have charges of +1 and
             -1, respectively.
-        :param cell: torch.tensor of shape `(3, 3)`. Describes the unit cell of the
-            structure, where cell[i] is the i-th basis vector. While redundant in this
-            particular implementation, the parameter is kept to keep the same inputs as
-            the other calculators.
 
         :returns: torch.tensor of shape `(n_atoms, n_channels)` containing the potential
         at the position of each atom for the `n_channels` independent meshes separately.
@@ -73,9 +69,9 @@ class DirectPotential(CalculatorBase):
         # obvious alternative of setting the same components to zero after the division
         # had issues with autograd. I would appreciate any better alternatives.
         distances_sq[diagonal_indices, diagonal_indices] += 1e50
-        
+
         # Compute potential
-        potentials_by_pair = distances_sq.pow(-self.exponent / 2.)
+        potentials_by_pair = distances_sq.pow(-self.exponent / 2.0)
         potentials = torch.matmul(potentials_by_pair, charges)
 
         return potentials

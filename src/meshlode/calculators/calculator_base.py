@@ -1,7 +1,15 @@
-from meshlode.lib import InversePowerLawPotential
 from typing import List, Optional, Union
 
 import torch
+
+from meshlode.lib import InversePowerLawPotential
+
+
+def get_default_exponent():
+    return torch.tensor(1.0)
+
+
+default_exponent = get_default_exponent()
 
 
 @torch.jit.script
@@ -38,7 +46,7 @@ class CalculatorBase(torch.nn.Module):
     def __init__(
         self,
         all_types: Optional[List[int]] = None,
-        exponent: Optional[torch.Tensor] = torch.tensor(1., dtype=torch.float64),
+        exponent: Optional[torch.Tensor] = default_exponent,
     ):
         super().__init__()
 
@@ -46,9 +54,9 @@ class CalculatorBase(torch.nn.Module):
             self.all_types = None
         else:
             self.all_types = _1d_tolist(torch.unique(torch.tensor(all_types)))
-        
+
         self.exponent = exponent
-        self.potential = InversePowerLawPotential(exponent = exponent)
+        self.potential = InversePowerLawPotential(exponent=exponent)
 
     # This function is kept to keep this library compatible with the broader pytorch
     # infrastructure, which require a "forward" function. We name this function
@@ -60,9 +68,7 @@ class CalculatorBase(torch.nn.Module):
         charges: Optional[Union[List[torch.Tensor], torch.Tensor]] = None,
     ) -> Union[torch.Tensor, List[torch.Tensor]]:
         """forward just calls :py:meth:`CalculatorModule.compute`"""
-        return self.compute(
-            types=types, positions=positions, charges=charges
-        )
+        return self.compute(types=types, positions=positions, charges=charges)
 
     def compute(
         self,

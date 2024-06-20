@@ -5,7 +5,9 @@ import torch
 from meshlode.lib.fourier_convolution import FourierSpaceConvolution
 from meshlode.lib.mesh_interpolator import MeshInterpolator
 
+from .calculator_base import default_exponent
 from .calculator_base_periodic import CalculatorBasePeriodic
+
 
 class MeshPotential(CalculatorBasePeriodic):
     """A specie-wise long-range potential, computed using the particle-mesh Ewald (PME)
@@ -56,7 +58,7 @@ class MeshPotential(CalculatorBasePeriodic):
         interpolation_order: Optional[int] = 4,
         subtract_self: Optional[bool] = False,
         all_types: Optional[List[int]] = None,
-        exponent: Optional[torch.Tensor] = torch.tensor(1., dtype=torch.float64),
+        exponent: Optional[torch.Tensor] = default_exponent,
     ):
         super().__init__(all_types=all_types, exponent=exponent)
 
@@ -120,7 +122,6 @@ class MeshPotential(CalculatorBasePeriodic):
         assert positions.dtype == cell.dtype and charges.dtype == cell.dtype
         assert positions.device == cell.device and charges.device == cell.device
 
-        
         # Define cutoff in reciprocal space
         if mesh_spacing is None:
             mesh_spacing = self.mesh_spacing

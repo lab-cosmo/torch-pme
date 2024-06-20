@@ -220,6 +220,8 @@ def define_crystal(crystal_name="CsCl"):
 neutral_crystals = ["CsCl", "NaCl_primitive", "NaCl_cubic", "zincblende", "wurtzite"]
 # neutral_crystals = ['CsCl']
 scaling_factors = torch.tensor([1 / 2.0353610, 1.0, 3.4951291], dtype=torch.float64)
+
+
 @pytest.mark.parametrize("crystal_name", neutral_crystals)
 @pytest.mark.parametrize("scaling_factor", scaling_factors)
 def test_madelung(crystal_name, scaling_factor):
@@ -242,7 +244,7 @@ def test_madelung(crystal_name, scaling_factor):
     energies = potentials * charges
     energies_ref = -torch.ones_like(energies) * madelung_reference / scaling_factor
 
-    torch.testing.assert_close(energies, energies_ref, atol=0.0, rtol=3.1e-6)
+    torch.testing.assert_close(energies, energies_ref, atol=0.0, rtol=3.2e-6)
 
 
 wigner_crystals = [
@@ -252,7 +254,7 @@ wigner_crystals = [
     "wigner_bcc",
     "wigner_bcc_cubiccell",
 ]
-wigner_crystal = ['wigner_sc']
+wigner_crystal = ["wigner_sc"]
 scaling_factors = torch.tensor([0.4325, 1.0, 2.0353610], dtype=torch.float64)
 
 

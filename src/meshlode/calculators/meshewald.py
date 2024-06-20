@@ -162,15 +162,6 @@ class MeshEwaldPotential(CalculatorBasePeriodic):
         :returns: torch.tensor of shape `(n_atoms, n_channels)` containing the potential
         at the position of each atom for the `n_channels` independent meshes separately.
         """
-        # Check that the realspace cutoff (if provided) is not too large
-        # This is because the current implementation is not able to return multiple
-        # periodic images of the same atom as a neighbor
-        cell_dimensions = torch.linalg.norm(cell, dim=1)
-        cutoff_max = torch.min(cell_dimensions) / 2 - 1e-6
-        if self.sr_cutoff is not None:
-            if self.sr_cutoff > torch.min(cell_dimensions) / 2:
-                raise ValueError(f"sr_cutoff {self.sr_cutoff} has to be > {cutoff_max}")
-
         # Set the defaut values of convergence parameters
         # The total computational cost = cost of SR part + cost of LR part
         # Bigger smearing increases the cost of the SR part while decreasing the cost
@@ -181,6 +172,8 @@ class MeshEwaldPotential(CalculatorBasePeriodic):
         # chosen to reach a convergence on the order of 1e-4 to 1e-5 for the test
         # structures.
         if self.sr_cutoff is None:
+            cell_dimensions = torch.linalg.norm(cell, dim=1)
+            cutoff_max = torch.min(cell_dimensions) / 2 - 1e-6
             sr_cutoff = cutoff_max
         else:
             sr_cutoff = self.sr_cutoff
@@ -203,7 +196,7 @@ class MeshEwaldPotential(CalculatorBasePeriodic):
             smearing=smearing,
             sr_cutoff=sr_cutoff,
             neighbor_indices=neighbor_indices,
-            neighbor_shifts=neighbor_shifts
+            neighbor_shifts=neighbor_shifts,
         )
 
         # Compute long-range (LR) part using a Fourier / reciprocal space sum
@@ -325,23 +318,22 @@ class MeshEwaldPotential(CalculatorBasePeriodic):
         :returns: torch.tensor of shape `(n_atoms, n_channels)` containing the potential
         at the position of each atom for the `n_channels` independent meshes separately.
         """
-        if neighbor_indices is None:
+        if neighbor_indices is None or neighbor_shifts is None:
             # Get list of neighbors
             struc = Atoms(positions=positions.detach().numpy(), cell=cell, pbc=True)
-            atom_is, atom_js, shifts = neighbor_list(
+            atom_is, atom_js, neighbor_shifts = neighbor_list(
                 "ijS", struc, sr_cutoff.item(), self_interaction=False
             )
         else:
-            atom_is = neighbor_indices[:,0]
-            atom_js = neighbor_indices[:,1]
-            shifts = neighbor_shifts.T
-            
+            atom_is = neighbor_indices[0]
+            atom_js = neighbor_indices[1]
 
         # Compute energy
         potential = torch.zeros_like(charges)
-        for i, j, shift in zip(atom_is, atom_js, shifts):
+        for i, j, shift in zip(atom_is, atom_js, neighbor_shifts):
+            shift = shift.type(cell.dtype)
             dist = torch.linalg.norm(
-                positions[j] - positions[i] + torch.tensor(shift.dot(struc.cell))
+                positions[j] - positions[i] + torch.tensor(shift @ cell)
             )
 
             # If the contribution from all atoms within the cutoff is to be subtracted
