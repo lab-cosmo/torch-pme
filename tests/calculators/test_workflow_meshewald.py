@@ -7,7 +7,7 @@ import pytest
 import torch
 from torch.testing import assert_close
 
-from meshlode import MeshPotential, MeshEwaldPotential
+from meshlode import MeshEwaldPotential, MeshPotential
 from meshlode.calculators.calculator_base import _1d_tolist, _is_subset
 
 
@@ -85,7 +85,8 @@ def check_operation(calculator):
 def test_operation_as_python():
     check_operation(descriptor())
 
-""" 
+
+"""
 # Similar to the above, but also testing that the code can be compiled as a torch script
 # Disabled for now since (1) the ASE neighbor list and (2) the use of the potential
 # class are clashing with the torch script capabilities.
@@ -93,6 +94,7 @@ def test_operation_as_torch_script():
     scripted = torch.jit.script(descriptor())
     check_operation(scripted)
 """
+
 
 def test_single_frame():
     values = descriptor().compute(*cscl_system())
@@ -245,6 +247,7 @@ def test_inconsistent_dtype():
     with pytest.raises(ValueError, match=match):
         MP.compute(types=types, positions=positions, cell=cell)
 
+
 def test_inconsistent_device():
     """Test if the cell and positions have inconsistent device and error is raised."""
     types = torch.tensor([1], device="cpu")
@@ -253,9 +256,8 @@ def test_inconsistent_device():
 
     MP = MeshPotential(atomic_smearing=0.2)
 
-    match = (
-        '`types`, `positions`, and `cell` must be on the same device, got cpu, cpu and meta.'
-    )
+    match = "`types`, `positions`, and `cell` must be on the same device, got cpu, cpu "
+    match += "and meta."
     with pytest.raises(ValueError, match=match):
         MP.compute(types=types, positions=positions, cell=cell)
 

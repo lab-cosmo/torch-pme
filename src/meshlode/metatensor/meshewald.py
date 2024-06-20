@@ -30,13 +30,21 @@ class MeshEwaldPotential(calculators.MeshEwaldPotential):
     def forward(
         self,
         systems: Union[List[System], System],
+        neighbor_indices: Union[List[torch.Tensor], torch.Tensor] = None,
+        neighbor_shifts: Union[List[torch.Tensor], torch.Tensor] = None,
     ) -> TensorMap:
         """forward just calls :py:meth:`CalculatorModule.compute`"""
-        return self.compute(systems=systems)
+        return self.compute(
+            systems=systems,
+            neighbor_indices=neighbor_indices,
+            neighbor_shifts=neighbor_shifts,
+        )
 
     def compute(
         self,
         systems: Union[List[System], System],
+        neighbor_indices: Union[List[torch.Tensor], torch.Tensor] = None,
+        neighbor_shifts: Union[List[torch.Tensor], torch.Tensor] = None,
     ) -> TensorMap:
         """Compute potential for all provided ``systems``.
 
@@ -61,6 +69,20 @@ class MeshEwaldPotential(calculators.MeshEwaldPotential):
         # provided as input (for convenience of users testing out the code)
         if not isinstance(systems, list):
             systems = [systems]
+        if (neighbor_indices is not None) and not isinstance(neighbor_indices, list):
+            neighbor_indices = [neighbor_indices]
+        if (neighbor_shifts is not None) and not isinstance(neighbor_shifts, list):
+            neighbor_shifts = [neighbor_shifts]
+
+        # Check that the lengths of the provided lists agree
+        if (neighbor_indices is not None) and len(neighbor_indices) != len(systems):
+            raise ValueError(
+                f"Numbers of systems (= {len(systems)}) needs to match number of neighbor lists (= {len(neighbor_indices)})"
+            )
+        if (neighbor_shifts is not None) and len(neighbor_shifts) != len(systems):
+            raise ValueError(
+                f"Numbers of systems (= {len(systems)}) needs to match number of neighbor shifts (= {len(neighbor_shifts)})"
+            )
 
         if len(systems) > 1:
             for system in systems[1:]:
@@ -122,7 +144,7 @@ class MeshEwaldPotential(calculators.MeshEwaldPotential):
         n_blocks = n_types * n_charges_channels
         feat_dic: Dict[int, List[torch.Tensor]] = {a: [] for a in range(n_blocks)}
 
-        for system in systems:
+        for i, system in enumerate(systems):
             if use_explicit_charges:
                 charges = system.get_data("charges").values
             else:
@@ -131,10 +153,21 @@ class MeshEwaldPotential(calculators.MeshEwaldPotential):
                     system.types, requested_types, dtype, device
                 )
 
-            # Compute the potentials
-            potential = self._compute_single_system(
-                system.positions, charges, system.cell
-            )
+            if neighbor_indices is None or neighbor_shifts is None:
+                # Compute the potentials
+                potential = self._compute_single_system(
+                    positions=system.positions,
+                    charges=charges,
+                    cell=system.cell,
+                )
+            else:
+                potential = self._compute_single_system(
+                    positions=system.positions,
+                    charges=charges,
+                    cell=system.cell,
+                    neighbor_indices=neighbor_indices[i],
+                    neighbor_shifts=neighbor_shifts[i],
+                )
 
             # Reorder data into metatensor format
             for spec_center, at_num_center in enumerate(requested_types):

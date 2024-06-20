@@ -36,6 +36,8 @@ class CalculatorBasePeriodic(CalculatorBase):
         positions: Union[List[torch.Tensor], torch.Tensor],
         cell: Union[List[torch.Tensor], torch.Tensor],
         charges: Optional[Union[List[torch.Tensor], torch.Tensor]] = None,
+        neighbor_indices: Union[List[torch.Tensor], torch.Tensor] = None,
+        neighbor_shifts: Union[List[torch.Tensor], torch.Tensor] = None,
     ) -> Union[torch.Tensor, List[torch.Tensor]]:
         """Compute potential for all provided "systems" stacked inside list.
 
@@ -51,6 +53,12 @@ class CalculatorBasePeriodic(CalculatorBase):
             vector; and columns should contain the x, y, and z components of these
             vectors (i.e. the cell should be given in row-major order).
         :param charges: Optional single or list of 2D tensor of shape (len(types), n),
+        :param neighbor_indices: Optional single or list of 2D tensors of shape (2, n),
+            where n is the number of atoms. The 2 rows correspond to the indices of
+            the two atoms which are considered neighbors (e.g. within a cutoff distance)
+        :param neighbor_shifts: Optional single or list of 2D tensors of shape (3, n),
+            where n is the number of atoms. The 3 rows correspond to the shift indices
+            for periodic images.
 
         :return: List of torch Tensors containing the potentials for all frames and all
             atoms. Each tensor in the list is of shape (n_atoms, n_types), where
@@ -155,15 +163,37 @@ class CalculatorBasePeriodic(CalculatorBase):
         # We don't require and test that all dtypes and devices are consistent if a list
         # of inputs. Each "frame" is processed independently.
         potentials = []
-        for positions_single, cell_single, charges_single in zip(
-            positions, cell, charges
-        ):
-            # Compute the potentials
-            potentials.append(
-                self._compute_single_system(
-                    positions=positions_single, charges=charges_single, cell=cell_single
+
+        if neighbor_indices is None:
+            for positions_single, cell_single, charges_single in zip(
+                positions, cell, charges
+            ):
+                # Compute the potentials
+                potentials.append(
+                    self._compute_single_system(
+                        positions=positions_single,
+                        charges=charges_single,
+                        cell=cell_single,
+                    )
                 )
-            )
+        else:
+            for (
+                positions_single,
+                cell_single,
+                charges_single,
+                neighbor_indices_single,
+                neighbor_shifts_single,
+            ) in zip(positions, cell, charges, neighbor_indices, neighbor_shifts):
+                # Compute the potentials
+                potentials.append(
+                    self._compute_single_system(
+                        positions=positions_single,
+                        charges=charges_single,
+                        cell=cell_single,
+                        neighbor_indices=neighbor_indices_single,
+                        neighbor_shifts=neighbor_shifts_single,
+                    )
+                )
 
         if len(types) == 1:
             return potentials[0]

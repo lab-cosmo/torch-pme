@@ -1,13 +1,18 @@
-import torch
 from typing import List, Optional
 
-# from .mesh import MeshPotential
-from .calculator_base_periodic import CalculatorBasePeriodic
-from meshlode.lib.mesh_interpolator import MeshInterpolator
+import torch
 
 # extra imports for neighbor list
 from ase import Atoms
 from ase.neighborlist import neighbor_list
+
+from meshlode.lib.mesh_interpolator import MeshInterpolator
+
+from .calculator_base import default_exponent
+
+# from .mesh import MeshPotential
+from .calculator_base_periodic import CalculatorBasePeriodic
+
 
 class MeshEwaldPotential(CalculatorBasePeriodic):
     """A specie-wise long-range potential computed using a mesh-based Ewald method,
@@ -46,13 +51,13 @@ class MeshEwaldPotential(CalculatorBasePeriodic):
     def __init__(
         self,
         all_types: Optional[List[int]] = None,
-        exponent: Optional[torch.Tensor] = torch.tensor(1., dtype=torch.float64),
-        sr_cutoff: Optional[float] = None,
+        exponent: Optional[torch.Tensor] = default_exponent,
+        sr_cutoff: Optional[torch.Tensor] = None,
         atomic_smearing: Optional[float] = None,
         mesh_spacing: Optional[float] = None,
         subtract_self: Optional[bool] = True,
         interpolation_order: Optional[int] = 4,
-        subtract_interior: Optional[bool] = False
+        subtract_interior: Optional[bool] = False,
     ):
         super().__init__(all_types=all_types, exponent=exponent)
 
@@ -129,6 +134,8 @@ class MeshEwaldPotential(CalculatorBasePeriodic):
         positions: torch.Tensor,
         charges: torch.Tensor,
         cell: torch.Tensor,
+        neighbor_indices: Optional[torch.Tensor] = None,
+        neighbor_shifts: Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
         """
         Compute the "electrostatic" potential at the position of all atoms in a
@@ -162,7 +169,7 @@ class MeshEwaldPotential(CalculatorBasePeriodic):
         cutoff_max = torch.min(cell_dimensions) / 2 - 1e-6
         if self.sr_cutoff is not None:
             if self.sr_cutoff > torch.min(cell_dimensions) / 2:
-                raise ValueError(f"sr_cutoff {sr_cutoff} needs to be > {cutoff_max}")
+                raise ValueError(f"sr_cutoff {self.sr_cutoff} has to be > {cutoff_max}")
 
         # Set the defaut values of convergence parameters
         # The total computational cost = cost of SR part + cost of LR part
@@ -184,7 +191,7 @@ class MeshEwaldPotential(CalculatorBasePeriodic):
             smearing = self.atomic_smearing
 
         if self.mesh_spacing is None:
-            mesh_spacing = smearing / 8.
+            mesh_spacing = smearing / 8.0
         else:
             mesh_spacing = self.mesh_spacing
 
@@ -195,6 +202,8 @@ class MeshEwaldPotential(CalculatorBasePeriodic):
             cell=cell,
             smearing=smearing,
             sr_cutoff=sr_cutoff,
+            neighbor_indices=neighbor_indices,
+            neighbor_shifts=neighbor_shifts
         )
 
         # Compute long-range (LR) part using a Fourier / reciprocal space sum
@@ -203,7 +212,8 @@ class MeshEwaldPotential(CalculatorBasePeriodic):
             charges=charges,
             cell=cell,
             smearing=smearing,
-            lr_wavelength=mesh_spacing)
+            lr_wavelength=mesh_spacing,
+        )
 
         # Combine both parts to obtain the full potential
         potential_ewald = potential_sr + potential_lr
@@ -233,16 +243,15 @@ class MeshEwaldPotential(CalculatorBasePeriodic):
             structure, where cell[i] is the i-th basis vector.
         :param smearing: torch.Tensor smearing paramter determining the splitting
             between the SR and LR parts.
-        :param lr_wavelength: Spatial resolution used for the long-range (reciprocal space)
-            part of the Ewald sum. More conretely, all Fourier space vectors with a
-            wavelength >= this value will be kept.
+        :param lr_wavelength: Spatial resolution used for the long-range (reciprocal
+            space) part of the Ewald sum. More conretely, all Fourier space vectors with
+            a wavelength >= this value will be kept.
 
         :returns: torch.tensor of shape `(n_atoms, n_channels)` containing the potential
         at the position of each atom for the `n_channels` independent meshes separately.
         """
         # Step 0 (Preparation): Compute number of times each basis vector of the
         # reciprocal space can be scaled until the cutoff is reached
-        mesh_spacing = lr_wavelength
         k_cutoff = 2 * torch.pi / lr_wavelength
         basis_norms = torch.linalg.norm(cell, dim=1)
         ns_approx = k_cutoff * basis_norms / 2 / torch.pi
@@ -258,11 +267,11 @@ class MeshEwaldPotential(CalculatorBasePeriodic):
         # Step 2.1: Generate k-vectors and evaluate kernel function
         kvectors = self._generate_kvectors(ns=ns, cell=cell)
         knorm_sq = torch.sum(kvectors**2, dim=3)
-        
+
         # Step 2.2: Evaluate kernel function (careful, tensor shapes are different from
         # the pure Ewald implementation since we are no longer flattening)
         G = self.potential.potential_fourier_from_k_sq(knorm_sq, smearing)
-        G[0,0,0] = self.potential.potential_fourier_at_zero(smearing)
+        G[0, 0, 0] = self.potential.potential_fourier_at_zero(smearing)
 
         potential_mesh = rho_mesh
 
@@ -293,6 +302,8 @@ class MeshEwaldPotential(CalculatorBasePeriodic):
         cell: torch.Tensor,
         smearing: torch.Tensor,
         sr_cutoff: torch.Tensor,
+        neighbor_indices: Optional[torch.Tensor] = None,
+        neighbor_shifts: Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
         """
         Compute the short-range part of the Ewald sum in realspace
@@ -314,16 +325,24 @@ class MeshEwaldPotential(CalculatorBasePeriodic):
         :returns: torch.tensor of shape `(n_atoms, n_channels)` containing the potential
         at the position of each atom for the `n_channels` independent meshes separately.
         """
-        # Get list of neighbors
-        struc = Atoms(positions=positions.detach().numpy(), cell=cell, pbc=True)
-        atom_is, atom_js, shifts = neighbor_list(
-            "ijS", struc, sr_cutoff.item(), self_interaction=False
-        )
+        if neighbor_indices is None:
+            # Get list of neighbors
+            struc = Atoms(positions=positions.detach().numpy(), cell=cell, pbc=True)
+            atom_is, atom_js, shifts = neighbor_list(
+                "ijS", struc, sr_cutoff.item(), self_interaction=False
+            )
+        else:
+            atom_is = neighbor_indices[:,0]
+            atom_js = neighbor_indices[:,1]
+            shifts = neighbor_shifts.T
+            
 
         # Compute energy
         potential = torch.zeros_like(charges)
         for i, j, shift in zip(atom_is, atom_js, shifts):
-            dist = torch.linalg.norm(positions[j] - positions[i] + torch.tensor(shift.dot(struc.cell)))
+            dist = torch.linalg.norm(
+                positions[j] - positions[i] + torch.tensor(shift.dot(struc.cell))
+            )
 
             # If the contribution from all atoms within the cutoff is to be subtracted
             # this short-range part will simply use -V_LR as the potential
