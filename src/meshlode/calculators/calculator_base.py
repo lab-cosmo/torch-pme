@@ -190,7 +190,14 @@ class CalculatorBase(torch.nn.Module):
                     )
 
             if neighbor_indices_single is not None:
-                # TODO validate shape and dtype
+                # TODO test dtype
+
+                if neighbor_indices_single.shape != (2, len(types_single)):
+                    raise ValueError(
+                        "Expected shape of neighbor_indices is "
+                        f"{2, len(types_single)}, but got "
+                        f"{list(neighbor_indices_single.shape)}"
+                    )
 
                 if types_single.device != neighbor_indices_single.device:
                     raise ValueError(
@@ -199,7 +206,14 @@ class CalculatorBase(torch.nn.Module):
                     )
 
             if neighbor_shifts_single is not None:
-                # TODO validate shape and dtype
+                # TODO test dtype
+
+                if neighbor_shifts_single.shape != (3, len(types_single)):
+                    raise ValueError(
+                        "Expected shape of neighbor_shifts is "
+                        f"{3, len(types_single)}, but got "
+                        f"{list(neighbor_shifts_single.shape)}"
+                    )
 
                 if types_single.device != neighbor_shifts_single.device:
                     raise ValueError(
