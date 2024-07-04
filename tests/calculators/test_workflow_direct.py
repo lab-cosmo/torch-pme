@@ -27,7 +27,7 @@ def cscl_system():
 def cscl_system_with_charges():
     """CsCl crystal with (cell) and charges."""
     charges = torch.tensor([[0.0, 1.0], [1.0, 0]])
-    return cscl_system() + (None, charges,)
+    return cscl_system() + (charges,)
 
 
 # Initialize the calculators. For now, only the DirectPotential is implemented.
