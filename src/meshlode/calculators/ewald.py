@@ -74,6 +74,8 @@ class EwaldPotential(CalculatorBase):
         super().__init__(all_types=all_types, exponent=exponent)
 
         # Store provided parameters
+        if atomic_smearing is not None and atomic_smearing <= 0:
+            raise ValueError(f"`atomic_smearing` {atomic_smearing} has to be positive")
         self.atomic_smearing = atomic_smearing
         self.sr_cutoff = sr_cutoff
         self.lr_wavelength = lr_wavelength
