@@ -167,8 +167,13 @@ class MeshPotential(calculators.MeshPotential):
                 )
 
             # Compute the potentials
+            # TODO: use neighborlist from system if provided.
             potential = self._compute_single_system(
-                system.positions, charges, system.cell
+                positions=system.positions,
+                cell=system.cell,
+                charges=charges,
+                neighbor_indices=None,
+                neighbor_shifts=None,
             )
 
             # Reorder data into metatensor format

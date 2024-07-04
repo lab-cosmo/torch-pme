@@ -1,11 +1,10 @@
-from typing import List, Optional
+from typing import List, Optional, Union
 
 import torch
 
 from meshlode.lib.fourier_convolution import FourierSpaceConvolution
 from meshlode.lib.mesh_interpolator import MeshInterpolator
 
-from .calculator_base import default_exponent
 from .calculator_base_periodic import CalculatorBasePeriodic
 
 
@@ -58,7 +57,7 @@ class MeshPotential(CalculatorBasePeriodic):
         interpolation_order: Optional[int] = 4,
         subtract_self: Optional[bool] = False,
         all_types: Optional[List[int]] = None,
-        exponent: Optional[torch.Tensor] = default_exponent,
+        exponent: float = 1.0,
     ):
         super().__init__(all_types=all_types, exponent=exponent)
 
@@ -71,11 +70,12 @@ class MeshPotential(CalculatorBasePeriodic):
         # If no explicit mesh_spacing is given, set it such that it can resolve
         # the smeared potentials.
         if mesh_spacing is None:
-            mesh_spacing = atomic_smearing / 2
+            self.mesh_spacing = atomic_smearing / 2
+        else:
+            self.mesh_spacing = mesh_spacing
 
         # Store provided parameters
         self.atomic_smearing = atomic_smearing
-        self.mesh_spacing = mesh_spacing
         self.interpolation_order = interpolation_order
         self.subtract_self = subtract_self
 
@@ -85,9 +85,10 @@ class MeshPotential(CalculatorBasePeriodic):
     def _compute_single_system(
         self,
         positions: torch.Tensor,
+        cell: Union[None, torch.Tensor],
         charges: torch.Tensor,
-        cell: torch.Tensor,
-        mesh_spacing: Optional[float] = None,
+        neighbor_indices: Union[None, torch.Tensor],
+        neighbor_shifts: Union[None, torch.Tensor],
     ) -> torch.Tensor:
         """
         Compute the "electrostatic" potential at the position of all atoms in a
@@ -115,17 +116,7 @@ class MeshPotential(CalculatorBasePeriodic):
         at the position of each atom for the `n_channels` independent meshes separately.
         """
         # Initializations
-        n_atoms = len(positions)
-        assert positions.shape == (n_atoms, 3)
-        assert charges.shape[0] == n_atoms
-
-        assert positions.dtype == cell.dtype and charges.dtype == cell.dtype
-        assert positions.device == cell.device and charges.device == cell.device
-
-        # Define cutoff in reciprocal space
-        if mesh_spacing is None:
-            mesh_spacing = self.mesh_spacing
-        k_cutoff = 2 * torch.pi / mesh_spacing
+        k_cutoff = 2 * torch.pi / self.mesh_spacing
 
         # Compute number of times each basis vector of the
         # reciprocal space can be scaled until the cutoff

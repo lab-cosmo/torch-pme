@@ -166,7 +166,7 @@ def test_charges_error_dimension_mismatch():
 def test_charges_error_length_mismatch():
     types = [torch.tensor([1, 2]), torch.tensor([1, 2, 3])]
     positions = [torch.zeros((2, 3)), torch.zeros((3, 3))]
-    cell = torch.eye(3)
+    cell = [torch.eye(3), torch.eye(3)]
     charges = [torch.zeros(2, 1)]  # This should have the same length as types
     match = "The number of `types` and `charges` tensors must be the same, got 2 and 1."
 
@@ -242,8 +242,7 @@ def test_inconsistent_device():
 
     EP = EwaldPotential(atomic_smearing=0.2)
 
-    match = "`types`, `positions`, and `cell` must be on the same device, "
-    match += "got cpu, cpu and meta."
+    match = r"Inconsistent devices of types \(cpu\) and cell \(meta\)"
     with pytest.raises(ValueError, match=match):
         EP.compute(types=types, positions=positions, cell=cell)
 

@@ -157,10 +157,13 @@ class MeshEwaldPotential(calculators.MeshEwaldPotential):
 
             if neighbor_indices is None or neighbor_shifts is None:
                 # Compute the potentials
+                # TODO: use neighborlist from system if provided.
                 potential = self._compute_single_system(
                     positions=system.positions,
-                    charges=charges,
                     cell=system.cell,
+                    charges=charges,
+                    neighbor_indices=None,
+                    neighbor_shifts=None,
                 )
             else:
                 potential = self._compute_single_system(

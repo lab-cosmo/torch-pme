@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Union
 
 import torch
 
@@ -6,7 +6,6 @@ import torch
 from ase import Atoms
 from ase.neighborlist import neighbor_list
 
-from .calculator_base import default_exponent
 from .calculator_base_periodic import CalculatorBasePeriodic
 
 
@@ -65,7 +64,7 @@ class EwaldPotential(CalculatorBasePeriodic):
     def __init__(
         self,
         all_types: Optional[List[int]] = None,
-        exponent: Optional[torch.Tensor] = default_exponent,
+        exponent: float = 1.0,
         sr_cutoff: Optional[torch.Tensor] = None,
         atomic_smearing: Optional[float] = None,
         lr_wavelength: Optional[float] = None,
@@ -88,34 +87,11 @@ class EwaldPotential(CalculatorBasePeriodic):
     def _compute_single_system(
         self,
         positions: torch.Tensor,
+        cell: Union[None, torch.Tensor],
         charges: torch.Tensor,
-        cell: torch.Tensor,
+        neighbor_indices: Union[None, torch.Tensor],
+        neighbor_shifts: Union[None, torch.Tensor],
     ) -> torch.Tensor:
-        """
-        Compute the "electrostatic" potential at the position of all atoms in a
-        structure.
-
-        :param positions: torch.tensor of shape (n_atoms, 3). Contains the Cartesian
-            coordinates of the atoms. The implementation also works if the positions
-            are not contained within the unit cell.
-        :param charges: torch.tensor of shape `(n_atoms, n_channels)`. In the simplest
-            case, this would be a tensor of shape (n_atoms, 1) where charges[i,0] is the
-            charge of atom i. More generally, the potential for the same atom positions
-            is computed for n_channels independent meshes, and one can specify the
-            "charge" of each atom on each of the meshes independently. For standard LODE
-            that treats all (atomic) types separately, one example could be: If n_atoms
-            = 4 and the types are [Na, Cl, Cl, Na], one could set n_channels=2 and use
-            the one-hot encoding charges = torch.tensor([[1,0],[0,1],[0,1],[1,0]]) for
-            the charges. This would then separately compute the "Na" potential and "Cl"
-            potential. Subtracting these from each other, one could recover the more
-            standard electrostatic potential in which Na and Cl have charges of +1 and
-            -1, respectively.
-        :param cell: torch.tensor of shape `(3, 3)`. Describes the unit cell of the
-            structure, where cell[i] is the i-th basis vector.
-
-        :returns: torch.tensor of shape `(n_atoms, n_channels)` containing the potential
-        at the position of each atom for the `n_channels` independent meshes separately.
-        """
         # Check that the realspace cutoff (if provided) is not too large
         # This is because the current implementation is not able to return multiple
         # periodic images of the same atom as a neighbor

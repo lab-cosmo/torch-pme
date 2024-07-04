@@ -125,7 +125,11 @@ class TestMadelung:
             smearing_eff, mesh_spacing, interpolation_order, subtract_self=True
         )
         potentials_mesh = MP._compute_single_system(
-            positions=positions, charges=charges, cell=cell
+            positions=positions,
+            charges=charges,
+            cell=cell,
+            neighbor_indices=None,
+            neighbor_shifts=None,
         )
         energies = potentials_mesh * charges
         energies_target = -torch.ones_like(energies) * madelung
@@ -161,7 +165,11 @@ class TestMadelung:
             smearing_eff, mesh_spacing, interpolation_order, subtract_self=True
         )
         potentials_mesh = MP._compute_single_system(
-            positions=positions, charges=charges, cell=cell
+            positions=positions,
+            charges=charges,
+            cell=cell,
+            neighbor_indices=None,
+            neighbor_shifts=None,
         )
         energies = potentials_mesh * charges
         energies_target = -torch.ones_like(energies) * madelung

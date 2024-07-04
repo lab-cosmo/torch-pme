@@ -25,9 +25,9 @@ def cscl_system():
 
 
 def cscl_system_with_charges():
-    """CsCl crystal with charges."""
+    """CsCl crystal with (cell) and charges."""
     charges = torch.tensor([[0.0, 1.0], [1.0, 0]])
-    return cscl_system() + (charges,)
+    return cscl_system() + (None, charges,)
 
 
 # Initialize the calculators. For now, only the DirectPotential is implemented.
@@ -87,6 +87,7 @@ def test_single_frame():
 
 # Test with explicit charges
 def test_single_frame_with_charges():
+    print(cscl_system_with_charges())
     values = descriptor().compute(*cscl_system_with_charges())
     assert_close(
         MADELUNG_CSCL,

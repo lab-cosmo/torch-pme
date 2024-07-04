@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Union
 
 import torch
 
@@ -7,8 +7,6 @@ from ase import Atoms
 from ase.neighborlist import neighbor_list
 
 from meshlode.lib.mesh_interpolator import MeshInterpolator
-
-from .calculator_base import default_exponent
 
 # from .mesh import MeshPotential
 from .calculator_base_periodic import CalculatorBasePeriodic
@@ -51,7 +49,7 @@ class MeshEwaldPotential(CalculatorBasePeriodic):
     def __init__(
         self,
         all_types: Optional[List[int]] = None,
-        exponent: Optional[torch.Tensor] = default_exponent,
+        exponent: float = 1.0,
         sr_cutoff: Optional[torch.Tensor] = None,
         atomic_smearing: Optional[float] = None,
         mesh_spacing: Optional[float] = None,
@@ -132,10 +130,10 @@ class MeshEwaldPotential(CalculatorBasePeriodic):
     def _compute_single_system(
         self,
         positions: torch.Tensor,
+        cell: Union[None, torch.Tensor],
         charges: torch.Tensor,
-        cell: torch.Tensor,
-        neighbor_indices: Optional[torch.Tensor] = None,
-        neighbor_shifts: Optional[torch.Tensor] = None,
+        neighbor_indices: Union[None, torch.Tensor],
+        neighbor_shifts: Union[None, torch.Tensor],
     ) -> torch.Tensor:
         """
         Compute the "electrostatic" potential at the position of all atoms in a
