@@ -77,11 +77,13 @@ class MeshEwaldPotential(calculators.MeshEwaldPotential):
         # Check that the lengths of the provided lists agree
         if (neighbor_indices is not None) and len(neighbor_indices) != len(systems):
             raise ValueError(
-                f"Numbers of systems (= {len(systems)}) needs to match number of neighbor lists (= {len(neighbor_indices)})"
+                f"Numbers of systems (= {len(systems)}) needs to match number of "
+                f"neighbor lists (= {len(neighbor_indices)})"
             )
         if (neighbor_shifts is not None) and len(neighbor_shifts) != len(systems):
             raise ValueError(
-                f"Numbers of systems (= {len(systems)}) needs to match number of neighbor shifts (= {len(neighbor_shifts)})"
+                f"Numbers of systems (= {len(systems)}) needs to match number of "
+                f"neighbor shifts (= {len(neighbor_shifts)})"
             )
 
         if len(systems) > 1:
