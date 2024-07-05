@@ -121,7 +121,9 @@ class InversePowerLawPotential:
             smearing parameter corresponds to the "width" of the Gaussian.
         """
         peff = (3 - self.exponent) / 2
-        prefac = (math.pi) ** 1.5 / gamma(self.exponent / 2) * (2 * smearing**2) ** peff
+        prefac = (
+            (math.pi) ** 1.5 / gamma(self.exponent / 2) * (2 * smearing**2) ** peff
+        )
         x = 0.5 * smearing**2 * k_sq
         fourier = prefac * gammaincc(peff, x) / x**peff * gamma(peff)
 

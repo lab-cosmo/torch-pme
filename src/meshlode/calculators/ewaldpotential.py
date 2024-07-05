@@ -6,6 +6,7 @@ import torch
 from ase import Atoms
 from ase.neighborlist import neighbor_list
 
+from ..lib import generate_kvectors_squeezed
 from .base import CalculatorBase
 
 
@@ -71,10 +72,11 @@ class EwaldPotential(CalculatorBase):
         subtract_self: Optional[bool] = True,
         subtract_interior: Optional[bool] = False,
     ):
-        super().__init__(all_types=all_types, exponent=exponent)
-
+        if exponent < 0.0 or exponent > 3.0:
+            raise ValueError(f"`exponent` p={exponent} has to satisfy 0 < p < 3")
         if atomic_smearing is not None and atomic_smearing <= 0:
             raise ValueError(f"`atomic_smearing` {atomic_smearing} has to be positive")
+        super().__init__(all_types=all_types, exponent=exponent)
 
         self.atomic_smearing = atomic_smearing
         self.sr_cutoff = sr_cutoff
@@ -165,20 +167,42 @@ class EwaldPotential(CalculatorBase):
     def _compute_single_system(
         self,
         positions: torch.Tensor,
-        cell: Union[None, torch.Tensor],
         charges: torch.Tensor,
-        neighbor_indices: Union[None, torch.Tensor],
-        neighbor_shifts: Union[None, torch.Tensor],
+        cell: torch.Tensor,
+        neighbor_indices: Optional[torch.Tensor] = None,
+        neighbor_shifts: Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
-        # Check that the realspace cutoff (if provided) is not too large
-        # This is because the current implementation is not able to return multiple
-        # periodic images of the same atom as a neighbor
-        cell_dimensions = torch.linalg.norm(cell, dim=1)
-        cutoff_max = torch.min(cell_dimensions) / 2 - 1e-6
-        if self.sr_cutoff is not None:
-            if self.sr_cutoff > torch.min(cell_dimensions) / 2:
-                raise ValueError(f"sr_cutoff {self.sr_cutoff} has to be > {cutoff_max}")
+        """
+        Compute the "electrostatic" potential at the position of all atoms in a
+        structure.
 
+        :param positions: torch.tensor of shape (n_atoms, 3). Contains the Cartesian
+            coordinates of the atoms. The implementation also works if the positions
+            are not contained within the unit cell.
+        :param charges: torch.tensor of shape `(n_atoms, n_channels)`. In the simplest
+            case, this would be a tensor of shape (n_atoms, 1) where charges[i,0] is the
+            charge of atom i. More generally, the potential for the same atom positions
+            is computed for n_channels independent meshes, and one can specify the
+            "charge" of each atom on each of the meshes independently. For standard LODE
+            that treats all (atomic) types separately, one example could be: If n_atoms
+            = 4 and the types are [Na, Cl, Cl, Na], one could set n_channels=2 and use
+            the one-hot encoding charges = torch.tensor([[1,0],[0,1],[0,1],[1,0]]) for
+            the charges. This would then separately compute the "Na" potential and "Cl"
+            potential. Subtracting these from each other, one could recover the more
+            standard electrostatic potential in which Na and Cl have charges of +1 and
+            -1, respectively.
+        :param cell: torch.tensor of shape `(3, 3)`. Describes the unit cell of the
+            structure, where cell[i] is the i-th basis vector.
+        :param neighbor_indices: Optional single or list of 2D tensors of shape (2, n),
+            where n is the number of atoms. The 2 rows correspond to the indices of
+            the two atoms which are considered neighbors (e.g. within a cutoff distance)
+        :param neighbor_shifts: Optional single or list of 2D tensors of shape (3, n),
+             where n is the number of atoms. The 3 rows correspond to the shift indices
+             for periodic images.
+
+        :returns: torch.tensor of shape `(n_atoms, n_channels)` containing the potential
+        at the position of each atom for the `n_channels` independent meshes separately.
+        """
         # Set the defaut values of convergence parameters
         # The total computational cost = cost of SR part + cost of LR part
         # Bigger smearing increases the cost of the SR part while decreasing the cost
@@ -189,12 +213,13 @@ class EwaldPotential(CalculatorBase):
         # chosen to reach a convergence on the order of 1e-4 to 1e-5 for the test
         # structures.
         if self.sr_cutoff is None:
-            sr_cutoff = cutoff_max
+            cell_dimensions = torch.linalg.norm(cell, dim=1)
+            sr_cutoff = torch.min(cell_dimensions) / 2 - 1e-6
         else:
             sr_cutoff = self.sr_cutoff
 
         if self.atomic_smearing is None:
-            smearing = cutoff_max / 5.0
+            smearing = sr_cutoff / 5.0
         else:
             smearing = self.atomic_smearing
 
@@ -203,14 +228,18 @@ class EwaldPotential(CalculatorBase):
         else:
             lr_wavelength = self.lr_wavelength
 
+        # Compute short-range (SR) part using a real space sum
         potential_sr = self._compute_sr(
             positions=positions,
             charges=charges,
             cell=cell,
             smearing=smearing,
             sr_cutoff=sr_cutoff,
+            neighbor_indices=neighbor_indices,
+            neighbor_shifts=neighbor_shifts,
         )
 
+        # Compute long-range (LR) part using a Fourier / reciprocal space sum
         potential_lr = self._compute_lr(
             positions=positions,
             charges=charges,
@@ -221,52 +250,6 @@ class EwaldPotential(CalculatorBase):
 
         potential_ewald = potential_sr + potential_lr
         return potential_ewald
-
-    def _generate_kvectors(self, ns: torch.Tensor, cell: torch.Tensor) -> torch.Tensor:
-        """
-        For a given unit cell, compute all reciprocal space vectors that are used to
-        perform sums in the Fourier transformed space.
-
-        Note that this function is different from the function implemented in the
-        FourierSpaceConvolution class of the same name, since in this case, we are
-        generating the full grid of k-vectors, rather than the one that is adapted
-        specifically to be used together with FFT.
-
-        :param ns: torch.tensor of shape ``(3,)`` containing integers
-            ``ns = [nx, ny, nz]`` contains the number of mesh points in the x-, y- and
-            z-direction, respectively.
-        :param cell: torch.tensor of shape ``(3, 3)`` Tensor specifying the real space
-            unit cell of a structure, where cell[i] is the i-th basis vector
-
-        :return: torch.tensor of shape ``(N, 3)`` Contains all reciprocal space vectors
-            that will be used during Ewald summation (or related approaches).
-            ``k_vectors[i]`` contains the i-th vector, where the order has no special
-            significance.
-            The total number N of k-vectors is NOT simply nx*ny*nz, and roughly
-            corresponds to nx*ny*nz/2 due since the vectors +k and -k can be grouped
-            together during summation.
-        """
-        # Check that the shapes of all inputs are correct
-        if ns.shape != (3,):
-            raise ValueError(f"ns of shape {list(ns.shape)} should be of shape (3, )")
-
-        # Define basis vectors of the reciprocal cell
-        reciprocal_cell = 2 * torch.pi * cell.inverse().T
-        bx = reciprocal_cell[0]
-        by = reciprocal_cell[1]
-        bz = reciprocal_cell[2]
-
-        # Generate all reciprocal space vectors
-        nxs_1d = ns[0] * torch.fft.fftfreq(ns[0], device=ns.device)
-        nys_1d = ns[1] * torch.fft.fftfreq(ns[1], device=ns.device)
-        nzs_1d = ns[2] * torch.fft.fftfreq(ns[2], device=ns.device)  # real FFT
-        nxs, nys, nzs = torch.meshgrid(nxs_1d, nys_1d, nzs_1d, indexing="ij")
-        nxs = nxs.flatten().reshape((-1, 1))
-        nys = nys.flatten().reshape((-1, 1))
-        nzs = nzs.flatten().reshape((-1, 1))
-        k_vectors = nxs * bx + nys * by + nzs * bz
-
-        return k_vectors
 
     def _compute_lr(
         self,
@@ -309,7 +292,8 @@ class EwaldPotential(CalculatorBase):
         ns = torch.ceil(ns_float).long()
 
         # Generate k-vectors and evaluate
-        kvectors = self._generate_kvectors(ns=ns, cell=cell)
+        # kvectors = self._generate_kvectors(ns=ns, cell=cell)
+        kvectors = generate_kvectors_squeezed(ns=ns, cell=cell)
         knorm_sq = torch.sum(kvectors**2, dim=1)
 
         # G(k) is the Fourier transform of the Coulomb potential
@@ -361,57 +345,3 @@ class EwaldPotential(CalculatorBase):
             energy -= charges * self_contrib
 
         return energy
-
-    def _compute_sr(
-        self,
-        positions: torch.Tensor,
-        charges: torch.Tensor,
-        cell: torch.Tensor,
-        smearing: torch.Tensor,
-        sr_cutoff: torch.Tensor,
-    ) -> torch.Tensor:
-        """
-        Compute the short-range part of the Ewald sum in realspace
-
-        :param positions: torch.tensor of shape (n_atoms, 3). Contains the Cartesian
-            coordinates of the atoms. The implementation also works if the positions
-            are not contained within the unit cell.
-        :param charges: torch.tensor of shape `(n_atoms, n_channels)`. In the simplest
-            case, this would be a tensor of shape (n_atoms, 1) where charges[i,0] is the
-            charge of atom i. More generally, the potential for the same atom positions
-            is computed for n_channels independent meshes, and one can specify the
-            "charge" of each atom on each of the meshes independently.
-        :param cell: torch.tensor of shape `(3, 3)`. Describes the unit cell of the
-            structure, where cell[i] is the i-th basis vector.
-        :param smearing: torch.Tensor smearing paramter determining the splitting
-            between the SR and LR parts.
-        :param sr_cutoff: Cutoff radius used for the short-range part of the Ewald sum.
-
-        :returns: torch.tensor of shape `(n_atoms, n_channels)` containing the potential
-        at the position of each atom for the `n_channels` independent meshes separately.
-        """
-        # Get list of neighbors
-        struc = Atoms(positions=positions.detach().numpy(), cell=cell, pbc=True)
-        atom_is, atom_js, shifts = neighbor_list(
-            "ijS", struc, sr_cutoff.item(), self_interaction=False
-        )
-
-        # Compute energy
-        potential = torch.zeros_like(charges)
-        for i, j, shift in zip(atom_is, atom_js, shifts):
-            dist = torch.linalg.norm(
-                positions[j] - positions[i] + torch.tensor(shift.dot(struc.cell))
-            )
-
-            # If the contribution from all atoms within the cutoff is to be subtracted
-            # this short-range part will simply use -V_LR as the potential
-            if self.subtract_interior:
-                potential_bare = -self.potential.potential_lr_from_dist(dist, smearing)
-            # In the remaining cases, we simply use the usual V_SR to get the full
-            # 1/r^p potential when combined with the long-range part implemented in
-            # reciprocal space
-            else:
-                potential_bare = self.potential.potential_sr_from_dist(dist, smearing)
-            potential[i] += charges[j] * potential_bare
-
-        return potential

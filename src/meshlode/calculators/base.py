@@ -1,6 +1,8 @@
 from typing import List, Optional, Tuple, Union
 
 import torch
+from ase import Atoms
+from ase.neighborlist import neighbor_list
 
 from meshlode.lib import InversePowerLawPotential
 
@@ -264,10 +266,15 @@ class CalculatorBase(torch.nn.Module):
         neighbor_indices: Union[None, List[torch.Tensor], torch.Tensor],
         neighbor_shifts: Union[None, List[torch.Tensor], torch.Tensor],
     ) -> Union[torch.Tensor, List[torch.Tensor]]:
-        types, positions, cell, charges, neighbor_indices, neighbor_shifts = (
-            self._validate_compute_parameters(
-                types, positions, cell, charges, neighbor_indices, neighbor_shifts
-            )
+        (
+            types,
+            positions,
+            cell,
+            charges,
+            neighbor_indices,
+            neighbor_shifts,
+        ) = self._validate_compute_parameters(
+            types, positions, cell, charges, neighbor_indices, neighbor_shifts
         )
         potentials = []
 
@@ -303,3 +310,77 @@ class CalculatorBase(torch.nn.Module):
         neighbor_shifts: Union[None, torch.Tensor],
     ) -> torch.Tensor:
         raise NotImplementedError("only implemented in child classes")
+
+    def _compute_sr(
+        self,
+        positions: torch.Tensor,
+        charges: torch.Tensor,
+        cell: torch.Tensor,
+        smearing: torch.Tensor,
+        sr_cutoff: torch.Tensor,
+        neighbor_indices: Optional[torch.Tensor] = None,
+        neighbor_shifts: Optional[torch.Tensor] = None,
+    ) -> torch.Tensor:
+        """
+        Compute the short-range part of the Ewald sum in realspace
+
+        :param positions: torch.tensor of shape (n_atoms, 3). Contains the Cartesian
+            coordinates of the atoms. The implementation also works if the positions
+            are not contained within the unit cell.
+        :param charges: torch.tensor of shape `(n_atoms, n_channels)`. In the simplest
+            case, this would be a tensor of shape (n_atoms, 1) where charges[i,0] is the
+            charge of atom i. More generally, the potential for the same atom positions
+            is computed for n_channels independent meshes, and one can specify the
+            "charge" of each atom on each of the meshes independently.
+        :param cell: torch.tensor of shape `(3, 3)`. Describes the unit cell of the
+            structure, where cell[i] is the i-th basis vector.
+        :param smearing: torch.Tensor smearing paramter determining the splitting
+            between the SR and LR parts.
+        :param sr_cutoff: Cutoff radius used for the short-range part of the Ewald sum.
+        :param neighbor_indices: Optional single or list of 2D tensors of shape (2, n),
+            where n is the number of atoms. The 2 rows correspond to the indices of
+            the two atoms which are considered neighbors (e.g. within a cutoff distance)
+        :param neighbor_shifts: Optional single or list of 2D tensors of shape (3, n),
+             where n is the number of atoms. The 3 rows correspond to the shift indices
+             for periodic images.
+
+        :returns: torch.tensor of shape `(n_atoms, n_channels)` containing the potential
+        at the position of each atom for the `n_channels` independent meshes separately.
+        """
+        if neighbor_indices is None or neighbor_shifts is None:
+            # Get list of neighbors
+            struc = Atoms(positions=positions.detach().numpy(), cell=cell, pbc=True)
+            atom_is, atom_js, neighbor_shifts = neighbor_list(
+                "ijS", struc, sr_cutoff.item(), self_interaction=False
+            )
+            atom_is = torch.tensor(atom_is)
+            atom_js = torch.tensor(atom_js)
+            shifts = torch.tensor(neighbor_shifts, dtype=cell.dtype)  # N x 3
+
+        else:
+            atom_is = neighbor_indices[0]
+            atom_js = neighbor_indices[1]
+            shifts = neighbor_shifts.T
+            shifts.dtype = cell.dtype
+
+        # Compute energy
+        potential = torch.zeros_like(charges)
+
+        pos_is = positions[atom_is]
+        pos_js = positions[atom_js]
+        dists = torch.linalg.norm(pos_js - pos_is + shifts @ cell, dim=1)
+        # If the contribution from all atoms within the cutoff is to be subtracted
+        # this short-range part will simply use -V_LR as the potential
+        if self.subtract_interior:
+            potentials_bare = -self.potential.potential_lr_from_dist(dists, smearing)
+        # In the remaining cases, we simply use the usual V_SR to get the full
+        # 1/r^p potential when combined with the long-range part implemented in
+        # reciprocal space
+        else:
+            potentials_bare = self.potential.potential_sr_from_dist(dists, smearing)
+        # potential.index_add_(0, atom_is, charges[atom_js] * potentials_bare)
+
+        for i, j, potential_bare in zip(atom_is, atom_js, potentials_bare):
+            potential[i.item()] += charges[j.item()] * potential_bare
+
+        return potential

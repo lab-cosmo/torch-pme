@@ -8,7 +8,7 @@ import torch
 # Imports for random structure
 from ase.io import read
 
-from meshlode import EwaldPotential, MeshEwaldPotential
+from meshlode import EwaldPotential, PMEPotential
 
 
 def generate_orthogonal_transformations():
@@ -314,7 +314,7 @@ def test_madelung(crystal_name, scaling_factor, calc_name):
         rtol = 4e-6
     elif calc_name == "pme":
         sr_cutoff = scaling_factor * torch.tensor(2.0, dtype=dtype)
-        calc = MeshEwaldPotential(sr_cutoff=sr_cutoff)
+        calc = PMEPotential(sr_cutoff=sr_cutoff)
         rtol = 9e-4
 
     # Compute potential and compare against target value using default hypers
@@ -374,8 +374,10 @@ def test_wigner(crystal_name, scaling_factor):
         smeareff *= scaling_factor
 
         # Compute potential and compare against reference
-        EP = EwaldPotential(atomic_smearing=smeareff)
-        potentials = EP.compute(types, positions, cell, charges)
+        calc = EwaldPotential(atomic_smearing=smeareff)
+        potentials = calc.compute(
+            types, positions=positions, cell=cell, charges=charges
+        )
         energies = potentials * charges
         energies_ref = -torch.ones_like(energies) * madelung_ref
         torch.testing.assert_close(energies, energies_ref, atol=0.0, rtol=rtol)
@@ -429,10 +431,12 @@ def test_random_structure(sr_cutoff, frame_index, scaling_factor, ortho, calc_na
         rtol_e = 2e-5
         rtol_f = 3.6e-3
     elif calc_name == "pme":
-        calc = MeshEwaldPotential(sr_cutoff=sr_cutoff)
+        calc = PMEPotential(sr_cutoff=sr_cutoff)
         rtol_e = 4.5e-3  # 1.5e-3
         rtol_f = 2.5e-3  # 6e-3
-    potentials = calc.compute(types, positions=positions, cell=cell, charges=charges)
+    potentials = calc.compute(
+        types=types, positions=positions, cell=cell, charges=charges
+    )
 
     # Compute energy, taking into account the double counting of each pair
     energy = torch.sum(potentials * charges) / 2

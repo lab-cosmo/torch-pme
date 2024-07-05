@@ -6,7 +6,9 @@ import torch
 from ase import Atoms
 from ase.neighborlist import neighbor_list
 
-from ..lib.mesh_interpolator import MeshInterpolator
+from meshlode.lib.mesh_interpolator import MeshInterpolator
+
+from ..lib import generate_kvectors_for_mesh
 from .base import CalculatorBase
 
 
@@ -52,17 +54,18 @@ class PMEPotential(CalculatorBase):
         sr_cutoff: Optional[torch.Tensor] = None,
         atomic_smearing: Optional[float] = None,
         mesh_spacing: Optional[float] = None,
-        interpolation_order: Optional[int] = 4,
+        interpolation_order: Optional[int] = 3,
         subtract_self: Optional[bool] = True,
         subtract_interior: Optional[bool] = False,
     ):
-        super().__init__(all_types=all_types, exponent=exponent)
-
         # Check that all provided values are correct
+        if exponent < 0.0 or exponent > 3.0:
+            raise ValueError(f"`exponent` p={exponent} has to satisfy 0 < p < 3")
         if interpolation_order not in [1, 2, 3, 4, 5]:
             raise ValueError("Only `interpolation_order` from 1 to 5 are allowed")
         if atomic_smearing is not None and atomic_smearing <= 0:
             raise ValueError(f"`atomic_smearing` {atomic_smearing} has to be positive")
+        super().__init__(all_types=all_types, exponent=exponent)
 
         self.atomic_smearing = atomic_smearing
         self.mesh_spacing = mesh_spacing
@@ -151,63 +154,13 @@ class PMEPotential(CalculatorBase):
             neighbor_shifts=neighbor_shifts,
         )
 
-    def _generate_kvectors(self, ns: torch.Tensor, cell: torch.Tensor) -> torch.Tensor:
-        """
-        For a given unit cell, compute all reciprocal space vectors that are used to
-        perform sums in the Fourier transformed space.
-
-        :param ns: torch.tensor of shape ``(3,)``
-            ``ns = [nx, ny, nz]`` contains the number of mesh points in the x-, y- and
-            z-direction, respectively. For faster performance during the Fast Fourier
-            Transform (FFT) it is recommended to use values of nx, ny and nz that are
-            powers of 2.
-        :param cell: torch.tensor of shape ``(3, 3)`` Tensor specifying the real space
-            unit cell of a structure, where cell[i] is the i-th basis vector
-
-        :return: torch.tensor of shape ``(N, 3)`` Contains all reciprocal space vectors
-            that will be used during Ewald summation (or related approaches).
-            ``k_vectors[i]`` contains the i-th vector, where the order has no special
-            significance.
-        """
-        if ns.device != cell.device:
-            raise ValueError(
-                f"`ns` and `cell` are not on the same device, got {ns.device} and "
-                f"{cell.device}."
-            )
-
-        if ns.shape != (3,):
-            raise ValueError(f"ns of shape {list(ns.shape)} should be of shape (3, )")
-
-        if cell.shape != (3, 3):
-            raise ValueError(
-                f"cell of shape {list(cell.shape)} should be of shape (3, 3)"
-            )
-
-        # Define basis vectors of the reciprocal cell
-        reciprocal_cell = 2 * torch.pi * cell.inverse().T
-        bx = reciprocal_cell[0]
-        by = reciprocal_cell[1]
-        bz = reciprocal_cell[2]
-
-        # Generate all reciprocal space vectors
-        nxs_1d = ns[0] * torch.fft.fftfreq(ns[0], device=ns.device)
-        nys_1d = ns[1] * torch.fft.fftfreq(ns[1], device=ns.device)
-        nzs_1d = ns[2] * torch.fft.rfftfreq(ns[2], device=ns.device)  # real FFT
-        nxs, nys, nzs = torch.meshgrid(nxs_1d, nys_1d, nzs_1d, indexing="ij")
-        nxs = nxs.reshape((int(ns[0]), int(ns[1]), len(nzs_1d), 1))
-        nys = nys.reshape((int(ns[0]), int(ns[1]), len(nzs_1d), 1))
-        nzs = nzs.reshape((int(ns[0]), int(ns[1]), len(nzs_1d), 1))
-        k_vectors = nxs * bx + nys * by + nzs * bz
-
-        return k_vectors
-
     def _compute_single_system(
         self,
         positions: torch.Tensor,
-        cell: Union[None, torch.Tensor],
         charges: torch.Tensor,
-        neighbor_indices: Union[None, torch.Tensor],
-        neighbor_shifts: Union[None, torch.Tensor],
+        cell: torch.Tensor,
+        neighbor_indices: Optional[torch.Tensor] = None,
+        neighbor_shifts: Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
         """
         Compute the "electrostatic" potential at the position of all atoms in a
@@ -230,6 +183,12 @@ class PMEPotential(CalculatorBase):
             -1, respectively.
         :param cell: torch.tensor of shape `(3, 3)`. Describes the unit cell of the
             structure, where cell[i] is the i-th basis vector.
+        :param neighbor_indices: Optional single or list of 2D tensors of shape (2, n),
+            where n is the number of atoms. The 2 rows correspond to the indices of
+            the two atoms which are considered neighbors (e.g. within a cutoff distance)
+        :param neighbor_shifts: Optional single or list of 2D tensors of shape (3, n),
+             where n is the number of atoms. The 3 rows correspond to the shift indices
+             for periodic images.
 
         :returns: torch.tensor of shape `(n_atoms, n_channels)` containing the potential
         at the position of each atom for the `n_channels` independent meshes separately.
@@ -251,7 +210,7 @@ class PMEPotential(CalculatorBase):
             sr_cutoff = self.sr_cutoff
 
         if self.atomic_smearing is None:
-            smearing = cutoff_max / 5.0
+            smearing = sr_cutoff / 5.0
         else:
             smearing = self.atomic_smearing
 
@@ -330,7 +289,8 @@ class PMEPotential(CalculatorBase):
 
         # Step 2: Perform Fourier space convolution (FSC) to get potential on mesh
         # Step 2.1: Generate k-vectors and evaluate kernel function
-        kvectors = self._generate_kvectors(ns=ns, cell=cell)
+        # kvectors = self._generate_kvectors(ns=ns, cell=cell)
+        kvectors = generate_kvectors_for_mesh(ns=ns, cell=cell)
         knorm_sq = torch.sum(kvectors**2, dim=3)
 
         # Step 2.2: Evaluate kernel function (careful, tensor shapes are different from
@@ -359,64 +319,3 @@ class PMEPotential(CalculatorBase):
             interpolated_potential -= charges * self_contrib
 
         return interpolated_potential
-
-    def _compute_sr(
-        self,
-        positions: torch.Tensor,
-        charges: torch.Tensor,
-        cell: torch.Tensor,
-        smearing: torch.Tensor,
-        sr_cutoff: torch.Tensor,
-        neighbor_indices: Optional[torch.Tensor] = None,
-        neighbor_shifts: Optional[torch.Tensor] = None,
-    ) -> torch.Tensor:
-        """
-        Compute the short-range part of the Ewald sum in realspace
-
-        :param positions: torch.tensor of shape (n_atoms, 3). Contains the Cartesian
-            coordinates of the atoms. The implementation also works if the positions
-            are not contained within the unit cell.
-        :param charges: torch.tensor of shape `(n_atoms, n_channels)`. In the simplest
-            case, this would be a tensor of shape (n_atoms, 1) where charges[i,0] is the
-            charge of atom i. More generally, the potential for the same atom positions
-            is computed for n_channels independent meshes, and one can specify the
-            "charge" of each atom on each of the meshes independently.
-        :param cell: torch.tensor of shape `(3, 3)`. Describes the unit cell of the
-            structure, where cell[i] is the i-th basis vector.
-        :param smearing: torch.Tensor smearing paramter determining the splitting
-            between the SR and LR parts.
-        :param sr_cutoff: Cutoff radius used for the short-range part of the Ewald sum.
-
-        :returns: torch.tensor of shape `(n_atoms, n_channels)` containing the potential
-        at the position of each atom for the `n_channels` independent meshes separately.
-        """
-        if neighbor_indices is None or neighbor_shifts is None:
-            # Get list of neighbors
-            struc = Atoms(positions=positions.detach().numpy(), cell=cell, pbc=True)
-            atom_is, atom_js, neighbor_shifts = neighbor_list(
-                "ijS", struc, sr_cutoff.item(), self_interaction=False
-            )
-        else:
-            atom_is = neighbor_indices[0]
-            atom_js = neighbor_indices[1]
-
-        # Compute energy
-        potential = torch.zeros_like(charges)
-        for i, j, shift in zip(atom_is, atom_js, neighbor_shifts):
-            shift = shift.type(cell.dtype)
-            dist = torch.linalg.norm(
-                positions[j] - positions[i] + torch.tensor(shift @ cell)
-            )
-
-            # If the contribution from all atoms within the cutoff is to be subtracted
-            # this short-range part will simply use -V_LR as the potential
-            if self.subtract_interior:
-                potential_bare = -self.potential.potential_lr_from_dist(dist, smearing)
-            # In the remaining cases, we simply use the usual V_SR to get the full
-            # 1/r^p potential when combined with the long-range part implemented in
-            # reciprocal space
-            else:
-                potential_bare = self.potential.potential_sr_from_dist(dist, smearing)
-            potential[i] += charges[j] * potential_bare
-
-        return potential
