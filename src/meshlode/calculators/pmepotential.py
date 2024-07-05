@@ -392,10 +392,18 @@ class PMEPotential(CalculatorBase):
         """
         if neighbor_indices is None or neighbor_shifts is None:
             # Get list of neighbors
-            struc = Atoms(positions=positions.detach().numpy(), cell=cell, pbc=True)
+            struc = Atoms(
+                positions=positions.detach().numpy(),
+                cell=cell.detach().numpy(),
+                pbc=True,
+            )
             atom_is, atom_js, neighbor_shifts = neighbor_list(
                 "ijS", struc, sr_cutoff.item(), self_interaction=False
             )
+
+            atom_is = torch.from_numpy(atom_is)
+            atom_js = torch.from_numpy(atom_js)
+            neighbor_shifts = torch.from_numpy(neighbor_shifts)
         else:
             atom_is = neighbor_indices[0]
             atom_js = neighbor_indices[1]
@@ -404,9 +412,7 @@ class PMEPotential(CalculatorBase):
         potential = torch.zeros_like(charges)
         for i, j, shift in zip(atom_is, atom_js, neighbor_shifts):
             shift = shift.type(cell.dtype)
-            dist = torch.linalg.norm(
-                positions[j] - positions[i] + torch.tensor(shift @ cell)
-            )
+            dist = torch.linalg.norm(positions[j] - positions[i] + shift @ cell)
 
             # If the contribution from all atoms within the cutoff is to be subtracted
             # this short-range part will simply use -V_LR as the potential

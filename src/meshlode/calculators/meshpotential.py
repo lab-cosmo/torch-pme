@@ -15,7 +15,7 @@ class MeshPotential(CalculatorBase):
     and long range contribution but calculates the full contribution to the potential on
     a grid.
 
-    For a Particle Mesh Ewald (PME) use :py:class:`meshlode.MeshEwaldPotential`.
+    For a Particle Mesh Ewald (PME) use :py:class:`meshlode.PMEPotential`.
 
     :param atomic_smearing: Width of the atom-centered Gaussian used to create the
         atomic density.
