@@ -7,7 +7,7 @@ import pytest
 import torch
 from torch.testing import assert_close
 
-from meshlode import DirectPotential, EwaldPotential, MeshPotential, PMEPotential
+from meshlode import DirectPotential, EwaldPotential, PMEPotential
 
 
 MADELUNG_CSCL = torch.tensor(2 * 1.7626 / math.sqrt(3))
@@ -44,20 +44,9 @@ SUBTRACT_SELF = True
             },
             True,
         ),
-        (
-            MeshPotential,
-            {
-                "atomic_smearing": ATOMIC_SMEARING,
-                "mesh_spacing": MESH_SPACING,
-                "interpolation_order": INTERPOLATION_ORDER,
-                "subtract_self": SUBTRACT_SELF,
-            },
-            True,
-        ),
     ],
 )
 class TestWorkflow:
-
     def cscl_system(self, periodic):
         """CsCl crystal. Same as in the madelung test"""
         types = torch.tensor([55, 17])
@@ -95,7 +84,7 @@ class TestWorkflow:
                 CalculatorClass(atomic_smearing=-1.0)
 
     def test_interpolation_order_error(self, CalculatorClass, params, periodic):
-        if type(CalculatorClass) in [PMEPotential, MeshPotential]:
+        if type(CalculatorClass) in [PMEPotential]:
             match = "Only `interpolation_order` from 1 to 5"
             with pytest.raises(ValueError, match=match):
                 CalculatorClass(atomic_smearing=1, interpolation_order=10)

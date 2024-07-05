@@ -21,7 +21,7 @@ from .. import calculators
 # mypy: disable-error-code="override"
 
 
-class MeshEwaldPotential(calculators.PMEPotential):
+class PMEPotential(calculators.PMEPotential):
     """An (atomic) type wise long range potential.
 
     Refer to :class:`meshlode.MeshPotential` for full documentation.
@@ -75,9 +75,6 @@ class MeshEwaldPotential(calculators.PMEPotential):
             neighbor_shifts = [neighbor_shifts]
 
         # Check that the lengths of the provided lists agree
-        n_sys = len(systems)
-        n_shif = len(neighbor_shifts)
-        n_ind = len(neighbor_indices)
         if (neighbor_indices is not None) and len(neighbor_indices) != len(systems):
             raise ValueError(
                 f"Numbers of systems (= {len(systems)}) needs to match number of "

@@ -13,7 +13,7 @@ mts_atomistic = pytest.importorskip("metatensor.torch.atomistic")
 
 class TestMadelung:
     """
-    Test features computed in MeshPotential correspond to the "electrostatic" potential
+    Test features computed in PMEPotential correspond to the "electrostatic" potential
     of the structures. We thus compare the computed potential against the known exact
     values for some simple crystal structures.
     """
@@ -121,7 +121,7 @@ class TestMadelung:
         madelung = dic["madelung"] / scaling_factor
         mesh_spacing = atomic_smearing / 2 * scaling_factor
         smearing_eff = atomic_smearing * scaling_factor
-        MP = meshlode_metatensor.MeshPotential(
+        MP = meshlode_metatensor.PMEPotential(
             atomic_smearing=smearing_eff,
             mesh_spacing=mesh_spacing,
             interpolation_order=interpolation_order,
@@ -164,7 +164,7 @@ class TestMadelung:
         madelung = dic["madelung"] / scaling_factor
         mesh_spacing = atomic_smearing / 10 * scaling_factor
         smearing_eff = atomic_smearing * scaling_factor
-        MP = meshlode_metatensor.MeshPotential(
+        MP = meshlode_metatensor.PMEPotential(
             atomic_smearing=smearing_eff,
             mesh_spacing=mesh_spacing,
             interpolation_order=interpolation_order,
@@ -207,7 +207,7 @@ class TestMadelung:
         smearing_eff = atomic_smearing * scaling_factor
         n_atoms = len(positions)
         system = mts_atomistic.System(types=types, positions=positions, cell=cell)
-        MP = meshlode_metatensor.MeshPotential(
+        MP = meshlode_metatensor.PMEPotential(
             atomic_smearing=smearing_eff,
             mesh_spacing=mesh_spacing,
             interpolation_order=interpolation_order,

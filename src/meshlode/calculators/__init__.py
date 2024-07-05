@@ -1,4 +1,3 @@
-from .meshpotential import MeshPotential
 from .ewaldpotential import EwaldPotential
 from .directpotential import DirectPotential
 from .pmepotential import PMEPotential
