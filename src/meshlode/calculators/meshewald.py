@@ -284,9 +284,7 @@ class MeshEwaldPotential(CalculatorBasePeriodic):
         potential = torch.zeros_like(charges)
         for i, j, shift in zip(atom_is, atom_js, neighbor_shifts):
             shift = torch.tensor(shift, dtype=cell.dtype)
-            dist = torch.linalg.norm(
-                positions[j] - positions[i] + shift @ cell
-            )
+            dist = torch.linalg.norm(positions[j] - positions[i] + shift @ cell)
 
             # If the contribution from all atoms within the cutoff is to be subtracted
             # this short-range part will simply use -V_LR as the potential
