@@ -222,20 +222,3 @@ def test_invalid_shape_neighbor_shifts():
             neighbor_indices=None,
             neighbor_shifts=torch.ones([3, 3]),
         )
-
-
-def test_inconsistent_dtypes_neighbor_shifts():
-    calculator = TestCalculator(all_types=None, exponent=1.0)
-    match = (
-        r"`neighbor_shifts` must be have the same dtype as `positions`, got "
-        r"torch.float32 and torch.float64"
-    )
-    with pytest.raises(ValueError, match=match):
-        calculator.compute(
-            types=torch.arange(2),
-            positions=torch.ones([2, 3], dtype=torch.float64),
-            cell=None,
-            charges=None,
-            neighbor_indices=None,
-            neighbor_shifts=torch.ones([3, 2], dtype=torch.float32),
-        )

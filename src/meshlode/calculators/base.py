@@ -206,13 +206,6 @@ class CalculatorBase(torch.nn.Module):
                         f"{list(neighbor_shifts_single.shape)}"
                     )
 
-                if neighbor_shifts_single.dtype != positions_single.dtype:
-                    raise ValueError(
-                        "`neighbor_shifts` must be have the same dtype as `positions`, "
-                        f"got {neighbor_shifts_single.dtype} and "
-                        f"{positions_single.dtype}"
-                    )
-
                 if types_single.device != neighbor_shifts_single.device:
                     raise ValueError(
                         f"Inconsistent devices of types ({types_single.device}) and "
