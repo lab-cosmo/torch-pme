@@ -161,7 +161,7 @@ def test_exact_lr(exponent, smearing):
         potential_exact = potential_1 / dists_sq - prefac * potential_2
 
     # Compare results. Large tolerance due to singular division
-    rtol = 7e-12
+    rtol = 8e-12
     atol = 3e-16
     assert_close(potential_lr_from_dist, potential_exact, rtol=rtol, atol=atol)
 

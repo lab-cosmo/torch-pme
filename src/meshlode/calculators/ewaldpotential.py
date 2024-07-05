@@ -6,19 +6,21 @@ import torch
 from ase import Atoms
 from ase.neighborlist import neighbor_list
 
-from .calculator_base import CalculatorBase
+from .base import CalculatorBase
 
 
 class EwaldPotential(CalculatorBase):
-    """A specie-wise long-range potential computed using the Ewald sum, scaling as
-    O(N^2) with respect to the number of particles N used as a reference to test faster
-    implementations.
+    r"""Specie-wise long-range potential computed using the Ewald sum.
+
+    Scaling as :math:`\mathcal{O}(N^2)` with respect to the number of particles
+    :math:`N`.
 
     :param all_types: Optional global list of all atomic types that should be considered
         for the computation. This option might be useful when running the calculation on
         subset of a whole dataset and it required to keep the shape of the output
         consistent. If this is not set the possible atomic types will be determined when
         calling the :meth:`compute()`.
+    :param exponent: the exponent "p" in 1/r^p potentials
     :param sr_cutoff: Cutoff radius used for the short-range part of the Ewald sum. If
         not set to a global value, it will be set to be half of the shortest lattice
         vector defining the cell (separately for each structure).
@@ -59,8 +61,6 @@ class EwaldPotential(CalculatorBase):
             [-2.7745, -0.7391]])
     """
 
-    name = "EwaldPotential"
-
     def __init__(
         self,
         all_types: Optional[List[int]] = None,
@@ -73,9 +73,9 @@ class EwaldPotential(CalculatorBase):
     ):
         super().__init__(all_types=all_types, exponent=exponent)
 
-        # Store provided parameters
         if atomic_smearing is not None and atomic_smearing <= 0:
             raise ValueError(f"`atomic_smearing` {atomic_smearing} has to be positive")
+
         self.atomic_smearing = atomic_smearing
         self.sr_cutoff = sr_cutoff
         self.lr_wavelength = lr_wavelength
@@ -152,7 +152,7 @@ class EwaldPotential(CalculatorBase):
         neighbor_indices: Union[List[torch.Tensor], torch.Tensor] = None,
         neighbor_shifts: Union[List[torch.Tensor], torch.Tensor] = None,
     ) -> Union[torch.Tensor, List[torch.Tensor]]:
-        """forward just calls :py:meth:`CalculatorModule.compute`"""
+        """Forward just calls :py:meth:`compute`."""
         return self.compute(
             types=types,
             positions=positions,

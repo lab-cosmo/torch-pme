@@ -1,7 +1,7 @@
-from .calculators.mesh import MeshPotential
-from .calculators.ewald import EwaldPotential
-from .calculators.direct import DirectPotential
-from .calculators.meshewald import MeshEwaldPotential
+from .calculators.meshpotential import MeshPotential
+from .calculators.ewaldpotential import EwaldPotential
+from .calculators.directpotential import DirectPotential
+from .calculators.pmepotential import PMEPotential
 
 try:
     from . import metatensor  # noqa
@@ -9,5 +9,5 @@ except ImportError:
     pass
 
 
-__all__ = ["MeshPotential", "EwaldPotential", "DirectPotential", "MeshEwaldPotential"]
+__all__ = ["MeshPotential", "EwaldPotential", "DirectPotential", "PMEPotential"]
 __version__ = "0.0.0-dev"

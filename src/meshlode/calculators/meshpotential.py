@@ -4,15 +4,27 @@ import torch
 
 from ..lib.fourier_convolution import FourierSpaceConvolution
 from ..lib.mesh_interpolator import MeshInterpolator
-from .calculator_base import CalculatorBase
+from .base import CalculatorBase
 
 
 class MeshPotential(CalculatorBase):
-    """A specie-wise long-range potential, computed using the particle-mesh Ewald (PME)
-    method scaling as O(NlogN) with respect to the number of particles N.
+    r"""Specie-wise long-range potential, computed on a grid.
+
+    Method scaling as :math:`\mathcal{O}(NlogN)` with respect to the number of particles
+    :math:`N`. This class does not perform a usual Ewald style splitting into a short
+    and long range contribution but calculates the full contribution to the potential on
+    a grid.
+
+    For a Particle Mesh Ewald (PME) use :py:class:`meshlode.MeshEwaldPotential`.
 
     :param atomic_smearing: Width of the atom-centered Gaussian used to create the
         atomic density.
+    :param all_types: Optional global list of all atomic types that should be considered
+        for the computation. This option might be useful when running the calculation on
+        subset of a whole dataset and it required to keep the shape of the output
+        consistent. If this is not set the possible atomic types will be determined when
+        calling the :meth:`compute()`.
+    :param exponent: the exponent "p" in 1/r^p potentials
     :param mesh_spacing: Value that determines the umber of Fourier-space grid points
         that will be used along each axis. If set to None, it will automatically be set
         to half of ``atomic_smearing``.
@@ -22,11 +34,6 @@ class MeshPotential(CalculatorBase):
     :param subtract_self: If set to :py:obj:`True`, subtract from the features of an
         atom the contributions to the potential arising from that atom itself (but not
         the periodic images).
-    :param all_types: Optional global list of all atomic types that should be considered
-        for the computation. This option might be useful when running the calculation on
-        subset of a whole dataset and it required to keep the shape of the output
-        consistent. If this is not set the possible atomic types will be determined when
-        calling the :meth:`compute()`.
 
     Example
     -------
@@ -47,34 +54,28 @@ class MeshPotential(CalculatorBase):
             [ 1.3755, -0.5467]])
     """
 
-    name = "MeshPotential"
-
     def __init__(
         self,
         atomic_smearing: float,
+        all_types: Optional[List[int]] = None,
+        exponent: float = 1.0,
         mesh_spacing: Optional[float] = None,
         interpolation_order: Optional[int] = 4,
         subtract_self: Optional[bool] = False,
-        all_types: Optional[List[int]] = None,
-        exponent: float = 1.0,
     ):
         super().__init__(all_types=all_types, exponent=exponent)
 
         # Check that all provided values are correct
         if interpolation_order not in [1, 2, 3, 4, 5]:
             raise ValueError("Only `interpolation_order` from 1 to 5 are allowed")
-        if atomic_smearing <= 0:
-            raise ValueError(f"`atomic_smearing` {atomic_smearing} has to be positive")
 
         # If no explicit mesh_spacing is given, set it such that it can resolve
         # the smeared potentials.
-        if mesh_spacing is None:
-            self.mesh_spacing = atomic_smearing / 2
-        else:
-            self.mesh_spacing = mesh_spacing
+        if atomic_smearing <= 0:
+            raise ValueError(f"`atomic_smearing` {atomic_smearing} has to be positive")
 
-        # Store provided parameters
         self.atomic_smearing = atomic_smearing
+        self.mesh_spacing = mesh_spacing
         self.interpolation_order = interpolation_order
         self.subtract_self = subtract_self
 
@@ -87,8 +88,6 @@ class MeshPotential(CalculatorBase):
         positions: Union[List[torch.Tensor], torch.Tensor],
         cell: Union[List[torch.Tensor], torch.Tensor],
         charges: Optional[Union[List[torch.Tensor], torch.Tensor]] = None,
-        neighbor_indices: Union[List[torch.Tensor], torch.Tensor] = None,
-        neighbor_shifts: Union[List[torch.Tensor], torch.Tensor] = None,
     ) -> Union[torch.Tensor, List[torch.Tensor]]:
         """Compute potential for all provided "systems" stacked inside list.
 
@@ -131,8 +130,8 @@ class MeshPotential(CalculatorBase):
             positions=positions,
             cell=cell,
             charges=charges,
-            neighbor_indices=neighbor_indices,
-            neighbor_shifts=neighbor_shifts,
+            neighbor_indices=None,
+            neighbor_shifts=None,
         )
 
     # This function is kept to keep MeshLODE compatible with the broader pytorch
@@ -144,17 +143,13 @@ class MeshPotential(CalculatorBase):
         positions: Union[List[torch.Tensor], torch.Tensor],
         cell: Union[List[torch.Tensor], torch.Tensor],
         charges: Optional[Union[List[torch.Tensor], torch.Tensor]] = None,
-        neighbor_indices: Union[List[torch.Tensor], torch.Tensor] = None,
-        neighbor_shifts: Union[List[torch.Tensor], torch.Tensor] = None,
     ) -> Union[torch.Tensor, List[torch.Tensor]]:
-        """forward just calls :py:meth:`CalculatorModule.compute`"""
+        """Forward just calls :py:meth:`compute`."""
         return self.compute(
             types=types,
             positions=positions,
             cell=cell,
             charges=charges,
-            neighbor_indices=neighbor_indices,
-            neighbor_shifts=neighbor_shifts,
         )
 
     def _compute_single_system(
@@ -165,8 +160,14 @@ class MeshPotential(CalculatorBase):
         neighbor_indices: Union[None, torch.Tensor],
         neighbor_shifts: Union[None, torch.Tensor],
     ) -> torch.Tensor:
+
+        if self.mesh_spacing is None:
+            mesh_spacing = self.atomic_smearing / 2
+        else:
+            mesh_spacing = self.mesh_spacing
+
         # Initializations
-        k_cutoff = 2 * torch.pi / self.mesh_spacing
+        k_cutoff = 2 * torch.pi / mesh_spacing
 
         # Compute number of times each basis vector of the
         # reciprocal space can be scaled until the cutoff

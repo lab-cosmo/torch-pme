@@ -2,25 +2,28 @@ from typing import List, Optional, Union
 
 import torch
 
-from .calculator_base import CalculatorBase
+from .base import CalculatorBase
 
 
 class DirectPotential(CalculatorBase):
-    """A specie-wise long-range potential computed using a direct summation over all
-    pairs of atoms, scaling as O(N^2) with respect to the number of particles N.
-    As opposed to the Ewald sum, this calculator does NOT take into account periodic
-    images, and it will instead be assumed that the provided atoms are in the infinitely
-    extended three-dimensional Euclidean space.
-    While slow, this implementation used as a reference to test faster algorithms.
+    r"""Specie-wise long-range potential using a direct summation over all atoms.
+
+    Scaling as :math:`\mathcal{O}(N^2)` with respect to the number of particles
+    :math:`N`. As opposed to the Ewald sum, this calculator does NOT take into account
+    periodic images, and it will instead be assumed that the provided atoms are in the
+    infinitely extended three-dimensional Euclidean space. While slow, this
+    implementation used as a reference to test faster algorithms.
 
     :param all_types: Optional global list of all atomic types that should be considered
         for the computation. This option might be useful when running the calculation on
         subset of a whole dataset and it required to keep the shape of the output
         consistent. If this is not set the possible atomic types will be determined when
         calling the :meth:`compute()`.
+    :param exponent: the exponent "p" in 1/r^p potentials
     """
 
-    name = "DirectPotential"
+    def __init__(self, all_types: Optional[List[int]] = None, exponent: float = 1.0):
+        super().__init__(all_types=all_types, exponent=exponent)
 
     def compute(
         self,
@@ -72,7 +75,7 @@ class DirectPotential(CalculatorBase):
         positions: Union[List[torch.Tensor], torch.Tensor],
         charges: Optional[Union[List[torch.Tensor], torch.Tensor]] = None,
     ) -> Union[torch.Tensor, List[torch.Tensor]]:
-        """forward just calls :py:meth:`CalculatorModule.compute`"""
+        """Forward just calls :py:meth:`compute`."""
         return self.compute(
             types=types,
             positions=positions,

@@ -21,7 +21,7 @@ from .. import calculators
 # mypy: disable-error-code="override"
 
 
-class MeshEwaldPotential(calculators.MeshEwaldPotential):
+class MeshEwaldPotential(calculators.PMEPotential):
     """An (atomic) type wise long range potential.
 
     Refer to :class:`meshlode.MeshPotential` for full documentation.

@@ -1,7 +1,7 @@
 import pytest
 import torch
 
-from meshlode.calculators.calculator_base import CalculatorBase
+from meshlode.calculators.base import CalculatorBase
 
 
 class TestCalculator(CalculatorBase):
@@ -49,7 +49,7 @@ class TestCalculator(CalculatorBase):
     ],
 )
 def test_compute(method_name, types, positions, charges):
-    calculator = TestCalculator()
+    calculator = TestCalculator(all_types=None, exponent=1.0)
     method = getattr(calculator, method_name)
 
     result = method(
@@ -70,7 +70,7 @@ def test_compute(method_name, types, positions, charges):
 
 
 def test_mismatched_lengths_types_positions():
-    calculator = TestCalculator()
+    calculator = TestCalculator(all_types=None, exponent=1.0)
     match = r"inconsistent lengths of types \(\d+\) positions \(\d+\)"
     with pytest.raises(ValueError, match=match):
         calculator.compute(
@@ -84,7 +84,7 @@ def test_mismatched_lengths_types_positions():
 
 
 def test_invalid_shape_positions():
-    calculator = TestCalculator()
+    calculator = TestCalculator(all_types=None, exponent=1.0)
     match = (
         r"each `positions` must be a \(n_types x 3\) tensor, got at least one tensor "
         r"with shape \[3, 3\]"
@@ -101,7 +101,7 @@ def test_invalid_shape_positions():
 
 
 def test_mismatched_lengths_types_cell():
-    calculator = TestCalculator()
+    calculator = TestCalculator(all_types=None, exponent=1.0)
     match = r"inconsistent lengths of types \(\d+\) and cell \(\d+\)"
     with pytest.raises(ValueError, match=match):
         calculator.compute(
@@ -115,7 +115,7 @@ def test_mismatched_lengths_types_cell():
 
 
 def test_inconsistent_devices():
-    calculator = TestCalculator()
+    calculator = TestCalculator(all_types=None, exponent=1.0)
     match = r"Inconsistent devices of types \([a-zA-Z:]+\) and positions \([a-zA-Z:]+\)"
     with pytest.raises(ValueError, match=match):
         calculator.compute(
@@ -129,7 +129,7 @@ def test_inconsistent_devices():
 
 
 def test_inconsistent_dtypes_cell():
-    calculator = TestCalculator()
+    calculator = TestCalculator(all_types=None, exponent=1.0)
     match = (
         r"`cell` must be have the same dtype as `positions`, got "
         r"torch.float32 and torch.float64"
@@ -146,7 +146,7 @@ def test_inconsistent_dtypes_cell():
 
 
 def test_inconsistent_dtypes_charges():
-    calculator = TestCalculator()
+    calculator = TestCalculator(all_types=None, exponent=1.0)
     match = (
         r"`charges` must be have the same dtype as `positions`, got "
         r"torch.float32 and torch.float64"
@@ -163,7 +163,7 @@ def test_inconsistent_dtypes_charges():
 
 
 def test_mismatched_lengths_types_charges():
-    calculator = TestCalculator()
+    calculator = TestCalculator(all_types=None, exponent=1.0)
     match = (
         r"The first dimension of `charges` must be the same as the length of `types`, "
         r"got \d+ and \d+"
@@ -180,7 +180,7 @@ def test_mismatched_lengths_types_charges():
 
 
 def test_invalid_shape_cell():
-    calculator = TestCalculator()
+    calculator = TestCalculator(all_types=None, exponent=1.0)
     match = (
         r"each `cell` must be a \(3 x 3\) tensor, got at least one tensor with "
         r"shape \[2, 2\]"
@@ -197,7 +197,7 @@ def test_invalid_shape_cell():
 
 
 def test_invalid_shape_neighbor_indices():
-    calculator = TestCalculator()
+    calculator = TestCalculator(all_types=None, exponent=1.0)
     match = r"Expected shape of neighbor_indices is \(2, \d+\), but got \[\d+, \d+\]"
     with pytest.raises(ValueError, match=match):
         calculator.compute(
@@ -211,7 +211,7 @@ def test_invalid_shape_neighbor_indices():
 
 
 def test_invalid_shape_neighbor_shifts():
-    calculator = TestCalculator()
+    calculator = TestCalculator(all_types=None, exponent=1.0)
     match = r"Expected shape of neighbor_shifts is \(3, \d+\), but got \[\d+, \d+\]"
     with pytest.raises(ValueError, match=match):
         calculator.compute(
@@ -221,4 +221,21 @@ def test_invalid_shape_neighbor_shifts():
             charges=None,
             neighbor_indices=None,
             neighbor_shifts=torch.ones([3, 3]),
+        )
+
+
+def test_inconsistent_dtypes_neighbor_shifts():
+    calculator = TestCalculator(all_types=None, exponent=1.0)
+    match = (
+        r"`neighbor_shifts` must be have the same dtype as `positions`, got "
+        r"torch.float32 and torch.float64"
+    )
+    with pytest.raises(ValueError, match=match):
+        calculator.compute(
+            types=torch.arange(2),
+            positions=torch.ones([2, 3], dtype=torch.float64),
+            cell=None,
+            charges=None,
+            neighbor_indices=None,
+            neighbor_shifts=torch.ones([3, 2], dtype=torch.float32),
         )

@@ -18,5 +18,6 @@ We also provide a return values as a :py:class:`metatensor.TensorMap` in
 
 .. toctree::
    :maxdepth: 1
+   :glob:
 
-   meshpotential
+   ./*

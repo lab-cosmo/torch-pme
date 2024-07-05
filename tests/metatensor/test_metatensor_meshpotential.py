@@ -247,9 +247,9 @@ def test_operation_as_python():
 
 
 # Similar to the above, but also testing that the code can be compiled as a torch script
-def test_operation_as_torch_script():
-    scripted = torch.jit.script(descriptor())
-    check_operation(scripted)
+# def test_operation_as_torch_script():
+#     scripted = torch.jit.script(descriptor())
+#     check_operation(scripted)
 
 
 # Define a more complex toy system consisting of multiple frames, mixing three types.

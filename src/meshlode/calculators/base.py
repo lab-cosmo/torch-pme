@@ -32,15 +32,10 @@ class CalculatorBase(torch.nn.Module):
         subset of a whole dataset and it required to keep the shape of the output
         consistent. If this is not set the possible atomic types will be determined when
         calling the :meth:`compute()`.
+    :param exponent: the exponent "p" in 1/r^p potentials
     """
 
-    name = "CalculatorBase"
-
-    def __init__(
-        self,
-        all_types: Optional[List[int]] = None,
-        exponent: float = 1.0,
-    ):
+    def __init__(self, all_types: Union[None, List[int]], exponent: float):
         super().__init__()
 
         if all_types is None:
@@ -190,8 +185,6 @@ class CalculatorBase(torch.nn.Module):
                     )
 
             if neighbor_indices_single is not None:
-                # TODO test dtype
-
                 if neighbor_indices_single.shape != (2, len(types_single)):
                     raise ValueError(
                         "Expected shape of neighbor_indices is "
@@ -206,13 +199,18 @@ class CalculatorBase(torch.nn.Module):
                     )
 
             if neighbor_shifts_single is not None:
-                # TODO test dtype
-
                 if neighbor_shifts_single.shape != (3, len(types_single)):
                     raise ValueError(
                         "Expected shape of neighbor_shifts is "
                         f"{3, len(types_single)}, but got "
                         f"{list(neighbor_shifts_single.shape)}"
+                    )
+
+                if neighbor_shifts_single.dtype != positions_single.dtype:
+                    raise ValueError(
+                        "`neighbor_shifts` must be have the same dtype as `positions`, "
+                        f"got {neighbor_shifts_single.dtype} and "
+                        f"{positions_single.dtype}"
                     )
 
                 if types_single.device != neighbor_shifts_single.device:
@@ -268,10 +266,10 @@ class CalculatorBase(torch.nn.Module):
         self,
         types: Union[List[torch.Tensor], torch.Tensor],
         positions: Union[List[torch.Tensor], torch.Tensor],
-        cell: Union[List[torch.Tensor], torch.Tensor] = None,
-        charges: Optional[Union[List[torch.Tensor], torch.Tensor]] = None,
-        neighbor_indices: Union[List[torch.Tensor], torch.Tensor] = None,
-        neighbor_shifts: Union[List[torch.Tensor], torch.Tensor] = None,
+        cell: Union[None, List[torch.Tensor], torch.Tensor],
+        charges: Union[None, Union[List[torch.Tensor], torch.Tensor]],
+        neighbor_indices: Union[None, List[torch.Tensor], torch.Tensor],
+        neighbor_shifts: Union[None, List[torch.Tensor], torch.Tensor],
     ) -> Union[torch.Tensor, List[torch.Tensor]]:
         types, positions, cell, charges, neighbor_indices, neighbor_shifts = (
             self._validate_compute_parameters(

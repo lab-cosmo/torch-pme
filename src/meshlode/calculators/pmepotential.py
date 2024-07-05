@@ -7,19 +7,21 @@ from ase import Atoms
 from ase.neighborlist import neighbor_list
 
 from ..lib.mesh_interpolator import MeshInterpolator
-from .calculator_base import CalculatorBase
+from .base import CalculatorBase
 
 
-class MeshEwaldPotential(CalculatorBase):
-    """A specie-wise long-range potential computed using a mesh-based Ewald method,
-    scaling as O(NlogN) with respect to the number of particles N used as a reference
-    to test faster implementations.
+class PMEPotential(CalculatorBase):
+    r"""Specie-wise long-range potential using a particle mesh-based Ewald (PME).
+
+    Scaling as :math:`\mathcal{O}(NlogN)` with respect to the number of particles
+    :math:`N` used as a reference to test faster implementations.
 
     :param all_types: Optional global list of all atomic types that should be considered
         for the computation. This option might be useful when running the calculation on
         subset of a whole dataset and it required to keep the shape of the output
         consistent. If this is not set the possible atomic types will be determined when
         calling the :meth:`compute()`.
+    :param exponent: the exponent "p" in 1/r^p potentials
     :param sr_cutoff: Cutoff radius used for the short-range part of the Ewald sum. If
         not set to a global value, it will be set to be half of the shortest lattice
         vector defining the cell (separately for each structure).
@@ -28,11 +30,12 @@ class MeshEwaldPotential(CalculatorBase):
         value, it will be set to 1/5 times the sr_cutoff value (separately for each
         structure) to ensure convergence of the short-range part to a relative precision
         of 1e-5.
-    :param lr_wavelength: Spatial resolution used for the long-range (reciprocal space)
-        part of the Ewald sum. More conretely, all Fourier space vectors with a
-        wavelength >= this value will be kept. If not set to a global value, it will be
-        set to half the atomic_smearing parameter to ensure convergence of the
-        long-range part to a relative precision of 1e-5.
+    :param mesh_spacing: Value that determines the umber of Fourier-space grid points
+        that will be used along each axis. If set to None, it will automatically be set
+        to half of ``atomic_smearing``.
+    :param interpolation_order: Interpolation order for mapping onto the grid, where an
+        interpolation order of p corresponds to interpolation by a polynomial of degree
+        ``p - 1`` (e.g. ``p = 4`` for cubic interpolation).
     :param subtract_self: If set to :py:obj:`True`, subtract from the features of an
         atom the contributions to the potential arising from that atom itself (but not
         the periodic images).
@@ -42,8 +45,6 @@ class MeshEwaldPotential(CalculatorBase):
         subtracted by default.
     """
 
-    name = "MeshEwaldPotential"
-
     def __init__(
         self,
         all_types: Optional[List[int]] = None,
@@ -51,8 +52,8 @@ class MeshEwaldPotential(CalculatorBase):
         sr_cutoff: Optional[torch.Tensor] = None,
         atomic_smearing: Optional[float] = None,
         mesh_spacing: Optional[float] = None,
-        subtract_self: Optional[bool] = True,
         interpolation_order: Optional[int] = 4,
+        subtract_self: Optional[bool] = True,
         subtract_interior: Optional[bool] = False,
     ):
         super().__init__(all_types=all_types, exponent=exponent)
@@ -63,7 +64,6 @@ class MeshEwaldPotential(CalculatorBase):
         if atomic_smearing is not None and atomic_smearing <= 0:
             raise ValueError(f"`atomic_smearing` {atomic_smearing} has to be positive")
 
-        # Store provided parameters
         self.atomic_smearing = atomic_smearing
         self.mesh_spacing = mesh_spacing
         self.interpolation_order = interpolation_order
@@ -141,7 +141,7 @@ class MeshEwaldPotential(CalculatorBase):
         neighbor_indices: Union[List[torch.Tensor], torch.Tensor] = None,
         neighbor_shifts: Union[List[torch.Tensor], torch.Tensor] = None,
     ) -> Union[torch.Tensor, List[torch.Tensor]]:
-        """forward just calls :py:meth:`CalculatorModule.compute`"""
+        """Forward just calls :py:meth:`compute`."""
         return self.compute(
             types=types,
             positions=positions,
