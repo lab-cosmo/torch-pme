@@ -22,30 +22,16 @@ from .. import calculators
 
 
 class PMEPotential(calculators.PMEPotential):
-    """An (atomic) type wise long range potential.
+    """Specie-wise long-range potential using a particle mesh-based Ewald (PME).
 
     Refer to :class:`meshlode.MeshPotential` for full documentation.
     """
 
-    def forward(
-        self,
-        systems: Union[List[System], System],
-        neighbor_indices: Union[List[torch.Tensor], torch.Tensor] = None,
-        neighbor_shifts: Union[List[torch.Tensor], torch.Tensor] = None,
-    ) -> TensorMap:
-        """forward just calls :py:meth:`CalculatorModule.compute`"""
-        return self.compute(
-            systems=systems,
-            neighbor_indices=neighbor_indices,
-            neighbor_shifts=neighbor_shifts,
-        )
+    def forward(self, systems: Union[List[System], System]) -> TensorMap:
+        """forward just calls :py:meth:`compute()`"""
+        return self.compute(systems=systems)
 
-    def compute(
-        self,
-        systems: Union[List[System], System],
-        neighbor_indices: Union[List[torch.Tensor], torch.Tensor] = None,
-        neighbor_shifts: Union[List[torch.Tensor], torch.Tensor] = None,
-    ) -> TensorMap:
+    def compute(self, systems: Union[List[System], System]) -> TensorMap:
         """Compute potential for all provided ``systems``.
 
         All ``systems`` must have the same ``dtype`` and the same ``device``. If each
@@ -69,36 +55,19 @@ class PMEPotential(calculators.PMEPotential):
         # provided as input (for convenience of users testing out the code)
         if not isinstance(systems, list):
             systems = [systems]
-        if (neighbor_indices is not None) and not isinstance(neighbor_indices, list):
-            neighbor_indices = [neighbor_indices]
-        if (neighbor_shifts is not None) and not isinstance(neighbor_shifts, list):
-            neighbor_shifts = [neighbor_shifts]
 
-        # Check that the lengths of the provided lists agree
-        if (neighbor_indices is not None) and len(neighbor_indices) != len(systems):
-            raise ValueError(
-                f"Numbers of systems (= {len(systems)}) needs to match number of "
-                f"neighbor lists (= {len(neighbor_indices)})"
-            )
-        if (neighbor_shifts is not None) and len(neighbor_shifts) != len(systems):
-            raise ValueError(
-                f"Numbers of systems (= {len(systems)}) needs to match number of "
-                f"neighbor shifts (= {len(neighbor_shifts)})"
-            )
+        for system in systems:
+            if system.dtype != systems[0].dtype:
+                raise ValueError(
+                    "`dtype` of all systems must be the same, got "
+                    f"{system.dtype} and {systems[0].dtype}`"
+                )
 
-        if len(systems) > 1:
-            for system in systems[1:]:
-                if system.dtype != systems[0].dtype:
-                    raise ValueError(
-                        "`dtype` of all systems must be the same, got "
-                        f"{system.dtype} and {systems[0].dtype}`"
-                    )
-
-                if system.device != systems[0].device:
-                    raise ValueError(
-                        "`device` of all systems must be the same, got "
-                        f"{system.device} and {systems[0].device}`"
-                    )
+            if system.device != systems[0].device:
+                raise ValueError(
+                    "`device` of all systems must be the same, got "
+                    f"{system.device} and {systems[0].device}`"
+                )
 
         dtype = systems[0].positions.dtype
         device = systems[0].positions.device
@@ -146,7 +115,7 @@ class PMEPotential(calculators.PMEPotential):
         n_blocks = n_types * n_charges_channels
         feat_dic: Dict[int, List[torch.Tensor]] = {a: [] for a in range(n_blocks)}
 
-        for i, system in enumerate(systems):
+        for system in systems:
             if use_explicit_charges:
                 charges = system.get_data("charges").values
             else:
@@ -155,9 +124,18 @@ class PMEPotential(calculators.PMEPotential):
                     system.types, requested_types, dtype, device
                 )
 
-            if neighbor_indices is None or neighbor_shifts is None:
-                # Compute the potentials
-                # TODO: use neighborlist from system if provided.
+            # try to extract neighbor list from system object
+            neighbor_indices = None
+            for neighbor_list_options in system.known_neighbor_lists():
+                if neighbor_list_options.cutoff == self.sr_cutoff:
+                    neighbor_list = system.get_neighbor_list(neighbor_list_options)
+
+                    neighbor_indices = neighbor_list.samples.values[:, :2]
+                    neighbor_shifts = neighbor_list.samples.values[:, 2:]
+
+                    break
+
+            if neighbor_indices is None:
                 potential = self._compute_single_system(
                     positions=system.positions,
                     cell=system.cell,
@@ -170,8 +148,8 @@ class PMEPotential(calculators.PMEPotential):
                     positions=system.positions,
                     charges=charges,
                     cell=system.cell,
-                    neighbor_indices=neighbor_indices[i],
-                    neighbor_shifts=neighbor_shifts[i],
+                    neighbor_indices=neighbor_indices,
+                    neighbor_shifts=neighbor_shifts,
                 )
 
             # Reorder data into metatensor format
@@ -234,3 +212,4 @@ class PMEPotential(calculators.PMEPotential):
         labels_keys = Labels(key_names, key_values)
 
         return TensorMap(keys=labels_keys, blocks=blocks)
+

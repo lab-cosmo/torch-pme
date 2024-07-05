@@ -1,3 +1,3 @@
-from .meshewald import PMEPotential
+from .pmepotential import PMEPotential
 
-__all__ = ["MeshPotential", "EwaldPotential", "MeshEwaldPotential"]
+__all__ = ["MeshPotential", "PMEPotential"]
