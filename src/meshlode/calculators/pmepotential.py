@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Union
 
 import torch
 
@@ -6,25 +6,22 @@ import torch
 from ase import Atoms
 from ase.neighborlist import neighbor_list
 
-from meshlode.lib.mesh_interpolator import MeshInterpolator
-
-from ..lib import generate_kvectors_for_mesh
-from .calculator_base import default_exponent
-
-# from .mesh import MeshPotential
-from .calculator_base_periodic import CalculatorBasePeriodic
+from ..lib.mesh_interpolator import MeshInterpolator
+from .base import CalculatorBase
 
 
-class MeshEwaldPotential(CalculatorBasePeriodic):
-    """A specie-wise long-range potential computed using a mesh-based Ewald method,
-    scaling as O(NlogN) with respect to the number of particles N used as a reference
-    to test faster implementations.
+class PMEPotential(CalculatorBase):
+    r"""Specie-wise long-range potential using a particle mesh-based Ewald (PME).
+
+    Scaling as :math:`\mathcal{O}(NlogN)` with respect to the number of particles
+    :math:`N` used as a reference to test faster implementations.
 
     :param all_types: Optional global list of all atomic types that should be considered
         for the computation. This option might be useful when running the calculation on
         subset of a whole dataset and it required to keep the shape of the output
         consistent. If this is not set the possible atomic types will be determined when
         calling the :meth:`compute()`.
+    :param exponent: the exponent "p" in 1/r^p potentials
     :param sr_cutoff: Cutoff radius used for the short-range part of the Ewald sum. If
         not set to a global value, it will be set to be half of the shortest lattice
         vector defining the cell (separately for each structure).
@@ -33,11 +30,12 @@ class MeshEwaldPotential(CalculatorBasePeriodic):
         value, it will be set to 1/5 times the sr_cutoff value (separately for each
         structure) to ensure convergence of the short-range part to a relative precision
         of 1e-5.
-    :param lr_wavelength: Spatial resolution used for the long-range (reciprocal space)
-        part of the Ewald sum. More conretely, all Fourier space vectors with a
-        wavelength >= this value will be kept. If not set to a global value, it will be
-        set to half the atomic_smearing parameter to ensure convergence of the
-        long-range part to a relative precision of 1e-5.
+    :param mesh_spacing: Value that determines the umber of Fourier-space grid points
+        that will be used along each axis. If set to None, it will automatically be set
+        to half of ``atomic_smearing``.
+    :param interpolation_order: Interpolation order for mapping onto the grid, where an
+        interpolation order of p corresponds to interpolation by a polynomial of degree
+        ``p - 1`` (e.g. ``p = 4`` for cubic interpolation).
     :param subtract_self: If set to :py:obj:`True`, subtract from the features of an
         atom the contributions to the potential arising from that atom itself (but not
         the periodic images).
@@ -47,17 +45,15 @@ class MeshEwaldPotential(CalculatorBasePeriodic):
         subtracted by default.
     """
 
-    name = "MeshEwaldPotential"
-
     def __init__(
         self,
         all_types: Optional[List[int]] = None,
-        exponent: Optional[torch.Tensor] = default_exponent,
+        exponent: float = 1.0,
         sr_cutoff: Optional[torch.Tensor] = None,
         atomic_smearing: Optional[float] = None,
         mesh_spacing: Optional[float] = None,
+        interpolation_order: Optional[int] = 4,
         subtract_self: Optional[bool] = True,
-        interpolation_order: Optional[int] = 3,
         subtract_interior: Optional[bool] = False,
     ):
         super().__init__(all_types=all_types, exponent=exponent)
@@ -68,7 +64,6 @@ class MeshEwaldPotential(CalculatorBasePeriodic):
         if atomic_smearing is not None and atomic_smearing <= 0:
             raise ValueError(f"`atomic_smearing` {atomic_smearing} has to be positive")
 
-        # Store provided parameters
         self.atomic_smearing = atomic_smearing
         self.mesh_spacing = mesh_spacing
         self.interpolation_order = interpolation_order
@@ -80,13 +75,139 @@ class MeshEwaldPotential(CalculatorBasePeriodic):
         self.subtract_self = subtract_self
         self.subtract_interior = subtract_interior
 
+    def compute(
+        self,
+        types: Union[List[torch.Tensor], torch.Tensor],
+        positions: Union[List[torch.Tensor], torch.Tensor],
+        cell: Union[List[torch.Tensor], torch.Tensor],
+        charges: Optional[Union[List[torch.Tensor], torch.Tensor]] = None,
+        neighbor_indices: Union[List[torch.Tensor], torch.Tensor] = None,
+        neighbor_shifts: Union[List[torch.Tensor], torch.Tensor] = None,
+    ) -> Union[torch.Tensor, List[torch.Tensor]]:
+        """Compute potential for all provided "systems" stacked inside list.
+
+        The computation is performed on the same ``device`` as ``systems`` is stored on.
+        The ``dtype`` of the output tensors will be the same as the input.
+
+        :param types: single or list of 1D tensor of integer representing the
+            particles identity. For atoms, this is typically their atomic numbers.
+        :param positions: single or 2D tensor of shape (len(types), 3) containing the
+            Cartesian positions of all particles in the system.
+        :param cell: single or 2D tensor of shape (3, 3), describing the bounding
+            box/unit cell of the system. Each row should be one of the bounding box
+            vector; and columns should contain the x, y, and z components of these
+            vectors (i.e. the cell should be given in row-major order).
+        :param charges: Optional single or list of 2D tensor of shape (len(types), n),
+        :param neighbor_indices: Optional single or list of 2D tensors of shape (2, n),
+            where n is the number of atoms. The 2 rows correspond to the indices of
+            the two atoms which are considered neighbors (e.g. within a cutoff distance)
+        :param neighbor_shifts: Optional single or list of 2D tensors of shape (3, n),
+             where n is the number of atoms. The 3 rows correspond to the shift indices
+             for periodic images.
+
+        :return: List of torch Tensors containing the potentials for all frames and all
+            atoms. Each tensor in the list is of shape (n_atoms, n_types), where
+            n_types is the number of types in all systems combined. If the input was
+            a single system only a single torch tensor with the potentials is returned.
+
+            IMPORTANT: If multiple types are present, the different "types-channels"
+            are ordered according to atomic number. For example, if a structure contains
+            a water molecule with atoms 0, 1, 2 being of types O, H, H, then for this
+            system, the feature tensor will be of shape (3, 2) = (``n_atoms``,
+            ``n_types``), where ``features[0, 0]`` is the potential at the position of
+            the Oxygen atom (atom 0, first index) generated by the HYDROGEN(!) atoms,
+            while ``features[0,1]`` is the potential at the position of the Oxygen atom
+            generated by the Oxygen atom(s).
+        """
+
+        return self._compute_impl(
+            types=types,
+            positions=positions,
+            cell=cell,
+            charges=charges,
+            neighbor_indices=neighbor_indices,
+            neighbor_shifts=neighbor_shifts,
+        )
+
+    # This function is kept to keep MeshLODE compatible with the broader pytorch
+    # infrastructure, which require a "forward" function. We name this function
+    # "compute" instead, for compatibility with other COSMO software.
+    def forward(
+        self,
+        types: Union[List[torch.Tensor], torch.Tensor],
+        positions: Union[List[torch.Tensor], torch.Tensor],
+        cell: Union[List[torch.Tensor], torch.Tensor],
+        charges: Optional[Union[List[torch.Tensor], torch.Tensor]] = None,
+        neighbor_indices: Union[List[torch.Tensor], torch.Tensor] = None,
+        neighbor_shifts: Union[List[torch.Tensor], torch.Tensor] = None,
+    ) -> Union[torch.Tensor, List[torch.Tensor]]:
+        """Forward just calls :py:meth:`compute`."""
+        return self.compute(
+            types=types,
+            positions=positions,
+            cell=cell,
+            charges=charges,
+            neighbor_indices=neighbor_indices,
+            neighbor_shifts=neighbor_shifts,
+        )
+
+    def _generate_kvectors(self, ns: torch.Tensor, cell: torch.Tensor) -> torch.Tensor:
+        """
+        For a given unit cell, compute all reciprocal space vectors that are used to
+        perform sums in the Fourier transformed space.
+
+        :param ns: torch.tensor of shape ``(3,)``
+            ``ns = [nx, ny, nz]`` contains the number of mesh points in the x-, y- and
+            z-direction, respectively. For faster performance during the Fast Fourier
+            Transform (FFT) it is recommended to use values of nx, ny and nz that are
+            powers of 2.
+        :param cell: torch.tensor of shape ``(3, 3)`` Tensor specifying the real space
+            unit cell of a structure, where cell[i] is the i-th basis vector
+
+        :return: torch.tensor of shape ``(N, 3)`` Contains all reciprocal space vectors
+            that will be used during Ewald summation (or related approaches).
+            ``k_vectors[i]`` contains the i-th vector, where the order has no special
+            significance.
+        """
+        if ns.device != cell.device:
+            raise ValueError(
+                f"`ns` and `cell` are not on the same device, got {ns.device} and "
+                f"{cell.device}."
+            )
+
+        if ns.shape != (3,):
+            raise ValueError(f"ns of shape {list(ns.shape)} should be of shape (3, )")
+
+        if cell.shape != (3, 3):
+            raise ValueError(
+                f"cell of shape {list(cell.shape)} should be of shape (3, 3)"
+            )
+
+        # Define basis vectors of the reciprocal cell
+        reciprocal_cell = 2 * torch.pi * cell.inverse().T
+        bx = reciprocal_cell[0]
+        by = reciprocal_cell[1]
+        bz = reciprocal_cell[2]
+
+        # Generate all reciprocal space vectors
+        nxs_1d = ns[0] * torch.fft.fftfreq(ns[0], device=ns.device)
+        nys_1d = ns[1] * torch.fft.fftfreq(ns[1], device=ns.device)
+        nzs_1d = ns[2] * torch.fft.rfftfreq(ns[2], device=ns.device)  # real FFT
+        nxs, nys, nzs = torch.meshgrid(nxs_1d, nys_1d, nzs_1d, indexing="ij")
+        nxs = nxs.reshape((int(ns[0]), int(ns[1]), len(nzs_1d), 1))
+        nys = nys.reshape((int(ns[0]), int(ns[1]), len(nzs_1d), 1))
+        nzs = nzs.reshape((int(ns[0]), int(ns[1]), len(nzs_1d), 1))
+        k_vectors = nxs * bx + nys * by + nzs * bz
+
+        return k_vectors
+
     def _compute_single_system(
         self,
         positions: torch.Tensor,
+        cell: Union[None, torch.Tensor],
         charges: torch.Tensor,
-        cell: torch.Tensor,
-        neighbor_indices: Optional[torch.Tensor] = None,
-        neighbor_shifts: Optional[torch.Tensor] = None,
+        neighbor_indices: Union[None, torch.Tensor],
+        neighbor_shifts: Union[None, torch.Tensor],
     ) -> torch.Tensor:
         """
         Compute the "electrostatic" potential at the position of all atoms in a
@@ -130,7 +251,7 @@ class MeshEwaldPotential(CalculatorBasePeriodic):
             sr_cutoff = self.sr_cutoff
 
         if self.atomic_smearing is None:
-            smearing = sr_cutoff / 5.0
+            smearing = cutoff_max / 5.0
         else:
             smearing = self.atomic_smearing
 
@@ -209,8 +330,7 @@ class MeshEwaldPotential(CalculatorBasePeriodic):
 
         # Step 2: Perform Fourier space convolution (FSC) to get potential on mesh
         # Step 2.1: Generate k-vectors and evaluate kernel function
-        # kvectors = self._generate_kvectors(ns=ns, cell=cell)
-        kvectors = generate_kvectors_for_mesh(ns=ns, cell=cell)
+        kvectors = self._generate_kvectors(ns=ns, cell=cell)
         knorm_sq = torch.sum(kvectors**2, dim=3)
 
         # Step 2.2: Evaluate kernel function (careful, tensor shapes are different from
@@ -283,8 +403,10 @@ class MeshEwaldPotential(CalculatorBasePeriodic):
         # Compute energy
         potential = torch.zeros_like(charges)
         for i, j, shift in zip(atom_is, atom_js, neighbor_shifts):
-            shift = torch.tensor(shift, dtype=cell.dtype)
-            dist = torch.linalg.norm(positions[j] - positions[i] + shift @ cell)
+            shift = shift.type(cell.dtype)
+            dist = torch.linalg.norm(
+                positions[j] - positions[i] + torch.tensor(shift @ cell)
+            )
 
             # If the contribution from all atoms within the cutoff is to be subtracted
             # this short-range part will simply use -V_LR as the potential

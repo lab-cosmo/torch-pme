@@ -21,7 +21,7 @@ from .. import calculators
 # mypy: disable-error-code="override"
 
 
-class MeshEwaldPotential(calculators.MeshEwaldPotential):
+class MeshEwaldPotential(calculators.PMEPotential):
     """An (atomic) type wise long range potential.
 
     Refer to :class:`meshlode.MeshPotential` for full documentation.
@@ -80,11 +80,13 @@ class MeshEwaldPotential(calculators.MeshEwaldPotential):
         n_ind = len(neighbor_indices)
         if (neighbor_indices is not None) and len(neighbor_indices) != len(systems):
             raise ValueError(
-                f"Need equal numbers of systems ({n_sys}) and neighbor lists ({n_ind})"
+                f"Numbers of systems (= {len(systems)}) needs to match number of "
+                f"neighbor lists (= {len(neighbor_indices)})"
             )
         if (neighbor_shifts is not None) and len(neighbor_shifts) != len(systems):
             raise ValueError(
-                f"Need equal numbers of systems ({n_sys}) and neighbor lists ({n_shif})"
+                f"Numbers of systems (= {len(systems)}) needs to match number of "
+                f"neighbor shifts (= {len(neighbor_shifts)})"
             )
 
         if len(systems) > 1:
@@ -158,10 +160,13 @@ class MeshEwaldPotential(calculators.MeshEwaldPotential):
 
             if neighbor_indices is None or neighbor_shifts is None:
                 # Compute the potentials
+                # TODO: use neighborlist from system if provided.
                 potential = self._compute_single_system(
                     positions=system.positions,
-                    charges=charges,
                     cell=system.cell,
+                    charges=charges,
+                    neighbor_indices=None,
+                    neighbor_shifts=None,
                 )
             else:
                 potential = self._compute_single_system(

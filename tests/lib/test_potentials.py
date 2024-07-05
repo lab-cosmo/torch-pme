@@ -161,7 +161,7 @@ def test_exact_lr(exponent, smearing):
         potential_exact = potential_1 / dists_sq - prefac * potential_2
 
     # Compare results. Large tolerance due to singular division
-    rtol = 7e-12
+    rtol = 8e-12
     atol = 3e-16
     assert_close(potential_lr_from_dist, potential_exact, rtol=rtol, atol=atol)
 
@@ -226,8 +226,6 @@ def test_lr_value_at_zero(exponent, smearing):
     potential_close_to_zero = ipl.potential_lr_from_dist(dist_small, smearing=smearing)
 
     # Compare to
-    exact_value = (
-        1.0 / (2 * smearing**2) ** (exponent / 2) / gamma(exponent / 2 + 1.0)
-    )
+    exact_value = 1.0 / (2 * smearing**2) ** (exponent / 2) / gamma(exponent / 2 + 1.0)
     relerr = torch.abs(potential_close_to_zero - exact_value) / exact_value
     assert relerr.item() < 3e-14

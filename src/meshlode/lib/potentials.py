@@ -7,7 +7,7 @@ from torch.special import gammainc, gammaincc, gammaln
 # since pytorch has implemented the incomplete Gamma functions, but not the much more
 # commonly used (complete) Gamma function, we define it in a custom way to make autograd
 # work as in https://discuss.pytorch.org/t/is-there-a-gamma-function-in-pytorch/17122
-def gamma(x):
+def gamma(x: torch.Tensor):
     return torch.exp(gammaln(x))
 
 
@@ -22,11 +22,11 @@ class InversePowerLawPotential:
        length-scale parameter (called "smearing" in the code)
     3. the Fourier transform of the LR part
 
-    :param exponent: torch.tensor corresponding to the exponent "p" in 1/r^p potentials
+    :param exponent: the exponent "p" in 1/r^p potentials
     """
 
-    def __init__(self, exponent: torch.Tensor):
-        self.exponent = exponent
+    def __init__(self, exponent: float):
+        self.exponent = torch.tensor(exponent)
 
     def potential_from_dist(self, dist: torch.Tensor) -> torch.Tensor:
         """
@@ -121,9 +121,7 @@ class InversePowerLawPotential:
             smearing parameter corresponds to the "width" of the Gaussian.
         """
         peff = (3 - self.exponent) / 2
-        prefac = (
-            (math.pi) ** 1.5 / gamma(self.exponent / 2) * (2 * smearing**2) ** peff
-        )
+        prefac = (math.pi) ** 1.5 / gamma(self.exponent / 2) * (2 * smearing**2) ** peff
         x = 0.5 * smearing**2 * k_sq
         fourier = prefac * gammaincc(peff, x) / x**peff * gamma(peff)
 

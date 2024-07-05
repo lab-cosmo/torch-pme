@@ -122,10 +122,17 @@ class TestMadelung:
         mesh_spacing = atomic_smearing / 2 * scaling_factor
         smearing_eff = atomic_smearing * scaling_factor
         MP = meshlode_metatensor.MeshPotential(
-            smearing_eff, mesh_spacing, interpolation_order, subtract_self=True
+            atomic_smearing=smearing_eff,
+            mesh_spacing=mesh_spacing,
+            interpolation_order=interpolation_order,
+            subtract_self=True,
         )
         potentials_mesh = MP._compute_single_system(
-            positions=positions, charges=charges, cell=cell
+            positions=positions,
+            charges=charges,
+            cell=cell,
+            neighbor_indices=None,
+            neighbor_shifts=None,
         )
         energies = potentials_mesh * charges
         energies_target = -torch.ones_like(energies) * madelung
@@ -158,10 +165,17 @@ class TestMadelung:
         mesh_spacing = atomic_smearing / 10 * scaling_factor
         smearing_eff = atomic_smearing * scaling_factor
         MP = meshlode_metatensor.MeshPotential(
-            smearing_eff, mesh_spacing, interpolation_order, subtract_self=True
+            atomic_smearing=smearing_eff,
+            mesh_spacing=mesh_spacing,
+            interpolation_order=interpolation_order,
+            subtract_self=True,
         )
         potentials_mesh = MP._compute_single_system(
-            positions=positions, charges=charges, cell=cell
+            positions=positions,
+            charges=charges,
+            cell=cell,
+            neighbor_indices=None,
+            neighbor_shifts=None,
         )
         energies = potentials_mesh * charges
         energies_target = -torch.ones_like(energies) * madelung
