@@ -14,9 +14,6 @@ from meshlode import EwaldPotential, PMEPotential
 def generate_orthogonal_transformations():
     dtype = torch.float64
 
-    # first rotation matrix: identity
-    rot_1 = torch.eye(3, dtype=dtype)
-
     # second rotation matrix: rotation by angle phi around z-axis
     phi = 0.82321
     rot_2 = torch.zeros((3, 3), dtype=dtype)

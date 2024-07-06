@@ -212,4 +212,3 @@ class PMEPotential(calculators.PMEPotential):
         labels_keys = Labels(key_names, key_values)
 
         return TensorMap(keys=labels_keys, blocks=blocks)
-

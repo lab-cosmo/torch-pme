@@ -226,8 +226,6 @@ def test_lr_value_at_zero(exponent, smearing):
     potential_close_to_zero = ipl.potential_lr_from_dist(dist_small, smearing=smearing)
 
     # Compare to
-    exact_value = (
-        1.0 / (2 * smearing**2) ** (exponent / 2) / gamma(exponent / 2 + 1.0)
-    )
+    exact_value = 1.0 / (2 * smearing**2) ** (exponent / 2) / gamma(exponent / 2 + 1.0)
     relerr = torch.abs(potential_close_to_zero - exact_value) / exact_value
     assert relerr.item() < 3e-14

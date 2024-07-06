@@ -206,4 +206,3 @@ class MeshPotential(CalculatorBase):
             interpolated_potential -= charges * self_contrib
 
         return interpolated_potential
-

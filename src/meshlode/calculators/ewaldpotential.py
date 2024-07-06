@@ -2,10 +2,6 @@ from typing import List, Optional, Union
 
 import torch
 
-# extra imports for neighbor list
-from ase import Atoms
-from ase.neighborlist import neighbor_list
-
 from ..lib import generate_kvectors_squeezed
 from .base import CalculatorBase
 

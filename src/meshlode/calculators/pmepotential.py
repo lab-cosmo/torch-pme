@@ -2,13 +2,8 @@ from typing import List, Optional, Union
 
 import torch
 
-# extra imports for neighbor list
-from ase import Atoms
-from ase.neighborlist import neighbor_list
-
-from meshlode.lib.mesh_interpolator import MeshInterpolator
-
 from ..lib import generate_kvectors_for_mesh
+from ..lib.mesh_interpolator import MeshInterpolator
 from .base import CalculatorBase
 
 
