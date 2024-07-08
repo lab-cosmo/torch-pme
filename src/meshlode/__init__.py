@@ -8,5 +8,5 @@ except ImportError:
     pass
 
 
-__all__ = ["MeshPotential", "EwaldPotential", "DirectPotential", "PMEPotential"]
+__all__ = ["EwaldPotential", "DirectPotential", "PMEPotential"]
 __version__ = "0.0.0-dev"

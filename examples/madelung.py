@@ -2,8 +2,8 @@
 Compute Madelung Constants
 ==========================
 In this tutorial we show how to calculate the Madelung constants and total electrostatic
-energy of atomic structures using the :py:class:`meshlode.MeshPotential` and
-:py:class:`meshlode.metatensor.MeshPotential` calculator.
+energy of atomic structures using the :py:class:`meshlode.PMEPotential` and
+:py:class:`meshlode.metatensor.PMEPotential` calculator.
 """
 
 # %%
@@ -17,7 +17,7 @@ import meshlode
 
 # %%
 # Define simple example structure having the CsCl structure and compute the reference
-# values. MeshPotential by default outputs the types sorted according to the atomic
+# values. PMEPotential by default outputs the types sorted according to the atomic
 # number. Thus, we input the compound "CsCl" and "ClCs" since Cl and Cs have atomic
 # numbers 17 and 55, respectively.
 types = torch.tensor([17, 55])  # Cl and Cs
@@ -44,7 +44,7 @@ interpolation_order = 2
 # ------------------------------
 # Compute features using
 
-MP = meshlode.MeshPotential(
+MP = meshlode.PMEPotential(
     atomic_smearing=atomic_smearing,
     mesh_spacing=mesh_spacing,
     interpolation_order=interpolation_order,
@@ -92,7 +92,7 @@ print(f"Total energy = {total_energy_torch:.3f}\n")
 
 system = System(types=types, positions=positions, cell=cell)
 
-MP = meshlode.metatensor.MeshPotential(
+MP = meshlode.metatensor.PMEPotential(
     atomic_smearing=atomic_smearing,
     mesh_spacing=mesh_spacing,
     interpolation_order=interpolation_order,

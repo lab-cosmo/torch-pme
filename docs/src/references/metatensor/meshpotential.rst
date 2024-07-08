@@ -1,6 +1,6 @@
-MeshPotential
-#############
+PMEPotential
+############
 
-.. autoclass:: meshlode.metatensor.MeshPotential
+.. autoclass:: meshlode.metatensor.PMEPotential
     :members:
     :undoc-members:

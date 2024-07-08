@@ -1,4 +1,4 @@
-from typing import Dict, List, Union
+from typing import Dict, List, Optional, Union
 
 import torch
 
@@ -12,24 +12,24 @@ except ImportError:
         "Try installing it with:\npip install metatensor[torch]"
     )
 
-
-from .. import calculators
+from ..calculators.base import CalculatorBase, _1d_tolist
+from ..calculators.directpotential import _DirectPotentialImpl
+from ..calculators.ewaldpotential import _EwaldPotentialImpl
+from ..calculators.pmepotential import _PMEPotentialImpl
 
 
 # We are breaking the Liskov substitution principle here by changing the signature of
-# "compute" compated to the supertype of "MeshPotential".
+# "compute" method to the supertype of metatansor class.
 # mypy: disable-error-code="override"
 
 
-class PMEPotential(calculators.PMEPotential):
-    """Specie-wise long-range potential using a particle mesh-based Ewald (PME).
-
-    Refer to :class:`meshlode.MeshPotential` for full documentation.
-    """
+class CalculatorBaseMetatensor(CalculatorBase):
+    def __init__(self, exponent: float):
+        super().__init__(exponent)
 
     def forward(self, systems: Union[List[System], System]) -> TensorMap:
-        """forward just calls :py:meth:`compute()`"""
-        return self.compute(systems=systems)
+        """Forward just calls :py:meth:`compute`."""
+        return self.compute(systems)
 
     def compute(self, systems: Union[List[System], System]) -> TensorMap:
         """Compute potential for all provided ``systems``.
@@ -40,7 +40,7 @@ class PMEPotential(calculators.PMEPotential):
         ``systems``. If no "explicit" charges are set the potential will be calculated
         for each "types-channels".
 
-        Refer to :meth:`meshlode.MeshPotential.compute()` for additional details on how
+        Refer to :meth:`meshlode.PMEPotential.compute()` for additional details on how
         "charges-channel" and "types-channels" are computed.
 
         :param systems: single System or list of
@@ -69,65 +69,46 @@ class PMEPotential(calculators.PMEPotential):
                     f"{system.device} and {systems[0].device}`"
                 )
 
-        dtype = systems[0].positions.dtype
         device = systems[0].positions.device
 
-        requested_types = self._get_requested_types(
-            [system.types for system in systems]
-        )
-        n_types = len(requested_types)
+        all_atomic_types = torch.hstack([system.types for system in systems])
+        atomic_types = _1d_tolist(torch.unique(all_atomic_types))
+        n_types = len(atomic_types)
 
         has_charges = torch.tensor(["charges" in s.known_data() for s in systems])
-        all_charges = torch.all(has_charges)
-        any_charges = torch.any(has_charges)
 
-        if any_charges and not all_charges:
+        if not torch.all(has_charges):
             raise ValueError("`systems` do not consistently contain `charges` data")
-        if all_charges:
-            use_explicit_charges = True
-            n_charges_channels = systems[0].get_data("charges").values.shape[1]
-            spec_channels = list(range(n_charges_channels))
-            key_names = ["center_type", "charges_channel"]
 
-            for i_system, system in enumerate(systems):
-                n_channels = system.get_data("charges").values.shape[1]
-                if n_channels != n_charges_channels:
-                    raise ValueError(
-                        f"number of charges-channels in system index {i_system} "
-                        f"({n_channels}) is inconsistent with first system "
-                        f"({n_charges_channels})"
-                    )
-        else:
-            # Use one hot encoded type channel per species for charges channel
-            use_explicit_charges = False
-            n_charges_channels = n_types
-            spec_channels = requested_types
-            key_names = ["center_type", "neighbor_type"]
+        n_charges_channels = systems[0].get_data("charges").values.shape[1]
+        spec_channels = list(range(n_charges_channels))
+        key_names = ["center_type", "charges_channel"]
+
+        for i_system, system in enumerate(systems):
+            n_channels = system.get_data("charges").values.shape[1]
+            if n_channels != n_charges_channels:
+                raise ValueError(
+                    f"number of charges-channels in system index {i_system} "
+                    f"({n_channels}) is inconsistent with first system "
+                    f"({n_charges_channels})"
+                )
 
         # Initialize dictionary for TensorBlock storage.
         #
-        # If `use_explicit_charges=False`, the blocks are sorted according to the
-        # (integer) center_type and neighbor_type. Blocks are assigned the array indices
-        # 0, 1, 2,... Example: for H2O: `H` is mapped to `0` and `O` is mapped to `1`.
-        #
-        # For `use_explicit_charges=True` the blocks are stored according to the
-        # center_type and charge_channel
+        # blocks are stored according to the `center_type` and `charge_channel`
         n_blocks = n_types * n_charges_channels
         feat_dic: Dict[int, List[torch.Tensor]] = {a: [] for a in range(n_blocks)}
 
         for system in systems:
-            if use_explicit_charges:
-                charges = system.get_data("charges").values
-            else:
-                # One-hot encoding of charge information
-                charges = self._one_hot_charges(
-                    system.types, requested_types, dtype, device
-                )
+            charges = system.get_data("charges").values
 
             # try to extract neighbor list from system object
             neighbor_indices = None
             for neighbor_list_options in system.known_neighbor_lists():
-                if neighbor_list_options.cutoff == self.sr_cutoff:
+                if (
+                    hasattr(self, "sr_cutoff")
+                    and neighbor_list_options.cutoff == self.sr_cutoff
+                ):
                     neighbor_list = system.get_neighbor_list(neighbor_list_options)
 
                     neighbor_indices = neighbor_list.samples.values[:, :2]
@@ -153,7 +134,7 @@ class PMEPotential(calculators.PMEPotential):
                 )
 
             # Reorder data into metatensor format
-            for spec_center, at_num_center in enumerate(requested_types):
+            for spec_center, at_num_center in enumerate(atomic_types):
                 for spec_channel in range(len(spec_channels)):
                     a_pair = spec_center * n_charges_channels + spec_channel
                     feat_dic[a_pair] += [
@@ -164,7 +145,7 @@ class PMEPotential(calculators.PMEPotential):
         # of center_type and neighbor_type/charge_channel
         blocks: List[TensorBlock] = []
         for keys, values in feat_dic.items():
-            spec_center = requested_types[keys // n_charges_channels]
+            spec_center = atomic_types[keys // n_charges_channels]
 
             # Generate the Labels objects for the samples and properties of the
             # TensorBlock.
@@ -202,7 +183,7 @@ class PMEPotential(calculators.PMEPotential):
 
         # Generate TensorMap from TensorBlocks by defining suitable keys
         key_values: List[torch.Tensor] = []
-        for spec_center in requested_types:
+        for spec_center in atomic_types:
             for spec_channel in spec_channels:
                 key_values.append(
                     torch.tensor([spec_center, spec_channel], device=device)
@@ -212,3 +193,70 @@ class PMEPotential(calculators.PMEPotential):
         labels_keys = Labels(key_names, key_values)
 
         return TensorMap(keys=labels_keys, blocks=blocks)
+
+
+class DirectPotential(CalculatorBaseMetatensor, _DirectPotentialImpl):
+    """Specie-wise long-range potential using a direct summation over all atoms.
+
+    Refer to :class:`meshlode.DirectPotential` for full documentation.
+    """
+
+    def __init__(self, exponent: float = 1.0):
+        self._DirectPotentialImpl.__init__(self, exponent=exponent)
+        CalculatorBaseMetatensor.__init__(self, exponent=exponent)
+
+
+class EwaldPotential(CalculatorBaseMetatensor, _EwaldPotentialImpl):
+    """Specie-wise long-range potential computed using the Ewald sum.
+
+    Refer to :class:`meshlode.EwaldPotential` for full documentation.
+    """
+
+    def __init__(
+        self,
+        exponent: float = 1.0,
+        sr_cutoff: Optional[torch.Tensor] = None,
+        atomic_smearing: Optional[float] = None,
+        lr_wavelength: Optional[float] = None,
+        subtract_self: Optional[bool] = True,
+        subtract_interior: Optional[bool] = False,
+    ):
+        _EwaldPotentialImpl.__init__(
+            self,
+            exponent=exponent,
+            sr_cutoff=sr_cutoff,
+            atomic_smearing=atomic_smearing,
+            lr_wavelength=lr_wavelength,
+            subtract_self=subtract_self,
+            subtract_interior=subtract_interior,
+        )
+        CalculatorBaseMetatensor.__init__(self, exponent=exponent)
+
+
+class PMEPotential(CalculatorBaseMetatensor, _PMEPotentialImpl):
+    """Specie-wise long-range potential using a particle mesh-based Ewald (PME).
+
+    Refer to :class:`meshlode.PMEPotential` for full documentation.
+    """
+
+    def __init__(
+        self,
+        exponent: float = 1.0,
+        sr_cutoff: Optional[torch.Tensor] = None,
+        atomic_smearing: Optional[float] = None,
+        mesh_spacing: Optional[float] = None,
+        interpolation_order: Optional[int] = 3,
+        subtract_self: Optional[bool] = True,
+        subtract_interior: Optional[bool] = False,
+    ):
+        _PMEPotentialImpl.__init__(
+            self,
+            exponent=exponent,
+            sr_cutoff=sr_cutoff,
+            atomic_smearing=atomic_smearing,
+            mesh_spacing=mesh_spacing,
+            interpolation_order=interpolation_order,
+            subtract_self=subtract_self,
+            subtract_interior=subtract_interior,
+        )
+        CalculatorBaseMetatensor.__init__(self, exponent=exponent)

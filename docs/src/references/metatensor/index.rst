@@ -15,5 +15,6 @@ For a plain :py:class:`torch.Tensor` refer to :ref:`calculators`.
 
 .. toctree::
    :maxdepth: 1
+   :glob:
 
-   meshpotential
+   ./*

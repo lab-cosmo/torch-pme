@@ -408,11 +408,11 @@ def test_random_structure(sr_cutoff, frame_index, scaling_factor, ortho, calc_na
     frame = read(os.path.join(struc_path, "coulomb_test_frames.xyz"), frame_index)
 
     # Energies in Gaussian units (without e²/[4 π ɛ_0] prefactor)
-    energy_target = torch.tensor(frame.info["energy"], dtype=dtype) / scaling_factor
-    # Forces in Gaussian units per Å
-    forces_target = (
-        torch.tensor(frame.arrays["forces"], dtype=dtype) / scaling_factor**2
+    energy_target = (
+        torch.tensor(frame.get_potential_energy(), dtype=dtype) / scaling_factor
     )
+    # Forces in Gaussian units per Å
+    forces_target = torch.tensor(frame.get_forces(), dtype=dtype) / scaling_factor**2
 
     # Convert into input format suitable for MeshLODE
     positions = scaling_factor * (torch.tensor(frame.positions, dtype=dtype) @ ortho)

@@ -22,7 +22,7 @@ import meshlode
 
 # %%
 # Define simple example structure having the CsCl structure and compute the reference
-# values. MeshPotential by default outputs the types sorted according to the atomic
+# values. PMEPotential by default outputs the types sorted according to the atomic
 # number. Thus, we input the compound "CsCl" and "ClCs" since Cl and Cs have atomic
 # numbers 17 and 55, respectively.
 

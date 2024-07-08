@@ -1,10 +1,10 @@
 import pytest
 import torch
 
-from meshlode.calculators.base import CalculatorBase
+from meshlode.calculators.base import CalculatorBaseTorch
 
 
-class TestCalculator(CalculatorBase):
+class TestCalculator(CalculatorBaseTorch):
     def compute(
         self, types, positions, cell, charges, neighbor_indices, neighbor_shifts
     ):
