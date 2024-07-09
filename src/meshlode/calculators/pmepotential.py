@@ -252,7 +252,6 @@ class PMEPotential(CalculatorBaseTorch, _PMEPotentialImpl):
 
     def __init__(
         self,
-        all_types: Optional[List[int]] = None,
         exponent: float = 1.0,
         sr_cutoff: Optional[torch.Tensor] = None,
         atomic_smearing: Optional[float] = None,
@@ -271,11 +270,10 @@ class PMEPotential(CalculatorBaseTorch, _PMEPotentialImpl):
             subtract_self=subtract_self,
             subtract_interior=subtract_interior,
         )
-        CalculatorBaseTorch.__init__(self, all_types=all_types, exponent=exponent)
+        CalculatorBaseTorch.__init__(self, exponent=exponent)
 
     def compute(
         self,
-        types: Union[List[torch.Tensor], torch.Tensor],
         positions: Union[List[torch.Tensor], torch.Tensor],
         cell: Union[List[torch.Tensor], torch.Tensor],
         charges: Optional[Union[List[torch.Tensor], torch.Tensor]] = None,
@@ -287,8 +285,6 @@ class PMEPotential(CalculatorBaseTorch, _PMEPotentialImpl):
         The computation is performed on the same ``device`` as ``systems`` is stored on.
         The ``dtype`` of the output tensors will be the same as the input.
 
-        :param types: single or list of 1D tensor of integer representing the
-            particles identity. For atoms, this is typically their atomic numbers.
         :param positions: single or 2D tensor of shape (len(types), 3) containing the
             Cartesian positions of all particles in the system.
         :param cell: single or 2D tensor of shape (3, 3), describing the bounding
@@ -319,7 +315,6 @@ class PMEPotential(CalculatorBaseTorch, _PMEPotentialImpl):
         """
 
         return self._compute_impl(
-            types=types,
             positions=positions,
             cell=cell,
             charges=charges,
@@ -329,7 +324,6 @@ class PMEPotential(CalculatorBaseTorch, _PMEPotentialImpl):
 
     def forward(
         self,
-        types: Union[List[torch.Tensor], torch.Tensor],
         positions: Union[List[torch.Tensor], torch.Tensor],
         cell: Union[List[torch.Tensor], torch.Tensor],
         charges: Optional[Union[List[torch.Tensor], torch.Tensor]] = None,
@@ -338,7 +332,6 @@ class PMEPotential(CalculatorBaseTorch, _PMEPotentialImpl):
     ) -> Union[torch.Tensor, List[torch.Tensor]]:
         """Forward just calls :py:meth:`compute`."""
         return self.compute(
-            types=types,
             positions=positions,
             cell=cell,
             charges=charges,

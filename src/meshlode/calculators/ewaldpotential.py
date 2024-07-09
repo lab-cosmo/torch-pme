@@ -207,7 +207,7 @@ class _EwaldPotentialImpl:
         # TODO: modify to expression for general p
         if subtract_self:
             self_contrib = (
-                torch.sqrt(torch.tensor(2.0 / torch.pi, device=cell.device)) / smearing
+                torch.sqrt(torch.tensor(2.0 / torch.pi, device=self.device)) / smearing
             )
             energy -= charges * self_contrib
 
@@ -220,11 +220,6 @@ class EwaldPotential(CalculatorBaseTorch, _EwaldPotentialImpl):
     Scaling as :math:`\mathcal{O}(N^2)` with respect to the number of particles
     :math:`N`.
 
-    :param all_types: Optional global list of all atomic types that should be considered
-        for the computation. This option might be useful when running the calculation on
-        subset of a whole dataset and it required to keep the shape of the output
-        consistent. If this is not set the possible atomic types will be determined when
-        calling the :meth:`compute()`.
     :param exponent: the exponent "p" in 1/r^p potentials
     :param sr_cutoff: Cutoff radius used for the short-range part of the Ewald sum. If
         not set to a global value, it will be set to be half of the shortest lattice
@@ -268,7 +263,6 @@ class EwaldPotential(CalculatorBaseTorch, _EwaldPotentialImpl):
 
     def __init__(
         self,
-        all_types: Optional[List[int]] = None,
         exponent: float = 1.0,
         sr_cutoff: Optional[torch.Tensor] = None,
         atomic_smearing: Optional[float] = None,
@@ -285,11 +279,10 @@ class EwaldPotential(CalculatorBaseTorch, _EwaldPotentialImpl):
             subtract_self=subtract_self,
             subtract_interior=subtract_interior,
         )
-        CalculatorBaseTorch.__init__(self, all_types=all_types, exponent=exponent)
+        CalculatorBaseTorch.__init__(self, exponent=exponent)
 
     def compute(
         self,
-        types: Union[List[torch.Tensor], torch.Tensor],
         positions: Union[List[torch.Tensor], torch.Tensor],
         cell: Union[List[torch.Tensor], torch.Tensor],
         charges: Optional[Union[List[torch.Tensor], torch.Tensor]] = None,
@@ -301,8 +294,6 @@ class EwaldPotential(CalculatorBaseTorch, _EwaldPotentialImpl):
         The computation is performed on the same ``device`` as ``systems`` is stored on.
         The ``dtype`` of the output tensors will be the same as the input.
 
-        :param types: single or list of 1D tensor of integer representing the
-            particles identity. For atoms, this is typically their atomic numbers.
         :param positions: single or 2D tensor of shape (len(types), 3) containing the
             Cartesian positions of all particles in the system.
         :param cell: single or 2D tensor of shape (3, 3), describing the bounding
@@ -333,7 +324,6 @@ class EwaldPotential(CalculatorBaseTorch, _EwaldPotentialImpl):
         """
 
         return self._compute_impl(
-            types=types,
             positions=positions,
             cell=cell,
             charges=charges,
@@ -346,7 +336,6 @@ class EwaldPotential(CalculatorBaseTorch, _EwaldPotentialImpl):
     # "compute" instead, for compatibility with other COSMO software.
     def forward(
         self,
-        types: Union[List[torch.Tensor], torch.Tensor],
         positions: Union[List[torch.Tensor], torch.Tensor],
         cell: Union[List[torch.Tensor], torch.Tensor],
         charges: Optional[Union[List[torch.Tensor], torch.Tensor]] = None,
@@ -355,7 +344,6 @@ class EwaldPotential(CalculatorBaseTorch, _EwaldPotentialImpl):
     ) -> Union[torch.Tensor, List[torch.Tensor]]:
         """Forward just calls :py:meth:`compute`."""
         return self.compute(
-            types=types,
             positions=positions,
             cell=cell,
             charges=charges,

@@ -12,10 +12,19 @@ except ImportError:
         "Try installing it with:\npip install metatensor[torch]"
     )
 
-from ..calculators.base import CalculatorBase, _1d_tolist
+
+from ..calculators.base import CalculatorBase
 from ..calculators.directpotential import _DirectPotentialImpl
 from ..calculators.ewaldpotential import _EwaldPotentialImpl
 from ..calculators.pmepotential import _PMEPotentialImpl
+
+@torch.jit.script
+def _1d_tolist(x: torch.Tensor) -> List[int]:
+    """Auxilary function to convert 1d torch tensor to list of integers."""
+    result: List[int] = []
+    for i in x:
+        result.append(i.item())
+    return result
 
 
 # We are breaking the Liskov substitution principle here by changing the signature of

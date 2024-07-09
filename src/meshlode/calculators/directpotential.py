@@ -60,13 +60,12 @@ class DirectPotential(CalculatorBaseTorch, _DirectPotentialImpl):
     :param exponent: the exponent "p" in 1/r^p potentials
     """
 
-    def __init__(self, all_types: Optional[List[int]] = None, exponent: float = 1.0):
+    def __init__(self, exponent: float = 1.0):
         _DirectPotentialImpl.__init__(self, exponent=exponent)
-        CalculatorBaseTorch.__init__(self, all_types=all_types, exponent=exponent)
+        CalculatorBaseTorch.__init__(self, exponent=exponent)
 
     def compute(
         self,
-        types: Union[List[torch.Tensor], torch.Tensor],
         positions: Union[List[torch.Tensor], torch.Tensor],
         charges: Optional[Union[List[torch.Tensor], torch.Tensor]] = None,
     ) -> Union[torch.Tensor, List[torch.Tensor]]:
@@ -75,8 +74,6 @@ class DirectPotential(CalculatorBaseTorch, _DirectPotentialImpl):
         The computation is performed on the same ``device`` as ``systems`` is stored on.
         The ``dtype`` of the output tensors will be the same as the input.
 
-        :param types: single or list of 1D tensor of integer representing the
-            particles identity. For atoms, this is typically their atomic numbers.
         :param positions: single or 2D tensor of shape (len(types), 3) containing the
             Cartesian positions of all particles in the system.
         :param charges: Optional single or list of 2D tensor of shape (len(types), n),
@@ -97,7 +94,6 @@ class DirectPotential(CalculatorBaseTorch, _DirectPotentialImpl):
         """
 
         return self._compute_impl(
-            types=types,
             positions=positions,
             cell=None,
             charges=charges,
@@ -110,13 +106,11 @@ class DirectPotential(CalculatorBaseTorch, _DirectPotentialImpl):
     # "compute" instead, for compatibility with other COSMO software.
     def forward(
         self,
-        types: Union[List[torch.Tensor], torch.Tensor],
         positions: Union[List[torch.Tensor], torch.Tensor],
         charges: Optional[Union[List[torch.Tensor], torch.Tensor]] = None,
     ) -> Union[torch.Tensor, List[torch.Tensor]]:
         """Forward just calls :py:meth:`compute`."""
         return self.compute(
-            types=types,
             positions=positions,
             charges=charges,
         )

@@ -99,6 +99,8 @@ def define_molecule(molecule_name="dimer"):
         charges *= -1.0
         potentials *= -1.0
 
+    charges = charges.reshape((-1, 1))
+    potentials = potentials.reshape((-1, 1))
     return types, positions, charges, potentials
 
 
@@ -163,7 +165,7 @@ def test_coulomb_exact(
     molecule_name = molecule + molecule_charge
     types, positions, charges, ref_potentials = define_molecule(molecule_name)
     positions = scaling_factor * (positions @ orthogonal_transformation)
-    potentials = DP.compute(types, positions, charges=charges)
+    potentials = DP.compute(positions, charges=charges)
     ref_potentials /= scaling_factor
 
     torch.testing.assert_close(potentials, ref_potentials, atol=2e-15, rtol=1e-14)

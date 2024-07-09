@@ -7,28 +7,15 @@ from ase.neighborlist import neighbor_list
 from meshlode.lib import InversePowerLawPotential
 
 
-@torch.jit.script
-def _1d_tolist(x: torch.Tensor) -> List[int]:
-    """Auxilary function to convert 1d torch tensor to list of integers."""
-    result: List[int] = []
-    for i in x:
-        result.append(i.item())
-    return result
-
-
-@torch.jit.script
-def _is_subset(subset_candidate: List[int], superset: List[int]) -> bool:
-    """Checks whether all elements of `subset_candidate` are part of `superset`."""
-    for element in subset_candidate:
-        if element not in superset:
-            return False
-    return True
-
-
 class CalculatorBase(torch.nn.Module):
     """Base class providing general funtionality."""
 
-    def __init__(self, exponent):
+    def __init__(
+        self,
+        exponent: float,
+    ):
+        # Attach the function handling all computations related to the
+        # power-law potential for later convenience
         self.exponent = exponent
         self.potential = InversePowerLawPotential(exponent=exponent)
 
@@ -113,252 +100,227 @@ class CalculatorBaseTorch(CalculatorBase):
     """
     Base calculator for the torch interface to MeshLODE.
 
-    :param all_types: Optional global list of all atomic types that should be considered
-        for the computation. This option might be useful when running the calculation on
-        subset of a whole dataset and it required to keep the shape of the output
-        consistent. If this is not set the possible atomic types will be determined when
-        calling the :meth:`compute()`.
     :param exponent: the exponent "p" in 1/r^p potentials
     """
 
-    def __init__(self, all_types: Union[None, List[int]], exponent: float):
-        super().__init__(exponent)
-
-        if all_types is None:
-            self.all_types = None
-        else:
-            self.all_types = _1d_tolist(torch.unique(torch.tensor(all_types)))
-
-    def _get_requested_types(self, types: List[torch.Tensor]) -> List[int]:
-        """Extract a list of all unique and present types from the list of types."""
-        all_types = torch.hstack(types)
-        types_requested = _1d_tolist(torch.unique(all_types))
-
-        if self.all_types is not None:
-            if not _is_subset(types_requested, self.all_types):
-                raise ValueError(
-                    f"Global list of types {self.all_types} does not contain all "
-                    f"types for the provided systems {types_requested}."
-                )
-            return self.all_types
-        else:
-            return types_requested
-
-    def _one_hot_charges(
+    def __init__(
         self,
-        types: torch.Tensor,
-        requested_types: List[int],
-        dtype: Optional[torch.dtype] = None,
-        device: Optional[torch.device] = None,
-    ) -> torch.Tensor:
-        n_types = len(requested_types)
-        one_hot_charges = torch.zeros((len(types), n_types), dtype=dtype, device=device)
-
-        for i_type, atomic_type in enumerate(requested_types):
-            one_hot_charges[types == atomic_type, i_type] = 1.0
-
-        return one_hot_charges
+        exponent: float,
+    ):
+        super().__init__(exponent=exponent)
 
     def _validate_compute_parameters(
         self,
-        types: Union[List[torch.Tensor], torch.Tensor],
         positions: Union[List[torch.Tensor], torch.Tensor],
         cell: Union[None, List[torch.Tensor], torch.Tensor],
-        charges: Union[None, List[torch.Tensor], torch.Tensor],
+        charges: Union[List[torch.Tensor], torch.Tensor],
         neighbor_indices: Union[None, List[torch.Tensor], torch.Tensor],
         neighbor_shifts: Union[None, List[torch.Tensor], torch.Tensor],
     ) -> Tuple[
-        List[torch.Tensor],
         List[torch.Tensor],
         Union[List[None], List[torch.Tensor]],
         List[torch.Tensor],
         Union[List[None], List[torch.Tensor]],
         Union[List[None], List[torch.Tensor]],
     ]:
-        # validate types and positions
-        if not isinstance(types, list):
-            types = [types]
+        # make sure that the provided positions are a list
         if not isinstance(positions, list):
             positions = [positions]
 
-        if len(types) != len(positions):
-            raise ValueError(
-                f"Got inconsistent lengths of types ({len(types)}) "
-                f"positions ({len(positions)})"
-            )
+        # In actual computations, the data type (dtype) and device (e.g. CPU, GPU) of
+        # all remaining variables need to be consistent
+        self.device = positions[0].device
+        self.dtype = positions[0].dtype
 
+        # make sure that provided cells are a list of same length as positions
         if cell is None:
-            cell = len(types) * [None]
+            cell = len(positions) * [None]
         elif not isinstance(cell, list):
             cell = [cell]
 
-        if len(types) != len(cell):
+        if len(positions) != len(cell):
             raise ValueError(
-                f"Got inconsistent lengths of types ({len(types)}) and "
+                f"Got inconsistent numbers of positions ({len(positions)}) and "
                 f"cell ({len(cell)})"
             )
 
+        # make sure that provided charges are a list of same length as positions
+        if not isinstance(charges, list):
+            charges = [charges]
+
+        if len(positions) != len(charges):
+            raise ValueError(
+                f"Got inconsistent numbers of positions ({len(positions)}) and "
+                f"charges ({len(charges)})"
+            )
+
+        # check neighbor_indices
         if neighbor_indices is None:
-            neighbor_indices = len(types) * [None]
+            neighbor_indices = len(positions) * [None]
         elif not isinstance(neighbor_indices, list):
             neighbor_indices = [neighbor_indices]
 
-        if len(types) != len(neighbor_indices):
+        if len(positions) != len(neighbor_indices):
             raise ValueError(
-                f"Got inconsistent lengths of types ({len(types)}) and "
+                f"Got inconsistent numbers of positions ({len(positions)}) and "
                 f"neighbor_indices ({len(neighbor_indices)})"
             )
 
+        # check neighbor_shifts
         if neighbor_shifts is None:
-            neighbor_shifts = len(types) * [None]
+            neighbor_shifts = len(positions) * [None]
         elif not isinstance(neighbor_shifts, list):
             neighbor_shifts = [neighbor_shifts]
 
-        if len(types) != len(neighbor_shifts):
+        if len(positions) != len(neighbor_shifts):
             raise ValueError(
-                f"Got inconsistent lengths of types ({len(types)}) and "
-                f"neighbor_indices ({len(neighbor_shifts)})"
+                f"Got inconsistent numbers of positions ({len(positions)}) and "
+                f"neighbor_shifts ({len(neighbor_shifts)})"
             )
 
-        # Check that all inputs are consistent. We don't require and test that all
-        # dtypes and devices are consistent if a list of inputs. Each single "frame" is
-        # processed independently.
+        # check that all devices and data types (dtypes) are consistent
         for (
-            types_single,
             positions_single,
             cell_single,
+            charges_single,
             neighbor_indices_single,
             neighbor_shifts_single,
-        ) in zip(types, positions, cell, neighbor_indices, neighbor_shifts):
-            if len(types_single.shape) != 1:
+        ) in zip(positions, cell, charges, neighbor_indices, neighbor_shifts):
+            # check shape, dtype and device of positions
+            num_atoms = len(positions_single)
+            if list(positions_single.shape) != [num_atoms, 3]:
                 raise ValueError(
-                    "each `types` must be a 1 dimensional tensor, got at least "
-                    f"one tensor with {len(types_single.shape)} dimensions"
+                    "each `positions` must be a (n_atoms x 3) tensor, got at least "
+                    f"one tensor with shape {tuple(positions_single.shape)}"
                 )
 
-            if positions_single.shape != (len(types_single), 3):
+            if positions_single.dtype != self.dtype:
                 raise ValueError(
-                    "each `positions` must be a (n_types x 3) tensor, got at least "
-                    f"one tensor with shape {list(positions_single.shape)}"
+                    f"each `positions` must have the same type {self.dtype} as the "
+                    "first provided one. Got at least one tensor of type "
+                    f"{positions_single.dtype}"
                 )
 
-            if types_single.device != positions_single.device:
+            if positions_single.device != self.device:
                 raise ValueError(
-                    f"Inconsistent devices of types ({types_single.device}) and "
-                    f"positions ({positions_single.device})"
+                    f"each `positions` must be on the same device {self.device} as the "
+                    "first provided one. Got at least one tensor on device "
+                    f"{positions_single.device}"
                 )
 
+            # check shape, dtype and device of cell
             if cell_single is not None:
-                if cell_single.shape != (3, 3):
+                if list(cell_single.shape) != [3, 3]:
                     raise ValueError(
-                        "each `cell` must be a (3 x 3) tensor, got at least "
-                        f"one tensor with shape {list(cell_single.shape)}"
+                        f"each `cell` must be a (3 x 3) tensor, got at least one tensor "
+                        f"with shape {tuple(cell_single.shape)}"
                     )
 
-                if cell_single.dtype != positions_single.dtype:
+                if cell_single.dtype != self.dtype:
                     raise ValueError(
-                        "`cell` must be have the same dtype as `positions`, got "
-                        f"{cell_single.dtype} and {positions_single.dtype}"
+                        f"each `cell` must have the same type {self.dtype} as positions, "
+                        f"got at least one tensor of type {cell_single.dtype}"
                     )
 
-                if types_single.device != cell_single.device:
+                if cell_single.device != self.device:
                     raise ValueError(
-                        f"Inconsistent devices of types ({types_single.device}) and "
-                        f"cell ({cell_single.device})"
+                        f"each `cell` must be on the same device {self.device} as positions, "
+                        f"got at least one tensor with device {cell_single.device}"
                     )
 
+            # check shape, dtype and device of charges
+            if charges_single.dim() != 2:
+                raise ValueError(
+                    f"each `charges` needs to be a 2-dimensional tensor, got at least "
+                    f"one tensor with {charges_single.dim()} dimension(s) and shape "
+                    f"{tuple(charges_single.shape)}"
+                )
+
+            if list(charges_single.shape) != [num_atoms, charges_single.shape[1]]:
+                raise ValueError(
+                    f"each `charges` must be a (n_atoms x n_channels) tensor, with"
+                    f"`n_atoms` being the same as the variable `positions`. Got at "
+                    f"least one tensor with shape {tuple(charges_single.shape)} where "
+                    f"positions contains {len(positions_single)} atoms"
+                )
+
+            if charges_single.dtype != self.dtype:
+                raise ValueError(
+                    f"each `charges` must have the same type {self.dtype} as positions, "
+                    f"got at least one tensor of type {charges_single.dtype}"
+                )
+
+            if charges_single.device != self.device:
+                raise ValueError(
+                    f"each `charges` must be on the same device {self.device} as positions, "
+                    f"got at least one tensor with device {charges_single.device}"
+                )
+
+            # check shape, dtype and device of neighbor_indices and neighbor_shifts
             if neighbor_indices_single is not None:
-                if neighbor_indices_single.shape != (2, len(types_single)):
+                if neighbor_shifts_single is None:
                     raise ValueError(
-                        "Expected shape of neighbor_indices is "
-                        f"{2, len(types_single)}, but got "
-                        f"{list(neighbor_indices_single.shape)}"
+                        "Need to provide both neighbor_indices and neighbor_shifts together."
                     )
 
-                if types_single.device != neighbor_indices_single.device:
+                if neighbor_indices_single.shape[0] != 2:
                     raise ValueError(
-                        f"Inconsistent devices of types ({types_single.device}) and "
-                        f"neighbor_indices ({neighbor_indices_single.device})"
+                        "neighbor_indices is expected to have shape (2, num_neighbors)"
+                        f", but got {tuple(neighbor_indices_single.shape)} for one structure"
                     )
 
-            if neighbor_shifts_single is not None:
-                if neighbor_shifts_single.shape != (3, len(types_single)):
+                if neighbor_shifts_single.shape[1] != 3:
                     raise ValueError(
-                        "Expected shape of neighbor_shifts is "
-                        f"{3, len(types_single)}, but got "
-                        f"{list(neighbor_shifts_single.shape)}"
+                        "neighbor_shifts is expected to have shape (num_neighbors, 3)"
+                        f", but got {tuple(neighbor_shifts_single.shape)} for one structure"
                     )
 
-                if types_single.device != neighbor_shifts_single.device:
+                if neighbor_shifts_single.shape[0] != neighbor_indices_single.shape[1]:
                     raise ValueError(
-                        f"Inconsistent devices of types ({types_single.device}) and "
-                        f"neighbor_shifts_single ({neighbor_shifts_single.device})"
+                        f"`neighbor_indices` and `neighbor_shifts` need to have shapes "
+                        f"(2, num_neighbors) and (num_neighbors, 3). For at least one"
+                        f"structure, got {tuple(neighbor_indices_single.shape)} and "
+                        f"{tuple(neighbor_shifts_single.shape)}, which is inconsistent"
                     )
 
-        # If charges are not provided, we assume that all types are treated separately
-        if charges is None:
-            charges = []
-            for types_single, positions_single in zip(types, positions):
-                # One-hot encoding of charge information
-                charges_single = self._one_hot_charges(
-                    types=types_single,
-                    requested_types=self._get_requested_types(types),
-                    dtype=positions_single.dtype,
-                    device=positions_single.device,
-                )
-                charges.append(charges_single)
-
-        # If charges are provided, we need to make sure that they are consistent with
-        # the provided types
-        else:
-            if not isinstance(charges, list):
-                charges = [charges]
-            if len(charges) != len(types):
-                raise ValueError(
-                    "The number of `types` and `charges` tensors must be the same, "
-                    f"got {len(types)} and {len(charges)}."
-                )
-            for charges_single, types_single in zip(charges, types):
-                if charges_single.shape[0] != len(types_single):
+                if neighbor_indices_single.device != self.device:
                     raise ValueError(
-                        "The first dimension of `charges` must be the same as the "
-                        f"length of `types`, got {charges_single.shape[0]} and "
-                        f"{len(types_single)}."
+                        f"each `neighbor_indices` must be on the same device {self.device} as positions, "
+                        f"got at least one tensor with device {neighbor_indices_single.device}"
                     )
-            if charges[0].dtype != positions[0].dtype:
-                raise ValueError(
-                    "`charges` must be have the same dtype as `positions`, got "
-                    f"{charges[0].dtype} and {positions[0].dtype}."
-                )
-            if charges[0].device != positions[0].device:
-                raise ValueError(
-                    "`charges` must be on the same device as `positions`, got "
-                    f"{charges[0].device} and {positions[0].device}."
-                )
 
-        return types, positions, cell, charges, neighbor_indices, neighbor_shifts
+                if neighbor_shifts_single.device != self.device:
+                    raise ValueError(
+                        f"each `neighbor_shifts` must be on the same device {self.device} as positions, "
+                        f"got at least one tensor with device {neighbor_shifts_single.device}"
+                    )
+
+        return positions, cell, charges, neighbor_indices, neighbor_shifts
 
     def _compute_impl(
         self,
-        types: Union[List[torch.Tensor], torch.Tensor],
         positions: Union[List[torch.Tensor], torch.Tensor],
         cell: Union[None, List[torch.Tensor], torch.Tensor],
-        charges: Union[None, Union[List[torch.Tensor], torch.Tensor]],
+        charges: Union[Union[List[torch.Tensor], torch.Tensor]],
         neighbor_indices: Union[None, List[torch.Tensor], torch.Tensor],
         neighbor_shifts: Union[None, List[torch.Tensor], torch.Tensor],
     ) -> Union[torch.Tensor, List[torch.Tensor]]:
+        # Check that all shapes, data types and devices are consistent
+        # Furthermore, to handle the special case in which only the inputs for a single
+        # structure are provided, turn inputs into a list to be consistent with the
+        # more general case
         (
-            types,
             positions,
             cell,
             charges,
             neighbor_indices,
             neighbor_shifts,
         ) = self._validate_compute_parameters(
-            types, positions, cell, charges, neighbor_indices, neighbor_shifts
+            positions, cell, charges, neighbor_indices, neighbor_shifts
         )
-        potentials = []
 
+        # compute and append into a list the features of each structure
+        potentials = []
         for (
             positions_single,
             cell_single,
@@ -377,7 +339,9 @@ class CalculatorBaseTorch(CalculatorBase):
                 )
             )
 
-        if len(types) == 1:
+        # if only a single structure if provided as input, we directly return a single
+        # tensor containing its features rather than a list of tensors
+        if len(positions) == 1:
             return potentials[0]
         else:
             return potentials
