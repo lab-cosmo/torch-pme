@@ -7,9 +7,9 @@ import torch
 from packaging import version
 
 
-meshlode_metatensor = pytest.importorskip("meshlode.metatensor")
 mts_torch = pytest.importorskip("metatensor.torch")
 mts_atomistic = pytest.importorskip("metatensor.torch.atomistic")
+meshlode_metatensor = pytest.importorskip("meshlode.metatensor")
 
 
 ATOMIC_SMEARING = 0.1
