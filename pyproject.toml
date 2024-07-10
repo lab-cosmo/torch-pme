@@ -35,12 +35,12 @@ keywords = [
 ]
 dependencies = [
     "torch >=1.11",
+    "ase >= 3.23.0",
 ]
 dynamic = ["version"]
 
 [project.optional-dependencies]
 examples = [
-    "ase",
     "matplotlib",
 ]
 metatensor = [
@@ -66,6 +66,9 @@ data_file = 'tests/.coverage'
 [tool.coverage.xml]
 output = 'tests/coverage.xml'
 
+[tool.black]
+exclude = 'docs/src/examples'
+
 [tool.isort]
 skip = "__init__.py"
 profile = "black"
@@ -76,6 +79,10 @@ lines_after_imports = 2
 known_first_party = "meshlode"
 
 [tool.mypy]
+exclude = [
+    "docs/src/examples"
+]
+follow_imports = 'skip'
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

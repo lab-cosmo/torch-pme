@@ -6,6 +6,6 @@ are used for the meshLODE calculators.
 
 .. toctree::
    :maxdepth: 1
+   :glob:
 
-   fourier_convolution
-   mesh_interpolator
+   ./*
