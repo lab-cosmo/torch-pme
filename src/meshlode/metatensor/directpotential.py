@@ -3,7 +3,7 @@ from .base import CalculatorBaseMetatensor
 
 
 class DirectPotential(CalculatorBaseMetatensor, _DirectPotentialImpl):
-    """Specie-wise long-range potential using a direct summation over all atoms.
+    r"""Specie-wise long-range potential using a direct summation over all atoms.
 
     Refer to :class:`meshlode.DirectPotential` for parameter documentation.
 
@@ -28,9 +28,9 @@ class DirectPotential(CalculatorBaseMetatensor, _DirectPotentialImpl):
     >>> charges = torch.tensor([1.0, -1.0]).reshape(-1, 1)
     >>> data = TensorBlock(
     ...     values=charges,
-    ...     samples=Labels.range("atom", len(system)),
+    ...     samples=Labels.range("atom", charges.shape[0]),
     ...     components=[],
-    ...     properties=Labels("charge", torch.tensor([[0]])),
+    ...     properties=Labels.range("charge", charges.shape[1]),
     ... )
     >>> system.add_data(name="charges", data=data)
 

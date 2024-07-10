@@ -59,7 +59,7 @@ intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
     "numpy": ("https://numpy.org/doc/stable/", None),
     "torch": ("https://pytorch.org/docs/stable/", None),
-    "metatensor": ("https://lab-cosmo.github.io/metatensor/latest/", None),
+    "metatensor": ("https://docs.metatensor.org/latest/", None),
 }
 
 # -- Options for HTML output -------------------------------------------------

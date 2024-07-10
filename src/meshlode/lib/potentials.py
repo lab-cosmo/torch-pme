@@ -1,6 +1,5 @@
-from typing import Union
-
 import math
+from typing import Union
 
 import torch
 from torch.special import gammainc, gammaincc, gammaln

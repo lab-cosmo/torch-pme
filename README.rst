@@ -22,9 +22,8 @@ You can install *MeshLode* using pip with
 
 You can then ``import meshlode`` and use it in your projects!
 
-We also provide bindings to `metatensor
-<https://lab-cosmo.github.io/metatensor/latest/>`_ which can optionally be installed
-together and used as ``meshlode.metatensor`` via
+We also provide bindings to `metatensor <https://docs.metatensor.org/latest/>`_ which can
+optionally be installed together and used as ``meshlode.metatensor`` via
 
 .. code-block:: bash
 

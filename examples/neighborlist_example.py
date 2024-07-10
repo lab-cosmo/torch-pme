@@ -86,9 +86,9 @@ system = System(types=types, positions=positions, cell=cell)
 
 data = TensorBlock(
     values=charges,
-    samples=Labels.range("atom", len(system)),
+    samples=Labels.range("atom", charges.shape[0]),
     components=[],
-    properties=Labels("charge", torch.tensor([[0]])),
+    properties=Labels.range("charge", charges.shape[1]),
 )
 system.add_data(name="charges", data=data)
 

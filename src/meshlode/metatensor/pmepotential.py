@@ -7,7 +7,7 @@ from .base import CalculatorBaseMetatensor
 
 
 class PMEPotential(CalculatorBaseMetatensor, _PMEPotentialImpl):
-    """Specie-wise long-range potential using a particle mesh-based Ewald (PME).
+    r"""Specie-wise long-range potential using a particle mesh-based Ewald (PME).
 
     Refer to :class:`meshlode.PMEPotential` for parameter documentation.
 
@@ -33,9 +33,9 @@ class PMEPotential(CalculatorBaseMetatensor, _PMEPotentialImpl):
     >>> charges = torch.tensor([1.0, -1.0]).reshape(-1, 1)
     >>> data = TensorBlock(
     ...     values=charges,
-    ...     samples=Labels.range("atom", len(system)),
+    ...     samples=Labels.range("atom", charges.shape[0]),
     ...     components=[],
-    ...     properties=Labels("charge", torch.tensor([[0]])),
+    ...     properties=Labels.range("charge", charges.shape[1]),
     ... )
     >>> system.add_data(name="charges", data=data)
 
