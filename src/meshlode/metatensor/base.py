@@ -13,12 +13,10 @@ except ImportError:
         "Try installing it with:\npip install metatensor[torch]"
     )
 
-from ..calculators.base import CalculatorBase
 
-
-class CalculatorBaseMetatensor(CalculatorBase):
-    def __init__(self, exponent: float):
-        super().__init__(exponent)
+class CalculatorBaseMetatensor(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
 
     def forward(self, systems: Union[List[System], System]) -> TensorMap:
         """Forward just calls :py:meth:`compute`."""

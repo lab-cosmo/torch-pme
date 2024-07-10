@@ -60,8 +60,8 @@ class EwaldPotential(CalculatorBaseMetatensor, _EwaldPotentialImpl):
         sr_cutoff: Optional[torch.Tensor] = None,
         atomic_smearing: Optional[float] = None,
         lr_wavelength: Optional[float] = None,
-        subtract_self: Optional[bool] = True,
-        subtract_interior: Optional[bool] = False,
+        subtract_self: bool = True,
+        subtract_interior: bool = False,
     ):
         _EwaldPotentialImpl.__init__(
             self,
@@ -72,4 +72,4 @@ class EwaldPotential(CalculatorBaseMetatensor, _EwaldPotentialImpl):
             subtract_self=subtract_self,
             subtract_interior=subtract_interior,
         )
-        CalculatorBaseMetatensor.__init__(self, exponent=exponent)
+        CalculatorBaseMetatensor.__init__(self)

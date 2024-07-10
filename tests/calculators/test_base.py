@@ -1,7 +1,7 @@
 import pytest
 import torch
 
-from meshlode.calculators.base import CalculatorBase, CalculatorBaseTorch
+from meshlode.calculators.base import CalculatorBaseTorch
 
 
 # Define some example parameters
@@ -13,11 +13,6 @@ CHARGES_2 = torch.ones((5, 3), dtype=DTYPE, device=DEVICE)
 POSITIONS_2 = 0.7 * torch.arange(15, dtype=DTYPE, device=DEVICE).reshape((5, 3))
 CELL_1 = torch.eye(3, dtype=DTYPE, device=DEVICE)
 CELL_2 = torch.arange(9, dtype=DTYPE, device=DEVICE).reshape((3, 3))
-
-
-def test_CalculatorBase():
-    calculator = CalculatorBase(exponent=5.0)
-    assert calculator.exponent == 5.0
 
 
 class CalculatorTest(CalculatorBaseTorch):
@@ -58,7 +53,7 @@ class CalculatorTest(CalculatorBaseTorch):
     ],
 )
 def test_compute_output_shapes(method_name, positions, charges):
-    calculator = CalculatorTest(exponent=1.0)
+    calculator = CalculatorTest()
     method = getattr(calculator, method_name)
 
     result = method(
@@ -79,7 +74,7 @@ def test_compute_output_shapes(method_name, positions, charges):
 
 # Tests for a mismatch in the number of provided inputs for different variables
 def test_mismatched_numbers_cell():
-    calculator = CalculatorTest(exponent=1.0)
+    calculator = CalculatorTest()
     match = r"Got inconsistent numbers of positions \(2\) and cell \(3\)"
     with pytest.raises(ValueError, match=match):
         calculator.compute(
@@ -92,7 +87,7 @@ def test_mismatched_numbers_cell():
 
 
 def test_mismatched_numbers_charges():
-    calculator = CalculatorTest(exponent=1.0)
+    calculator = CalculatorTest()
     match = r"Got inconsistent numbers of positions \(2\) and charges \(3\)"
     with pytest.raises(ValueError, match=match):
         calculator.compute(
@@ -105,7 +100,7 @@ def test_mismatched_numbers_charges():
 
 
 def test_mismatched_numbers_neighbor_indices():
-    calculator = CalculatorTest(exponent=1.0)
+    calculator = CalculatorTest()
     match = r"Got inconsistent numbers of positions \(2\) and neighbor_indices \(3\)"
     with pytest.raises(ValueError, match=match):
         calculator.compute(
@@ -118,7 +113,7 @@ def test_mismatched_numbers_neighbor_indices():
 
 
 def test_mismatched_numbers_neighbor_shiftss():
-    calculator = CalculatorTest(exponent=1.0)
+    calculator = CalculatorTest()
     match = r"Got inconsistent numbers of positions \(2\) and neighbor_shifts \(3\)"
     with pytest.raises(ValueError, match=match):
         calculator.compute(
@@ -132,7 +127,7 @@ def test_mismatched_numbers_neighbor_shiftss():
 
 # Tests for invalid shape, dtype and device of positions
 def test_invalid_shape_positions():
-    calculator = CalculatorTest(exponent=1.0)
+    calculator = CalculatorTest()
     match = (
         r"each `positions` must be a \(n_atoms x 3\) tensor, got at least "
         r"one tensor with shape \(4, 5\)"
@@ -148,7 +143,7 @@ def test_invalid_shape_positions():
 
 
 def test_invalid_dtype_positions():
-    calculator = CalculatorTest(exponent=1.0)
+    calculator = CalculatorTest()
     match = (
         r"each `positions` must have the same type torch.float32 as the "
         r"first provided one. Got at least one tensor of type "
@@ -166,7 +161,7 @@ def test_invalid_dtype_positions():
 
 
 def test_invalid_device_positions():
-    calculator = CalculatorTest(exponent=1.0)
+    calculator = CalculatorTest()
     match = (
         r"each `positions` must be on the same device cpu as the "
         r"first provided one. Got at least one tensor on device "
@@ -185,7 +180,7 @@ def test_invalid_device_positions():
 
 # Tests for invalid shape, dtype and device of cell
 def test_invalid_shape_cell():
-    calculator = CalculatorTest(exponent=1.0)
+    calculator = CalculatorTest()
     match = (
         r"each `cell` must be a \(3 x 3\) tensor, got at least one tensor with "
         r"shape \(2, 2\)"
@@ -201,7 +196,7 @@ def test_invalid_shape_cell():
 
 
 def test_invalid_dtype_cell():
-    calculator = CalculatorTest(exponent=1.0)
+    calculator = CalculatorTest()
     match = (
         r"each `cell` must have the same type torch.float32 as positions, "
         r"got at least one tensor of type torch.float64"
@@ -217,7 +212,7 @@ def test_invalid_dtype_cell():
 
 
 def test_invalid_device_cell():
-    calculator = CalculatorTest(exponent=1.0)
+    calculator = CalculatorTest()
     match = (
         r"each `cell` must be on the same device cpu as positions, "
         r"got at least one tensor with device meta"
@@ -234,7 +229,7 @@ def test_invalid_device_cell():
 
 # Tests for invalid shape, dtype and device of charges
 def test_invalid_dim_charges():
-    calculator = CalculatorTest(exponent=1.0)
+    calculator = CalculatorTest()
     match = (
         r"each `charges` needs to be a 2-dimensional tensor, got at least "
         r"one tensor with 1 dimension\(s\) and shape "
@@ -251,7 +246,7 @@ def test_invalid_dim_charges():
 
 
 def test_invalid_shape_charges():
-    calculator = CalculatorTest(exponent=1.0)
+    calculator = CalculatorTest()
     match = (
         r"each `charges` must be a \(n_atoms x n_channels\) tensor, with"
         r"`n_atoms` being the same as the variable `positions`. Got at "
@@ -269,7 +264,7 @@ def test_invalid_shape_charges():
 
 
 def test_invalid_dtype_charges():
-    calculator = CalculatorTest(exponent=1.0)
+    calculator = CalculatorTest()
     match = (
         r"each `charges` must have the same type torch.float32 as positions, "
         r"got at least one tensor of type torch.float64"
@@ -285,7 +280,7 @@ def test_invalid_dtype_charges():
 
 
 def test_invalid_device_charges():
-    calculator = CalculatorTest(exponent=1.0)
+    calculator = CalculatorTest()
     match = (
         r"each `charges` must be on the same device cpu as positions, "
         r"got at least one tensor with device meta"
@@ -302,7 +297,7 @@ def test_invalid_device_charges():
 
 # Tests for invalid shape, dtype and device of neighbor_indices and neighbor_shifts
 def test_need_both_neighbor_indices_and_shifts():
-    calculator = CalculatorTest(exponent=1.0)
+    calculator = CalculatorTest()
     match = r"Need to provide both `neighbor_indices` and `neighbor_shifts` together."
     with pytest.raises(ValueError, match=match):
         calculator.compute(
@@ -315,7 +310,7 @@ def test_need_both_neighbor_indices_and_shifts():
 
 
 def test_invalid_shape_neighbor_indices():
-    calculator = CalculatorTest(exponent=1.0)
+    calculator = CalculatorTest()
     match = (
         r"neighbor_indices is expected to have shape \(2, num_neighbors\)"
         r", but got \(4, 10\) for one structure"
@@ -331,7 +326,7 @@ def test_invalid_shape_neighbor_indices():
 
 
 def test_invalid_shape_neighbor_shifts():
-    calculator = CalculatorTest(exponent=1.0)
+    calculator = CalculatorTest()
     match = (
         r"neighbor_shifts is expected to have shape \(num_neighbors, 3\)"
         r", but got \(10, 2\) for one structure"
@@ -347,7 +342,7 @@ def test_invalid_shape_neighbor_shifts():
 
 
 def test_invalid_shape_neighbor_indices_neighbor_shifts():
-    calculator = CalculatorTest(exponent=1.0)
+    calculator = CalculatorTest()
     match = (
         r"`neighbor_indices` and `neighbor_shifts` need to have shapes "
         r"\(2, num_neighbors\) and \(num_neighbors, 3\). For at least one"
@@ -365,7 +360,7 @@ def test_invalid_shape_neighbor_indices_neighbor_shifts():
 
 
 def test_invalid_device_neighbor_indices():
-    calculator = CalculatorTest(exponent=1.0)
+    calculator = CalculatorTest()
     match = (
         r"each `neighbor_indices` must be on the same device cpu as positions, "
         r"got at least one tensor with device meta"
@@ -381,7 +376,7 @@ def test_invalid_device_neighbor_indices():
 
 
 def test_invalid_device_neighbor_shifts():
-    calculator = CalculatorTest(exponent=1.0)
+    calculator = CalculatorTest()
     match = (
         r"each `neighbor_shifts` must be on the same device cpu as positions, "
         r"got at least one tensor with device meta"

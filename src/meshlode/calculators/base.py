@@ -7,19 +7,15 @@ from ase.neighborlist import neighbor_list
 from meshlode.lib import InversePowerLawPotential
 
 
-class CalculatorBase(torch.nn.Module):
-    """Base class providing general funtionality."""
+class _ShortRange:
+    """Base class providing general funtionality for short range interactions."""
 
-    def __init__(
-        self,
-        exponent: float,
-    ):
+    def __init__(self, exponent: float, subtract_interior: bool):
         # Attach the function handling all computations related to the
         # power-law potential for later convenience
         self.exponent = exponent
+        self.subtract_interior = subtract_interior
         self.potential = InversePowerLawPotential(exponent=exponent)
-
-        super().__init__()
 
     def _compute_sr(
         self,
@@ -31,32 +27,6 @@ class CalculatorBase(torch.nn.Module):
         neighbor_indices: Optional[torch.Tensor] = None,
         neighbor_shifts: Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
-        """
-        Compute the short-range part of the Ewald sum in realspace
-
-        :param positions: torch.tensor of shape (n_atoms, 3). Contains the Cartesian
-            coordinates of the atoms. The implementation also works if the positions
-            are not contained within the unit cell.
-        :param charges: torch.tensor of shape `(n_atoms, n_channels)`. In the simplest
-            case, this would be a tensor of shape (n_atoms, 1) where charges[i,0] is the
-            charge of atom i. More generally, the potential for the same atom positions
-            is computed for n_channels independent meshes, and one can specify the
-            "charge" of each atom on each of the meshes independently.
-        :param cell: torch.tensor of shape `(3, 3)`. Describes the unit cell of the
-            structure, where cell[i] is the i-th basis vector.
-        :param smearing: torch.Tensor smearing paramter determining the splitting
-            between the SR and LR parts.
-        :param sr_cutoff: Cutoff radius used for the short-range part of the Ewald sum.
-        :param neighbor_indices: Optional single or list of 2D tensors of shape (2, n),
-            where n is the number of atoms. The 2 rows correspond to the indices of
-            the two atoms which are considered neighbors (e.g. within a cutoff distance)
-        :param neighbor_shifts: Optional single or list of 2D tensors of shape (3, n),
-             where n is the number of atoms. The 3 rows correspond to the shift indices
-             for periodic images.
-
-        :returns: torch.tensor of shape `(n_atoms, n_channels)` containing the potential
-        at the position of each atom for the `n_channels` independent meshes separately.
-        """
         if neighbor_indices is None or neighbor_shifts is None:
             # Get list of neighbors
             struc = Atoms(positions=positions.detach().numpy(), cell=cell, pbc=True)
@@ -94,7 +64,7 @@ class CalculatorBase(torch.nn.Module):
         return potential
 
 
-class CalculatorBaseTorch(CalculatorBase):
+class CalculatorBaseTorch(torch.nn.Module):
     """
     Base calculator for the torch interface to MeshLODE.
 
@@ -103,9 +73,8 @@ class CalculatorBaseTorch(CalculatorBase):
 
     def __init__(
         self,
-        exponent: float,
     ):
-        super().__init__(exponent=exponent)
+        super().__init__()
 
     def _validate_compute_parameters(
         self,

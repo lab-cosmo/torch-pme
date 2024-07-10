@@ -78,7 +78,7 @@ class DirectPotential(CalculatorBaseTorch, _DirectPotentialImpl):
 
     def __init__(self, exponent: float = 1.0):
         _DirectPotentialImpl.__init__(self, exponent=exponent)
-        CalculatorBaseTorch.__init__(self, exponent=exponent)
+        CalculatorBaseTorch.__init__(self)
 
     def compute(
         self,

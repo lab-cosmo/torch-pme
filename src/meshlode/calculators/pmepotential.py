@@ -4,19 +4,19 @@ import torch
 
 from ..lib import generate_kvectors_for_mesh
 from ..lib.mesh_interpolator import MeshInterpolator
-from .base import CalculatorBaseTorch
+from .base import CalculatorBaseTorch, _ShortRange
 
 
-class _PMEPotentialImpl:
+class _PMEPotentialImpl(_ShortRange):
     def __init__(
         self,
         exponent: float,
         sr_cutoff: Union[None, torch.Tensor],
         atomic_smearing: Union[None, float],
         mesh_spacing: Union[None, float],
-        interpolation_order: Union[None, int],
-        subtract_self: Union[None, bool],
-        subtract_interior: Union[None, bool],
+        interpolation_order: int,
+        subtract_self: bool,
+        subtract_interior: bool,
     ):
         # Check that all provided values are correct
         if exponent < 0.0 or exponent > 3.0:
@@ -26,16 +26,18 @@ class _PMEPotentialImpl:
         if atomic_smearing is not None and atomic_smearing <= 0:
             raise ValueError(f"`atomic_smearing` {atomic_smearing} has to be positive")
 
+        _ShortRange.__init__(
+            self, exponent=exponent, subtract_interior=subtract_interior
+        )
         self.atomic_smearing = atomic_smearing
         self.mesh_spacing = mesh_spacing
         self.interpolation_order = interpolation_order
         self.sr_cutoff = sr_cutoff
 
         # If interior contributions are to be subtracted, also do so for self term
-        if subtract_interior:
+        if self.subtract_interior:
             subtract_self = True
         self.subtract_self = subtract_self
-        self.subtract_interior = subtract_interior
 
         self.atomic_smearing = atomic_smearing
         self.mesh_spacing = mesh_spacing
@@ -225,9 +227,9 @@ class PMEPotential(CalculatorBaseTorch, _PMEPotentialImpl):
         sr_cutoff: Optional[torch.Tensor] = None,
         atomic_smearing: Optional[float] = None,
         mesh_spacing: Optional[float] = None,
-        interpolation_order: Optional[int] = 3,
-        subtract_self: Optional[bool] = True,
-        subtract_interior: Optional[bool] = False,
+        interpolation_order: int = 3,
+        subtract_self: bool = True,
+        subtract_interior: bool = False,
     ):
         _PMEPotentialImpl.__init__(
             self,
@@ -239,7 +241,7 @@ class PMEPotential(CalculatorBaseTorch, _PMEPotentialImpl):
             subtract_self=subtract_self,
             subtract_interior=subtract_interior,
         )
-        CalculatorBaseTorch.__init__(self, exponent=exponent)
+        CalculatorBaseTorch.__init__(self)
 
     def compute(
         self,

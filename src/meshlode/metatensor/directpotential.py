@@ -52,4 +52,4 @@ class DirectPotential(CalculatorBaseMetatensor, _DirectPotentialImpl):
 
     def __init__(self, exponent: float = 1.0):
         _DirectPotentialImpl.__init__(self, exponent=exponent)
-        CalculatorBaseMetatensor.__init__(self, exponent=exponent)
+        CalculatorBaseMetatensor.__init__(self)

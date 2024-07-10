@@ -60,9 +60,9 @@ class PMEPotential(CalculatorBaseMetatensor, _PMEPotentialImpl):
         sr_cutoff: Optional[torch.Tensor] = None,
         atomic_smearing: Optional[float] = None,
         mesh_spacing: Optional[float] = None,
-        interpolation_order: Optional[int] = 3,
-        subtract_self: Optional[bool] = True,
-        subtract_interior: Optional[bool] = False,
+        interpolation_order: int = 3,
+        subtract_self: bool = True,
+        subtract_interior: bool = False,
     ):
         _PMEPotentialImpl.__init__(
             self,
@@ -74,4 +74,4 @@ class PMEPotential(CalculatorBaseMetatensor, _PMEPotentialImpl):
             subtract_self=subtract_self,
             subtract_interior=subtract_interior,
         )
-        CalculatorBaseMetatensor.__init__(self, exponent=exponent)
+        CalculatorBaseMetatensor.__init__(self)

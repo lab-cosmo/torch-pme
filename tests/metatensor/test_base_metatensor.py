@@ -32,7 +32,7 @@ def test_compute_output_shapes_single(method_name):
 
     system.add_data(name="charges", data=data)
 
-    calculator = CalculatorTest(exponent=1.0)
+    calculator = CalculatorTest()
     method = getattr(calculator, method_name)
     result = method(system)
 
@@ -66,7 +66,7 @@ def test_compute_output_shapes_multiple():
 
     system.add_data(name="charges", data=data)
 
-    calculator = CalculatorTest(exponent=1.0)
+    calculator = CalculatorTest()
     result = calculator.compute([system, system])
 
     assert isinstance(result, torch.ScriptObject)
@@ -94,7 +94,7 @@ def test_wrong_system_dtype():
         cell=torch.zeros([3, 3], dtype=torch.float64),
     )
 
-    calculator = CalculatorTest(exponent=1.0)
+    calculator = CalculatorTest()
 
     match = r"`dtype` of all systems must be the same, got 7 and 6"
     with pytest.raises(ValueError, match=match):
@@ -114,7 +114,7 @@ def test_wrong_system_device():
         cell=torch.zeros([3, 3], device="meta"),
     )
 
-    calculator = CalculatorTest(exponent=1.0)
+    calculator = CalculatorTest()
 
     match = r"`device` of all systems must be the same, got meta and cpu"
     with pytest.raises(ValueError, match=match):
@@ -146,7 +146,7 @@ def test_wrong_system_not_all_charges():
         cell=torch.zeros([3, 3]),
     )
 
-    calculator = CalculatorTest(exponent=1.0)
+    calculator = CalculatorTest()
 
     match = r"`systems` do not consistently contain `charges` data"
     with pytest.raises(ValueError, match=match):
@@ -185,7 +185,7 @@ def test_different_number_charge_channles():
     )
     system2.add_data(name="charges", data=data2)
 
-    calculator = CalculatorTest(exponent=1.0)
+    calculator = CalculatorTest()
 
     match = (
         r"number of charges-channels in system index 1 \(2\) is inconsistent with "

@@ -3,33 +3,35 @@ from typing import List, Optional, Union
 import torch
 
 from ..lib import generate_kvectors_squeezed
-from .base import CalculatorBaseTorch
+from .base import CalculatorBaseTorch, _ShortRange
 
 
-class _EwaldPotentialImpl:
+class _EwaldPotentialImpl(_ShortRange):
     def __init__(
         self,
         exponent: float,
         sr_cutoff: Union[None, torch.Tensor],
         atomic_smearing: Union[None, float],
         lr_wavelength: Union[None, float],
-        subtract_self: Union[None, bool],
-        subtract_interior: Union[None, bool],
+        subtract_self: bool,
+        subtract_interior: bool,
     ):
         if exponent < 0.0 or exponent > 3.0:
             raise ValueError(f"`exponent` p={exponent} has to satisfy 0 < p < 3")
         if atomic_smearing is not None and atomic_smearing <= 0:
             raise ValueError(f"`atomic_smearing` {atomic_smearing} has to be positive")
 
+        _ShortRange.__init__(
+            self, exponent=exponent, subtract_interior=subtract_interior
+        )
         self.atomic_smearing = atomic_smearing
         self.sr_cutoff = sr_cutoff
         self.lr_wavelength = lr_wavelength
 
         # If interior contributions are to be subtracted, also do so for self term
-        if subtract_interior:
+        if self.subtract_interior:
             subtract_self = True
         self.subtract_self = subtract_self
-        self.subtract_interior = subtract_interior
 
     def _compute_single_system(
         self,
@@ -154,7 +156,8 @@ class _EwaldPotentialImpl:
         # TODO: modify to expression for general p
         if subtract_self:
             self_contrib = (
-                torch.sqrt(torch.tensor(2.0 / torch.pi, device=self._device)) / smearing
+                torch.sqrt(torch.tensor(2.0 / torch.pi, device=positions.device))
+                / smearing
             )
             energy -= charges * self_contrib
 
@@ -218,8 +221,8 @@ class EwaldPotential(CalculatorBaseTorch, _EwaldPotentialImpl):
         sr_cutoff: Optional[torch.Tensor] = None,
         atomic_smearing: Optional[float] = None,
         lr_wavelength: Optional[float] = None,
-        subtract_self: Optional[bool] = True,
-        subtract_interior: Optional[bool] = False,
+        subtract_self: bool = True,
+        subtract_interior: bool = False,
     ):
         _EwaldPotentialImpl.__init__(
             self,
@@ -230,7 +233,7 @@ class EwaldPotential(CalculatorBaseTorch, _EwaldPotentialImpl):
             subtract_self=subtract_self,
             subtract_interior=subtract_interior,
         )
-        CalculatorBaseTorch.__init__(self, exponent=exponent)
+        CalculatorBaseTorch.__init__(self)
 
     def compute(
         self,
