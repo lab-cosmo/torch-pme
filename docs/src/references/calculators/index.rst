@@ -14,8 +14,6 @@ Calculators return the representations as a :py:obj:`List` of :py:class:`torch.T
 We also provide a return values as a :py:class:`metatensor.TensorMap` in
 :ref:`metatensor`.
 
-.. automodule:: meshlode.calculators
-
 .. toctree::
    :maxdepth: 1
    :glob:

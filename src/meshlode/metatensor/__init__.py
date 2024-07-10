@@ -1,3 +1,5 @@
-from .calculators import PMEPotential, EwaldPotential, DirectPotential
+from .ewaldpotential import EwaldPotential
+from .directpotential import DirectPotential
+from .pmepotential import PMEPotential
 
-__all__ = ["DirectPotential", "EwaldPotential", "PMEPotential"]
+__all__ = ["EwaldPotential", "DirectPotential", "PMEPotential"]

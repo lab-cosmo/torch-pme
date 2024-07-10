@@ -1,3 +1,5 @@
+from typing import Union
+
 import math
 
 import torch
@@ -22,11 +24,14 @@ class InversePowerLawPotential:
        length-scale parameter (called "smearing" in the code)
     3. the Fourier transform of the LR part
 
-    :param exponent: the exponent "p" in 1/r^p potentials
+    :param exponent: the exponent :math:`p` in :math:`1/r^p` potentials
     """
 
-    def __init__(self, exponent: float):
-        self.exponent = torch.tensor(exponent)
+    def __init__(self, exponent: Union[float, torch.Tensor]):
+        if type(exponent) is float:
+            self.exponent = torch.tensor(exponent)
+        else:
+            self.exponent = exponent
 
     def potential_from_dist(self, dist: torch.Tensor) -> torch.Tensor:
         """

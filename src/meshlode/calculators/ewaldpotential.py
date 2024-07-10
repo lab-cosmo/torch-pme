@@ -167,7 +167,7 @@ class EwaldPotential(CalculatorBaseTorch, _EwaldPotentialImpl):
     Scaling as :math:`\mathcal{O}(N^2)` with respect to the number of particles
     :math:`N`.
 
-    :param exponent: the exponent "p" in 1/r^p potentials
+    :param exponent: the exponent :math:`p` in :math:`1/r^p` potentials
     :param sr_cutoff: Cutoff radius used for the short-range part of the Ewald sum. If
         not set to a global value, it will be set to be half of the shortest lattice
         vector defining the cell (separately for each structure).
@@ -191,20 +191,25 @@ class EwaldPotential(CalculatorBaseTorch, _EwaldPotentialImpl):
 
     Example
     -------
+    We calculate the Madelung constant of a CsCl (Cesium-Chloride) crystal. The
+    reference value is :math:`2 \cdot 1.7626 / \sqrt{3} \approx 2.0354`.
+
     >>> import torch
 
-    Define simple example structure having the CsCl (Cesium-Chloride) structure
+    Define crystal structure
 
     >>> positions = torch.tensor([[0.0, 0.0, 0.0], [0.5, 0.5, 0.5]])
     >>> charges = torch.tensor([1.0, -1.0]).reshape(-1, 1)
     >>> cell = torch.eye(3)
 
-    Compute features
+    Compute the potential
 
     >>> ewald = EwaldPotential()
     >>> ewald.compute(positions=positions, charges=charges, cell=cell)
     tensor([[-2.0354],
             [ 2.0354]])
+
+    Which is the same as the reference value given above.
     """
 
     def __init__(

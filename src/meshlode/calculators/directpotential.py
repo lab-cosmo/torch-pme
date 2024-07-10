@@ -52,23 +52,28 @@ class DirectPotential(CalculatorBaseTorch, _DirectPotentialImpl):
     infinitely extended three-dimensional Euclidean space. While slow, this
     implementation used as a reference to test faster algorithms.
 
-    :param exponent: the exponent "p" in 1/r^p potentials
+    :param exponent: the exponent :math:`p` in :math:`1/r^p` potentials
 
     Example
     -------
+    We compute the energy of two charges which are sepearated by 2 along the z-axis.
+
     >>> import torch
 
     Define simple example structure
 
-    >>> positions = torch.tensor([[0.0, 0.0, 0.0], [0.5, 0.5, 0.5]])
+    >>> positions = torch.tensor([[0.0, 0.0, 0.0], [0.0, 0.0, 2.0]])
     >>> charges = torch.tensor([1.0, -1.0]).reshape(-1, 1)
 
     Compute features
 
     >>> direct = DirectPotential()
     >>> direct.compute(positions=positions, charges=charges)
-    tensor([[-1.1547],
-            [ 1.1547]])
+    tensor([[-0.5000],
+            [ 0.5000]])
+
+    Which is the expected potential since :math:`V \propto 1/r` where :math:`r` is the
+    distance between the particles.
     """
 
     def __init__(self, exponent: float = 1.0):

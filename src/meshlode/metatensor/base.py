@@ -1,4 +1,5 @@
-from typing import List, Optional, Union
+import warnings
+from typing import List, Union
 
 import torch
 
@@ -13,9 +14,6 @@ except ImportError:
     )
 
 from ..calculators.base import CalculatorBase
-from ..calculators.directpotential import _DirectPotentialImpl
-from ..calculators.ewaldpotential import _EwaldPotentialImpl
-from ..calculators.pmepotential import _PMEPotentialImpl
 
 
 class CalculatorBaseMetatensor(CalculatorBase):
@@ -52,7 +50,12 @@ class CalculatorBaseMetatensor(CalculatorBase):
         if not torch.all(has_charges):
             raise ValueError("`systems` do not consistently contain `charges` data")
 
-        self._n_charges_channels = systems[0].get_data("charges").values.shape[1]
+        # Metatensor will issue a warning because `charges` are not a default member of
+        # a System object
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            self._n_charges_channels = systems[0].get_data("charges").values.shape[1]
+
         for i_system, system in enumerate(systems):
             n_channels = system.get_data("charges").values.shape[1]
             if n_channels != self._n_charges_channels:
@@ -86,7 +89,9 @@ class CalculatorBaseMetatensor(CalculatorBase):
         potentials: List[torch.Tensor] = []
 
         for system in systems:
-            charges = system.get_data("charges").values
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                charges = system.get_data("charges").values
 
             # try to extract neighbor list from system object
             neighbor_indices = None
@@ -98,8 +103,8 @@ class CalculatorBaseMetatensor(CalculatorBase):
                 ):
                     neighbor_list = system.get_neighbor_list(neighbor_list_options)
 
-                    neighbor_indices = neighbor_list.samples.values[:, :2]
-                    neighbor_shifts = neighbor_list.samples.values[:, 2:]
+                    neighbor_indices = neighbor_list.samples.values[:, :2].T
+                    neighbor_shifts = neighbor_list.samples.values[:, 2:].T
 
                     break
 
@@ -128,70 +133,3 @@ class CalculatorBaseMetatensor(CalculatorBase):
         )
 
         return TensorMap(keys=Labels.single(), blocks=[block])
-
-
-class DirectPotential(CalculatorBaseMetatensor, _DirectPotentialImpl):
-    """Specie-wise long-range potential using a direct summation over all atoms.
-
-    Refer to :class:`meshlode.DirectPotential` for parameter documentation.
-    """
-
-    def __init__(self, exponent: float = 1.0):
-        _DirectPotentialImpl.__init__(self, exponent=exponent)
-        CalculatorBaseMetatensor.__init__(self, exponent=exponent)
-
-
-class EwaldPotential(CalculatorBaseMetatensor, _EwaldPotentialImpl):
-    """Specie-wise long-range potential computed using the Ewald sum.
-
-    Refer to :class:`meshlode.EwaldPotential` for parameter documentation.
-    """
-
-    def __init__(
-        self,
-        exponent: float = 1.0,
-        sr_cutoff: Optional[torch.Tensor] = None,
-        atomic_smearing: Optional[float] = None,
-        lr_wavelength: Optional[float] = None,
-        subtract_self: Optional[bool] = True,
-        subtract_interior: Optional[bool] = False,
-    ):
-        _EwaldPotentialImpl.__init__(
-            self,
-            exponent=exponent,
-            sr_cutoff=sr_cutoff,
-            atomic_smearing=atomic_smearing,
-            lr_wavelength=lr_wavelength,
-            subtract_self=subtract_self,
-            subtract_interior=subtract_interior,
-        )
-        CalculatorBaseMetatensor.__init__(self, exponent=exponent)
-
-
-class PMEPotential(CalculatorBaseMetatensor, _PMEPotentialImpl):
-    """Specie-wise long-range potential using a particle mesh-based Ewald (PME).
-
-    Refer to :class:`meshlode.PMEPotential` for parameter documentation.
-    """
-
-    def __init__(
-        self,
-        exponent: float = 1.0,
-        sr_cutoff: Optional[torch.Tensor] = None,
-        atomic_smearing: Optional[float] = None,
-        mesh_spacing: Optional[float] = None,
-        interpolation_order: Optional[int] = 3,
-        subtract_self: Optional[bool] = True,
-        subtract_interior: Optional[bool] = False,
-    ):
-        _PMEPotentialImpl.__init__(
-            self,
-            exponent=exponent,
-            sr_cutoff=sr_cutoff,
-            atomic_smearing=atomic_smearing,
-            mesh_spacing=mesh_spacing,
-            interpolation_order=interpolation_order,
-            subtract_self=subtract_self,
-            subtract_interior=subtract_interior,
-        )
-        CalculatorBaseMetatensor.__init__(self, exponent=exponent)

@@ -26,7 +26,7 @@ class CalculatorBase(torch.nn.Module):
         positions: torch.Tensor,
         charges: torch.Tensor,
         cell: torch.Tensor,
-        smearing: torch.Tensor,
+        smearing: float,
         sr_cutoff: torch.Tensor,
         neighbor_indices: Optional[torch.Tensor] = None,
         neighbor_shifts: Optional[torch.Tensor] = None,
@@ -66,12 +66,10 @@ class CalculatorBase(torch.nn.Module):
             atom_is = torch.tensor(atom_is)
             atom_js = torch.tensor(atom_js)
             shifts = torch.tensor(neighbor_shifts, dtype=cell.dtype)  # N x 3
-
         else:
             atom_is = neighbor_indices[0]
             atom_js = neighbor_indices[1]
-            shifts = neighbor_shifts.T
-            shifts.dtype = cell.dtype
+            shifts = neighbor_shifts.type(cell.dtype).T
 
         # Compute energy
         potential = torch.zeros_like(charges)
@@ -100,7 +98,7 @@ class CalculatorBaseTorch(CalculatorBase):
     """
     Base calculator for the torch interface to MeshLODE.
 
-    :param exponent: the exponent "p" in 1/r^p potentials
+    :param exponent: the exponent :math:`p` in :math:`1/r^p` potentials
     """
 
     def __init__(

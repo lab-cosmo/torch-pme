@@ -173,7 +173,7 @@ class PMEPotential(CalculatorBaseTorch, _PMEPotentialImpl):
         subset of a whole dataset and it required to keep the shape of the output
         consistent. If this is not set the possible atomic types will be determined when
         calling the :meth:`compute()`.
-    :param exponent: the exponent "p" in 1/r^p potentials
+    :param exponent: the exponent :math:`p` in :math:`1/r^p` potentials
     :param sr_cutoff: Cutoff radius used for the short-range part of the Ewald sum. If
         not set to a global value, it will be set to be half of the shortest lattice
         vector defining the cell (separately for each structure).
@@ -198,20 +198,25 @@ class PMEPotential(CalculatorBaseTorch, _PMEPotentialImpl):
 
     Example
     -------
+    We calculate the Madelung constant of a CsCl (Cesium-Chloride) crystal. The
+    reference value is :math:`2 \cdot 1.7626 / \sqrt{3} \approx 2.0354`.
+
     >>> import torch
 
-    Define simple example structure having the CsCl (Cesium-Chloride) structure
+    Define crystal structure
 
     >>> positions = torch.tensor([[0.0, 0.0, 0.0], [0.5, 0.5, 0.5]])
     >>> charges = torch.tensor([1.0, -1.0]).reshape(-1, 1)
     >>> cell = torch.eye(3)
 
-    Compute features
+    Compute the potential
 
     >>> pme = PMEPotential()
     >>> pme.compute(positions=positions, charges=charges, cell=cell)
     tensor([[-2.0384],
             [ 2.0384]])
+
+    Which is the close the reference value given above.
     """
 
     def __init__(

@@ -1,7 +1,7 @@
 import pytest
 import torch
 
-from meshlode.calculators.base import CalculatorBaseTorch
+from meshlode.calculators.base import CalculatorBase, CalculatorBaseTorch
 
 
 # Define some example parameters
@@ -13,6 +13,11 @@ CHARGES_2 = torch.ones((5, 3), dtype=DTYPE, device=DEVICE)
 POSITIONS_2 = 0.7 * torch.arange(15, dtype=DTYPE, device=DEVICE).reshape((5, 3))
 CELL_1 = torch.eye(3, dtype=DTYPE, device=DEVICE)
 CELL_2 = torch.arange(9, dtype=DTYPE, device=DEVICE).reshape((3, 3))
+
+
+def test_CalculatorBase():
+    calculator = CalculatorBase(exponent=5.0)
+    assert calculator.exponent == 5.0
 
 
 class CalculatorTest(CalculatorBaseTorch):

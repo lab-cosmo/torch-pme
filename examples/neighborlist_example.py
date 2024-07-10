@@ -3,7 +3,7 @@ Computations with explicit Neighbor Lists
 =========================================
 
 This example will explain how to use the metatensor branch of Meshlode with an attached
-neighborlist to a :py:class:`metatensor.torch.atomistic.System` object.
+neighborlist to an :py:class:`metatensor.torch.atomistic.System` object.
 """
 
 # %%
@@ -28,7 +28,7 @@ import meshlode
 
 types = torch.tensor([17, 55])  # Cl and Cs
 positions = torch.tensor([[0, 0, 0], [0.5, 0.5, 0.5]])
-charges = torch.tensor([-1.0, 1.0])
+charges = torch.tensor([-1.0, 1.0]).reshape(-1, 1)
 cell = torch.eye(3)
 
 # %%
@@ -77,52 +77,47 @@ neighbors = TensorBlock(
 
 
 # %%
-# Attach ``neighbors`` to ``system`` object.
+# Define the system.
 
 system = System(types=types, positions=positions, cell=cell)
+
+# %%
+# Attach charges to the system.
+
+data = TensorBlock(
+    values=charges,
+    samples=Labels.range("atom", len(system)),
+    components=[],
+    properties=Labels("charge", torch.tensor([[0]])),
+)
+system.add_data(name="charges", data=data)
+
+# %%
+# Attach ``neighbors`` to ``system`` object.
 
 nl_options = NeighborListOptions(cutoff=sr_cutoff, full_list=True)
 system.add_neighbor_list(options=nl_options, neighbors=neighbors)
 
-MP = meshlode.metatensor.PMEPotential(
+pme = meshlode.metatensor.PMEPotential(
     atomic_smearing=atomic_smearing,
     mesh_spacing=mesh_spacing,
     interpolation_order=interpolation_order,
     subtract_self=True,
     sr_cutoff=sr_cutoff,
 )
-potential_metatensor = MP.compute(system)
-
-
-# %%
-# Convert to Madelung constant and check that the value is correct
-
-atomic_energies_metatensor = torch.zeros((n_atoms, 1))
-for idx_c, c in enumerate(types):
-    for idx_n, n in enumerate(types):
-        # Take the coefficients with the correct center atom and neighbor atom types
-        block = potential_metatensor.block(
-            {"center_type": int(c), "neighbor_type": int(n)}
-        )
-
-        # The coulomb potential between atoms i and j is charge_i * charge_j / d_ij
-        # The features are simply computing a pure 1/r potential with no prefactors.
-        # Thus, to compute the energy between atoms of types i and j, we need to
-        # multiply by the charges of i and j.
-        print(c, n, charges[idx_c] * charges[idx_n], block.values[0, 0])
-        atomic_energies_metatensor[idx_c] += (
-            charges[idx_c] * charges[idx_n] * block.values[0, 0]
-        )
+potential = pme.compute(system)
 
 # %%
 # The total energy is just the sum of all atomic energies
 
-total_energy_metatensor = torch.sum(atomic_energies_metatensor)
+print(potential)
 
-# %%
-# Compare against reference Madelung constant and reference energy:
+# total_energy_metatensor = torch.sum(potential[0].values)
 
-print("Using the metatensor version")
-print(f"Computed energies on each atom = {atomic_energies_metatensor.tolist()}")
-print(f"Reference Madelung constant = {madelung:.3f}")
-print(f"Total energy = {total_energy_metatensor:.3f}")
+# # %%
+# # Compare against reference Madelung constant and reference energy:
+
+# print("Using the metatensor version")
+# print(f"Computed energies on each atom = {potential[0].values.tolist()}")
+# print(f"Reference Madelung constant = {madelung:.3f}")
+# print(f"Total energy = {total_energy_metatensor[0].values}")
