@@ -112,8 +112,8 @@ class CalculatorBaseTorch(CalculatorBase):
     def _validate_compute_parameters(
         self,
         positions: Union[List[torch.Tensor], torch.Tensor],
-        cell: Union[None, List[torch.Tensor], torch.Tensor],
         charges: Union[List[torch.Tensor], torch.Tensor],
+        cell: Union[None, List[torch.Tensor], torch.Tensor],
         neighbor_indices: Union[None, List[torch.Tensor], torch.Tensor],
         neighbor_shifts: Union[None, List[torch.Tensor], torch.Tensor],
     ) -> Tuple[
@@ -129,8 +129,8 @@ class CalculatorBaseTorch(CalculatorBase):
 
         # In actual computations, the data type (dtype) and device (e.g. CPU, GPU) of
         # all remaining variables need to be consistent
-        self.device = positions[0].device
-        self.dtype = positions[0].dtype
+        self._device = positions[0].device
+        self._dtype = positions[0].dtype
 
         # make sure that provided cells are a list of same length as positions
         if cell is None:
@@ -194,17 +194,17 @@ class CalculatorBaseTorch(CalculatorBase):
                     f"one tensor with shape {tuple(positions_single.shape)}"
                 )
 
-            if positions_single.dtype != self.dtype:
+            if positions_single.dtype != self._dtype:
                 raise ValueError(
-                    f"each `positions` must have the same type {self.dtype} as the "
+                    f"each `positions` must have the same type {self._dtype} as the "
                     "first provided one. Got at least one tensor of type "
                     f"{positions_single.dtype}"
                 )
 
-            if positions_single.device != self.device:
+            if positions_single.device != self._device:
                 raise ValueError(
-                    f"each `positions` must be on the same device {self.device} as the "
-                    "first provided one. Got at least one tensor on device "
+                    f"each `positions` must be on the same device {self._device} as "
+                    "the first provided one. Got at least one tensor on device "
                     f"{positions_single.device}"
                 )
 
@@ -212,20 +212,22 @@ class CalculatorBaseTorch(CalculatorBase):
             if cell_single is not None:
                 if list(cell_single.shape) != [3, 3]:
                     raise ValueError(
-                        f"each `cell` must be a (3 x 3) tensor, got at least one tensor "
-                        f"with shape {tuple(cell_single.shape)}"
+                        f"each `cell` must be a (3 x 3) tensor, got at least one "
+                        f"tensor with shape {tuple(cell_single.shape)}"
                     )
 
-                if cell_single.dtype != self.dtype:
+                if cell_single.dtype != self._dtype:
                     raise ValueError(
-                        f"each `cell` must have the same type {self.dtype} as positions, "
-                        f"got at least one tensor of type {cell_single.dtype}"
+                        f"each `cell` must have the same type {self._dtype} as "
+                        "positions, got at least one tensor of type "
+                        f"{cell_single.dtype}"
                     )
 
-                if cell_single.device != self.device:
+                if cell_single.device != self._device:
                     raise ValueError(
-                        f"each `cell` must be on the same device {self.device} as positions, "
-                        f"got at least one tensor with device {cell_single.device}"
+                        f"each `cell` must be on the same device {self._device} as "
+                        "positions, got at least one tensor with device "
+                        f"{cell_single.device}"
                     )
 
             # check shape, dtype and device of charges
@@ -244,35 +246,39 @@ class CalculatorBaseTorch(CalculatorBase):
                     f"positions contains {len(positions_single)} atoms"
                 )
 
-            if charges_single.dtype != self.dtype:
+            if charges_single.dtype != self._dtype:
                 raise ValueError(
-                    f"each `charges` must have the same type {self.dtype} as positions, "
-                    f"got at least one tensor of type {charges_single.dtype}"
+                    f"each `charges` must have the same type {self._dtype} as "
+                    f"positions, got at least one tensor of type {charges_single.dtype}"
                 )
 
-            if charges_single.device != self.device:
+            if charges_single.device != self._device:
                 raise ValueError(
-                    f"each `charges` must be on the same device {self.device} as positions, "
-                    f"got at least one tensor with device {charges_single.device}"
+                    f"each `charges` must be on the same device {self._device} as "
+                    f"positions, got at least one tensor with device "
+                    f"{charges_single.device}"
                 )
 
             # check shape, dtype and device of neighbor_indices and neighbor_shifts
             if neighbor_indices_single is not None:
                 if neighbor_shifts_single is None:
                     raise ValueError(
-                        "Need to provide both neighbor_indices and neighbor_shifts together."
+                        "Need to provide both `neighbor_indices` and `neighbor_shifts` "
+                        "together."
                     )
 
                 if neighbor_indices_single.shape[0] != 2:
                     raise ValueError(
                         "neighbor_indices is expected to have shape (2, num_neighbors)"
-                        f", but got {tuple(neighbor_indices_single.shape)} for one structure"
+                        f", but got {tuple(neighbor_indices_single.shape)} for one "
+                        "structure"
                     )
 
                 if neighbor_shifts_single.shape[1] != 3:
                     raise ValueError(
                         "neighbor_shifts is expected to have shape (num_neighbors, 3)"
-                        f", but got {tuple(neighbor_shifts_single.shape)} for one structure"
+                        f", but got {tuple(neighbor_shifts_single.shape)} for one "
+                        "structure"
                     )
 
                 if neighbor_shifts_single.shape[0] != neighbor_indices_single.shape[1]:
@@ -283,16 +289,18 @@ class CalculatorBaseTorch(CalculatorBase):
                         f"{tuple(neighbor_shifts_single.shape)}, which is inconsistent"
                     )
 
-                if neighbor_indices_single.device != self.device:
+                if neighbor_indices_single.device != self._device:
                     raise ValueError(
-                        f"each `neighbor_indices` must be on the same device {self.device} as positions, "
-                        f"got at least one tensor with device {neighbor_indices_single.device}"
+                        f"each `neighbor_indices` must be on the same device "
+                        f"{self._device} as positions, got at least one tensor with "
+                        f"device {neighbor_indices_single.device}"
                     )
 
-                if neighbor_shifts_single.device != self.device:
+                if neighbor_shifts_single.device != self._device:
                     raise ValueError(
-                        f"each `neighbor_shifts` must be on the same device {self.device} as positions, "
-                        f"got at least one tensor with device {neighbor_shifts_single.device}"
+                        f"each `neighbor_shifts` must be on the same device "
+                        f"{self._device} as positions, got at least one tensor with "
+                        f"device {neighbor_shifts_single.device}"
                     )
 
         return positions, cell, charges, neighbor_indices, neighbor_shifts
@@ -300,8 +308,8 @@ class CalculatorBaseTorch(CalculatorBase):
     def _compute_impl(
         self,
         positions: Union[List[torch.Tensor], torch.Tensor],
-        cell: Union[None, List[torch.Tensor], torch.Tensor],
         charges: Union[Union[List[torch.Tensor], torch.Tensor]],
+        cell: Union[None, List[torch.Tensor], torch.Tensor],
         neighbor_indices: Union[None, List[torch.Tensor], torch.Tensor],
         neighbor_shifts: Union[None, List[torch.Tensor], torch.Tensor],
     ) -> Union[torch.Tensor, List[torch.Tensor]]:
@@ -316,7 +324,11 @@ class CalculatorBaseTorch(CalculatorBase):
             neighbor_indices,
             neighbor_shifts,
         ) = self._validate_compute_parameters(
-            positions, cell, charges, neighbor_indices, neighbor_shifts
+            positions=positions,
+            charges=charges,
+            cell=cell,
+            neighbor_indices=neighbor_indices,
+            neighbor_shifts=neighbor_shifts,
         )
 
         # compute and append into a list the features of each structure

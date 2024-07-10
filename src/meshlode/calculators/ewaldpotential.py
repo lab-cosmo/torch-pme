@@ -39,37 +39,6 @@ class _EwaldPotentialImpl:
         neighbor_indices: Optional[torch.Tensor] = None,
         neighbor_shifts: Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
-        """
-        Compute the "electrostatic" potential at the position of all atoms in a
-        structure.
-
-        :param positions: torch.tensor of shape (n_atoms, 3). Contains the Cartesian
-            coordinates of the atoms. The implementation also works if the positions
-            are not contained within the unit cell.
-        :param charges: torch.tensor of shape `(n_atoms, n_channels)`. In the simplest
-            case, this would be a tensor of shape (n_atoms, 1) where charges[i,0] is the
-            charge of atom i. More generally, the potential for the same atom positions
-            is computed for n_channels independent meshes, and one can specify the
-            "charge" of each atom on each of the meshes independently. For standard LODE
-            that treats all (atomic) types separately, one example could be: If n_atoms
-            = 4 and the types are [Na, Cl, Cl, Na], one could set n_channels=2 and use
-            the one-hot encoding charges = torch.tensor([[1,0],[0,1],[0,1],[1,0]]) for
-            the charges. This would then separately compute the "Na" potential and "Cl"
-            potential. Subtracting these from each other, one could recover the more
-            standard electrostatic potential in which Na and Cl have charges of +1 and
-            -1, respectively.
-        :param cell: torch.tensor of shape `(3, 3)`. Describes the unit cell of the
-            structure, where cell[i] is the i-th basis vector.
-        :param neighbor_indices: Optional single or list of 2D tensors of shape (2, n),
-            where n is the number of atoms. The 2 rows correspond to the indices of
-            the two atoms which are considered neighbors (e.g. within a cutoff distance)
-        :param neighbor_shifts: Optional single or list of 2D tensors of shape (3, n),
-             where n is the number of atoms. The 3 rows correspond to the shift indices
-             for periodic images.
-
-        :returns: torch.tensor of shape `(n_atoms, n_channels)` containing the potential
-        at the position of each atom for the `n_channels` independent meshes separately.
-        """
         # Set the defaut values of convergence parameters
         # The total computational cost = cost of SR part + cost of LR part
         # Bigger smearing increases the cost of the SR part while decreasing the cost
@@ -127,28 +96,6 @@ class _EwaldPotentialImpl:
         lr_wavelength: torch.Tensor,
         subtract_self=True,
     ) -> torch.Tensor:
-        """
-        Compute the long-range part of the Ewald sum in realspace
-
-        :param positions: torch.tensor of shape (n_atoms, 3). Contains the Cartesian
-            coordinates of the atoms. The implementation also works if the positions
-            are not contained within the unit cell.
-        :param charges: torch.tensor of shape `(n_atoms, n_channels)`. In the simplest
-            case, this would be a tensor of shape (n_atoms, 1) where charges[i,0] is the
-            charge of atom i. More generally, the potential for the same atom positions
-            is computed for n_channels independent meshes, and one can specify the
-            "charge" of each atom on each of the meshes independently.
-        :param cell: torch.tensor of shape `(3, 3)`. Describes the unit cell of the
-            structure, where cell[i] is the i-th basis vector.
-        :param smearing: torch.Tensor smearing paramter determining the splitting
-            between the SR and LR parts.
-        :param lr_wavelength: Spatial resolution used for the long-range (reciprocal
-            space) part of the Ewald sum. More conretely, all Fourier space vectors with
-            a wavelength >= this value will be kept.
-
-        :returns: torch.tensor of shape `(n_atoms, n_channels)` containing the potential
-        at the position of each atom for the `n_channels` independent meshes separately.
-        """
         # Define k-space cutoff from required real-space resolution
         k_cutoff = 2 * torch.pi / lr_wavelength
 
@@ -207,7 +154,7 @@ class _EwaldPotentialImpl:
         # TODO: modify to expression for general p
         if subtract_self:
             self_contrib = (
-                torch.sqrt(torch.tensor(2.0 / torch.pi, device=self.device)) / smearing
+                torch.sqrt(torch.tensor(2.0 / torch.pi, device=self._device)) / smearing
             )
             energy -= charges * self_contrib
 
@@ -245,20 +192,19 @@ class EwaldPotential(CalculatorBaseTorch, _EwaldPotentialImpl):
     Example
     -------
     >>> import torch
-    >>> from meshlode import EwaldPotential
 
-    Define simple example structure having the CsCl (Cesium Chloride) structure
+    Define simple example structure having the CsCl (Cesium-Chloride) structure
 
-    >>> types = torch.tensor([55, 17])  # Cs and Cl
-    >>> positions = torch.tensor([[0, 0, 0], [0.5, 0.5, 0.5]])
+    >>> positions = torch.tensor([[0.0, 0.0, 0.0], [0.5, 0.5, 0.5]])
+    >>> charges = torch.tensor([1.0, -1.0]).reshape(-1, 1)
     >>> cell = torch.eye(3)
 
     Compute features
 
-    >>> EP = EwaldPotential()
-    >>> EP.compute(types=types, positions=positions, cell=cell)
-    tensor([[-0.7391, -2.7745],
-            [-2.7745, -0.7391]])
+    >>> ewald = EwaldPotential()
+    >>> ewald.compute(positions=positions, charges=charges, cell=cell)
+    tensor([[-2.0354],
+            [ 2.0354]])
     """
 
     def __init__(
@@ -284,49 +230,43 @@ class EwaldPotential(CalculatorBaseTorch, _EwaldPotentialImpl):
     def compute(
         self,
         positions: Union[List[torch.Tensor], torch.Tensor],
+        charges: Union[List[torch.Tensor], torch.Tensor],
         cell: Union[List[torch.Tensor], torch.Tensor],
-        charges: Optional[Union[List[torch.Tensor], torch.Tensor]] = None,
         neighbor_indices: Union[List[torch.Tensor], torch.Tensor] = None,
         neighbor_shifts: Union[List[torch.Tensor], torch.Tensor] = None,
     ) -> Union[torch.Tensor, List[torch.Tensor]]:
         """Compute potential for all provided "systems" stacked inside list.
 
-        The computation is performed on the same ``device`` as ``systems`` is stored on.
-        The ``dtype`` of the output tensors will be the same as the input.
+        The computation is performed on the same ``device`` as ``dtype`` is the input is
+        stored on. The ``dtype`` of the output tensors will be the same as the input.
 
-        :param positions: single or 2D tensor of shape (len(types), 3) containing the
-            Cartesian positions of all particles in the system.
+        :param positions: Single or 2D tensor of shape (``len(charges), 3``) containing
+            the Cartesian positions of all point charges in the system.
+        :param charges: Single 2D tensor or list of 2D tensor of shape (``n_channels,
+            len(positions))``. ``n_channels`` is the number of charge channels the
+            potential should be calculated for a standard potential ``n_channels=1``. If
+            more than one "channel" is provided multiple potentials for the same
+            position but different are computed.
         :param cell: single or 2D tensor of shape (3, 3), describing the bounding
             box/unit cell of the system. Each row should be one of the bounding box
             vector; and columns should contain the x, y, and z components of these
             vectors (i.e. the cell should be given in row-major order).
-        :param charges: Optional single or list of 2D tensor of shape (len(types), n),
         :param neighbor_indices: Optional single or list of 2D tensors of shape (2, n),
             where n is the number of atoms. The 2 rows correspond to the indices of
             the two atoms which are considered neighbors (e.g. within a cutoff distance)
         :param neighbor_shifts: Optional single or list of 2D tensors of shape (3, n),
              where n is the number of atoms. The 3 rows correspond to the shift indices
              for periodic images.
-
-        :return: List of torch Tensors containing the potentials for all frames and all
-            atoms. Each tensor in the list is of shape (n_atoms, n_types), where
-            n_types is the number of types in all systems combined. If the input was
-            a single system only a single torch tensor with the potentials is returned.
-
-            IMPORTANT: If multiple types are present, the different "types-channels"
-            are ordered according to atomic number. For example, if a structure contains
-            a water molecule with atoms 0, 1, 2 being of types O, H, H, then for this
-            system, the feature tensor will be of shape (3, 2) = (``n_atoms``,
-            ``n_types``), where ``features[0, 0]`` is the potential at the position of
-            the Oxygen atom (atom 0, first index) generated by the HYDROGEN(!) atoms,
-            while ``features[0,1]`` is the potential at the position of the Oxygen atom
-            generated by the Oxygen atom(s).
+        :return: Single or List of torch Tensors containing the potential(s) for all
+            positions. Each tensor in the list is of shape ``(len(positions),
+            len(charges))``, where If the inputs are only single tensors only a single
+            torch tensor with the potentials is returned.
         """
 
         return self._compute_impl(
             positions=positions,
-            cell=cell,
             charges=charges,
+            cell=cell,
             neighbor_indices=neighbor_indices,
             neighbor_shifts=neighbor_shifts,
         )
@@ -337,16 +277,16 @@ class EwaldPotential(CalculatorBaseTorch, _EwaldPotentialImpl):
     def forward(
         self,
         positions: Union[List[torch.Tensor], torch.Tensor],
+        charges: Union[List[torch.Tensor], torch.Tensor],
         cell: Union[List[torch.Tensor], torch.Tensor],
-        charges: Optional[Union[List[torch.Tensor], torch.Tensor]] = None,
         neighbor_indices: Union[List[torch.Tensor], torch.Tensor] = None,
         neighbor_shifts: Union[List[torch.Tensor], torch.Tensor] = None,
     ) -> Union[torch.Tensor, List[torch.Tensor]]:
         """Forward just calls :py:meth:`compute`."""
         return self.compute(
             positions=positions,
-            cell=cell,
             charges=charges,
+            cell=cell,
             neighbor_indices=neighbor_indices,
             neighbor_shifts=neighbor_shifts,
         )

@@ -10,6 +10,7 @@ energy of atomic structures using the :py:class:`meshlode.PMEPotential` and
 import math
 
 import torch
+from metatensor.torch import Labels, TensorBlock
 from metatensor.torch.atomistic import System
 
 import meshlode
@@ -22,12 +23,12 @@ import meshlode
 # numbers 17 and 55, respectively.
 types = torch.tensor([17, 55])  # Cl and Cs
 positions = torch.tensor([[0, 0, 0], [0.5, 0.5, 0.5]])
-charges = torch.tensor([-1.0, 1.0])
+charges = torch.tensor([-1.0, 1.0]).reshape(-1, 1)
 cell = torch.eye(3)
 
 # %%
 # Define the expected values of the energy
-n_atoms = len(types)
+n_atoms = len(positions)
 madelung = 2 * 1.7626 / math.sqrt(3)
 energies_ref = -madelung * torch.ones((n_atoms, 1))
 
@@ -44,13 +45,15 @@ interpolation_order = 2
 # ------------------------------
 # Compute features using
 
-MP = meshlode.PMEPotential(
+pme = meshlode.PMEPotential(
     atomic_smearing=atomic_smearing,
     mesh_spacing=mesh_spacing,
     interpolation_order=interpolation_order,
     subtract_self=True,
 )
-potentials_torch = MP.compute(types=types, positions=positions, cell=cell)
+potentials_torch: torch.Tensor = pme.compute(
+    positions=positions, charges=charges, cell=cell
+)
 
 # %%
 # The "potentials" that have been computed so far are not the actual electrostatic
@@ -92,13 +95,28 @@ print(f"Total energy = {total_energy_torch:.3f}\n")
 
 system = System(types=types, positions=positions, cell=cell)
 
-MP = meshlode.metatensor.PMEPotential(
+# %%
+# Attach charges to the system.
+
+data = TensorBlock(
+    values=charges,
+    samples=Labels.range("atom", len(system)),
+    components=[],
+    properties=Labels("charge", torch.tensor([[0]])),
+)
+system.add_data(name="charges", data=data)
+
+
+# %%
+# Perform the calculation.
+
+pme = meshlode.metatensor.PMEPotential(
     atomic_smearing=atomic_smearing,
     mesh_spacing=mesh_spacing,
     interpolation_order=interpolation_order,
     subtract_self=True,
 )
-potential_metatensor = MP.compute(system)
+potential_metatensor = pme.compute(system)
 
 
 # %%

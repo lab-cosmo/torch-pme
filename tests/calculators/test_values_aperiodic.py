@@ -20,24 +20,22 @@ def define_molecule(molecule_name="dimer"):
     # Start defining molecules
     # Dimer
     if molecule_name == "dimer":
-        types = torch.tensor([1, 1])
         positions = torch.tensor([[0.0, 0, 0], [0, 0, 1.0]], dtype=dtype)
         charges = torch.tensor([1.0, -1.0], dtype=dtype)
         potentials = torch.tensor([-1.0, 1], dtype=dtype)
 
     elif molecule_name == "dimer_positive":
-        types, positions, charges, potentials = define_molecule("dimer")
+        positions, charges, potentials = define_molecule("dimer")
         charges = torch.tensor([1.0, 1], dtype=dtype)
         potentials = torch.tensor([1.0, 1], dtype=dtype)
 
     elif molecule_name == "dimer_negative":
-        types, positions, charges, potentials = define_molecule("dimer_positive")
+        positions, charges, potentials = define_molecule("dimer_positive")
         charges *= -1.0
         potentials *= -1.0
 
     # Equilateral triangle
     elif molecule_name == "triangle":
-        types = torch.tensor([1, 1, 1])
         positions = torch.tensor(
             [[0.0, 0, 0], [1, 0, 0], [1 / 2, SQRT3 / 2, 0]], dtype=dtype
         )
@@ -45,18 +43,17 @@ def define_molecule(molecule_name="dimer"):
         potentials = torch.tensor([-1.0, 1, 0], dtype=dtype)
 
     elif molecule_name == "triangle_positive":
-        types, positions, charges, potentials = define_molecule("triangle")
+        positions, charges, potentials = define_molecule("triangle")
         charges = torch.tensor([1.0, 1, 1], dtype=dtype)
         potentials = torch.tensor([2.0, 2, 2], dtype=dtype)
 
     elif molecule_name == "triangle_negative":
-        types, positions, charges, potentials = define_molecule("triangle_positive")
+        positions, charges, potentials = define_molecule("triangle_positive")
         charges *= -1.0
         potentials *= -1.0
 
     # Squares (planar)
     elif molecule_name == "square":
-        types = torch.tensor([1, 1, 1, 1])
         positions = torch.tensor(
             [[1, 1, 0], [1, -1, 0], [-1, 1, 0], [-1, -1, 0]], dtype=dtype
         )
@@ -65,18 +62,17 @@ def define_molecule(molecule_name="dimer"):
         potentials = charges * (1.0 / SQRT2 - 2.0)
 
     elif molecule_name == "square_positive":
-        types, positions, charges, potentials = define_molecule("square")
+        positions, charges, potentials = define_molecule("square")
         charges = torch.tensor([1.0, 1, 1, 1], dtype=dtype)
         potentials = (2.0 + 1.0 / SQRT2) * torch.ones(4, dtype=dtype)
 
     elif molecule_name == "square_negative":
-        types, positions, charges, potentials = define_molecule("square_positive")
+        positions, charges, potentials = define_molecule("square_positive")
         charges *= -1.0
         potentials *= -1.0
 
     # Tetrahedra
     elif molecule_name == "tetrahedron":
-        types = torch.tensor([1, 1, 1, 1])
         positions = torch.tensor(
             [
                 [0.0, 0, 0],
@@ -90,18 +86,18 @@ def define_molecule(molecule_name="dimer"):
         potentials = -charges
 
     elif molecule_name == "tetrahedron_positive":
-        types, positions, charges, potentials = define_molecule("tetrahedron")
+        positions, charges, potentials = define_molecule("tetrahedron")
         charges = torch.ones(4, dtype=dtype)
         potentials = 3 * torch.ones(4, dtype=dtype)
 
     elif molecule_name == "tetrahedron_negative":
-        types, positions, charges, potentials = define_molecule("tetrahedron_positive")
+        positions, charges, potentials = define_molecule("tetrahedron_positive")
         charges *= -1.0
         potentials *= -1.0
 
     charges = charges.reshape((-1, 1))
     potentials = potentials.reshape((-1, 1))
-    return types, positions, charges, potentials
+    return positions, charges, potentials
 
 
 def generate_orthogonal_transformations():
@@ -159,13 +155,13 @@ def test_coulomb_exact(
     """
     # Call Ewald potential class without specifying any of the convergence parameters
     # so that they are chosen by default (in a structure-dependent way)
-    DP = DirectPotential()
+    direct = DirectPotential()
 
     # Compute potential at the position of the atoms for the specified structure
     molecule_name = molecule + molecule_charge
-    types, positions, charges, ref_potentials = define_molecule(molecule_name)
+    positions, charges, ref_potentials = define_molecule(molecule_name)
     positions = scaling_factor * (positions @ orthogonal_transformation)
-    potentials = DP.compute(positions, charges=charges)
+    potentials = direct.compute(positions, charges=charges)
     ref_potentials /= scaling_factor
 
     torch.testing.assert_close(potentials, ref_potentials, atol=2e-15, rtol=1e-14)

@@ -50,10 +50,10 @@ class TestWorkflow:
     def cscl_system(self, periodic):
         """CsCl crystal. Same as in the madelung test"""
         positions = torch.tensor([[0, 0, 0], [0.5, 0.5, 0.5]])
-        cell = torch.eye(3)
         charges = torch.tensor([1.0, -1.0]).reshape((-1, 1))
         if periodic:
-            return positions, cell, charges
+            cell = torch.eye(3)
+            return positions, charges, cell
         else:
             return positions, charges
 
@@ -86,7 +86,7 @@ class TestWorkflow:
     def test_multi_frame(self, CalculatorClass, periodic, params):
         calculator = self.calculator(CalculatorClass, periodic, params)
         if periodic:
-            positions, cell, charges = self.cscl_system(periodic)
+            positions, charges, cell = self.cscl_system(periodic)
             l_values = calculator.compute(
                 positions=[positions, positions],
                 cell=[cell, cell],
@@ -118,7 +118,7 @@ class TestWorkflow:
         if periodic:
             cell = torch.eye(3, dtype=dtype, device=device)
             potential = calculator.compute(
-                positions=positions, cell=cell, charges=charges
+                positions=positions, charges=charges, cell=cell
             )
         else:
             potential = calculator.compute(positions=positions, charges=charges)
@@ -127,14 +127,14 @@ class TestWorkflow:
         assert potential.device.type == device
 
     # Make sure that the calculators are computing the features without raising errors,
-    # and returns the correct output format (TensorMap)
+    # and returns the correct output format (torch.Tensor)
     def check_operation(self, CalculatorClass, periodic, params):
         calculator = self.calculator(CalculatorClass, periodic, params)
 
         if periodic:
-            positions, cell, charges = self.cscl_system(periodic)
+            positions, charges, cell = self.cscl_system(periodic)
             descriptor = calculator.compute(
-                positions=positions, cell=cell, charges=charges
+                positions=positions, charges=charges, cell=cell
             )
         else:
             positions, charges = self.cscl_system(periodic)

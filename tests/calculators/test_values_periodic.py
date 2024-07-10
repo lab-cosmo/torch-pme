@@ -316,7 +316,7 @@ def test_madelung(crystal_name, scaling_factor, calc_name):
         rtol = 9e-4
 
     # Compute potential and compare against target value using default hypers
-    potentials = calc.compute(positions=pos, cell=cell, charges=charges)
+    potentials = calc.compute(positions=pos, charges=charges, cell=cell)
     energies = potentials * charges
     madelung = -torch.sum(energies) / 2 / num_units
 
@@ -373,7 +373,7 @@ def test_wigner(crystal_name, scaling_factor):
 
         # Compute potential and compare against reference
         calc = EwaldPotential(atomic_smearing=smeareff)
-        potentials = calc.compute(positions=positions, cell=cell, charges=charges)
+        potentials = calc.compute(positions=positions, charges=charges, cell=cell)
         energies = potentials * charges
         energies_ref = -torch.ones_like(energies) * madelung_ref
         torch.testing.assert_close(energies, energies_ref, atol=0.0, rtol=rtol)
@@ -418,7 +418,6 @@ def test_random_structure(sr_cutoff, frame_index, scaling_factor, ortho, calc_na
     positions.requires_grad = True
     cell = scaling_factor * torch.tensor(np.array(frame.cell), dtype=dtype) @ ortho
     charges = torch.tensor([1, 1, 1, 1, -1, -1, -1, -1], dtype=dtype).reshape((-1, 1))
-    types = torch.tensor([1, 1, 1, 1, 2, 2, 2, 2])
 
     # Compute potential using MeshLODE and compare against reference values
     sr_cutoff = scaling_factor * torch.tensor(sr_cutoff, dtype=dtype)
@@ -430,7 +429,8 @@ def test_random_structure(sr_cutoff, frame_index, scaling_factor, ortho, calc_na
         calc = PMEPotential(sr_cutoff=sr_cutoff)
         rtol_e = 4.5e-3  # 1.5e-3
         rtol_f = 2.5e-3  # 6e-3
-    potentials = calc.compute(positions=positions, cell=cell, charges=charges)
+
+    potentials = calc.compute(positions=positions, charges=charges, cell=cell)
 
     # Compute energy, taking into account the double counting of each pair
     energy = torch.sum(potentials * charges) / 2

@@ -17,14 +17,6 @@ from ..calculators.directpotential import _DirectPotentialImpl
 from ..calculators.ewaldpotential import _EwaldPotentialImpl
 from ..calculators.pmepotential import _PMEPotentialImpl
 
-@torch.jit.script
-def _1d_tolist(x: torch.Tensor) -> List[int]:
-    """Auxilary function to convert 1d torch tensor to list of integers."""
-    result: List[int] = []
-    for i in x:
-        result.append(i.item())
-    return result
-
 
 class CalculatorBaseMetatensor(CalculatorBase):
     def __init__(self, exponent: float):
@@ -76,7 +68,7 @@ class CalculatorBaseMetatensor(CalculatorBase):
         """Compute potential for all provided ``systems``.
 
         All ``systems`` must have the same ``dtype`` and the same ``device``. If each
-        system contains a custom data field `charges` the potential will be calculated
+        system contains a custom data field ``charges`` the potential will be calculated
         for each "charges-channel". The number of `charges-channels` must be same in all
         ``systems``. If no "explicit" charges are set the potential will be calculated
         for each "types-channels".
@@ -88,9 +80,7 @@ class CalculatorBaseMetatensor(CalculatorBase):
             :py:class:`metatensor.torch.atomisic.System` on which to run the
             calculations.
 
-        :return: TensorMap containing the potential of all types. The keys of the
-            TensorMap are "center_type" and "neighbor_type" if no charges are asociated
-            with
+        :return: TensorMap containing the potential of all types.
         """
         systems = self._validate_compute_parameters(systems)
         potentials: List[torch.Tensor] = []
@@ -100,6 +90,7 @@ class CalculatorBaseMetatensor(CalculatorBase):
 
             # try to extract neighbor list from system object
             neighbor_indices = None
+            neighbor_shifts = None
             for neighbor_list_options in system.known_neighbor_lists():
                 if (
                     hasattr(self, "sr_cutoff")
@@ -112,26 +103,15 @@ class CalculatorBaseMetatensor(CalculatorBase):
 
                     break
 
-            if neighbor_indices is None:
-                potentials.append(
-                    self._compute_single_system(
-                        positions=system.positions,
-                        cell=system.cell,
-                        charges=charges,
-                        neighbor_indices=None,
-                        neighbor_shifts=None,
-                    )
+            potentials.append(
+                self._compute_single_system(
+                    positions=system.positions,
+                    charges=charges,
+                    cell=system.cell,
+                    neighbor_indices=neighbor_indices,
+                    neighbor_shifts=neighbor_shifts,
                 )
-            else:
-                potentials.append(
-                    self._compute_single_system(
-                        positions=system.positions,
-                        charges=charges,
-                        cell=system.cell,
-                        neighbor_indices=neighbor_indices,
-                        neighbor_shifts=neighbor_shifts,
-                    )
-                )
+            )
 
         values_samples: List[List[int]] = []
         for i_system in range(len(systems)):
@@ -153,18 +133,18 @@ class CalculatorBaseMetatensor(CalculatorBase):
 class DirectPotential(CalculatorBaseMetatensor, _DirectPotentialImpl):
     """Specie-wise long-range potential using a direct summation over all atoms.
 
-    Refer to :class:`meshlode.DirectPotential` for full documentation.
+    Refer to :class:`meshlode.DirectPotential` for parameter documentation.
     """
 
     def __init__(self, exponent: float = 1.0):
-        self._DirectPotentialImpl.__init__(self, exponent=exponent)
+        _DirectPotentialImpl.__init__(self, exponent=exponent)
         CalculatorBaseMetatensor.__init__(self, exponent=exponent)
 
 
 class EwaldPotential(CalculatorBaseMetatensor, _EwaldPotentialImpl):
     """Specie-wise long-range potential computed using the Ewald sum.
 
-    Refer to :class:`meshlode.EwaldPotential` for full documentation.
+    Refer to :class:`meshlode.EwaldPotential` for parameter documentation.
     """
 
     def __init__(
@@ -191,7 +171,7 @@ class EwaldPotential(CalculatorBaseMetatensor, _EwaldPotentialImpl):
 class PMEPotential(CalculatorBaseMetatensor, _PMEPotentialImpl):
     """Specie-wise long-range potential using a particle mesh-based Ewald (PME).
 
-    Refer to :class:`meshlode.PMEPotential` for full documentation.
+    Refer to :class:`meshlode.PMEPotential` for parameter documentation.
     """
 
     def __init__(
