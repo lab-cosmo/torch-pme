@@ -2,13 +2,14 @@ import pytest
 import torch
 from packaging import version
 
+import meshlode
+
 
 mts_torch = pytest.importorskip("metatensor.torch")
 mts_atomistic = pytest.importorskip("metatensor.torch.atomistic")
-meshlode_metatensor = pytest.importorskip("meshlode.metatensor")
 
 
-class CalculatorTest(meshlode_metatensor.base.CalculatorBaseMetatensor):
+class CalculatorTest(meshlode.metatensor.base.CalculatorBaseMetatensor):
     def _compute_single_system(
         self, positions, charges, cell, neighbor_indices, neighbor_shifts
     ):

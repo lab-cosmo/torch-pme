@@ -6,10 +6,11 @@ import pytest
 import torch
 from packaging import version
 
+import meshlode
+
 
 mts_torch = pytest.importorskip("metatensor.torch")
 mts_atomistic = pytest.importorskip("metatensor.torch.atomistic")
-meshlode_metatensor = pytest.importorskip("meshlode.metatensor")
 
 
 ATOMIC_SMEARING = 0.1
@@ -22,9 +23,9 @@ SUBTRACT_SELF = True
 @pytest.mark.parametrize(
     "CalculatorClass, params",
     [
-        (meshlode_metatensor.DirectPotential, {}),
+        (meshlode.metatensor.DirectPotential, {}),
         (
-            meshlode_metatensor.EwaldPotential,
+            meshlode.metatensor.EwaldPotential,
             {
                 "atomic_smearing": ATOMIC_SMEARING,
                 "lr_wavelength": LR_WAVELENGTH,
@@ -32,7 +33,7 @@ SUBTRACT_SELF = True
             },
         ),
         (
-            meshlode_metatensor.PMEPotential,
+            meshlode.metatensor.PMEPotential,
             {
                 "atomic_smearing": ATOMIC_SMEARING,
                 "mesh_spacing": MESH_SPACING,
