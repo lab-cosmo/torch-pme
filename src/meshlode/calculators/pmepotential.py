@@ -11,7 +11,6 @@ class _PMEPotentialImpl(_ShortRange):
     def __init__(
         self,
         exponent: float,
-        sr_cutoff: Union[None, float],
         atomic_smearing: Union[None, float],
         mesh_spacing: Union[None, float],
         interpolation_order: int,
@@ -29,44 +28,34 @@ class _PMEPotentialImpl(_ShortRange):
         _ShortRange.__init__(
             self, exponent=exponent, subtract_interior=subtract_interior
         )
-
         self.atomic_smearing = atomic_smearing
         self.mesh_spacing = mesh_spacing
         self.interpolation_order = interpolation_order
-        self.sr_cutoff = sr_cutoff
 
         # If interior contributions are to be subtracted, also do so for self term
-        if subtract_interior:
+        if self.subtract_interior:
             subtract_self = True
         self.subtract_self = subtract_self
-        self.subtract_interior = subtract_interior
 
     def _compute_single_system(
         self,
         positions: torch.Tensor,
         charges: torch.Tensor,
         cell: torch.Tensor,
-        neighbor_indices: Optional[torch.Tensor] = None,
-        neighbor_shifts: Optional[torch.Tensor] = None,
+        neighbor_indices: torch.Tensor,
+        neighbor_shifts: torch.Tensor,
     ) -> torch.Tensor:
-        # Set the defaut values of convergence parameters
-        # The total computational cost = cost of SR part + cost of LR part
-        # Bigger smearing increases the cost of the SR part while decreasing the cost
-        # of the LR part. Since the latter usually is more expensive, we maximize the
-        # value of the smearing by default to minimize the cost of the LR part.
-        # The two auxilary parameters (sr_cutoff, lr_wavelength) then control the
-        # convergence of the SR and LR sums, respectively. The default values are
-        # chosen to reach a convergence on the order of 1e-4 to 1e-5 for the test
-        # structures.
-        if self.sr_cutoff is None:
-            cell_dimensions = torch.linalg.norm(cell, dim=1)
-            cutoff_max = torch.min(cell_dimensions) / 2 - 1e-6
-            sr_cutoff = cutoff_max.item()
-        else:
-            sr_cutoff = self.sr_cutoff
-
+        # Set the defaut values of convergence parameters The total computational cost =
+        # cost of SR part + cost of LR part Bigger smearing increases the cost of the SR
+        # part while decreasing the cost of the LR part. Since the latter usually is
+        # more expensive, we maximize the value of the smearing by default to minimize
+        # the cost of the LR part. The auxilary parameter mesh_spacing then controls the
+        # convergence of the SR and LR sums, respectively. The default values are chosen
+        # to reach a convergence on the order of 1e-4 to 1e-5 for the test structures.
         if self.atomic_smearing is None:
-            smearing = sr_cutoff / 5.0
+            cell_dimensions = torch.linalg.norm(cell, dim=1)
+            max_cutoff = torch.min(cell_dimensions) / 2 - 1e-6
+            smearing = max_cutoff.item() / 5.0
         else:
             smearing = self.atomic_smearing
 
@@ -81,7 +70,6 @@ class _PMEPotentialImpl(_ShortRange):
             charges=charges,
             cell=cell,
             smearing=smearing,
-            sr_cutoff=sr_cutoff,
             neighbor_indices=neighbor_indices,
             neighbor_shifts=neighbor_shifts,
         )
@@ -161,20 +149,22 @@ class PMEPotential(CalculatorBaseTorch, _PMEPotentialImpl):
     Scaling as :math:`\mathcal{O}(NlogN)` with respect to the number of particles
     :math:`N` used as a reference to test faster implementations.
 
-    :param all_types: Optional global list of all atomic types that should be considered
-        for the computation. This option might be useful when running the calculation on
-        subset of a whole dataset and it required to keep the shape of the output
-        consistent. If this is not set the possible atomic types will be determined when
-        calling the :meth:`compute()`.
+    For computing a **neighborlist** a reasonable ``cutoff`` is half the length of
+    the shortest cell vector, which can be for example computed according as
+
+    .. code-block:: python
+
+        cell_dimensions = torch.linalg.norm(cell, dim=1)
+        cutoff = torch.min(cell_dimensions) / 2 - 1e-6
+
+    This ensures a accuracy of the short range part of ``1e-5``.
+
     :param exponent: the exponent :math:`p` in :math:`1/r^p` potentials
-    :param sr_cutoff: Cutoff radius used for the short-range part of the Ewald sum. If
-        not set to a global value, it will be set to be half of the shortest lattice
-        vector defining the cell (separately for each structure).
     :param atomic_smearing: Width of the atom-centered Gaussian used to split the
-        Coulomb potential into the short- and long-range parts. If not set to a global
-        value, it will be set to 1/5 times the sr_cutoff value (separately for each
-        structure) to ensure convergence of the short-range part to a relative precision
-        of 1e-5.
+        Coulomb potential into the short- and long-range parts. A reasonable value for
+        most systems is to set it to ``1/5`` times the neighbor list cutoff. If
+        :py:obj:`None` ,it will be set to 1/5 times of half the largest box vector
+        (separately for each structure).
     :param mesh_spacing: Value that determines the umber of Fourier-space grid points
         that will be used along each axis. If set to None, it will automatically be set
         to half of ``atomic_smearing``.
@@ -195,6 +185,7 @@ class PMEPotential(CalculatorBaseTorch, _PMEPotentialImpl):
     reference value is :math:`2 \cdot 1.7626 / \sqrt{3} \approx 2.0354`.
 
     >>> import torch
+    >>> from vesin import NeighborList
 
     Define crystal structure
 
@@ -202,10 +193,39 @@ class PMEPotential(CalculatorBaseTorch, _PMEPotentialImpl):
     >>> charges = torch.tensor([1.0, -1.0]).reshape(-1, 1)
     >>> cell = torch.eye(3)
 
-    Compute the potential
+    Compute the neighbor indices (``"i"``, ``"j"``) and the neighbor shifts ("``S``")
+    using the ``vesin`` package. Refer to the `documentation
+    <https://luthaf.fr/vesin>`_ for details on the API. Similarly you can also use
+    ``ase``'s :py:func:`neighbor_list <ase.neighborlist.neighbor_list>`.
+
+    >>> cell_dimensions = torch.linalg.norm(cell, dim=1)
+    >>> cutoff = torch.min(cell_dimensions) / 2 - 1e-6
+    >>> nl = NeighborList(cutoff=cutoff, full_list=True)
+    >>> i, j, S = nl.compute(
+    ...     points=positions, box=cell, periodic=True, quantities="ijS"
+    ... )
+
+    The ``vesin`` calculator returned the indices and the neighbor shifts. We know stack
+    the together and convert them into the suitable types
+
+    >>> i = torch.from_numpy(i.astype(int))
+    >>> j = torch.from_numpy(j.astype(int))
+    >>> neighbor_indices = torch.vstack([i, j])
+    >>> neighbor_shifts = torch.from_numpy(S.astype(int))
+
+    If you inspect the neighborlist you will notice that they are empty for the given
+    system, which means the the whole potential will be calculated using the long range
+    part of the potential. Finally, we initlize the potential class and ``compute`` the
+    potential for the crystal
 
     >>> pme = PMEPotential()
-    >>> pme.compute(positions=positions, charges=charges, cell=cell)
+    >>> pme.compute(
+    ...     positions=positions,
+    ...     charges=charges,
+    ...     cell=cell,
+    ...     neighbor_indices=neighbor_indices,
+    ...     neighbor_shifts=neighbor_shifts,
+    ... )
     tensor([[-2.0384],
             [ 2.0384]])
 
@@ -215,7 +235,6 @@ class PMEPotential(CalculatorBaseTorch, _PMEPotentialImpl):
     def __init__(
         self,
         exponent: float = 1.0,
-        sr_cutoff: Optional[torch.Tensor] = None,
         atomic_smearing: Optional[float] = None,
         mesh_spacing: Optional[float] = None,
         interpolation_order: int = 3,
@@ -225,7 +244,6 @@ class PMEPotential(CalculatorBaseTorch, _PMEPotentialImpl):
         _PMEPotentialImpl.__init__(
             self,
             exponent=exponent,
-            sr_cutoff=sr_cutoff,
             atomic_smearing=atomic_smearing,
             mesh_spacing=mesh_spacing,
             interpolation_order=interpolation_order,
@@ -239,8 +257,8 @@ class PMEPotential(CalculatorBaseTorch, _PMEPotentialImpl):
         positions: Union[List[torch.Tensor], torch.Tensor],
         charges: Union[List[torch.Tensor], torch.Tensor],
         cell: Union[List[torch.Tensor], torch.Tensor],
-        neighbor_indices: Union[List[torch.Tensor], torch.Tensor] = None,
-        neighbor_shifts: Union[List[torch.Tensor], torch.Tensor] = None,
+        neighbor_indices: Union[List[torch.Tensor], torch.Tensor],
+        neighbor_shifts: Union[List[torch.Tensor], torch.Tensor],
     ) -> Union[torch.Tensor, List[torch.Tensor]]:
         """Compute potential for all provided "systems" stacked inside list.
 

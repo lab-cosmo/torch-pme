@@ -10,7 +10,6 @@ class _EwaldPotentialImpl(_ShortRange):
     def __init__(
         self,
         exponent: float,
-        sr_cutoff: Union[None, float],
         atomic_smearing: Union[None, float],
         lr_wavelength: Union[None, float],
         subtract_self: bool,
@@ -25,7 +24,6 @@ class _EwaldPotentialImpl(_ShortRange):
             self, exponent=exponent, subtract_interior=subtract_interior
         )
         self.atomic_smearing = atomic_smearing
-        self.sr_cutoff = sr_cutoff
         self.lr_wavelength = lr_wavelength
 
         # If interior contributions are to be subtracted, also do so for self term
@@ -38,27 +36,22 @@ class _EwaldPotentialImpl(_ShortRange):
         positions: torch.Tensor,
         charges: torch.Tensor,
         cell: torch.Tensor,
-        neighbor_indices: Optional[torch.Tensor] = None,
-        neighbor_shifts: Optional[torch.Tensor] = None,
+        neighbor_indices: torch.Tensor,
+        neighbor_shifts: torch.Tensor,
     ) -> torch.Tensor:
         # Set the defaut values of convergence parameters
         # The total computational cost = cost of SR part + cost of LR part
         # Bigger smearing increases the cost of the SR part while decreasing the cost
         # of the LR part. Since the latter usually is more expensive, we maximize the
         # value of the smearing by default to minimize the cost of the LR part.
-        # The two auxilary parameters (sr_cutoff, lr_wavelength) then control the
+        # The auxilary parameter lr_wavelength then control the
         # convergence of the SR and LR sums, respectively. The default values are
         # chosen to reach a convergence on the order of 1e-4 to 1e-5 for the test
         # structures.
-        if self.sr_cutoff is None:
-            cell_dimensions = torch.linalg.norm(cell, dim=1)
-            cutoff_max = torch.min(cell_dimensions) / 2 - 1e-6
-            sr_cutoff = cutoff_max.item()
-        else:
-            sr_cutoff = self.sr_cutoff
-
         if self.atomic_smearing is None:
-            smearing = sr_cutoff / 5.0
+            cell_dimensions = torch.linalg.norm(cell, dim=1)
+            max_cutoff = torch.min(cell_dimensions) / 2 - 1e-6
+            smearing = max_cutoff.item() / 5.0
         else:
             smearing = self.atomic_smearing
 
@@ -73,7 +66,6 @@ class _EwaldPotentialImpl(_ShortRange):
             charges=charges,
             cell=cell,
             smearing=smearing,
-            sr_cutoff=sr_cutoff,
             neighbor_indices=neighbor_indices,
             neighbor_shifts=neighbor_shifts,
         )
@@ -171,15 +163,22 @@ class EwaldPotential(CalculatorBaseTorch, _EwaldPotentialImpl):
     Scaling as :math:`\mathcal{O}(N^2)` with respect to the number of particles
     :math:`N`.
 
+    For computing a **neighborlist** a reasonable ``cutoff`` is half the length of
+    the shortest cell vector, which can be for example computed according as
+
+    .. code-block:: python
+
+        cell_dimensions = torch.linalg.norm(cell, dim=1)
+        cutoff = torch.min(cell_dimensions) / 2 - 1e-6
+
+    This ensures a accuracy of the short range part of ``1e-5``.
+
     :param exponent: the exponent :math:`p` in :math:`1/r^p` potentials
-    :param sr_cutoff: Cutoff radius used for the short-range part of the Ewald sum. If
-        not set to a global value, it will be set to be half of the shortest lattice
-        vector defining the cell (separately for each structure).
     :param atomic_smearing: Width of the atom-centered Gaussian used to split the
-        Coulomb potential into the short- and long-range parts. If not set to a global
-        value, it will be set to 1/5 times the sr_cutoff value (separately for each
-        structure) to ensure convergence of the short-range part to a relative precision
-        of 1e-5.
+        Coulomb potential into the short- and long-range parts. A reasonable value for
+        most systems is to set it to ``1/5`` times the neighbor list cutoff. If
+        :py:obj:`None` ,it will be set to 1/5 times of half the largest box vector
+        (separately for each structure).
     :param lr_wavelength: Spatial resolution used for the long-range (reciprocal space)
         part of the Ewald sum. More conretely, all Fourier space vectors with a
         wavelength >= this value will be kept. If not set to a global value, it will be
@@ -193,33 +192,12 @@ class EwaldPotential(CalculatorBaseTorch, _EwaldPotentialImpl):
         Note that if set to true, the self contribution (see previous) is also
         subtracted by default.
 
-    Example
-    -------
-    We calculate the Madelung constant of a CsCl (Cesium-Chloride) crystal. The
-    reference value is :math:`2 \cdot 1.7626 / \sqrt{3} \approx 2.0354`.
-
-    >>> import torch
-
-    Define crystal structure
-
-    >>> positions = torch.tensor([[0.0, 0.0, 0.0], [0.5, 0.5, 0.5]])
-    >>> charges = torch.tensor([1.0, -1.0]).reshape(-1, 1)
-    >>> cell = torch.eye(3)
-
-    Compute the potential
-
-    >>> ewald = EwaldPotential()
-    >>> ewald.compute(positions=positions, charges=charges, cell=cell)
-    tensor([[-2.0354],
-            [ 2.0354]])
-
-    Which is the same as the reference value given above.
+    For an **example** on the usage refer to :py:class:`PMEPotential`.
     """
 
     def __init__(
         self,
         exponent: float = 1.0,
-        sr_cutoff: Optional[torch.Tensor] = None,
         atomic_smearing: Optional[float] = None,
         lr_wavelength: Optional[float] = None,
         subtract_self: bool = True,
@@ -228,7 +206,6 @@ class EwaldPotential(CalculatorBaseTorch, _EwaldPotentialImpl):
         _EwaldPotentialImpl.__init__(
             self,
             exponent=exponent,
-            sr_cutoff=sr_cutoff,
             atomic_smearing=atomic_smearing,
             lr_wavelength=lr_wavelength,
             subtract_self=subtract_self,
@@ -241,13 +218,21 @@ class EwaldPotential(CalculatorBaseTorch, _EwaldPotentialImpl):
         positions: Union[List[torch.Tensor], torch.Tensor],
         charges: Union[List[torch.Tensor], torch.Tensor],
         cell: Union[List[torch.Tensor], torch.Tensor],
-        neighbor_indices: Union[List[torch.Tensor], torch.Tensor] = None,
-        neighbor_shifts: Union[List[torch.Tensor], torch.Tensor] = None,
+        neighbor_indices: Union[List[torch.Tensor], torch.Tensor],
+        neighbor_shifts: Union[List[torch.Tensor], torch.Tensor],
     ) -> Union[torch.Tensor, List[torch.Tensor]]:
         """Compute potential for all provided "systems" stacked inside list.
 
         The computation is performed on the same ``device`` as ``dtype`` is the input is
         stored on. The ``dtype`` of the output tensors will be the same as the input.
+
+        For computing a **neighborlist** a reasonable ``cutoff`` is half the length of
+        the shortest cell vector, which can be for example computed according as
+
+        .. code-block:: python
+
+            cell_dimensions = torch.linalg.norm(cell, dim=1)
+            cutoff = torch.min(cell_dimensions) / 2 - 1e-6
 
         :param positions: Single or 2D tensor of shape (``len(charges), 3``) containing
             the Cartesian positions of all point charges in the system.

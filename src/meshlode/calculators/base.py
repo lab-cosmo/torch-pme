@@ -1,8 +1,6 @@
-from typing import List, Optional, Tuple, Union
+from typing import List, Tuple, Union
 
 import torch
-from ase import Atoms
-from ase.neighborlist import neighbor_list
 
 from meshlode.lib import InversePowerLawPotential
 
@@ -23,23 +21,12 @@ class _ShortRange:
         charges: torch.Tensor,
         cell: torch.Tensor,
         smearing: float,
-        sr_cutoff: float,
-        neighbor_indices: Optional[torch.Tensor] = None,
-        neighbor_shifts: Optional[torch.Tensor] = None,
+        neighbor_indices: torch.Tensor,
+        neighbor_shifts: torch.Tensor,
     ) -> torch.Tensor:
-        if neighbor_indices is None or neighbor_shifts is None:
-            # Get list of neighbors
-            struc = Atoms(positions=positions.detach().numpy(), cell=cell, pbc=True)
-            atom_is, atom_js, neighbor_shifts = neighbor_list(
-                "ijS", struc, sr_cutoff, self_interaction=False
-            )
-            atom_is = torch.tensor(atom_is)
-            atom_js = torch.tensor(atom_js)
-            shifts = torch.tensor(neighbor_shifts, dtype=cell.dtype)  # N x 3
-        else:
-            atom_is = neighbor_indices[0]
-            atom_js = neighbor_indices[1]
-            shifts = neighbor_shifts.type(cell.dtype)
+        atom_is = neighbor_indices[0]
+        atom_js = neighbor_indices[1]
+        shifts = neighbor_shifts.type(cell.dtype)
 
         # Compute energy
         potential = torch.zeros_like(charges)
@@ -65,15 +52,9 @@ class _ShortRange:
 
 
 class CalculatorBaseTorch(torch.nn.Module):
-    """
-    Base calculator for the torch interface to MeshLODE.
+    """Base calculator for the torch interface to MeshLODE."""
 
-    :param exponent: the exponent :math:`p` in :math:`1/r^p` potentials
-    """
-
-    def __init__(
-        self,
-    ):
+    def __init__(self):
         super().__init__()
 
     def _validate_compute_parameters(
@@ -270,7 +251,7 @@ class CalculatorBaseTorch(torch.nn.Module):
                         f"device {neighbor_shifts_single.device}"
                     )
 
-        return positions, cell, charges, neighbor_indices, neighbor_shifts
+        return positions, charges, cell, neighbor_indices, neighbor_shifts
 
     def _compute_impl(
         self,
@@ -286,8 +267,8 @@ class CalculatorBaseTorch(torch.nn.Module):
         # more general case
         (
             positions,
-            cell,
             charges,
+            cell,
             neighbor_indices,
             neighbor_shifts,
         ) = self._validate_compute_parameters(
@@ -302,11 +283,11 @@ class CalculatorBaseTorch(torch.nn.Module):
         potentials = []
         for (
             positions_single,
-            cell_single,
             charges_single,
+            cell_single,
             neighbor_indices_single,
             neighbor_shifts_single,
-        ) in zip(positions, cell, charges, neighbor_indices, neighbor_shifts):
+        ) in zip(positions, charges, cell, neighbor_indices, neighbor_shifts):
             # Compute the potentials
             potentials.append(
                 self._compute_single_system(

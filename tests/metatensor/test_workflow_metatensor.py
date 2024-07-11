@@ -5,6 +5,7 @@ Madelung tests
 import pytest
 import torch
 from packaging import version
+from utils_metatensor import add_neighbor_list
 
 import meshlode
 
@@ -60,6 +61,7 @@ class TestWorkflow:
             properties=mts_torch.Labels("charge", torch.tensor([[0]])),
         )
         system.add_data(name="charges", data=data)
+        add_neighbor_list(system)
 
         return system
 

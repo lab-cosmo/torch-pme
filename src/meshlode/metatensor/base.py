@@ -79,7 +79,8 @@ class CalculatorBaseMetatensor(torch.nn.Module):
 
         :param systems: single System or list of
             :py:class:`metatensor.torch.atomisic.System` on which to run the
-            calculations.
+            calculations. If a ``system`` has multiple neighbor lists the first *full*
+            list will taken into account for the computation.
 
         :return: TensorMap containing the potential of all types.
         """
@@ -91,20 +92,33 @@ class CalculatorBaseMetatensor(torch.nn.Module):
                 warnings.simplefilter("ignore")
                 charges = system.get_data("charges").values
 
-            # try to extract neighbor list from system object
-            neighbor_indices = None
-            neighbor_shifts = None
-            for neighbor_list_options in system.known_neighbor_lists():
-                if (
-                    hasattr(self, "sr_cutoff")
-                    and neighbor_list_options.cutoff == self.sr_cutoff
-                ):
-                    neighbor_list = system.get_neighbor_list(neighbor_list_options)
+            all_neighbor_lists = system.known_neighbor_lists()
+            if all_neighbor_lists:
+                # try to extract neighbor list from system object
+                for neighbor_list_options in all_neighbor_lists:
+                    if neighbor_list_options.full_list:
+                        break
 
-                    neighbor_indices = neighbor_list.samples.values[:, :2].T
-                    neighbor_shifts = neighbor_list.samples.values[:, 2:]
+                if not neighbor_list_options.full_list:
+                    raise ValueError(
+                        f"Found {len(all_neighbor_lists)} neighbor list(s) but no full "
+                        "list, which is required."
+                    )
 
-                    break
+                if len(system.known_neighbor_lists()) > 1:
+                    warnings.warn(
+                        "Multiple neighbor lists found "
+                        f"({len(all_neighbor_lists)}). Using the full first one "
+                        f"with `cutoff={neighbor_list_options.cutoff}`.",
+                        stacklevel=2,
+                    )
+
+                neighbor_list = system.get_neighbor_list(neighbor_list_options)
+                neighbor_indices = neighbor_list.samples.values[:, :2].T
+                neighbor_shifts = neighbor_list.samples.values[:, 2:]
+            else:
+                neighbor_indices = None
+                neighbor_shifts = None
 
             potentials.append(
                 self._compute_single_system(

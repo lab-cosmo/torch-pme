@@ -1,6 +1,8 @@
 import pytest
 import torch
 from packaging import version
+from utils_metatensor import add_neighbor_list
+from vesin import NeighborList
 
 import meshlode
 
@@ -13,6 +15,12 @@ class CalculatorTest(meshlode.metatensor.base.CalculatorBaseMetatensor):
     def _compute_single_system(
         self, positions, charges, cell, neighbor_indices, neighbor_shifts
     ):
+        self._positions = positions
+        self._charges = charges
+        self._cell = cell
+        self._neighbor_indices = neighbor_indices
+        self._neighbor_shifts = neighbor_shifts
+
         return charges
 
 
@@ -48,6 +56,47 @@ def test_compute_output_shapes_single(method_name):
     assert result[0].properties.names == ["charges_channel"]
 
     assert tuple(result[0].values.shape) == (len(system), 1)
+
+
+def test_corrrect_value_extraction():
+    system = mts_atomistic.System(
+        types=torch.tensor([1, 1]),
+        positions=torch.tensor([[0.0, 0.0, 0.0], [0.0, 0.0, 2.0]]),
+        cell=torch.eye(3),
+    )
+
+    charges = torch.tensor([1.0, -1.0]).reshape(-1, 1)
+    data = mts_torch.TensorBlock(
+        values=charges,
+        samples=mts_torch.Labels.range("atom", charges.shape[0]),
+        components=[],
+        properties=mts_torch.Labels.range("charge", charges.shape[1]),
+    )
+
+    calculator = CalculatorTest()
+
+    system.add_data(name="charges", data=data)
+
+    cutoff = 2.0
+    add_neighbor_list(system, cutoff=cutoff)
+
+    # Compute reference neighborlist
+    nl = NeighborList(cutoff=cutoff, full_list=True)
+    i, j, S = nl.compute(
+        points=system.positions, box=system.cell, periodic=True, quantities="ijS"
+    )
+
+    i = torch.from_numpy(i.astype(int))
+    j = torch.from_numpy(j.astype(int))
+
+    neighbor_indices = torch.vstack([i, j])
+    neighbor_shifts = torch.from_numpy(S.astype(int))
+
+    calculator.compute(system)
+
+    assert torch.equal(calculator._charges, charges)
+    assert torch.equal(calculator._neighbor_indices, neighbor_indices)
+    assert torch.equal(calculator._neighbor_shifts, neighbor_shifts)
 
 
 def test_compute_output_shapes_multiple():
@@ -195,3 +244,59 @@ def test_different_number_charge_channles():
     )
     with pytest.raises(ValueError, match=match):
         calculator.compute([system1, system2])
+
+
+def test_multiple_neighborlist_warning():
+    system = mts_atomistic.System(
+        types=torch.tensor([1, 1]),
+        positions=torch.tensor([[0.0, 0.0, 0.0], [0.0, 0.0, 2.0]]),
+        cell=torch.eye(3),
+    )
+
+    charges = torch.tensor([1.0, -1.0]).reshape(-1, 1)
+    data = mts_torch.TensorBlock(
+        values=charges,
+        samples=mts_torch.Labels.range("atom", charges.shape[0]),
+        components=[],
+        properties=mts_torch.Labels.range("charge", charges.shape[1]),
+    )
+
+    system.add_data(name="charges", data=data)
+
+    add_neighbor_list(system, cutoff=1.0)
+    add_neighbor_list(system, cutoff=2.0)
+
+    calculator = CalculatorTest()
+
+    match = (
+        r"Multiple neighbor lists found \(2\). Using the full first one with "
+        r"`cutoff=1.0`."
+    )
+    with pytest.warns(UserWarning, match=match):
+        calculator.compute(system)
+
+
+def test_neighborlist_half_error():
+    system = mts_atomistic.System(
+        types=torch.tensor([1, 1]),
+        positions=torch.tensor([[0.0, 0.0, 0.0], [0.0, 0.0, 2.0]]),
+        cell=torch.eye(3),
+    )
+
+    charges = torch.tensor([1.0, -1.0]).reshape(-1, 1)
+    data = mts_torch.TensorBlock(
+        values=charges,
+        samples=mts_torch.Labels.range("atom", charges.shape[0]),
+        components=[],
+        properties=mts_torch.Labels.range("charge", charges.shape[1]),
+    )
+
+    calculator = CalculatorTest()
+
+    system.add_data(name="charges", data=data)
+
+    add_neighbor_list(system, cutoff=1.0, full_list=False)
+
+    match = r"Found 1 neighbor list\(s\) but no full list, which is required."
+    with pytest.raises(ValueError, match=match):
+        calculator.compute(system)
