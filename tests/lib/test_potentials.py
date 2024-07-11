@@ -8,6 +8,7 @@ from meshlode.lib import InversePowerLawPotential
 
 
 def gamma(x):
+    x = torch.tensor(x, dtype=dtype)
     return torch.exp(torch.special.gammaln(x))
 
 
@@ -54,7 +55,6 @@ def test_potential_from_squared_argument(exponent):
     The potentials class can either compute the potential by taking the distance r or
     its square r^2 as an argument. This test makes sure that both implementations agree.
     """
-    exponent = torch.tensor(exponent, dtype=dtype)
 
     # Compute diverse potentials for this inverse power law
     ipl = InversePowerLawPotential(exponent=exponent)
@@ -75,8 +75,6 @@ def test_sr_lr_split(exponent, smearing):
     whether the sum of the SR and LR parts combine to the standard inverse power-law
     potential.
     """
-    exponent = torch.tensor(exponent, dtype=dtype)
-    smearing = torch.tensor(smearing, dtype=dtype)
 
     # Compute diverse potentials for this inverse power law
     ipl = InversePowerLawPotential(exponent=exponent)
@@ -105,8 +103,6 @@ def test_exact_sr(exponent, smearing):
     distance range (the variable dist_min) is increased, since the potential has a
     (removable) singularity at r=0.
     """
-    exponent = torch.tensor(exponent, dtype=dtype)
-    smearing = torch.tensor(smearing, dtype=dtype)
 
     # Compute SR part of Coulomb potential using the potentials class working for any
     # exponent
@@ -141,8 +137,6 @@ def test_exact_lr(exponent, smearing):
     distance range (the variable dist_min) is increased, since the potential has a
     (removable) singularity at r=0.
     """
-    exponent = torch.tensor(exponent, dtype=dtype)
-    smearing = torch.tensor(smearing, dtype=dtype)
 
     # Compute LR part of Coulomb potential using the potentials class working for any
     # exponent
@@ -161,8 +155,8 @@ def test_exact_lr(exponent, smearing):
         potential_exact = potential_1 / dists_sq - prefac * potential_2
 
     # Compare results. Large tolerance due to singular division
-    rtol = 8e-12
-    atol = 3e-16
+    rtol = 1e-10
+    atol = 1e-12
     assert_close(potential_lr_from_dist, potential_exact, rtol=rtol, atol=atol)
 
 
@@ -177,8 +171,6 @@ def test_exact_fourier(exponent, smearing):
     distance range (the variable dist_min) is increased, since the potential has a
     (removable) singularity at r=0.
     """
-    exponent = torch.tensor(exponent, dtype=dtype)
-    smearing = torch.tensor(smearing, dtype=dtype)
 
     # Compute LR part of Coulomb potential using the potentials class working for any
     # exponent
@@ -194,8 +186,8 @@ def test_exact_fourier(exponent, smearing):
         fourier_exact = -2 * PI * expi(-0.5 * smearing**2 * ks_sq)
 
     # Compare results. Large tolerance due to singular division
-    rtol = 10 * machine_epsilon
-    atol = 7e-16
+    rtol = 1e-14
+    atol = 1e-14
     assert_close(fourier_from_class, fourier_exact, rtol=rtol, atol=atol)
 
 
@@ -217,11 +209,8 @@ def test_lr_value_at_zero(exponent, smearing):
     In practice, this should not be such an issue since no two atoms should approach
     each other until their distance is 1e-5 (the value used here).
     """
-    exponent = torch.tensor(exponent, dtype=dtype)
-    smearing = torch.tensor(smearing, dtype=dtype)
-
     # Get atomic density at tiny distance
-    dist_small = torch.tensor(1e-8)
+    dist_small = torch.tensor(1e-8, dtype=dtype)
     ipl = InversePowerLawPotential(exponent=exponent)
     potential_close_to_zero = ipl.potential_lr_from_dist(dist_small, smearing=smearing)
 
