@@ -103,7 +103,6 @@ pme = meshlode.metatensor.PMEPotential(
     mesh_spacing=mesh_spacing,
     interpolation_order=interpolation_order,
     subtract_self=True,
-    sr_cutoff=sr_cutoff,
 )
 potential = pme.compute(system)
 
