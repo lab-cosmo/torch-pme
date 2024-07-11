@@ -11,7 +11,7 @@ class _PMEPotentialImpl(_ShortRange):
     def __init__(
         self,
         exponent: float,
-        sr_cutoff: Union[None, torch.Tensor],
+        sr_cutoff: Union[None, float],
         atomic_smearing: Union[None, float],
         mesh_spacing: Union[None, float],
         interpolation_order: int,
@@ -29,15 +29,6 @@ class _PMEPotentialImpl(_ShortRange):
         _ShortRange.__init__(
             self, exponent=exponent, subtract_interior=subtract_interior
         )
-        self.atomic_smearing = atomic_smearing
-        self.mesh_spacing = mesh_spacing
-        self.interpolation_order = interpolation_order
-        self.sr_cutoff = sr_cutoff
-
-        # If interior contributions are to be subtracted, also do so for self term
-        if self.subtract_interior:
-            subtract_self = True
-        self.subtract_self = subtract_self
 
         self.atomic_smearing = atomic_smearing
         self.mesh_spacing = mesh_spacing
@@ -70,7 +61,7 @@ class _PMEPotentialImpl(_ShortRange):
         if self.sr_cutoff is None:
             cell_dimensions = torch.linalg.norm(cell, dim=1)
             cutoff_max = torch.min(cell_dimensions) / 2 - 1e-6
-            sr_cutoff = cutoff_max
+            sr_cutoff = cutoff_max.item()
         else:
             sr_cutoff = self.sr_cutoff
 
@@ -113,8 +104,8 @@ class _PMEPotentialImpl(_ShortRange):
         positions: torch.Tensor,
         charges: torch.Tensor,
         cell: torch.Tensor,
-        smearing: torch.Tensor,
-        lr_wavelength: torch.Tensor,
+        smearing: float,
+        lr_wavelength: float,
         subtract_self=True,
     ) -> torch.Tensor:
         # Step 0 (Preparation): Compute number of times each basis vector of the

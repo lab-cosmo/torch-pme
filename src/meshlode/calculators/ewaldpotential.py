@@ -10,7 +10,7 @@ class _EwaldPotentialImpl(_ShortRange):
     def __init__(
         self,
         exponent: float,
-        sr_cutoff: Union[None, torch.Tensor],
+        sr_cutoff: Union[None, float],
         atomic_smearing: Union[None, float],
         lr_wavelength: Union[None, float],
         subtract_self: bool,
@@ -52,7 +52,8 @@ class _EwaldPotentialImpl(_ShortRange):
         # structures.
         if self.sr_cutoff is None:
             cell_dimensions = torch.linalg.norm(cell, dim=1)
-            sr_cutoff = torch.min(cell_dimensions) / 2 - 1e-6
+            cutoff_max = torch.min(cell_dimensions) / 2 - 1e-6
+            sr_cutoff = cutoff_max.item()
         else:
             sr_cutoff = self.sr_cutoff
 

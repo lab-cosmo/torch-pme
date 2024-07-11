@@ -280,7 +280,7 @@ def define_crystal(crystal_name="CsCl"):
     return types, positions, charges, cell, madelung_ref, num_formula_units
 
 
-scaling_factors = torch.tensor([1 / 2.0353610, 1.0, 3.4951291], dtype=torch.float64)
+scaling_factors = [1 / 2.0353610, 1.0, 3.4951291]
 neutral_crystals = ["CsCl", "NaCl_primitive", "NaCl_cubic", "zincblende", "wurtzite"]
 neutral_crystals += ["cu2o", "fluorite"]
 
@@ -307,11 +307,11 @@ def test_madelung(crystal_name, scaling_factor, calc_name):
 
     # Define calculator and tolerances
     if calc_name == "ewald":
-        sr_cutoff = scaling_factor * torch.tensor(1.0, dtype=dtype)
+        sr_cutoff = scaling_factor
         calc = EwaldPotential(sr_cutoff=sr_cutoff)
         rtol = 4e-6
     elif calc_name == "pme":
-        sr_cutoff = scaling_factor * torch.tensor(2.0, dtype=dtype)
+        sr_cutoff = scaling_factor * 2
         calc = PMEPotential(sr_cutoff=sr_cutoff)
         rtol = 9e-4
 
@@ -333,7 +333,7 @@ wigner_crystals = [
     "wigner_bcc_cubiccell",
 ]
 
-scaling_factors = torch.tensor([0.4325, 1.0, 2.0353610], dtype=torch.float64)
+scaling_factors = [0.4325, 1.0, 2.0353610]
 
 
 @pytest.mark.parametrize("crystal_name", wigner_crystals)
@@ -372,7 +372,7 @@ def test_wigner(crystal_name, scaling_factor):
         smeareff *= scaling_factor
 
         # Compute potential and compare against reference
-        calc = EwaldPotential(atomic_smearing=smeareff)
+        calc = EwaldPotential(atomic_smearing=smeareff.item())
         potentials = calc.compute(positions=positions, charges=charges, cell=cell)
         energies = potentials * charges
         energies_ref = -torch.ones_like(energies) * madelung_ref
@@ -380,7 +380,7 @@ def test_wigner(crystal_name, scaling_factor):
 
 
 orthogonal_transformations = generate_orthogonal_transformations()
-scaling_factors = torch.tensor([0.4325, 2.0353610], dtype=dtype)
+scaling_factors = [0.4325, 2.0353610]
 
 
 @pytest.mark.parametrize("sr_cutoff", [2.01, 5.5])
@@ -420,7 +420,7 @@ def test_random_structure(sr_cutoff, frame_index, scaling_factor, ortho, calc_na
     charges = torch.tensor([1, 1, 1, 1, -1, -1, -1, -1], dtype=dtype).reshape((-1, 1))
 
     # Compute potential using MeshLODE and compare against reference values
-    sr_cutoff = scaling_factor * torch.tensor(sr_cutoff, dtype=dtype)
+    sr_cutoff = scaling_factor * sr_cutoff
     if calc_name == "ewald":
         calc = EwaldPotential(sr_cutoff=sr_cutoff)
         rtol_e = 2e-5

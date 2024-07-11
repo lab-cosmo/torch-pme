@@ -102,7 +102,7 @@ class CalculatorBaseMetatensor(torch.nn.Module):
                     neighbor_list = system.get_neighbor_list(neighbor_list_options)
 
                     neighbor_indices = neighbor_list.samples.values[:, :2].T
-                    neighbor_shifts = neighbor_list.samples.values[:, 2:].T
+                    neighbor_shifts = neighbor_list.samples.values[:, 2:]
 
                     break
 

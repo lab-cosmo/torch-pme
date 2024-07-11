@@ -23,7 +23,7 @@ class _ShortRange:
         charges: torch.Tensor,
         cell: torch.Tensor,
         smearing: float,
-        sr_cutoff: torch.Tensor,
+        sr_cutoff: float,
         neighbor_indices: Optional[torch.Tensor] = None,
         neighbor_shifts: Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
@@ -31,7 +31,7 @@ class _ShortRange:
             # Get list of neighbors
             struc = Atoms(positions=positions.detach().numpy(), cell=cell, pbc=True)
             atom_is, atom_js, neighbor_shifts = neighbor_list(
-                "ijS", struc, sr_cutoff.item(), self_interaction=False
+                "ijS", struc, sr_cutoff, self_interaction=False
             )
             atom_is = torch.tensor(atom_is)
             atom_js = torch.tensor(atom_js)
@@ -39,7 +39,7 @@ class _ShortRange:
         else:
             atom_is = neighbor_indices[0]
             atom_js = neighbor_indices[1]
-            shifts = neighbor_shifts.type(cell.dtype).T
+            shifts = neighbor_shifts.type(cell.dtype)
 
         # Compute energy
         potential = torch.zeros_like(charges)
