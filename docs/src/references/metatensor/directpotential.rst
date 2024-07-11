@@ -2,5 +2,5 @@ DirectPotential
 ###############
 
 .. autoclass:: meshlode.metatensor.DirectPotential
-    :members:
+    :members: compute, forward
     :undoc-members:

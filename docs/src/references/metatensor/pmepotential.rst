@@ -2,5 +2,5 @@ PMEPotential
 ############
 
 .. autoclass:: meshlode.metatensor.PMEPotential
-    :members:
+    :members: compute, forward
     :undoc-members:

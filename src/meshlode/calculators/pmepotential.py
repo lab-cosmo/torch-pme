@@ -276,13 +276,14 @@ class PMEPotential(CalculatorBaseTorch, _PMEPotentialImpl):
             box/unit cell of the system. Each row should be one of the bounding box
             vector; and columns should contain the x, y, and z components of these
             vectors (i.e. the cell should be given in row-major order).
-        :param neighbor_indices: Optional single or list of 2D tensors of shape (2, n),
-            where n is the number of atoms. The 2 rows correspond to the indices of
-            the two atoms which are considered neighbors (e.g. within a cutoff distance)
+        :param neighbor_indices: Optional single or list of 2D tensors of shape ``(2,
+            n)``, where ``n`` is the number of atoms. The two rows correspond to the
+            indices of a **full neighbor list** for the two atoms which are considered
+            neighbors (e.g. within a cutoff distance).
         :param neighbor_shifts: Optional single or list of 2D tensors of shape (3, n),
              where n is the number of atoms. The 3 rows correspond to the shift indices
-             for periodic images.
-        :return: Single or List of torch Tensors containing the potential(s) for all
+             for periodic images of a **full neighbor list**.
+        :return: Single or list of torch tensors containing the potential(s) for all
             positions. Each tensor in the list is of shape ``(len(positions),
             len(charges))``, where If the inputs are only single tensors only a single
             torch tensor with the potentials is returned.

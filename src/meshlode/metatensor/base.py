@@ -74,13 +74,15 @@ class CalculatorBaseMetatensor(torch.nn.Module):
         ``systems``. If no "explicit" charges are set the potential will be calculated
         for each "types-channels".
 
-        Refer to :meth:`meshlode.PMEPotential.compute()` for additional details on how
-        "charges-channel" and "types-channels" are computed.
-
         :param systems: single System or list of
             :py:class:`metatensor.torch.atomisic.System` on which to run the
-            calculations. If a ``system`` has multiple neighbor lists the first *full*
-            list will taken into account for the computation.
+            calculations. The system should have ``"charges"`` using the
+            :py:meth:`add_data <metatensor.torch.atomistic.System.add_data>` method. If
+            periodic computations (Ewald, PME) are performed additionally a **full
+            neighbor list** should be attached using the :py:meth:`add_neighbor_list
+            <metatensor.torch.atomistic.System.add_neighbor_list>` method. If a
+            ``system`` has *multiple* neighbor lists the first full list will taken into
+            account for the computation.
 
         :return: TensorMap containing the potential of all types.
         """
