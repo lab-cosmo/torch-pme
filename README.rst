@@ -58,4 +58,4 @@ Thanks goes to all people that make MeshLODE possible:
 
 .. |docs| image:: https://img.shields.io/badge/documentation-latest-sucess
    :alt: Documentation
-   :target: https://lab-cosmo.github.io/MeshLODE/latest/
+   :target: `documentation`_

@@ -60,6 +60,7 @@ intersphinx_mapping = {
     "numpy": ("https://numpy.org/doc/stable/", None),
     "torch": ("https://pytorch.org/docs/stable/", None),
     "metatensor": ("https://docs.metatensor.org/latest/", None),
+    "vesin": ("https://luthaf.fr/vesin/latest/", None),
 }
 
 # -- Options for HTML output -------------------------------------------------
