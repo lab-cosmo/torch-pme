@@ -6,6 +6,7 @@ import math
 import pytest
 import torch
 from torch.testing import assert_close
+from utils import neighbor_list_torch
 
 from meshlode import DirectPotential, EwaldPotential, PMEPotential
 
@@ -53,7 +54,11 @@ class TestWorkflow:
         charges = torch.tensor([1.0, -1.0]).reshape((-1, 1))
         if periodic:
             cell = torch.eye(3)
-            return positions, charges, cell
+
+            neighbor_indices, neighbor_shifts = neighbor_list_torch(
+                positions=positions, cell=cell
+            )
+            return positions, charges, cell, neighbor_indices, neighbor_shifts
         else:
             return positions, charges
 
@@ -86,11 +91,15 @@ class TestWorkflow:
     def test_multi_frame(self, CalculatorClass, periodic, params):
         calculator = self.calculator(CalculatorClass, periodic, params)
         if periodic:
-            positions, charges, cell = self.cscl_system(periodic)
+            positions, charges, cell, neighbor_indices, neighbor_shifts = (
+                self.cscl_system(periodic)
+            )
             l_values = calculator.compute(
                 positions=[positions, positions],
                 cell=[cell, cell],
                 charges=[charges, charges],
+                neighbor_indices=[neighbor_indices, neighbor_indices],
+                neighbor_shifts=[neighbor_shifts, neighbor_shifts],
             )
         else:
             positions, charges = self.cscl_system(periodic)
@@ -117,8 +126,14 @@ class TestWorkflow:
         calculator = self.calculator(CalculatorClass, periodic, params)
         if periodic:
             cell = torch.eye(3, dtype=dtype, device=device)
+            neighbor_indices = torch.tensor([0, 0]).reshape(-1, 1)
+            neighbor_shifts = torch.tensor([0, 0, 0]).reshape(1, -1)
             potential = calculator.compute(
-                positions=positions, charges=charges, cell=cell
+                positions=positions,
+                charges=charges,
+                cell=cell,
+                neighbor_indices=neighbor_indices,
+                neighbor_shifts=neighbor_shifts,
             )
         else:
             potential = calculator.compute(positions=positions, charges=charges)
@@ -130,15 +145,7 @@ class TestWorkflow:
     # and returns the correct output format (torch.Tensor)
     def check_operation(self, CalculatorClass, periodic, params):
         calculator = self.calculator(CalculatorClass, periodic, params)
-
-        if periodic:
-            positions, charges, cell = self.cscl_system(periodic)
-            descriptor = calculator.compute(
-                positions=positions, charges=charges, cell=cell
-            )
-        else:
-            positions, charges = self.cscl_system(periodic)
-            descriptor = calculator.compute(positions=positions, charges=charges)
+        descriptor = calculator.compute(*self.cscl_system(periodic))
 
         assert type(descriptor) is torch.Tensor
 

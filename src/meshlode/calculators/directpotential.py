@@ -12,10 +12,10 @@ class _DirectPotentialImpl:
     def _compute_single_system(
         self,
         positions: torch.Tensor,
-        cell: Union[None, torch.Tensor],
+        cell: None,
         charges: torch.Tensor,
-        neighbor_indices: Union[None, torch.Tensor],
-        neighbor_shifts: Union[None, torch.Tensor],
+        neighbor_indices: None,
+        neighbor_shifts: None,
     ) -> torch.Tensor:
         # Compute matrix containing the squared distances from the Gram matrix
         # The squared distance and the inner product between two vectors r_i and r_j are

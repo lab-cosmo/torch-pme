@@ -35,12 +35,13 @@ keywords = [
 ]
 dependencies = [
     "torch >=1.11",
-    "ase >= 3.23.0",
 ]
 dynamic = ["version"]
 
 [project.optional-dependencies]
 examples = [
+    "ase >= 3.23.0",
+    "chemiscope",
     "matplotlib",
 ]
 metatensor = [

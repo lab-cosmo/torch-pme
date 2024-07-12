@@ -2,5 +2,5 @@ EwaldPotential
 ##############
 
 .. autoclass:: meshlode.metatensor.EwaldPotential
-    :members:
+    :members: compute, forward
     :undoc-members:
