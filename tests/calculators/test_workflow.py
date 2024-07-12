@@ -62,14 +62,8 @@ class TestWorkflow:
         else:
             return positions, charges
 
-    def calculator(self, CalculatorClass, periodic, params):
-        if periodic:
-            return CalculatorClass(**params)
-        else:
-            return CalculatorClass()
-
     def test_forward(self, CalculatorClass, periodic, params):
-        calculator = self.calculator(CalculatorClass, periodic, params)
+        calculator = CalculatorClass(**params)
         descriptor_compute = calculator.compute(*self.cscl_system(periodic))
         descriptor_forward = calculator.forward(*self.cscl_system(periodic))
 
@@ -89,7 +83,7 @@ class TestWorkflow:
                 CalculatorClass(atomic_smearing=1, interpolation_order=10)
 
     def test_multi_frame(self, CalculatorClass, periodic, params):
-        calculator = self.calculator(CalculatorClass, periodic, params)
+        calculator = CalculatorClass(**params)
         if periodic:
             positions, charges, cell, neighbor_indices, neighbor_shifts = (
                 self.cscl_system(periodic)
@@ -123,7 +117,7 @@ class TestWorkflow:
         positions = torch.tensor([[0.0, 0.0, 0.0]], dtype=dtype, device=device)
         charges = torch.ones((1, 2), dtype=dtype, device=device)
 
-        calculator = self.calculator(CalculatorClass, periodic, params)
+        calculator = CalculatorClass(**params)
         if periodic:
             cell = torch.eye(3, dtype=dtype, device=device)
             neighbor_indices = torch.tensor([0, 0]).reshape(-1, 1)
@@ -143,18 +137,18 @@ class TestWorkflow:
 
     # Make sure that the calculators are computing the features without raising errors,
     # and returns the correct output format (torch.Tensor)
-    def check_operation(self, CalculatorClass, periodic, params):
-        calculator = self.calculator(CalculatorClass, periodic, params)
+    def check_operation(self, calculator, periodic):
         descriptor = calculator.compute(*self.cscl_system(periodic))
-
         assert type(descriptor) is torch.Tensor
 
     # Run the above test as a normal python script
     def test_operation_as_python(self, CalculatorClass, periodic, params):
-        self.check_operation(CalculatorClass, periodic, params)
+        calculator = CalculatorClass(**params)
+        self.check_operation(calculator, periodic)
 
     # Similar to the above, but also testing that the code can be compiled as a torch
     # script
-    # def test_operation_as_torch_script(self, CalculatorClass, periodic, params):
-    #     scripted = torch.jit.script(CalculatorClass, periodic, params)
-    #     self.check_operation(scripted)
+    def test_operation_as_torch_script(self, CalculatorClass, periodic, params):
+        calculator = CalculatorClass(**params)
+        scripted = torch.jit.script(calculator)
+        self.check_operation(scripted, periodic)

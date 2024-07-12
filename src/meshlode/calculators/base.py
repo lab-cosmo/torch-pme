@@ -56,6 +56,8 @@ class CalculatorBaseTorch(torch.nn.Module):
 
     def __init__(self):
         super().__init__()
+        self._device = torch.device("cpu")
+        self._dtype = torch.float32
 
     def _validate_compute_parameters(
         self,

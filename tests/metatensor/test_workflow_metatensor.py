@@ -65,11 +65,8 @@ class TestWorkflow:
 
         return system
 
-    def calculator(self, CalculatorClass, params):
-        return CalculatorClass(**params)
-
     def test_forward(self, CalculatorClass, params):
-        calculator = self.calculator(CalculatorClass, params)
+        calculator = CalculatorClass(**params)
         descriptor_compute = calculator.compute(self.cscl_system())
         descriptor_forward = calculator.forward(self.cscl_system())
 
@@ -83,8 +80,7 @@ class TestWorkflow:
 
     # Make sure that the calculators are computing the features without raising errors,
     # and returns the correct output format (TensorMap)
-    def check_operation(self, CalculatorClass, params):
-        calculator = self.calculator(CalculatorClass, params)
+    def check_operation(self, calculator):
         descriptor = calculator.compute(self.cscl_system())
 
         assert isinstance(descriptor, torch.ScriptObject)
@@ -93,10 +89,12 @@ class TestWorkflow:
 
     # Run the above test as a normal python script
     def test_operation_as_python(self, CalculatorClass, params):
-        self.check_operation(CalculatorClass, params)
+        calculator = CalculatorClass(**params)
+        self.check_operation(calculator)
 
     # Similar to the above, but also testing that the code can be compiled as a torch
     # script
-    # def test_operation_as_torch_script(self, CalculatorClass, params):
-    #     scripted = torch.jit.script(CalculatorClass, params)
-    #     self.check_operation(scripted)
+    def test_operation_as_torch_script(self, CalculatorClass, params):
+        calculator = CalculatorClass(**params)
+        scripted = torch.jit.script(calculator)
+        self.check_operation(scripted)
