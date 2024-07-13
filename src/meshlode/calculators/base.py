@@ -1,4 +1,4 @@
-from typing import List, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 import torch
 
@@ -46,7 +46,7 @@ class _ShortRange:
         # potential.index_add_(0, atom_is, charges[atom_js] * potentials_bare)
 
         for i, j, potential_bare in zip(atom_is, atom_js, potentials_bare):
-            potential[i.item()] += charges[j.item()] * potential_bare
+            potential[int(i.item())] += charges[int(j.item())] * potential_bare
 
         return potential
 
@@ -63,19 +63,23 @@ class CalculatorBaseTorch(torch.nn.Module):
         self,
         positions: Union[List[torch.Tensor], torch.Tensor],
         charges: Union[List[torch.Tensor], torch.Tensor],
-        cell: Union[None, List[torch.Tensor], torch.Tensor],
-        neighbor_indices: Union[None, List[torch.Tensor], torch.Tensor],
-        neighbor_shifts: Union[None, List[torch.Tensor], torch.Tensor],
+        cell: Union[List[Optional[torch.Tensor]], Optional[torch.Tensor]],
+        neighbor_indices: Union[List[Optional[torch.Tensor]], Optional[torch.Tensor]],
+        neighbor_shifts: Union[List[Optional[torch.Tensor]], Optional[torch.Tensor]],
     ) -> Tuple[
         List[torch.Tensor],
-        Union[List[None], List[torch.Tensor]],
         List[torch.Tensor],
-        Union[List[None], List[torch.Tensor]],
-        Union[List[None], List[torch.Tensor]],
+        List[Optional[torch.Tensor]],
+        List[Optional[torch.Tensor]],
+        List[Optional[torch.Tensor]],
     ]:
         # make sure that the provided positions are a list
         if not isinstance(positions, list):
             positions = [positions]
+
+        # make sure that provided charges are a list of same length as positions
+        if not isinstance(charges, list):
+            charges = [charges]
 
         # In actual computations, the data type (dtype) and device (e.g. CPU, GPU) of
         # all remaining variables need to be consistent
@@ -83,20 +87,18 @@ class CalculatorBaseTorch(torch.nn.Module):
         self._dtype = positions[0].dtype
 
         # make sure that provided cells are a list of same length as positions
-        if cell is None:
-            cell = len(positions) * [None]
-        elif not isinstance(cell, list):
+        if isinstance(cell, list):
+            pass
+        else:
             cell = [cell]
+            if cell[0] is None:
+                cell = cell * len(positions)
 
         if len(positions) != len(cell):
             raise ValueError(
                 f"Got inconsistent numbers of positions ({len(positions)}) and "
                 f"cell ({len(cell)})"
             )
-
-        # make sure that provided charges are a list of same length as positions
-        if not isinstance(charges, list):
-            charges = [charges]
 
         if len(positions) != len(charges):
             raise ValueError(
@@ -105,10 +107,12 @@ class CalculatorBaseTorch(torch.nn.Module):
             )
 
         # check neighbor_indices
-        if neighbor_indices is None:
-            neighbor_indices = len(positions) * [None]
-        elif not isinstance(neighbor_indices, list):
+        if isinstance(neighbor_indices, list):
+            pass
+        else:
             neighbor_indices = [neighbor_indices]
+            if neighbor_indices[0] is None:
+                neighbor_indices = neighbor_indices * len(positions)
 
         if len(positions) != len(neighbor_indices):
             raise ValueError(
@@ -117,10 +121,12 @@ class CalculatorBaseTorch(torch.nn.Module):
             )
 
         # check neighbor_shifts
-        if neighbor_shifts is None:
-            neighbor_shifts = len(positions) * [None]
-        elif not isinstance(neighbor_shifts, list):
+        if isinstance(neighbor_shifts, list):
+            pass
+        else:
             neighbor_shifts = [neighbor_shifts]
+            if neighbor_shifts[0] is None:
+                neighbor_shifts = neighbor_shifts * len(positions)
 
         if len(positions) != len(neighbor_shifts):
             raise ValueError(
@@ -141,7 +147,9 @@ class CalculatorBaseTorch(torch.nn.Module):
             if list(positions_single.shape) != [num_atoms, 3]:
                 raise ValueError(
                     "each `positions` must be a (n_atoms x 3) tensor, got at least "
-                    f"one tensor with shape {tuple(positions_single.shape)}"
+                    f"one tensor with shape {list(positions_single.shape)}".replace(
+                        "[", "("
+                    ).replace("]", ")")
                 )
 
             if positions_single.dtype != self._dtype:
@@ -162,8 +170,10 @@ class CalculatorBaseTorch(torch.nn.Module):
             if cell_single is not None:
                 if list(cell_single.shape) != [3, 3]:
                     raise ValueError(
-                        f"each `cell` must be a (3 x 3) tensor, got at least one "
-                        f"tensor with shape {tuple(cell_single.shape)}"
+                        "each `cell` must be a (3 x 3) tensor, got at least one "
+                        f"tensor with shape {list(cell_single.shape)}".replace(
+                            "[", "("
+                        ).replace("]", ")")
                     )
 
                 if cell_single.dtype != self._dtype:
@@ -183,17 +193,19 @@ class CalculatorBaseTorch(torch.nn.Module):
             # check shape, dtype and device of charges
             if charges_single.dim() != 2:
                 raise ValueError(
-                    f"each `charges` needs to be a 2-dimensional tensor, got at least "
+                    "each `charges` needs to be a 2-dimensional tensor, got at least "
                     f"one tensor with {charges_single.dim()} dimension(s) and shape "
-                    f"{tuple(charges_single.shape)}"
+                    f"{list(charges_single.shape)}".replace("[", "(").replace("]", ")")
                 )
 
             if list(charges_single.shape) != [num_atoms, charges_single.shape[1]]:
                 raise ValueError(
-                    f"each `charges` must be a (n_atoms x n_channels) tensor, with"
-                    f"`n_atoms` being the same as the variable `positions`. Got at "
-                    f"least one tensor with shape {tuple(charges_single.shape)} where "
-                    f"positions contains {len(positions_single)} atoms"
+                    "each `charges` must be a (n_atoms x n_channels) tensor, with"
+                    "`n_atoms` being the same as the variable `positions`. Got at "
+                    f"least one tensor with shape {list(charges_single.shape)} where "
+                    f"positions contains {len(positions_single)} atoms".replace(
+                        "[", "("
+                    ).replace("]", ")")
                 )
 
             if charges_single.dtype != self._dtype:
@@ -220,23 +232,24 @@ class CalculatorBaseTorch(torch.nn.Module):
                 if neighbor_indices_single.shape[0] != 2:
                     raise ValueError(
                         "neighbor_indices is expected to have shape (2, num_neighbors)"
-                        f", but got {tuple(neighbor_indices_single.shape)} for one "
-                        "structure"
+                        f", but got {list(neighbor_indices_single.shape)} for one "
+                        "structure".replace("[", "(").replace("]", ")")
                     )
 
                 if neighbor_shifts_single.shape[1] != 3:
                     raise ValueError(
                         "neighbor_shifts is expected to have shape (num_neighbors, 3)"
-                        f", but got {tuple(neighbor_shifts_single.shape)} for one "
-                        "structure"
+                        f", but got {list(neighbor_shifts_single.shape)} for one "
+                        "structure".replace("[", "(").replace("]", ")")
                     )
 
                 if neighbor_shifts_single.shape[0] != neighbor_indices_single.shape[1]:
                     raise ValueError(
-                        f"`neighbor_indices` and `neighbor_shifts` need to have shapes "
-                        f"(2, num_neighbors) and (num_neighbors, 3). For at least one"
-                        f"structure, got {tuple(neighbor_indices_single.shape)} and "
-                        f"{tuple(neighbor_shifts_single.shape)}, which is inconsistent"
+                        "`neighbor_indices` and `neighbor_shifts` need to have shapes "
+                        "(2, num_neighbors) and (num_neighbors, 3). For at least one"
+                        f"structure, got {list(neighbor_indices_single.shape)} and "
+                        f"{list(neighbor_shifts_single.shape)}, "
+                        "which is inconsistent".replace("[", "(").replace("]", ")")
                     )
 
                 if neighbor_indices_single.device != self._device:
@@ -258,11 +271,11 @@ class CalculatorBaseTorch(torch.nn.Module):
     def _compute_impl(
         self,
         positions: Union[List[torch.Tensor], torch.Tensor],
-        charges: Union[Union[List[torch.Tensor], torch.Tensor]],
-        cell: Union[None, List[torch.Tensor], torch.Tensor],
-        neighbor_indices: Union[None, List[torch.Tensor], torch.Tensor],
-        neighbor_shifts: Union[None, List[torch.Tensor], torch.Tensor],
-    ) -> Union[torch.Tensor, List[torch.Tensor]]:
+        charges: Union[List[torch.Tensor], torch.Tensor],
+        cell: Union[List[Optional[torch.Tensor]], Optional[torch.Tensor]],
+        neighbor_indices: Union[List[Optional[torch.Tensor]], Optional[torch.Tensor]],
+        neighbor_shifts: Union[List[Optional[torch.Tensor]], Optional[torch.Tensor]],
+    ) -> Union[List[torch.Tensor], torch.Tensor]:
         # Check that all shapes, data types and devices are consistent
         # Furthermore, to handle the special case in which only the inputs for a single
         # structure are provided, turn inputs into a list to be consistent with the

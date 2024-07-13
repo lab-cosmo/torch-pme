@@ -233,7 +233,7 @@ def test_invalid_dim_charges():
     match = (
         r"each `charges` needs to be a 2-dimensional tensor, got at least "
         r"one tensor with 1 dimension\(s\) and shape "
-        r"\(4,\)"
+        r"\(4\)"
     )
     with pytest.raises(ValueError, match=match):
         calculator.compute(

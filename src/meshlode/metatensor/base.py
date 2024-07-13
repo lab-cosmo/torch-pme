@@ -17,6 +17,9 @@ except ImportError:
 class CalculatorBaseMetatensor(torch.nn.Module):
     def __init__(self):
         super().__init__()
+        self._device = torch.device("cpu")
+        self._dtype = torch.float32
+        self._n_charges_channels = 0
 
     def forward(self, systems: Union[List[System], System]) -> TensorMap:
         """Forward just calls :py:meth:`compute`."""
@@ -50,9 +53,7 @@ class CalculatorBaseMetatensor(torch.nn.Module):
 
         # Metatensor will issue a warning because `charges` are not a default member of
         # a System object
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            self._n_charges_channels = systems[0].get_data("charges").values.shape[1]
+        self._n_charges_channels = systems[0].get_data("charges").values.shape[1]
 
         for i_system, system in enumerate(systems):
             n_channels = system.get_data("charges").values.shape[1]
@@ -90,18 +91,19 @@ class CalculatorBaseMetatensor(torch.nn.Module):
         potentials: List[torch.Tensor] = []
 
         for system in systems:
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
-                charges = system.get_data("charges").values
-
+            charges = system.get_data("charges").values
             all_neighbor_lists = system.known_neighbor_lists()
             if all_neighbor_lists:
                 # try to extract neighbor list from system object
+                has_full_neighbor_list = False
+                first_full_neighbor_list = all_neighbor_lists[0]
                 for neighbor_list_options in all_neighbor_lists:
                     if neighbor_list_options.full_list:
+                        has_full_neighbor_list = True
+                        first_full_neighbor_list = neighbor_list_options
                         break
 
-                if not neighbor_list_options.full_list:
+                if not has_full_neighbor_list:
                     raise ValueError(
                         f"Found {len(all_neighbor_lists)} neighbor list(s) but no full "
                         "list, which is required."
@@ -111,11 +113,11 @@ class CalculatorBaseMetatensor(torch.nn.Module):
                     warnings.warn(
                         "Multiple neighbor lists found "
                         f"({len(all_neighbor_lists)}). Using the full first one "
-                        f"with `cutoff={neighbor_list_options.cutoff}`.",
+                        f"with `cutoff={first_full_neighbor_list.cutoff}`.",
                         stacklevel=2,
                     )
 
-                neighbor_list = system.get_neighbor_list(neighbor_list_options)
+                neighbor_list = system.get_neighbor_list(first_full_neighbor_list)
                 neighbor_indices = neighbor_list.samples.values[:, :2].T
                 neighbor_shifts = neighbor_list.samples.values[:, 2:]
             else:
@@ -131,7 +133,7 @@ class CalculatorBaseMetatensor(torch.nn.Module):
                     neighbor_shifts=neighbor_shifts,
                 )
             )
-
+        system = systems[-1]
         values_samples: List[List[int]] = []
         for i_system in range(len(systems)):
             for i_atom in range(len(system)):

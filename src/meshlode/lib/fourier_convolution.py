@@ -3,7 +3,6 @@ from typing import Optional
 import torch
 
 
-@torch.jit.script
 class FourierSpaceConvolution:
     """
     Class for handling all the steps necessary to compute the convolution :math:`f*G`

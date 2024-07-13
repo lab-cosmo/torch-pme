@@ -12,10 +12,10 @@ class _DirectPotentialImpl:
     def _compute_single_system(
         self,
         positions: torch.Tensor,
-        cell: None,
+        cell: Optional[torch.Tensor],
         charges: torch.Tensor,
-        neighbor_indices: None,
-        neighbor_shifts: None,
+        neighbor_indices: Optional[torch.Tensor],
+        neighbor_shifts: Optional[torch.Tensor],
     ) -> torch.Tensor:
         # Compute matrix containing the squared distances from the Gram matrix
         # The squared distance and the inner product between two vectors r_i and r_j are
@@ -117,7 +117,7 @@ class DirectPotential(CalculatorBaseTorch, _DirectPotentialImpl):
     def forward(
         self,
         positions: Union[List[torch.Tensor], torch.Tensor],
-        charges: Optional[Union[List[torch.Tensor], torch.Tensor]] = None,
+        charges: Union[List[torch.Tensor], torch.Tensor],
     ) -> Union[torch.Tensor, List[torch.Tensor]]:
         """Forward just calls :py:meth:`compute`."""
         return self.compute(
