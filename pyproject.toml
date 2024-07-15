@@ -89,6 +89,13 @@ ignore_missing_imports = true
 [tool.pytest.ini_options]
 python_files = ["*.py"]
 testpaths = ["tests"]
+filterwarnings = [
+    "error",
+    "ignore:ast.Str is deprecated and will be removed in Python 3.14:DeprecationWarning",
+    "ignore:Attribute s is deprecated and will be removed in Python 3.14:DeprecationWarning",
+    "ignore:ast.NameConstant is deprecated and will be removed in Python 3.14:DeprecationWarning",
+    "ignore:custom data 'charges' is experimental, please contact metatensor's developers to add this data as a member of the `System` class:UserWarning",
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]

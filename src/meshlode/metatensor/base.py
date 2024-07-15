@@ -145,7 +145,9 @@ class CalculatorBaseMetatensor(torch.nn.Module):
             values=torch.vstack(potentials),
             samples=Labels(["system", "atom"], samples_vals_tensor),
             components=[],
-            properties=Labels.range("charges_channel", self._n_charges_channels),
+            properties=Labels(
+                "charges_channel", torch.arange(self._n_charges_channels).reshape(-1, 1)
+            ),
         )
 
-        return TensorMap(keys=Labels.single(), blocks=[block])
+        return TensorMap(keys=Labels("_", torch.tensor([[0]])), blocks=[block])
