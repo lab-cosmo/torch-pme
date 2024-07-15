@@ -36,7 +36,7 @@ import meshlode
 
 # %%
 # Define a global constant for the cutoff of the neighbor list calculations.
-CUTOFF = 1.0
+cutoff = 1.0
 
 # %%
 # Create the properties NaCl unit cell
@@ -50,7 +50,7 @@ cell = torch.eye(3)
 # <https://luthaf.fr/vesin>`_ and rearrange the results to be suitable for the
 # calculations below.
 
-nl = NeighborList(cutoff=CUTOFF, full_list=True)
+nl = NeighborList(cutoff=cutoff, full_list=True)
 
 i, j, S, D = nl.compute(points=positions, box=cell, periodic=True, quantities="ijSD")
 
@@ -73,14 +73,14 @@ calculator = meshlode.PMEPotential(exponent=1.0)
 # Single Charge Channel
 # #####################
 # As a first application of multiple charge channels, we start simply by using the
-# classic definition of one charge channel as a reshaped 1D array.
+# classic definition of one charge channel per atom.
 
-charges = torch.tensor([1.0, -1.0]).reshape(-1, 1)
+charges = torch.tensor([[1.0], [-1.0]])
 
 # %%
-# We reshaped the ``charges`` into a 2D array to be a suitable input to the calculator
-# where the *rows* describe the number of atoms ``(2)`` and the *columns* the number of
-# atomic charge channels ``(1)``.
+# Any input the meshLODE calculators has to be a 2D array where the *rows* describe the
+# number of atoms (here ``(2)``) and the *columns* the number of atomic charge channels
+# (here ``(1)``).
 
 charges.shape
 
@@ -198,7 +198,7 @@ neighbor_list = TensorBlock(
     torch.tensor(distances).view(-1, 3, 1), samples, [components], properties
 )
 
-nl_options = NeighborListOptions(cutoff=CUTOFF, full_list=True)
+nl_options = NeighborListOptions(cutoff=cutoff, full_list=True)
 system.add_neighbor_list(options=nl_options, neighbors=neighbor_list)
 
 # %%
