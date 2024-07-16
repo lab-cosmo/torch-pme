@@ -98,9 +98,7 @@ class CalculatorBaseTorch(torch.nn.Module):
             if list(positions_single.shape) != [num_atoms, 3]:
                 raise ValueError(
                     "each `positions` must be a (n_atoms x 3) tensor, got at least "
-                    f"one tensor with shape {list(positions_single.shape)}".replace(
-                        "[", "("
-                    ).replace("]", ")")
+                    f"one tensor with shape {list(positions_single.shape)}"
                 )
 
             if positions_single.dtype != self._dtype:
@@ -122,9 +120,7 @@ class CalculatorBaseTorch(torch.nn.Module):
                 if list(cell_single.shape) != [3, 3]:
                     raise ValueError(
                         "each `cell` must be a (3 x 3) tensor, got at least one "
-                        f"tensor with shape {list(cell_single.shape)}".replace(
-                            "[", "("
-                        ).replace("]", ")")
+                        f"tensor with shape {list(cell_single.shape)}"
                     )
 
                 if cell_single.dtype != self._dtype:
@@ -146,7 +142,7 @@ class CalculatorBaseTorch(torch.nn.Module):
                 raise ValueError(
                     "each `charges` needs to be a 2-dimensional tensor, got at least "
                     f"one tensor with {charges_single.dim()} dimension(s) and shape "
-                    f"{list(charges_single.shape)}".replace("[", "(").replace("]", ")")
+                    f"{list(charges_single.shape)}"
                 )
 
             if list(charges_single.shape) != [num_atoms, charges_single.shape[1]]:
@@ -154,9 +150,7 @@ class CalculatorBaseTorch(torch.nn.Module):
                     "each `charges` must be a (n_atoms x n_channels) tensor, with"
                     "`n_atoms` being the same as the variable `positions`. Got at "
                     f"least one tensor with shape {list(charges_single.shape)} where "
-                    f"positions contains {len(positions_single)} atoms".replace(
-                        "[", "("
-                    ).replace("]", ")")
+                    f"positions contains {len(positions_single)} atoms"
                 )
 
             if charges_single.dtype != self._dtype:
@@ -182,25 +176,25 @@ class CalculatorBaseTorch(torch.nn.Module):
 
                 if neighbor_indices_single.shape[0] != 2:
                     raise ValueError(
-                        "neighbor_indices is expected to have shape (2, num_neighbors)"
+                        "neighbor_indices is expected to have shape [2, num_neighbors]"
                         f", but got {list(neighbor_indices_single.shape)} for one "
-                        "structure".replace("[", "(").replace("]", ")")
+                        "structure"
                     )
 
                 if neighbor_shifts_single.shape[1] != 3:
                     raise ValueError(
-                        "neighbor_shifts is expected to have shape (num_neighbors, 3)"
+                        "neighbor_shifts is expected to have shape [num_neighbors, 3]"
                         f", but got {list(neighbor_shifts_single.shape)} for one "
-                        "structure".replace("[", "(").replace("]", ")")
+                        "structure"
                     )
 
                 if neighbor_shifts_single.shape[0] != neighbor_indices_single.shape[1]:
                     raise ValueError(
                         "`neighbor_indices` and `neighbor_shifts` need to have shapes "
-                        "(2, num_neighbors) and (num_neighbors, 3). For at least one"
+                        "[2, num_neighbors] and [num_neighbors, 3]. For at least one"
                         f"structure, got {list(neighbor_indices_single.shape)} and "
                         f"{list(neighbor_shifts_single.shape)}, "
-                        "which is inconsistent".replace("[", "(").replace("]", ")")
+                        "which is inconsistent"
                     )
 
                 if neighbor_indices_single.device != self._device:
