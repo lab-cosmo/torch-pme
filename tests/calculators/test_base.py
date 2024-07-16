@@ -1,7 +1,7 @@
 import pytest
 import torch
 
-from meshlode.calculators.base import CalculatorBaseTorch
+from meshlode.calculators.base import CalculatorBaseTorch, PeriodicBase
 
 
 # Define some example parameters
@@ -129,8 +129,8 @@ def test_mismatched_numbers_neighbor_shiftss():
 def test_invalid_shape_positions():
     calculator = CalculatorTest()
     match = (
-        r"each `positions` must be a \(n_atoms x 3\) tensor, got at least "
-        r"one tensor with shape \(4, 5\)"
+        r"each `positions` must be a tensor with shape \[n_atoms, 3\], got at least "
+        r"one tensor with shape \[4, 5\]"
     )
     with pytest.raises(ValueError, match=match):
         calculator.compute(
@@ -182,8 +182,8 @@ def test_invalid_device_positions():
 def test_invalid_shape_cell():
     calculator = CalculatorTest()
     match = (
-        r"each `cell` must be a \(3 x 3\) tensor, got at least one tensor with "
-        r"shape \(2, 2\)"
+        r"each `cell` must be a tensor with shape \[3, 3\], got at least one tensor "
+        r"with shape \[2, 2\]"
     )
     with pytest.raises(ValueError, match=match):
         calculator.compute(
@@ -233,7 +233,7 @@ def test_invalid_dim_charges():
     match = (
         r"each `charges` needs to be a 2-dimensional tensor, got at least "
         r"one tensor with 1 dimension\(s\) and shape "
-        r"\(4,\)"
+        r"\[4\]"
     )
     with pytest.raises(ValueError, match=match):
         calculator.compute(
@@ -248,9 +248,9 @@ def test_invalid_dim_charges():
 def test_invalid_shape_charges():
     calculator = CalculatorTest()
     match = (
-        r"each `charges` must be a \(n_atoms x n_channels\) tensor, with"
+        r"each `charges` must be a tensor with shape \[n_atoms, n_channels\], with "
         r"`n_atoms` being the same as the variable `positions`. Got at "
-        r"least one tensor with shape \(6, 2\) where "
+        r"least one tensor with shape \[6, 2\] where "
         r"positions contains 4 atoms"
     )
     with pytest.raises(ValueError, match=match):
@@ -312,8 +312,8 @@ def test_need_both_neighbor_indices_and_shifts():
 def test_invalid_shape_neighbor_indices():
     calculator = CalculatorTest()
     match = (
-        r"neighbor_indices is expected to have shape \(2, num_neighbors\)"
-        r", but got \(4, 10\) for one structure"
+        r"neighbor_indices is expected to have shape \[2, num_neighbors\]"
+        r", but got \[4, 10\] for one structure"
     )
     with pytest.raises(ValueError, match=match):
         calculator.compute(
@@ -328,8 +328,8 @@ def test_invalid_shape_neighbor_indices():
 def test_invalid_shape_neighbor_shifts():
     calculator = CalculatorTest()
     match = (
-        r"neighbor_shifts is expected to have shape \(num_neighbors, 3\)"
-        r", but got \(10, 2\) for one structure"
+        r"neighbor_shifts is expected to have shape \[num_neighbors, 3\]"
+        r", but got \[10, 2\] for one structure"
     )
     with pytest.raises(ValueError, match=match):
         calculator.compute(
@@ -345,9 +345,9 @@ def test_invalid_shape_neighbor_indices_neighbor_shifts():
     calculator = CalculatorTest()
     match = (
         r"`neighbor_indices` and `neighbor_shifts` need to have shapes "
-        r"\(2, num_neighbors\) and \(num_neighbors, 3\). For at least one"
-        r"structure, got \(2, 10\) and "
-        r"\(11, 3\), which is inconsistent"
+        r"\[2, num_neighbors\] and \[num_neighbors, 3\]. For at least one"
+        r"structure, got \[2, 10\] and "
+        r"\[11, 3\], which is inconsistent"
     )
     with pytest.raises(ValueError, match=match):
         calculator.compute(
@@ -389,3 +389,41 @@ def test_invalid_device_neighbor_shifts():
             neighbor_indices=torch.ones((2, 10), dtype=DTYPE, device=DEVICE),
             neighbor_shifts=torch.ones((10, 3), dtype=DTYPE, device="meta"),
         )
+
+
+def test_exponent_out_of_range():
+    match = r"`exponent` p=.* has to satisfy 0 < p <= 3"
+    with pytest.raises(ValueError, match=match):
+        PeriodicBase(exponent=-1, atomic_smearing=0.1, subtract_interior=True)
+    with pytest.raises(ValueError, match=match):
+        PeriodicBase(exponent=4, atomic_smearing=0.1, subtract_interior=True)
+
+
+def test_atomic_smearing_non_positive():
+    match = r"`atomic_smearing` .* has to be positive"
+    with pytest.raises(ValueError, match=match):
+        PeriodicBase(exponent=2, atomic_smearing=0, subtract_interior=True)
+    with pytest.raises(ValueError, match=match):
+        PeriodicBase(exponent=2, atomic_smearing=-0.1, subtract_interior=True)
+
+
+def periodic_base():
+    return PeriodicBase(exponent=2, atomic_smearing=0.1, subtract_interior=True)
+
+
+def test_prepare_no_cell():
+    match = r"provide `cell` for periodic calculation"
+    with pytest.raises(ValueError, match=match):
+        periodic_base()._prepare(None, torch.tensor([0]), torch.tensor([0]))
+
+
+def test_prepare_no_neighbor_indices():
+    match = r"provide `neighbor_indices` for periodic calculation"
+    with pytest.raises(ValueError, match=match):
+        periodic_base()._prepare(torch.tensor([0]), None, torch.tensor([0]))
+
+
+def test_prepare_no_neighbor_shifts():
+    match = r"provide `neighbor_shifts` for periodic calculation"
+    with pytest.raises(ValueError, match=match):
+        periodic_base()._prepare(torch.tensor([0]), torch.tensor([0]), None)

@@ -53,8 +53,7 @@ class MeshInterpolator:
         self._dtype = cell.dtype
         self._device = cell.device
 
-        # Initialize the variables in which to store the intermediate
-        # interpolation nodes and weights
+        # TorchScript requires to initialize all attributes in __init__
         self.interpolation_weights: torch.Tensor = torch.tensor(
             0, device=self._device, dtype=self._dtype
         )

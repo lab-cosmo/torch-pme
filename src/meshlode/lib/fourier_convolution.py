@@ -3,7 +3,6 @@ from typing import Optional
 import torch
 
 
-@torch.jit.script
 class FourierSpaceConvolution:
     """
     Class for handling all the steps necessary to compute the convolution :math:`f*G`
@@ -36,6 +35,7 @@ class FourierSpaceConvolution:
     """
 
     def __init__(self):
+        # TorchScript requires to initialize all attributes in __init__
         self._cell_cache = torch.zeros(3, 3)
         self._ns_cache = torch.zeros(3)
         self._knorm_sq_cache = torch.empty(1)

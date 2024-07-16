@@ -4,10 +4,10 @@ import torch
 
 from ..lib import generate_kvectors_for_mesh
 from ..lib.mesh_interpolator import MeshInterpolator
-from .base import CalculatorBaseTorch, _ShortRange
+from .base import CalculatorBaseTorch, PeriodicBase
 
 
-class _PMEPotentialImpl(_ShortRange):
+class _PMEPotentialImpl(PeriodicBase):
     def __init__(
         self,
         exponent: float,
@@ -17,18 +17,15 @@ class _PMEPotentialImpl(_ShortRange):
         subtract_self: bool,
         subtract_interior: bool,
     ):
-        # Check that all provided values are correct
-        if exponent < 0.0 or exponent > 3.0:
-            raise ValueError(f"`exponent` p={exponent} has to satisfy 0 < p < 3")
         if interpolation_order not in [1, 2, 3, 4, 5]:
             raise ValueError("Only `interpolation_order` from 1 to 5 are allowed")
-        if atomic_smearing is not None and atomic_smearing <= 0:
-            raise ValueError(f"`atomic_smearing` {atomic_smearing} has to be positive")
 
-        _ShortRange.__init__(
-            self, exponent=exponent, subtract_interior=subtract_interior
+        PeriodicBase.__init__(
+            self,
+            exponent=exponent,
+            atomic_smearing=atomic_smearing,
+            subtract_interior=subtract_interior,
         )
-        self.atomic_smearing = atomic_smearing
         self.mesh_spacing = mesh_spacing
         self.interpolation_order = interpolation_order
 
@@ -41,9 +38,9 @@ class _PMEPotentialImpl(_ShortRange):
         self,
         positions: torch.Tensor,
         charges: torch.Tensor,
-        cell: torch.Tensor,
-        neighbor_indices: torch.Tensor,
-        neighbor_shifts: torch.Tensor,
+        cell: Optional[torch.Tensor],
+        neighbor_indices: Optional[torch.Tensor],
+        neighbor_shifts: Optional[torch.Tensor],
     ) -> torch.Tensor:
         # Set the defaut values of convergence parameters The total computational cost =
         # cost of SR part + cost of LR part Bigger smearing increases the cost of the SR
@@ -52,12 +49,11 @@ class _PMEPotentialImpl(_ShortRange):
         # the cost of the LR part. The auxilary parameter mesh_spacing then controls the
         # convergence of the SR and LR sums, respectively. The default values are chosen
         # to reach a convergence on the order of 1e-4 to 1e-5 for the test structures.
-        if self.atomic_smearing is None:
-            cell_dimensions = torch.linalg.norm(cell, dim=1)
-            max_cutoff = torch.min(cell_dimensions) / 2 - 1e-6
-            smearing = max_cutoff.item() / 5.0
-        else:
-            smearing = self.atomic_smearing
+        cell, neighbor_indices, neighbor_shifts, smearing = self._prepare(
+            cell=cell,
+            neighbor_indices=neighbor_indices,
+            neighbor_shifts=neighbor_shifts,
+        )
 
         if self.mesh_spacing is None:
             mesh_spacing = smearing / 8.0
@@ -83,9 +79,7 @@ class _PMEPotentialImpl(_ShortRange):
             lr_wavelength=mesh_spacing,
         )
 
-        # Combine both parts to obtain the full potential
-        potential_ewald = potential_sr + potential_lr
-        return potential_ewald
+        return potential_sr + potential_lr
 
     def _compute_lr(
         self,
@@ -94,7 +88,7 @@ class _PMEPotentialImpl(_ShortRange):
         cell: torch.Tensor,
         smearing: float,
         lr_wavelength: float,
-        subtract_self=True,
+        subtract_self: bool = True,
     ) -> torch.Tensor:
         # Step 0 (Preparation): Compute number of times each basis vector of the
         # reciprocal space can be scaled until the cutoff is reached
@@ -256,9 +250,9 @@ class PMEPotential(CalculatorBaseTorch, _PMEPotentialImpl):
         self,
         positions: Union[List[torch.Tensor], torch.Tensor],
         charges: Union[List[torch.Tensor], torch.Tensor],
-        cell: Union[List[torch.Tensor], torch.Tensor],
-        neighbor_indices: Union[List[torch.Tensor], torch.Tensor],
-        neighbor_shifts: Union[List[torch.Tensor], torch.Tensor],
+        cell: Union[List[Optional[torch.Tensor]], Optional[torch.Tensor]],
+        neighbor_indices: Union[List[Optional[torch.Tensor]], Optional[torch.Tensor]],
+        neighbor_shifts: Union[List[Optional[torch.Tensor]], Optional[torch.Tensor]],
     ) -> Union[torch.Tensor, List[torch.Tensor]]:
         """Compute potential for all provided "systems" stacked inside list.
 
@@ -301,9 +295,9 @@ class PMEPotential(CalculatorBaseTorch, _PMEPotentialImpl):
         self,
         positions: Union[List[torch.Tensor], torch.Tensor],
         charges: Union[List[torch.Tensor], torch.Tensor],
-        cell: Union[List[torch.Tensor], torch.Tensor],
-        neighbor_indices: Union[List[torch.Tensor], torch.Tensor] = None,
-        neighbor_shifts: Union[List[torch.Tensor], torch.Tensor] = None,
+        cell: Union[List[Optional[torch.Tensor]], Optional[torch.Tensor]],
+        neighbor_indices: Union[List[Optional[torch.Tensor]], Optional[torch.Tensor]],
+        neighbor_shifts: Union[List[Optional[torch.Tensor]], Optional[torch.Tensor]],
     ) -> Union[torch.Tensor, List[torch.Tensor]]:
         """Forward just calls :py:meth:`compute`."""
         return self.compute(
