@@ -98,8 +98,8 @@ class CalculatorBaseTorch(torch.nn.Module):
             num_atoms = len(positions_single)
             if list(positions_single.shape) != [num_atoms, 3]:
                 raise ValueError(
-                    "each `positions` must be a (n_atoms x 3) tensor, got at least "
-                    f"one tensor with shape {list(positions_single.shape)}"
+                    "each `positions` must be a tensor with shape [n_atoms, 3], got at "
+                    f"least one tensor with shape {list(positions_single.shape)}"
                 )
 
             if positions_single.dtype != self._dtype:
@@ -120,8 +120,8 @@ class CalculatorBaseTorch(torch.nn.Module):
             if cell_single is not None:
                 if list(cell_single.shape) != [3, 3]:
                     raise ValueError(
-                        "each `cell` must be a (3 x 3) tensor, got at least one "
-                        f"tensor with shape {list(cell_single.shape)}"
+                        "each `cell` must be a tensor with shape [3, 3], got at least "
+                        f"one tensor with shape {list(cell_single.shape)}"
                     )
 
                 if cell_single.dtype != self._dtype:
@@ -148,8 +148,8 @@ class CalculatorBaseTorch(torch.nn.Module):
 
             if list(charges_single.shape) != [num_atoms, charges_single.shape[1]]:
                 raise ValueError(
-                    "each `charges` must be a (n_atoms x n_channels) tensor, with"
-                    "`n_atoms` being the same as the variable `positions`. Got at "
+                    "each `charges` must be a tensor with shape [n_atoms, n_channels], "
+                    "with `n_atoms` being the same as the variable `positions`. Got at "
                     f"least one tensor with shape {list(charges_single.shape)} where "
                     f"positions contains {len(positions_single)} atoms"
                 )

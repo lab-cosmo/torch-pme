@@ -129,7 +129,7 @@ def test_mismatched_numbers_neighbor_shiftss():
 def test_invalid_shape_positions():
     calculator = CalculatorTest()
     match = (
-        r"each `positions` must be a \(n_atoms x 3\) tensor, got at least "
+        r"each `positions` must be a tensor with shape \[n_atoms, 3\], got at least "
         r"one tensor with shape \[4, 5\]"
     )
     with pytest.raises(ValueError, match=match):
@@ -182,8 +182,8 @@ def test_invalid_device_positions():
 def test_invalid_shape_cell():
     calculator = CalculatorTest()
     match = (
-        r"each `cell` must be a \(3 x 3\) tensor, got at least one tensor with "
-        r"shape \[2, 2\]"
+        r"each `cell` must be a tensor with shape \[3, 3\], got at least one tensor "
+        r"with shape \[2, 2\]"
     )
     with pytest.raises(ValueError, match=match):
         calculator.compute(
@@ -248,7 +248,7 @@ def test_invalid_dim_charges():
 def test_invalid_shape_charges():
     calculator = CalculatorTest()
     match = (
-        r"each `charges` must be a \(n_atoms x n_channels\) tensor, with"
+        r"each `charges` must be a tensor with shape \[n_atoms, n_channels\], with "
         r"`n_atoms` being the same as the variable `positions`. Got at "
         r"least one tensor with shape \[6, 2\] where "
         r"positions contains 4 atoms"
