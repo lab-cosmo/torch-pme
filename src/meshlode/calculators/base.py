@@ -73,26 +73,37 @@ class CalculatorBaseTorch(torch.nn.Module):
         List[Optional[torch.Tensor]],
         List[Optional[torch.Tensor]],
     ]:
-        # make sure that the provided positions are a list
+        # make sure that all provided parameters are lists
         if not isinstance(positions, list):
             positions = [positions]
 
-        # make sure that provided charges are a list of same length as positions
         if not isinstance(charges, list):
             charges = [charges]
+
+        if not isinstance(cell, list):
+            cell = [cell]
+
+        if not isinstance(neighbor_indices, list):
+            neighbor_indices = [neighbor_indices]
+
+        if not isinstance(neighbor_shifts, list):
+            neighbor_shifts = [neighbor_shifts]
 
         # In actual computations, the data type (dtype) and device (e.g. CPU, GPU) of
         # all remaining variables need to be consistent
         self._device = positions[0].device
         self._dtype = positions[0].dtype
 
-        # make sure that provided cells are a list of same length as positions
-        if isinstance(cell, list):
-            pass
-        else:
-            cell = [cell]
-            if cell[0] is None:
-                cell = cell * len(positions)
+        # check charges
+        if len(positions) != len(charges):
+            raise ValueError(
+                f"Got inconsistent numbers of positions ({len(positions)}) and "
+                f"charges ({len(charges)})"
+            )
+
+        # check cell
+        if cell[0] is None:
+            cell = cell * len(positions)
 
         if len(positions) != len(cell):
             raise ValueError(
@@ -100,19 +111,9 @@ class CalculatorBaseTorch(torch.nn.Module):
                 f"cell ({len(cell)})"
             )
 
-        if len(positions) != len(charges):
-            raise ValueError(
-                f"Got inconsistent numbers of positions ({len(positions)}) and "
-                f"charges ({len(charges)})"
-            )
-
         # check neighbor_indices
-        if isinstance(neighbor_indices, list):
-            pass
-        else:
-            neighbor_indices = [neighbor_indices]
-            if neighbor_indices[0] is None:
-                neighbor_indices = neighbor_indices * len(positions)
+        if neighbor_indices[0] is None:
+            neighbor_indices = neighbor_indices * len(positions)
 
         if len(positions) != len(neighbor_indices):
             raise ValueError(
@@ -121,12 +122,8 @@ class CalculatorBaseTorch(torch.nn.Module):
             )
 
         # check neighbor_shifts
-        if isinstance(neighbor_shifts, list):
-            pass
-        else:
-            neighbor_shifts = [neighbor_shifts]
-            if neighbor_shifts[0] is None:
-                neighbor_shifts = neighbor_shifts * len(positions)
+        if neighbor_shifts[0] is None:
+            neighbor_shifts = neighbor_shifts * len(positions)
 
         if len(positions) != len(neighbor_shifts):
             raise ValueError(
