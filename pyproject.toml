@@ -15,7 +15,7 @@ authors = [
     {name = "Michele Ceriotti"},
 ]
 readme = "README.rst"
-requires-python = ">=3.7"
+requires-python = ">=3.9"
 license = {text = "BSD-3-Clause"}
 classifiers = [
     "Development Status :: 4 - Beta",
