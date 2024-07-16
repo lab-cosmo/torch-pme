@@ -10,6 +10,7 @@ class CalculatorBaseTorch(torch.nn.Module):
 
     def __init__(self):
         super().__init__()
+        # TorchScript requires to initialize all attributes in __init__
         self._device = torch.device("cpu")
         self._dtype = torch.float32
 

@@ -35,6 +35,7 @@ class FourierSpaceConvolution:
     """
 
     def __init__(self):
+        # TorchScript requires to initialize all attributes in __init__
         self._cell_cache = torch.zeros(3, 3)
         self._ns_cache = torch.zeros(3)
         self._knorm_sq_cache = torch.empty(1)
