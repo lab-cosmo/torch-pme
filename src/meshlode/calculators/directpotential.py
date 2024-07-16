@@ -12,8 +12,8 @@ class _DirectPotentialImpl:
     def _compute_single_system(
         self,
         positions: torch.Tensor,
-        cell: Optional[torch.Tensor],
         charges: torch.Tensor,
+        cell: Optional[torch.Tensor],
         neighbor_indices: Optional[torch.Tensor],
         neighbor_shifts: Optional[torch.Tensor],
     ) -> torch.Tensor:
