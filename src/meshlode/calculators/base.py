@@ -5,54 +5,8 @@ import torch
 from meshlode.lib import InversePowerLawPotential
 
 
-class _ShortRange:
-    """Base class providing general funtionality for short range interactions."""
-
-    def __init__(self, exponent: float, subtract_interior: bool):
-        # Attach the function handling all computations related to the
-        # power-law potential for later convenience
-        self.exponent = exponent
-        self.subtract_interior = subtract_interior
-        self.potential = InversePowerLawPotential(exponent=exponent)
-
-    def _compute_sr(
-        self,
-        positions: torch.Tensor,
-        charges: torch.Tensor,
-        cell: torch.Tensor,
-        smearing: float,
-        neighbor_indices: torch.Tensor,
-        neighbor_shifts: torch.Tensor,
-    ) -> torch.Tensor:
-        atom_is = neighbor_indices[0]
-        atom_js = neighbor_indices[1]
-        shifts = neighbor_shifts.type(cell.dtype)
-
-        # Compute energy
-        potential = torch.zeros_like(charges)
-
-        pos_is = positions[atom_is]
-        pos_js = positions[atom_js]
-        dists = torch.linalg.norm(pos_js - pos_is + shifts @ cell, dim=1)
-        # If the contribution from all atoms within the cutoff is to be subtracted
-        # this short-range part will simply use -V_LR as the potential
-        if self.subtract_interior:
-            potentials_bare = -self.potential.potential_lr_from_dist(dists, smearing)
-        # In the remaining cases, we simply use the usual V_SR to get the full
-        # 1/r^p potential when combined with the long-range part implemented in
-        # reciprocal space
-        else:
-            potentials_bare = self.potential.potential_sr_from_dist(dists, smearing)
-        # potential.index_add_(0, atom_is, charges[atom_js] * potentials_bare)
-
-        for i, j, potential_bare in zip(atom_is, atom_js, potentials_bare):
-            potential[int(i.item())] += charges[int(j.item())] * potential_bare
-
-        return potential
-
-
 class CalculatorBaseTorch(torch.nn.Module):
-    """Base calculator for the torch interface to MeshLODE."""
+    """Base calculator for the torch interface."""
 
     def __init__(self):
         super().__init__()
@@ -317,3 +271,95 @@ class CalculatorBaseTorch(torch.nn.Module):
             return potentials[0]
         else:
             return potentials
+
+
+class PeriodicBase:
+    """Base class providing general funtionality for periodic calculations.
+
+    :param exponent: the exponent :math:`p` in :math:`1/r^p` potentials
+    :param atomic_smearing: Width of the atom-centered Gaussian used to split the
+        Coulomb potential into the short- and long-range parts. A reasonable value for
+        most systems is to set it to ``1/5`` times the neighbor list cutoff. If
+        :py:obj:`None` ,it will be set to 1/5 times of half the largest box vector
+        (separately for each structure).
+    :param subtract_interior: If set to :py:obj:`True`, subtract from the features of an
+        atom the contributions to the potential arising from all atoms within the cutoff
+        Note that if set to true, the self contribution (see previous) is also
+        subtracted by default.
+    """
+
+    def __init__(
+        self,
+        exponent: float,
+        atomic_smearing: Union[None, float],
+        subtract_interior: bool,
+    ):
+
+        if exponent < 0.0 or exponent > 3.0:
+            raise ValueError(f"`exponent` p={exponent} has to satisfy 0 < p <= 3")
+        if atomic_smearing is not None and atomic_smearing <= 0:
+            raise ValueError(f"`atomic_smearing` {atomic_smearing} has to be positive")
+
+        # Attach the function handling all computations related to the
+        # power-law potential for later convenience
+        self.exponent = exponent
+        self.atomic_smearing = atomic_smearing
+        self.subtract_interior = subtract_interior
+        self.potential = InversePowerLawPotential(exponent=exponent)
+
+    def _compute_sr(
+        self,
+        positions: torch.Tensor,
+        charges: torch.Tensor,
+        cell: torch.Tensor,
+        smearing: float,
+        neighbor_indices: torch.Tensor,
+        neighbor_shifts: torch.Tensor,
+    ) -> torch.Tensor:
+        atom_is = neighbor_indices[0]
+        atom_js = neighbor_indices[1]
+        shifts = neighbor_shifts.type(cell.dtype)
+
+        # Compute energy
+        potential = torch.zeros_like(charges)
+
+        pos_is = positions[atom_is]
+        pos_js = positions[atom_js]
+        dists = torch.linalg.norm(pos_js - pos_is + shifts @ cell, dim=1)
+        # If the contribution from all atoms within the cutoff is to be subtracted
+        # this short-range part will simply use -V_LR as the potential
+        if self.subtract_interior:
+            potentials_bare = -self.potential.potential_lr_from_dist(dists, smearing)
+        # In the remaining cases, we simply use the usual V_SR to get the full
+        # 1/r^p potential when combined with the long-range part implemented in
+        # reciprocal space
+        else:
+            potentials_bare = self.potential.potential_sr_from_dist(dists, smearing)
+        # potential.index_add_(0, atom_is, charges[atom_js] * potentials_bare)
+
+        for i, j, potential_bare in zip(atom_is, atom_js, potentials_bare):
+            potential[int(i.item())] += charges[int(j.item())] * potential_bare
+
+        return potential
+
+    def _prepare(
+        self,
+        cell: Optional[torch.Tensor],
+        neighbor_indices: Optional[torch.Tensor],
+        neighbor_shifts: Optional[torch.Tensor],
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, float]:
+        if cell is None:
+            raise ValueError("provide `cell` for periodic calculation")
+        if neighbor_indices is None:
+            raise ValueError("provide `neighbor_indices` for periodic calculation")
+        if neighbor_shifts is None:
+            raise ValueError("provide `neighbor_shifts` for periodic calculation")
+
+        if self.atomic_smearing is None:
+            cell_dimensions = torch.linalg.norm(cell, dim=1)
+            max_cutoff = torch.min(cell_dimensions) / 2 - 1e-6
+            smearing = max_cutoff.item() / 5.0
+        else:
+            smearing = self.atomic_smearing
+
+        return cell, neighbor_indices, neighbor_shifts, smearing

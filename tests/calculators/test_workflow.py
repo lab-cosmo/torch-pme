@@ -63,11 +63,6 @@ class TestWorkflow:
         else:
             return positions, charges
 
-    def test_atomic_smearing_error(self, CalculatorClass, params, periodic):
-        if periodic:
-            with pytest.raises(ValueError, match="has to be positive"):
-                CalculatorClass(atomic_smearing=-1.0)
-
     def test_interpolation_order_error(self, CalculatorClass, params, periodic):
         if type(CalculatorClass) in [PMEPotential]:
             match = "Only `interpolation_order` from 1 to 5"

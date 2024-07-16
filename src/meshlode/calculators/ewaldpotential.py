@@ -3,10 +3,10 @@ from typing import List, Optional, Union
 import torch
 
 from ..lib import generate_kvectors_squeezed
-from .base import CalculatorBaseTorch, _ShortRange
+from .base import CalculatorBaseTorch, PeriodicBase
 
 
-class _EwaldPotentialImpl(_ShortRange):
+class _EwaldPotentialImpl(PeriodicBase):
     def __init__(
         self,
         exponent: float,
@@ -15,15 +15,12 @@ class _EwaldPotentialImpl(_ShortRange):
         subtract_self: bool,
         subtract_interior: bool,
     ):
-        if exponent < 0.0 or exponent > 3.0:
-            raise ValueError(f"`exponent` p={exponent} has to satisfy 0 < p < 3")
-        if atomic_smearing is not None and atomic_smearing <= 0:
-            raise ValueError(f"`atomic_smearing` {atomic_smearing} has to be positive")
-
-        _ShortRange.__init__(
-            self, exponent=exponent, subtract_interior=subtract_interior
+        PeriodicBase.__init__(
+            self,
+            exponent=exponent,
+            atomic_smearing=atomic_smearing,
+            subtract_interior=subtract_interior,
         )
-        self.atomic_smearing = atomic_smearing
         self.lr_wavelength = lr_wavelength
 
         # If interior contributions are to be subtracted, also do so for self term
@@ -48,18 +45,11 @@ class _EwaldPotentialImpl(_ShortRange):
         # convergence of the SR and LR sums, respectively. The default values are
         # chosen to reach a convergence on the order of 1e-4 to 1e-5 for the test
         # structures.
-        if cell is None:
-            raise ValueError("Cell has to be provided for PME calculation")
-        if neighbor_indices is None:
-            raise ValueError("Neighbor indices have to be provided for PME calculation")
-        if neighbor_shifts is None:
-            raise ValueError("Neighbor shifts have to be provided for PME calculation")
-        if self.atomic_smearing is None:
-            cell_dimensions = torch.linalg.norm(cell, dim=1)
-            max_cutoff = torch.min(cell_dimensions) / 2 - 1e-6
-            smearing = max_cutoff.item() / 5.0
-        else:
-            smearing = self.atomic_smearing
+        cell, neighbor_indices, neighbor_shifts, smearing = self._prepare(
+            cell=cell,
+            neighbor_indices=neighbor_indices,
+            neighbor_shifts=neighbor_shifts,
+        )
 
         if self.lr_wavelength is None:
             lr_wavelength = 0.5 * smearing
@@ -85,8 +75,7 @@ class _EwaldPotentialImpl(_ShortRange):
             lr_wavelength=lr_wavelength,
         )
 
-        potential_ewald = potential_sr + potential_lr
-        return potential_ewald
+        return potential_sr + potential_lr
 
     def _compute_lr(
         self,

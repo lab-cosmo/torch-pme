@@ -1,7 +1,7 @@
 import pytest
 import torch
 
-from meshlode.calculators.base import CalculatorBaseTorch
+from meshlode.calculators.base import CalculatorBaseTorch, PeriodicBase
 
 
 # Define some example parameters
@@ -389,3 +389,41 @@ def test_invalid_device_neighbor_shifts():
             neighbor_indices=torch.ones((2, 10), dtype=DTYPE, device=DEVICE),
             neighbor_shifts=torch.ones((10, 3), dtype=DTYPE, device="meta"),
         )
+
+
+def test_exponent_out_of_range():
+    match = r"`exponent` p=.* has to satisfy 0 < p <= 3"
+    with pytest.raises(ValueError, match=match):
+        PeriodicBase(exponent=-1, atomic_smearing=0.1, subtract_interior=True)
+    with pytest.raises(ValueError, match=match):
+        PeriodicBase(exponent=4, atomic_smearing=0.1, subtract_interior=True)
+
+
+def test_atomic_smearing_non_positive():
+    match = r"`atomic_smearing` .* has to be positive"
+    with pytest.raises(ValueError, match=match):
+        PeriodicBase(exponent=2, atomic_smearing=0, subtract_interior=True)
+    with pytest.raises(ValueError, match=match):
+        PeriodicBase(exponent=2, atomic_smearing=-0.1, subtract_interior=True)
+
+
+def periodic_base():
+    return PeriodicBase(exponent=2, atomic_smearing=0.1, subtract_interior=True)
+
+
+def test_prepare_no_cell():
+    match = r"provide `cell` for periodic calculation"
+    with pytest.raises(ValueError, match=match):
+        periodic_base()._prepare(None, torch.tensor([0]), torch.tensor([0]))
+
+
+def test_prepare_no_neighbor_indices():
+    match = r"provide `neighbor_indices` for periodic calculation"
+    with pytest.raises(ValueError, match=match):
+        periodic_base()._prepare(torch.tensor([0]), None, torch.tensor([0]))
+
+
+def test_prepare_no_neighbor_shifts():
+    match = r"provide `neighbor_shifts` for periodic calculation"
+    with pytest.raises(ValueError, match=match):
+        periodic_base()._prepare(torch.tensor([0]), torch.tensor([0]), None)

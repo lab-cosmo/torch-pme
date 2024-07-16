@@ -13,4 +13,5 @@ functions toegther you might take a look at the :ref:`userdoc-how-to` section.
 
     calculators/index
     metatensor/index
+    base
     lib/index

@@ -15,6 +15,8 @@ except ImportError:
 
 
 class CalculatorBaseMetatensor(torch.nn.Module):
+    """Base calculator for the metatensor interface."""
+
     def __init__(self):
         super().__init__()
         self._device = torch.device("cpu")
