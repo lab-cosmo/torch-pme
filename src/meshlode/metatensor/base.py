@@ -143,15 +143,15 @@ class CalculatorBaseMetatensor(torch.nn.Module):
             for i_atom in range(len(system)):
                 values_samples.append([i_system, i_atom])
 
-        samples_vals_tensor = torch.tensor(values_samples, device=self._device)
+        samples_values = torch.tensor(values_samples, device=self._device)
+        properties_values = torch.arange(self._n_charges_channels, device=self._device)
 
         block = TensorBlock(
             values=torch.vstack(potentials),
-            samples=Labels(["system", "atom"], samples_vals_tensor),
+            samples=Labels(["system", "atom"], samples_values),
             components=[],
-            properties=Labels(
-                "charges_channel", torch.arange(self._n_charges_channels).reshape(-1, 1)
-            ),
+            properties=Labels("charges_channel", properties_values.reshape(-1, 1)),
         )
 
-        return TensorMap(keys=Labels("_", torch.tensor([[0]])), blocks=[block])
+        keys = Labels("_", torch.tensor([[0]], device=self._device))
+        return TensorMap(keys=keys, blocks=[block])
