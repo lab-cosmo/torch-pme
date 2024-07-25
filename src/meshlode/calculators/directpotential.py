@@ -21,10 +21,13 @@ class _DirectPotentialImpl:
         # The squared distance and the inner product between two vectors r_i and r_j are
         # related by: d_ij^2 = |r_i - r_j|^2 = r_i^2 + r_j^2 - 2*r_i*r_j
         num_atoms = len(positions)
-        diagonal_indices = torch.arange(num_atoms)
+        dtype = positions.dtype
+        device = positions.device
+
+        diagonal_indices = torch.arange(num_atoms, device=device)
         gram_matrix = positions @ positions.T
         squared_norms = gram_matrix[diagonal_indices, diagonal_indices].reshape(-1, 1)
-        ones = torch.ones((1, len(positions)), dtype=positions.dtype)
+        ones = torch.ones((1, len(positions)), dtype=dtype, device=device)
         squared_norms_matrix = torch.matmul(squared_norms, ones)
         distances_sq = squared_norms_matrix + squared_norms_matrix.T - 2 * gram_matrix
 
