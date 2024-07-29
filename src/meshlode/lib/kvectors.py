@@ -35,7 +35,6 @@ def generate_kvectors_for_mesh(ns: torch.Tensor, cell: torch.Tensor) -> torch.Te
             f"{cell.device}."
         )
 
-    # Define basis vectors of the reciprocal cell
     reciprocal_cell = 2 * torch.pi * cell.inverse().T
     bx = reciprocal_cell[0]
     by = reciprocal_cell[1]
@@ -44,20 +43,18 @@ def generate_kvectors_for_mesh(ns: torch.Tensor, cell: torch.Tensor) -> torch.Te
     # Generate all reciprocal space vectors:
     # The frequencies from the fftfreq function  are of the form [0, 1/n, 2/n, ...]
     # These are then converted to [0, 1, 2, ...] by multiplying with n.
-    # torch.meshgrid allows us to take all possible combinations of the indices
-    # along the three coordinate dimensions.
     nx = int(ns[0])
     ny = int(ns[1])
     nz = int(ns[2])
-    nxs_1d = nx * torch.fft.fftfreq(nx, device=ns.device)
-    nys_1d = ny * torch.fft.fftfreq(ny, device=ns.device)
-    nzs_1d = nz * torch.fft.rfftfreq(nz, device=ns.device)  # real FFT
-    nxs, nys, nzs = torch.meshgrid(nxs_1d, nys_1d, nzs_1d, indexing="ij")
-    target_shape = (nx, ny, len(nzs_1d), 1)
-    nxs = nxs.reshape(target_shape)
-    nys = nys.reshape(target_shape)
-    nzs = nzs.reshape(target_shape)
-    k_vectors = nxs * bx + nys * by + nzs * bz
+
+    # get the frequencies, multiply with n, then w/ the reciprocal space vectors
+    kxs = (bx * ns[0]) * torch.fft.fftfreq(nx, device=ns.device).unsqueeze(-1)
+    kys = (by * ns[1]) * torch.fft.fftfreq(ny, device=ns.device).unsqueeze(-1)
+    # real FFT!
+    kzs = (bz * ns[2]) * torch.fft.rfftfreq(nz, device=ns.device).unsqueeze(-1)
+    # then take the cartesian product (all possible combinations, same as meshgrid)
+    # via broadcasting (to avoid instantiating intermediates), and sum up
+    k_vectors = kxs[:, None, None] + kys[None, :, None] + kzs[None, None, :]
 
     return k_vectors
 
@@ -99,27 +96,19 @@ def generate_kvectors_squeezed(ns: torch.Tensor, cell: torch.Tensor) -> torch.Te
             f"{cell.device}."
         )
 
-    # Define basis vectors of the reciprocal cell
     reciprocal_cell = 2 * torch.pi * cell.inverse().T
     bx = reciprocal_cell[0]
     by = reciprocal_cell[1]
     bz = reciprocal_cell[2]
 
-    # Generate all reciprocal space vectors:
-    # The frequencies from the fftfreq function  are of the form [0, 1/n, 2/n, ...]
-    # These are then converted to [0, 1, 2, ...] by multiplying with n.
-    # torch.meshgrid allows us to take all possible combinations of the indices
-    # along the three coordinate dimensions.
+    # same as above, except for the z dimension (& the flattened output)
     nx = int(ns[0])
     ny = int(ns[1])
     nz = int(ns[2])
-    nxs_1d = nx * torch.fft.fftfreq(nx, device=ns.device)
-    nys_1d = ny * torch.fft.fftfreq(ny, device=ns.device)
-    nzs_1d = nz * torch.fft.fftfreq(nz, device=ns.device)
-    nxs, nys, nzs = torch.meshgrid(nxs_1d, nys_1d, nzs_1d, indexing="ij")
-    nxs = nxs.flatten().reshape((-1, 1))
-    nys = nys.flatten().reshape((-1, 1))
-    nzs = nzs.flatten().reshape((-1, 1))
-    k_vectors = nxs * bx + nys * by + nzs * bz
+    kxs = (bx * ns[0]) * torch.fft.fftfreq(nx, device=ns.device).unsqueeze(-1)
+    kys = (by * ns[1]) * torch.fft.fftfreq(ny, device=ns.device).unsqueeze(-1)
+    kzs = (bz * ns[2]) * torch.fft.fftfreq(nz, device=ns.device).unsqueeze(-1)
 
-    return k_vectors
+    k_vectors = kxs[:, None, None] + kys[None, :, None] + kzs[None, None, :]
+
+    return k_vectors.reshape(-1, 3)

@@ -289,7 +289,6 @@ class PeriodicBase:
         atomic_smearing: Union[None, float],
         subtract_interior: bool,
     ):
-
         if exponent < 0.0 or exponent > 3.0:
             raise ValueError(f"`exponent` p={exponent} has to satisfy 0 < p <= 3")
         if atomic_smearing is not None and atomic_smearing <= 0:
@@ -330,10 +329,9 @@ class PeriodicBase:
         # reciprocal space
         else:
             potentials_bare = self.potential.potential_sr_from_dist(dists, smearing)
-        # potential.index_add_(0, atom_is, charges[atom_js] * potentials_bare)
 
-        for i, j, potential_bare in zip(atom_is, atom_js, potentials_bare):
-            potential[int(i.item())] += charges[int(j.item())] * potential_bare
+        contributions = charges[atom_js] * potentials_bare.unsqueeze(-1)
+        potential.index_add_(0, atom_is, contributions)
 
         return potential
 
