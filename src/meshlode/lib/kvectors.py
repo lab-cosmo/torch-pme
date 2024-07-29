@@ -53,7 +53,7 @@ def generate_kvectors_for_mesh(ns: torch.Tensor, cell: torch.Tensor) -> torch.Te
     # real FFT!
     kzs = (bz * ns[2]) * torch.fft.rfftfreq(nz, device=ns.device).unsqueeze(-1)
     # then take the cartesian product (all possible combinations, same as meshgrid)
-    # via broadcasting (to avoid instating intermediates), and sum up
+    # via broadcasting (to avoid instantiating intermediates), and sum up
     k_vectors = kxs[:, None, None] + kys[None, :, None] + kzs[None, None, :]
 
     return k_vectors
