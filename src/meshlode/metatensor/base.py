@@ -93,8 +93,9 @@ class CalculatorBaseMetatensor(torch.nn.Module):
         """
         systems = self._validate_compute_parameters(systems)
         potentials: List[torch.Tensor] = []
+        values_samples: List[List[int]] = []
 
-        for system in systems:
+        for i_system, system in enumerate(systems):
             charges = system.get_data("charges").values
             all_neighbor_lists = system.known_neighbor_lists()
             if all_neighbor_lists:
@@ -137,11 +138,8 @@ class CalculatorBaseMetatensor(torch.nn.Module):
                     neighbor_shifts=neighbor_shifts,
                 )
             )
-        system = systems[-1]
-        values_samples: List[List[int]] = []
-        for i_system in range(len(systems)):
-            for i_atom in range(len(system)):
-                values_samples.append([i_system, i_atom])
+
+            values_samples += [[i_system, i_atom] for i_atom in range(len(system))]
 
         samples_values = torch.tensor(values_samples, device=self._device)
         properties_values = torch.arange(self._n_charges_channels, device=self._device)
