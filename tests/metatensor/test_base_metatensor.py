@@ -300,3 +300,42 @@ def test_neighborlist_half_error():
     match = r"Found 1 neighbor list\(s\) but no full list, which is required."
     with pytest.raises(ValueError, match=match):
         calculator.compute(system)
+
+
+def test_systems_with_different_number_of_atoms():
+    system1 = mts_atomistic.System(
+        types=torch.tensor([1, 1, 8]),
+        positions=torch.tensor([[0.0, 0.0, 0.0], [0.0, 0.0, 2.0], [0.0, 2.0, 2.0]]),
+        cell=torch.zeros([3, 3]),
+    )
+
+    charges1 = torch.tensor([1.0, -1.0, 2.0]).reshape(-1, 1)
+    data1 = mts_torch.TensorBlock(
+        values=charges1,
+        samples=mts_torch.Labels.range("atom", charges1.shape[0]),
+        components=[],
+        properties=mts_torch.Labels.range("charge", charges1.shape[1]),
+    )
+
+    system1.add_data(name="charges", data=data1)
+
+    system2 = mts_atomistic.System(
+        types=torch.tensor(
+            [1, 1],
+        ),
+        positions=torch.tensor([[0.0, 0.0, 0.0], [0.0, 0.0, 2.0]]),
+        cell=torch.zeros([3, 3]),
+    )
+
+    charges2 = torch.tensor([1.0, -1.0]).reshape(-1, 1)
+    data2 = mts_torch.TensorBlock(
+        values=charges2,
+        samples=mts_torch.Labels.range("atom", charges2.shape[0]),
+        components=[],
+        properties=mts_torch.Labels.range("charge", charges2.shape[1]),
+    )
+
+    system2.add_data(name="charges", data=data2)
+    calculator = CalculatorTest()
+
+    calculator.compute([system1, system2])
