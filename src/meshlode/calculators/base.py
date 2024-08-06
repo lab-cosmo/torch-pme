@@ -192,7 +192,7 @@ class CalculatorBaseTorch(torch.nn.Module):
                 if neighbor_shifts_single.shape[0] != neighbor_indices_single.shape[1]:
                     raise ValueError(
                         "`neighbor_indices` and `neighbor_shifts` need to have shapes "
-                        "[2, num_neighbors] and [num_neighbors, 3]. For at least one"
+                        "[2, num_neighbors] and [num_neighbors, 3]. For at least one "
                         f"structure, got {list(neighbor_indices_single.shape)} and "
                         f"{list(neighbor_shifts_single.shape)}, "
                         "which is inconsistent"

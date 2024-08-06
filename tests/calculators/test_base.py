@@ -345,7 +345,7 @@ def test_invalid_shape_neighbor_indices_neighbor_shifts():
     calculator = CalculatorTest()
     match = (
         r"`neighbor_indices` and `neighbor_shifts` need to have shapes "
-        r"\[2, num_neighbors\] and \[num_neighbors, 3\]. For at least one"
+        r"\[2, num_neighbors\] and \[num_neighbors, 3\]. For at least one "
         r"structure, got \[2, 10\] and "
         r"\[11, 3\], which is inconsistent"
     )
