@@ -2,7 +2,7 @@ import pytest
 import torch
 from torch.testing import assert_close
 
-from meshlode.lib import generate_kvectors_for_mesh, generate_kvectors_squeezed
+from torchpme.lib import generate_kvectors_for_mesh, generate_kvectors_squeezed
 
 
 # Generate random cells and mesh parameters

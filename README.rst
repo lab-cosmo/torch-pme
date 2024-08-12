@@ -1,29 +1,47 @@
-MeshLODE
+torch-pme
 ========
+
 |tests| |codecov| |docs|
 
-Particle-mesh based calculation of Long Distance Equivariants.
+.. marker-introduction
+
+``torch-pme`` enables efficient, auto-differentiable computation of long-range
+interactions in PyTorch. Auto-differentiation is supported for particle *positions*,
+*charges*, and *cell* parameters, allowing not only the automatic computation of forces
+but also enabling applications in machine learning tasks. The library offers classes for
+Particle Mesh Ewald (``PME``), standard ``Ewald``, and non-periodic ``direct`` methods,
+with the flexibility to calculate potentials beyond :math:`1/r` electrostatics,
+including arbitrary order :math:`1/r^p` potentials.
+
+Optimized for both CPU and GPU devices, torch-pme is fully `TorchScriptable`_, allowing
+it to be converted into a format that runs independently of Python, such as in C++,
+making it ideal for high-performance production environments.
+
+.. _`TorchScriptable`: https://pytorch.org/docs/stable/jit.html
+
+.. marker-documentation
 
 For details, tutorials, and examples, please have a look at our `documentation`_.
 
-.. _`documentation`: https://lab-cosmo.github.io/MeshLODE/latest
+.. _`documentation`: https://lab-cosmo.github.io/torch-pme/latest
 
 .. marker-installation
 
 Installation
 ------------
-You can install *MeshLode* using pip with
+
+You can install *torch-pme* using pip with
 
 .. code-block:: bash
 
-    git clone https://github.com/lab-cosmo/MeshLODE
-    cd MeshLODE
+    git clone https://github.com/lab-cosmo/torch-pme
+    cd torch-pme
     pip install .
 
-You can then ``import meshlode`` and use it in your projects!
+You can then ``import torchpme`` and use it in your projects!
 
 We also provide bindings to `metatensor <https://docs.metatensor.org/latest/>`_ which
-can optionally be installed together and used as ``meshlode.metatensor`` via
+can optionally be installed together and used as ``torchpme.metatensor`` via
 
 .. code-block:: bash
 
@@ -33,28 +51,30 @@ can optionally be installed together and used as ``meshlode.metatensor`` via
 
 Having problems or ideas?
 -------------------------
-Having a problem with MeshLODE? Please let us know by `submitting an issue
-<https://github.com/lab-cosmo/MeshLODE/issues>`_.
+
+Having a problem with torch-pme? Please let us know by `submitting an issue
+<https://github.com/lab-cosmo/torch-pme/issues>`_.
 
 Submit new features or bug fixes through a `pull request
-<https://github.com/lab-cosmo/MeshLODE/pulls>`_.
+<https://github.com/lab-cosmo/torch-pme/pulls>`_.
 
 .. marker-contributing
 
 Contributors
 ------------
-Thanks goes to all people that make MeshLODE possible:
 
-.. image:: https://contrib.rocks/image?repo=lab-cosmo/MeshLODE
-   :target: https://github.com/lab-cosmo/MeshLODE/graphs/contributors
+Thanks goes to all people that make torch-pme possible:
 
-.. |tests| image:: https://github.com/lab-cosmo/MeshLODE/workflows/Tests/badge.svg
+.. image:: https://contrib.rocks/image?repo=lab-cosmo/torch-pme
+   :target: https://github.com/lab-cosmo/torch-pme/graphs/contributors
+
+.. |tests| image:: https://github.com/lab-cosmo/torch-pme/workflows/Tests/badge.svg
    :alt: Github Actions Tests Job Status
-   :target: https://github.com/lab-cosmo/MeshLODE/actions?query=workflow%3ATests
+   :target: https://github.com/lab-cosmo/torch-pme/actions?query=workflow%3ATests
 
-.. |codecov| image:: https://codecov.io/gh/lab-cosmo/MeshLODE/graph/badge.svg?token=srVKRy7r6m
+.. |codecov| image:: https://codecov.io/gh/lab-cosmo/torch-pme/graph/badge.svg?token=srVKRy7r6m
    :alt: Code coverage
-   :target: https://codecov.io/gh/lab-cosmo/MeshLODE
+   :target: https://codecov.io/gh/lab-cosmo/torch-pme
 
 .. |docs| image:: https://img.shields.io/badge/documentation-latest-sucess
    :alt: Documentation

@@ -1,6 +1,6 @@
 PMEPotential
 ############
 
-.. autoclass:: meshlode.PMEPotential
+.. autoclass:: torchpme.PMEPotential
     :members:
     :undoc-members:

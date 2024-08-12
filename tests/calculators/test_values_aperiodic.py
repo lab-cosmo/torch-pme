@@ -3,7 +3,7 @@ import math
 import pytest
 import torch
 
-from meshlode import DirectPotential
+from torchpme import DirectPotential
 
 
 def define_molecule(molecule_name="dimer"):

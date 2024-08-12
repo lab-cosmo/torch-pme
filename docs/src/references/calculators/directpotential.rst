@@ -1,6 +1,6 @@
 DirectPotential
 ###############
 
-.. autoclass:: meshlode.DirectPotential
+.. autoclass:: torchpme.DirectPotential
     :members:
     :undoc-members:

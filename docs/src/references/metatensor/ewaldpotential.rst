@@ -1,6 +1,6 @@
 EwaldPotential
 ##############
 
-.. autoclass:: meshlode.metatensor.EwaldPotential
+.. autoclass:: torchpme.metatensor.EwaldPotential
     :members: compute, forward
     :undoc-members:

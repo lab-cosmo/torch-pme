@@ -4,7 +4,7 @@ from scipy.special import expi
 from torch.special import erf, erfc
 from torch.testing import assert_close
 
-from meshlode.lib import InversePowerLawPotential
+from torchpme.lib import InversePowerLawPotential
 
 
 def gamma(x):

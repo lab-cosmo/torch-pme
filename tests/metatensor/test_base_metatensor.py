@@ -4,14 +4,14 @@ from packaging import version
 from utils_metatensor import add_neighbor_list
 from vesin import NeighborList
 
-import meshlode
+import torchpme
 
 
 mts_torch = pytest.importorskip("metatensor.torch")
 mts_atomistic = pytest.importorskip("metatensor.torch.atomistic")
 
 
-class CalculatorTest(meshlode.metatensor.base.CalculatorBaseMetatensor):
+class CalculatorTest(torchpme.metatensor.base.CalculatorBaseMetatensor):
     def _compute_single_system(
         self, positions, charges, cell, neighbor_indices, neighbor_shifts
     ):

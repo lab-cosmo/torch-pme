@@ -9,7 +9,7 @@ import torch
 from packaging import version
 from utils_metatensor import add_neighbor_list
 
-import meshlode
+import torchpme
 
 
 mts_torch = pytest.importorskip("metatensor.torch")
@@ -28,9 +28,9 @@ SUBTRACT_SELF = True
 @pytest.mark.parametrize(
     "CalculatorClass, params",
     [
-        (meshlode.metatensor.DirectPotential, {}),
+        (torchpme.metatensor.DirectPotential, {}),
         (
-            meshlode.metatensor.EwaldPotential,
+            torchpme.metatensor.EwaldPotential,
             {
                 "atomic_smearing": ATOMIC_SMEARING,
                 "lr_wavelength": LR_WAVELENGTH,
@@ -38,7 +38,7 @@ SUBTRACT_SELF = True
             },
         ),
         (
-            meshlode.metatensor.PMEPotential,
+            torchpme.metatensor.PMEPotential,
             {
                 "atomic_smearing": ATOMIC_SMEARING,
                 "mesh_spacing": MESH_SPACING,

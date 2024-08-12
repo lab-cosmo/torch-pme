@@ -6,32 +6,43 @@ requires = [
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "MeshLODE"
-description = "Particle-mesh based calculation of Long Distance Equivariants"
-authors = [
-    {name = "Melika Honarmand"},
-    {name = "Kevin Kazuki Huguenin-Dumittan"},
-    {name = "Philip Loche"},
-    {name = "Michele Ceriotti"},
-]
+name = "torch-pme"
+description = "Particle-mesh based calculations of long-range interactions in PyTorch"
+authors = [{name = "torch-pme developers"}]
+
 readme = "README.rst"
 requires-python = ">=3.9"
 license = {text = "BSD-3-Clause"}
 classifiers = [
     "Development Status :: 4 - Beta",
-    "Environment :: Console",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: BSD License",
     "Natural Language :: English",
     "Operating System :: POSIX",
     "Operating System :: MacOS :: MacOS X",
-    "Programming Language :: Python :: 3",
+    "Operating System :: Microsoft :: Windows",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
     "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Topic :: Scientific/Engineering :: Chemistry",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "Framework :: PyTorch",
 ]
 keywords = [
+    "PyTorch",
+    "Auto-differentiation",
+    "Particle-Mesh Ewald",
     "Electrostatics",
     "Computational Materials Science",
-    "Atomistic Simulations",
+    "Machine Learning",
+    "Molecular Dynamics",
+    "GPU Acceleration",
+    "High-Performance Computing",
+    "Fourier Transform",
+    "TorchScript",
+    "Scientific Computing",
 ]
 dependencies = [
     "torch >=1.11",
@@ -50,15 +61,15 @@ metatensor = [
 ]
 
 [project.urls]
-homepage = "http://meshlode.readthedocs.io"
-documentation = "http://meshlode.readthedocs.io"
-repository = "https://github.com/lab-cosmo/MeshLODE"
-issues = "https://github.com/lab-cosmo/MeshLODE/issues"
+homepage = "http://torch-pme.readthedocs.io"
+documentation = "http://torch-pme.readthedocs.io"
+repository = "https://github.com/lab-cosmo/torch-pme"
+issues = "https://github.com/lab-cosmo/torch-pme/issues"
 
 [tool.coverage.report]
 show_missing = true
 include = [
-    "src/meshlode/*"
+    "src/torchpme/*"
 ]
 
 [tool.coverage.run]
@@ -78,7 +89,7 @@ line_length = 88
 indent = 4
 include_trailing_comma = true
 lines_after_imports = 2
-known_first_party = "meshlode"
+known_first_party = "torchpme"
 
 [tool.mypy]
 exclude = [
@@ -102,4 +113,4 @@ filterwarnings = [
 where = ["src"]
 
 [tool.setuptools.dynamic]
-version = {attr = "meshlode.__version__"}
+version = {attr = "torchpme.__version__"}

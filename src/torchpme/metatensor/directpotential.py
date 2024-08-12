@@ -5,7 +5,7 @@ from .base import CalculatorBaseMetatensor
 class DirectPotential(CalculatorBaseMetatensor, _DirectPotentialImpl):
     r"""Specie-wise long-range potential using a direct summation over all atoms.
 
-    Refer to :class:`meshlode.DirectPotential` for parameter documentation.
+    Refer to :class:`torchpme.DirectPotential` for parameter documentation.
 
     Example
     -------

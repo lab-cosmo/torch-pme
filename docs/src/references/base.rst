@@ -5,10 +5,10 @@ Base classes
 
 General Base classes all calculators build on top.
 
-.. automodule:: meshlode.calculators.base
+.. automodule:: torchpme.calculators.base
     :members:
     :undoc-members:
 
-.. automodule:: meshlode.metatensor.base
+.. automodule:: torchpme.metatensor.base
     :members:
     :undoc-members:

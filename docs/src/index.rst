@@ -1,7 +1,9 @@
-MeshLODE
-########
+torch-pme
+#########
 
-Particle-mesh based calculation of Long Distance Equivariants.
+.. include:: ../../README.rst
+    :start-after: marker-introduction
+    :end-before: marker-documentation
 
 .. toctree::
    :hidden:

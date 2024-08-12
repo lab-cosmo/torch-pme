@@ -1,6 +1,6 @@
 DirectPotential
 ###############
 
-.. autoclass:: meshlode.metatensor.DirectPotential
+.. autoclass:: torchpme.metatensor.DirectPotential
     :members: compute, forward
     :undoc-members:

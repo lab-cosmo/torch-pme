@@ -9,7 +9,7 @@ import torch
 from torch.testing import assert_close
 from utils import neighbor_list_torch
 
-from meshlode import DirectPotential, EwaldPotential, PMEPotential
+from torchpme import DirectPotential, EwaldPotential, PMEPotential
 
 
 AVAILABLE_DEVICES = [torch.device("cpu")] + torch.cuda.is_available() * [
