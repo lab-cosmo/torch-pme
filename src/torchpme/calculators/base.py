@@ -2,7 +2,7 @@ from typing import List, Optional, Tuple, Union
 
 import torch
 
-from torchpme.lib import InversePowerLawPotential
+from ..lib import InversePowerLawPotential, distances
 
 
 class CalculatorBaseTorch(torch.nn.Module):
@@ -138,6 +138,9 @@ class CalculatorBaseTorch(torch.nn.Module):
                         f"{cell_single.device}"
                     )
 
+                if neighbor_shifts_single is None:
+                    raise ValueError("Provided `cell` but no `neighbor_shifts`.")
+
             # check shape, dtype and device of charges
             if charges_single.dim() != 2:
                 raise ValueError(
@@ -169,33 +172,11 @@ class CalculatorBaseTorch(torch.nn.Module):
 
             # check shape, dtype and device of neighbor_indices and neighbor_shifts
             if neighbor_indices_single is not None:
-                if neighbor_shifts_single is None:
-                    raise ValueError(
-                        "Need to provide both `neighbor_indices` and `neighbor_shifts` "
-                        "together."
-                    )
-
                 if neighbor_indices_single.shape[0] != 2:
                     raise ValueError(
                         "neighbor_indices is expected to have shape [2, num_neighbors]"
                         f", but got {list(neighbor_indices_single.shape)} for one "
                         "structure"
-                    )
-
-                if neighbor_shifts_single.shape[1] != 3:
-                    raise ValueError(
-                        "neighbor_shifts is expected to have shape [num_neighbors, 3]"
-                        f", but got {list(neighbor_shifts_single.shape)} for one "
-                        "structure"
-                    )
-
-                if neighbor_shifts_single.shape[0] != neighbor_indices_single.shape[1]:
-                    raise ValueError(
-                        "`neighbor_indices` and `neighbor_shifts` need to have shapes "
-                        "[2, num_neighbors] and [num_neighbors, 3]. For at least one "
-                        f"structure, got {list(neighbor_indices_single.shape)} and "
-                        f"{list(neighbor_shifts_single.shape)}, "
-                        "which is inconsistent"
                     )
 
                 if neighbor_indices_single.device != self._device:
@@ -205,11 +186,35 @@ class CalculatorBaseTorch(torch.nn.Module):
                         f"device {neighbor_indices_single.device}"
                     )
 
+            if neighbor_shifts_single is not None:
+                if cell_single is None:
+                    raise ValueError("Provided `neighbor_shifts` but no `cell`.")
+
+                if neighbor_shifts_single.shape[1] != 3:
+                    raise ValueError(
+                        "neighbor_shifts is expected to have shape [num_neighbors, 3]"
+                        f", but got {list(neighbor_shifts_single.shape)} for one "
+                        "structure"
+                    )
+
                 if neighbor_shifts_single.device != self._device:
                     raise ValueError(
                         f"each `neighbor_shifts` must be on the same device "
                         f"{self._device} as positions, got at least one tensor with "
                         f"device {neighbor_shifts_single.device}"
+                    )
+
+            if (
+                neighbor_indices_single is not None
+                and neighbor_shifts_single is not None
+            ):
+                if neighbor_shifts_single.shape[0] != neighbor_indices_single.shape[1]:
+                    raise ValueError(
+                        "`neighbor_indices` and `neighbor_shifts` need to have shapes "
+                        "[2, num_neighbors] and [num_neighbors, 3]. For at least one "
+                        f"structure, got {list(neighbor_indices_single.shape)} and "
+                        f"{list(neighbor_shifts_single.shape)}, "
+                        "which is inconsistent"
                     )
 
         return positions, charges, cell, neighbor_indices, neighbor_shifts
@@ -310,16 +315,12 @@ class PeriodicBase:
         neighbor_indices: torch.Tensor,
         neighbor_shifts: torch.Tensor,
     ) -> torch.Tensor:
-        atom_is = neighbor_indices[0]
-        atom_js = neighbor_indices[1]
-        shifts = neighbor_shifts.type(cell.dtype)
-
-        # Compute energy
-        potential = torch.zeros_like(charges)
-
-        pos_is = positions[atom_is]
-        pos_js = positions[atom_js]
-        dists = torch.linalg.norm(pos_js - pos_is + shifts @ cell, dim=1)
+        dists = distances(
+            positions=positions,
+            cell=cell,
+            neighbor_indices=neighbor_indices,
+            neighbor_shifts=neighbor_shifts,
+        )
         # If the contribution from all atoms within the cutoff is to be subtracted
         # this short-range part will simply use -V_LR as the potential
         if self.subtract_interior:
@@ -330,7 +331,12 @@ class PeriodicBase:
         else:
             potentials_bare = self.potential.potential_sr_from_dist(dists, smearing)
 
+        atom_is = neighbor_indices[0]
+        atom_js = neighbor_indices[1]
+
         contributions = charges[atom_js] * potentials_bare.unsqueeze(-1)
+
+        potential = torch.zeros_like(charges)
         potential.index_add_(0, atom_is, contributions)
 
         return potential

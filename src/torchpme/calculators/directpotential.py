@@ -2,12 +2,14 @@ from typing import List, Optional, Union
 
 import torch
 
+from ..lib import InversePowerLawPotential, all_neighbor_indices, distances
 from .base import CalculatorBaseTorch
 
 
 class _DirectPotentialImpl:
     def __init__(self, exponent):
         self.exponent = exponent
+        self.potential = InversePowerLawPotential(exponent=exponent)
 
     def _compute_single_system(
         self,
@@ -17,33 +19,32 @@ class _DirectPotentialImpl:
         neighbor_indices: Optional[torch.Tensor],
         neighbor_shifts: Optional[torch.Tensor],
     ) -> torch.Tensor:
-        # Compute matrix containing the squared distances from the Gram matrix
-        # The squared distance and the inner product between two vectors r_i and r_j are
-        # related by: d_ij^2 = |r_i - r_j|^2 = r_i^2 + r_j^2 - 2*r_i*r_j
-        num_atoms = len(positions)
-        dtype = positions.dtype
-        device = positions.device
 
-        diagonal_indices = torch.arange(num_atoms, device=device)
-        gram_matrix = positions @ positions.T
-        squared_norms = gram_matrix[diagonal_indices, diagonal_indices].reshape(-1, 1)
-        ones = torch.ones((1, len(positions)), dtype=dtype, device=device)
-        squared_norms_matrix = torch.matmul(squared_norms, ones)
-        distances_sq = squared_norms_matrix + squared_norms_matrix.T - 2 * gram_matrix
+        if neighbor_indices is None:
+            neighbor_indices_tensor = all_neighbor_indices(
+                len(charges), device=charges.device
+            )
+        else:
+            neighbor_indices_tensor = neighbor_indices
 
-        # Add terms to diagonal in order to avoid division by zero
-        # Since these components in the target tensor need to be set to zero, we add
-        # a huge number such that after taking the inverse (since we evaluate 1/r^p),
-        # the components will effectively be set to zero.
-        # This is not the most elegant solution, but I am doing this since the more
-        # obvious alternative of setting the same components to zero after the division
-        # had issues with autograd. I would appreciate any better alternatives.
-        distances_sq[diagonal_indices, diagonal_indices] += 1e50
+        dists = distances(
+            positions=positions,
+            cell=cell,
+            neighbor_indices=neighbor_indices_tensor,
+            neighbor_shifts=neighbor_shifts,
+        )
 
-        # Compute potential
-        potentials_by_pair = distances_sq.pow(-self.exponent / 2.0)
+        potentials_bare = self.potential.potential_from_dist(dists)
 
-        return torch.matmul(potentials_by_pair, charges)
+        atom_is = neighbor_indices_tensor[0]
+        atom_js = neighbor_indices_tensor[1]
+
+        contributions = charges[atom_js] * potentials_bare.unsqueeze(-1)
+
+        potential = torch.zeros_like(charges)
+        potential.index_add_(0, atom_is, contributions)
+
+        return potential
 
 
 class DirectPotential(CalculatorBaseTorch, _DirectPotentialImpl):
@@ -87,8 +88,28 @@ class DirectPotential(CalculatorBaseTorch, _DirectPotentialImpl):
         self,
         positions: Union[List[torch.Tensor], torch.Tensor],
         charges: Union[List[torch.Tensor], torch.Tensor],
+        cell: Union[List[Optional[torch.Tensor]], Optional[torch.Tensor]] = None,
+        neighbor_indices: Union[
+            List[Optional[torch.Tensor]], Optional[torch.Tensor]
+        ] = None,
+        neighbor_shifts: Union[
+            List[Optional[torch.Tensor]], Optional[torch.Tensor]
+        ] = None,
     ) -> Union[torch.Tensor, List[torch.Tensor]]:
         """Compute potential for all provided "systems" stacked inside list.
+
+        If the optional parameter  ``neighbor_indices`` is provided only those indices
+        are taken into account for the compuation. Otherwise all particles are
+        considered for computing the potential. If ``cell`` and `neighbor_shifts` are
+        given, compuation is performed taking the periodicity of the system into
+        account.
+
+        .. warning ::
+
+            When passing the ``neighbor_shifts`` parameter withput explicit
+            ``neighbor_indices``, the shape of the ``neighbor_shifts`` must have a shape
+            of ``(num_atoms * (num_atoms - 1), 3)``. Also the order of all pairs must
+            match the of :py:func:`torchpme.lib.neighbors.all_neighbor_indices`!
 
         The computation is performed on the same ``device`` as ``dtype`` is the input is
         stored on. The ``dtype`` of the output tensors will be the same as the input.
@@ -100,6 +121,17 @@ class DirectPotential(CalculatorBaseTorch, _DirectPotentialImpl):
             potential should be calculated for a standard potential ``n_channels=1``. If
             more than one "channel" is provided multiple potentials for the same
             position but different are computed.
+        :param cell: single or 2D tensor of shape (3, 3), describing the bounding
+            box/unit cell of the system. Each row should be one of the bounding box
+            vector; and columns should contain the x, y, and z components of these
+            vectors (i.e. the cell should be given in row-major order).
+        :param neighbor_indices: Optional single or list of 2D tensors of shape ``(2,
+            n)``, where ``n`` is the number of atoms. The two rows correspond to the
+            indices of a **full neighbor list** for the two atoms which are considered
+            neighbors (e.g. within a cutoff distance).
+        :param neighbor_shifts: Optional single or list of 2D tensors of shape (3, n),
+             where n is the number of atoms. The 3 rows correspond to the shift indices
+             for periodic images of a **full neighbor list**.
         :return: Single or List of torch Tensors containing the potential(s) for all
             positions. Each tensor in the list is of shape ``(len(positions),
             len(charges))``, where If the inputs are only single tensors only a single
@@ -108,10 +140,10 @@ class DirectPotential(CalculatorBaseTorch, _DirectPotentialImpl):
 
         return self._compute_impl(
             positions=positions,
-            cell=None,
             charges=charges,
-            neighbor_indices=None,
-            neighbor_shifts=None,
+            cell=cell,
+            neighbor_indices=neighbor_indices,
+            neighbor_shifts=neighbor_shifts,
         )
 
     # This function is kept to keep torch-pme compatible with the broader pytorch
@@ -121,9 +153,19 @@ class DirectPotential(CalculatorBaseTorch, _DirectPotentialImpl):
         self,
         positions: Union[List[torch.Tensor], torch.Tensor],
         charges: Union[List[torch.Tensor], torch.Tensor],
+        cell: Union[List[Optional[torch.Tensor]], Optional[torch.Tensor]] = None,
+        neighbor_indices: Union[
+            List[Optional[torch.Tensor]], Optional[torch.Tensor]
+        ] = None,
+        neighbor_shifts: Union[
+            List[Optional[torch.Tensor]], Optional[torch.Tensor]
+        ] = None,
     ) -> Union[torch.Tensor, List[torch.Tensor]]:
         """Forward just calls :py:meth:`compute`."""
         return self.compute(
             positions=positions,
             charges=charges,
+            cell=cell,
+            neighbor_indices=neighbor_indices,
+            neighbor_shifts=neighbor_shifts,
         )

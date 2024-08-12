@@ -97,6 +97,12 @@ class CalculatorBaseMetatensor(torch.nn.Module):
 
         for i_system, system in enumerate(systems):
             charges = system.get_data("charges").values
+
+            if torch.all(system.cell == torch.zeros([3, 3], device=system.cell.device)):
+                cell = None
+            else:
+                cell = system.cell
+
             all_neighbor_lists = system.known_neighbor_lists()
             if all_neighbor_lists:
                 # try to extract neighbor list from system object
@@ -133,7 +139,7 @@ class CalculatorBaseMetatensor(torch.nn.Module):
                 self._compute_single_system(
                     positions=system.positions,
                     charges=charges,
-                    cell=system.cell,
+                    cell=cell,
                     neighbor_indices=neighbor_indices,
                     neighbor_shifts=neighbor_shifts,
                 )

@@ -14,20 +14,20 @@ def define_molecule(molecule_name="dimer"):
     """
     # Use a higher precision than the default float32
     dtype = torch.float64
-    SQRT2 = torch.sqrt(torch.tensor(2, dtype=dtype))
-    SQRT3 = torch.sqrt(torch.tensor(3, dtype=dtype))
+    SQRT2 = torch.sqrt(torch.tensor(2.0, dtype=dtype))
+    SQRT3 = torch.sqrt(torch.tensor(3.0, dtype=dtype))
 
     # Start defining molecules
     # Dimer
     if molecule_name == "dimer":
-        positions = torch.tensor([[0.0, 0, 0], [0, 0, 1.0]], dtype=dtype)
+        positions = torch.tensor([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]], dtype=dtype)
         charges = torch.tensor([1.0, -1.0], dtype=dtype)
-        potentials = torch.tensor([-1.0, 1], dtype=dtype)
+        potentials = torch.tensor([-1.0, 1.0], dtype=dtype)
 
     elif molecule_name == "dimer_positive":
         positions, charges, potentials = define_molecule("dimer")
-        charges = torch.tensor([1.0, 1], dtype=dtype)
-        potentials = torch.tensor([1.0, 1], dtype=dtype)
+        charges = torch.tensor([1.0, 1.0], dtype=dtype)
+        potentials = torch.tensor([1.0, 1.0], dtype=dtype)
 
     elif molecule_name == "dimer_negative":
         positions, charges, potentials = define_molecule("dimer_positive")
@@ -37,15 +37,15 @@ def define_molecule(molecule_name="dimer"):
     # Equilateral triangle
     elif molecule_name == "triangle":
         positions = torch.tensor(
-            [[0.0, 0, 0], [1, 0, 0], [1 / 2, SQRT3 / 2, 0]], dtype=dtype
+            [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [1 / 2, SQRT3 / 2, 0.0]], dtype=dtype
         )
         charges = torch.tensor([1.0, -1.0, 0.0], dtype=dtype)
-        potentials = torch.tensor([-1.0, 1, 0], dtype=dtype)
+        potentials = torch.tensor([-1.0, 1.0, 0.0], dtype=dtype)
 
     elif molecule_name == "triangle_positive":
         positions, charges, potentials = define_molecule("triangle")
-        charges = torch.tensor([1.0, 1, 1], dtype=dtype)
-        potentials = torch.tensor([2.0, 2, 2], dtype=dtype)
+        charges = torch.tensor([1.0, 1.0, 1.0], dtype=dtype)
+        potentials = torch.tensor([2.0, 2.0, 2.0], dtype=dtype)
 
     elif molecule_name == "triangle_negative":
         positions, charges, potentials = define_molecule("triangle_positive")
@@ -55,15 +55,16 @@ def define_molecule(molecule_name="dimer"):
     # Squares (planar)
     elif molecule_name == "square":
         positions = torch.tensor(
-            [[1, 1, 0], [1, -1, 0], [-1, 1, 0], [-1, -1, 0]], dtype=dtype
+            [[1.0, 1.0, 0.0], [1.0, -1.0, 0.0], [-1.0, 1.0, 0.0], [-1.0, -1.0, 0.0]],
+            dtype=dtype,
         )
         positions /= 2.0
-        charges = torch.tensor([1.0, -1, -1, 1], dtype=dtype)
+        charges = torch.tensor([1.0, -1.0, -1.0, 1.0], dtype=dtype)
         potentials = charges * (1.0 / SQRT2 - 2.0)
 
     elif molecule_name == "square_positive":
         positions, charges, potentials = define_molecule("square")
-        charges = torch.tensor([1.0, 1, 1, 1], dtype=dtype)
+        charges = torch.tensor([1.0, 1.0, 1.0, 1.0], dtype=dtype)
         potentials = (2.0 + 1.0 / SQRT2) * torch.ones(4, dtype=dtype)
 
     elif molecule_name == "square_negative":
@@ -75,14 +76,14 @@ def define_molecule(molecule_name="dimer"):
     elif molecule_name == "tetrahedron":
         positions = torch.tensor(
             [
-                [0.0, 0, 0],
-                [1, 0, 0],
-                [1 / 2, SQRT3 / 2, 0],
+                [0.0, 0.0, 0.0],
+                [1.0, 0.0, 0.0],
+                [1 / 2, SQRT3 / 2, 0.0],
                 [1 / 2, SQRT3 / 6, SQRT2 / SQRT3],
             ],
             dtype=dtype,
         )
-        charges = torch.tensor([1.0, -1, 1, -1], dtype=dtype)
+        charges = torch.tensor([1.0, -1.0, 1.0, -1.0], dtype=dtype)
         potentials = -charges
 
     elif molecule_name == "tetrahedron_positive":
@@ -94,9 +95,12 @@ def define_molecule(molecule_name="dimer"):
         positions, charges, potentials = define_molecule("tetrahedron_positive")
         charges *= -1.0
         potentials *= -1.0
+    else:
+        raise ValueError(f"unknown molecule_name {molecule_name}")
 
     charges = charges.reshape((-1, 1))
     potentials = potentials.reshape((-1, 1))
+
     return positions, charges, potentials
 
 
@@ -165,3 +169,84 @@ def test_coulomb_exact(
     ref_potentials /= scaling_factor
 
     torch.testing.assert_close(potentials, ref_potentials, atol=2e-15, rtol=1e-14)
+
+
+def test_direct_neighbor_indices():
+    """test triangle with selected indices same as dimer"""
+
+    direct = DirectPotential()
+
+    positions, charges, _ = define_molecule(molecule_name="triangle")
+    _, _, ref_potentials = define_molecule(molecule_name="dimer")
+
+    neighbor_indices = torch.tensor([[0, 1], [1, 0]])
+
+    potentials = direct.compute(
+        positions=positions, charges=charges, neighbor_indices=neighbor_indices
+    )
+
+    assert torch.equal(potentials[:2], ref_potentials)
+    assert potentials[2] == 0
+
+
+def test_direct_cell():
+    """Test a dimer which is "cut" accross a box.
+
+    +----------+
+    |          |
+    | +      - |
+    |          |
+    +----------+
+    """
+
+    direct = DirectPotential()
+
+    positions = torch.tensor([[0.5, 2.5, 0], [4.5, 2.5, 0]])
+    charges = torch.tensor([1.0, -1.0]).reshape(-1, 1)
+    cell = 5.0 * torch.eye(3)
+    neighbor_shifts = torch.tensor([[1, 0, 0], [-1, 0, 0]])
+
+    # Test without PBC
+    potentials_vacuum = direct.compute(positions=positions, charges=charges)
+    ref_potentials_vacuum = torch.tensor([-1 / 4, 1 / 4]).reshape(-1, 1)
+
+    assert torch.equal(potentials_vacuum, ref_potentials_vacuum)
+
+    # Test with PBC
+    potentials_pbc = direct.compute(
+        positions=positions, charges=charges, cell=cell, neighbor_shifts=neighbor_shifts
+    )
+    ref_potentials_pbc = torch.tensor([-1, 1]).reshape(-1, 1)
+
+    assert torch.equal(potentials_pbc, ref_potentials_pbc)
+
+
+def test_direct_neighbor_indices_and_cell():
+    """Test a selected dimer from a dimer across a box.
+
+    +----------+
+    |          |
+    | +      - |
+    | 0        |
+    +----------+
+    """
+
+    direct = DirectPotential()
+
+    positions = torch.tensor([[0.5, 2.5, 0], [4.5, 2.5, 0], [0.5, 0.0, 0.0]])
+    charges = torch.tensor([1.0, -1.0, 0.0]).reshape(-1, 1)
+    cell = 5.0 * torch.eye(3)
+
+    neighbor_indices = torch.tensor([[1, 0], [0, 1]])
+    neighbor_shifts = torch.tensor([[1, 0, 0], [-1, 0, 0]])
+
+    potentials = direct.compute(
+        positions=positions,
+        charges=charges,
+        cell=cell,
+        neighbor_indices=neighbor_indices,
+        neighbor_shifts=neighbor_shifts,
+    )
+    ref_potentials = torch.tensor([-1, 1, 0]).reshape(-1, 1)
+
+    assert torch.equal(potentials, ref_potentials)
