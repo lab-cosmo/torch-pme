@@ -1,6 +1,6 @@
 EwaldPotential
 ##############
 
-.. autoclass:: meshlode.EwaldPotential
+.. autoclass:: torchpme.EwaldPotential
     :members:
     :undoc-members:

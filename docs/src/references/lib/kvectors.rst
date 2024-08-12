@@ -1,6 +1,6 @@
 Kvectors
 ========
 
-.. automodule:: meshlode.lib.kvectors
+.. automodule:: torchpme.lib.kvectors
     :members:
     :undoc-members:

@@ -2,7 +2,7 @@ from typing import List, Optional, Tuple, Union
 
 import torch
 
-from meshlode.lib import InversePowerLawPotential
+from torchpme.lib import InversePowerLawPotential
 
 
 class CalculatorBaseTorch(torch.nn.Module):

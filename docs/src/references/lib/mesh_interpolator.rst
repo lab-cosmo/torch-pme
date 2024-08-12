@@ -1,6 +1,6 @@
 Mesh Interpolator
 =================
 
-.. autoclass:: meshlode.lib.MeshInterpolator
+.. autoclass:: torchpme.lib.MeshInterpolator
     :members:
     :undoc-members:

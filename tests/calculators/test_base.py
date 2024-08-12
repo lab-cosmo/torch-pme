@@ -1,7 +1,7 @@
 import pytest
 import torch
 
-from meshlode.calculators.base import CalculatorBaseTorch, PeriodicBase
+from torchpme.calculators.base import CalculatorBaseTorch, PeriodicBase
 
 
 # Define some example parameters

@@ -31,7 +31,7 @@ from metatensor.torch import Labels, TensorBlock
 from metatensor.torch.atomistic import NeighborListOptions, System
 from vesin import NeighborList
 
-import meshlode
+import torchpme
 
 
 # %%
@@ -67,7 +67,7 @@ distances = distances.type(positions.dtype)
 # *1* for electrostatic interactions between the two atoms. This calculator
 # will be used to *compute* the potential energy of the system.
 
-calculator = meshlode.PMEPotential(exponent=1.0)
+calculator = torchpme.PMEPotential(exponent=1.0)
 
 # %%
 # Single Charge Channel
@@ -158,7 +158,7 @@ print(charge_Na * potential_one_hot[0] + charge_Cl * potential_one_hot[1])
 # Next, we will perform the same exercise with the Metatensor interface. This involves
 # creating a new calculator with the metatensor interface.
 
-calculator_metatensor = meshlode.metatensor.PMEPotential(exponent=1.0)
+calculator_metatensor = torchpme.metatensor.PMEPotential(exponent=1.0)
 
 # %%
 # Computation with metatensor involves using Metatensor's :py:class:`System

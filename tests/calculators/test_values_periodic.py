@@ -9,7 +9,7 @@ import torch
 from ase.io import read
 from utils import neighbor_list_torch
 
-from meshlode import EwaldPotential, PMEPotential
+from torchpme import EwaldPotential, PMEPotential
 
 
 DTYPE = torch.float64
@@ -426,7 +426,7 @@ def test_random_structure(sr_cutoff, frame_index, scaling_factor, ortho, calc_na
     # Forces in Gaussian units per Å
     forces_target = torch.tensor(frame.get_forces(), dtype=DTYPE) / scaling_factor**2
 
-    # Convert into input format suitable for MeshLODE
+    # Convert into input format suitable for torch-pme
     positions = scaling_factor * (torch.tensor(frame.positions, dtype=DTYPE) @ ortho)
     cell = scaling_factor * torch.tensor(np.array(frame.cell), dtype=DTYPE) @ ortho
     charges = torch.tensor([1, 1, 1, 1, -1, -1, -1, -1], dtype=DTYPE).reshape((-1, 1))
@@ -441,7 +441,7 @@ def test_random_structure(sr_cutoff, frame_index, scaling_factor, ortho, calc_na
     # Enable backward for positions
     positions.requires_grad = True
 
-    # Compute potential using MeshLODE and compare against reference values
+    # Compute potential using torch-pme and compare against reference values
     if calc_name == "ewald":
         calc = EwaldPotential(atomic_smearing=atomic_smearing)
         rtol_e = 2e-5

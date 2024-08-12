@@ -4,7 +4,7 @@ from datetime import datetime
 
 import tomli  # Replace by tomllib from std library once docs are build with Python 3.11
 
-import meshlode
+import torchpme
 
 
 ROOT = os.path.abspath(os.path.join("..", ".."))
@@ -24,7 +24,7 @@ author = ", ".join(a["name"] for a in project_dict["authors"])
 copyright = f"{datetime.now().date().year}, {author}"
 
 # The full version, including alpha/beta/rc tags
-release = meshlode.__version__
+release = torchpme.__version__
 
 
 # -- General configuration ---------------------------------------------------
@@ -45,8 +45,8 @@ sphinx_gallery_conf = {
     "examples_dirs": ["../../examples"],
     "gallery_dirs": ["examples"],
     "min_reported_time": 60,
-    "reference_url": {"meshlode": None},
-    "prefer_full_module": ["meshlode"],
+    "reference_url": {"torchpme": None},
+    "prefer_full_module": ["torchpme"],
 }
 
 autoclass_content = "both"

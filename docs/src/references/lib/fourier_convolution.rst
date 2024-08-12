@@ -1,6 +1,6 @@
 Fourier Convolution
 ===================
 
-.. autoclass:: meshlode.lib.FourierSpaceConvolution
+.. autoclass:: torchpme.lib.FourierSpaceConvolution
     :members:
     :undoc-members:

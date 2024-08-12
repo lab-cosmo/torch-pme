@@ -261,7 +261,7 @@ class EwaldPotential(CalculatorBaseTorch, _EwaldPotentialImpl):
             neighbor_shifts=neighbor_shifts,
         )
 
-    # This function is kept to keep MeshLODE compatible with the broader pytorch
+    # This function is kept to keep torch-pme compatible with the broader pytorch
     # infrastructure, which require a "forward" function. We name this function
     # "compute" instead, for compatibility with other COSMO software.
     def forward(

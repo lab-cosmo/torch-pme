@@ -2,7 +2,7 @@
 Basic Tutorial for Library functions
 ====================================
 This examples provides an illustration of the functioning of the underlaying library
-functions of ``meshlode`` and the construction LODE descriptors (`Grisafi 2019
+functions of ``torchpme`` and the construction LODE descriptors (`Grisafi 2019
 <https://doi.org/10.1063/1.5128375>`__, `Grisafi 2021
 <https://doi.org/10.1039/D0SC04934D>`__, `Huguenin 2023
 <10.1021/acs.jpclett.3c02375>`__). It builds the (simple and weighted) atom density for
@@ -19,7 +19,7 @@ import numpy as np
 import torch
 from metatensor.torch.atomistic import System
 
-import meshlode
+import torchpme
 
 
 torch.set_default_dtype(torch.float64)
@@ -90,7 +90,7 @@ else:
 # list of atom weights to yield the mesh values.
 #
 
-interpol = meshlode.lib.mesh_interpolator.MeshInterpolator(
+interpol = torchpme.lib.mesh_interpolator.MeshInterpolator(
     system.cell, torch.tensor([16, 16, 16]), interpolation_order=3
 )
 
@@ -127,7 +127,7 @@ sliceplot(mesh[1, :, :, :5], cmap="seismic", vmax=1, vmin=-1)
 # be easily extended to compute an arbitrary filter
 #
 
-fsc = meshlode.lib.fourier_convolution.FourierSpaceConvolution()
+fsc = torchpme.lib.fourier_convolution.FourierSpaceConvolution()
 
 # %%
 # plain atomic_smearing
@@ -167,7 +167,7 @@ potentials
 # ``interpolation_order``, if wanted.
 #
 
-interpol_slice = meshlode.lib.mesh_interpolator.MeshInterpolator(
+interpol_slice = torchpme.lib.mesh_interpolator.MeshInterpolator(
     system.cell, torch.tensor([16, 16, 16]), interpolation_order=4
 )
 

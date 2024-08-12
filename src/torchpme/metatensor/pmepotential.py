@@ -7,7 +7,7 @@ from .base import CalculatorBaseMetatensor
 class PMEPotential(CalculatorBaseMetatensor, _PMEPotentialImpl):
     r"""Specie-wise long-range potential using a particle mesh-based Ewald (PME).
 
-    Refer to :class:`meshlode.PMEPotential` for parameter documentation.
+    Refer to :class:`torchpme.PMEPotential` for parameter documentation.
 
     Example
     -------
