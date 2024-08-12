@@ -295,17 +295,29 @@ def test_invalid_device_charges():
         )
 
 
-# Tests for invalid shape, dtype and device of neighbor_indices and neighbor_shifts
-def test_need_both_neighbor_indices_and_shifts():
+def test_cell_no_shifts():
     calculator = CalculatorTest()
-    match = r"Need to provide both `neighbor_indices` and `neighbor_shifts` together."
+    match = r"Provided `cell` but no `neighbor_shifts`."
+    with pytest.raises(ValueError, match=match):
+        calculator.compute(
+            positions=POSITIONS_1,
+            charges=CHARGES_1,
+            cell=torch.ones([3, 3], dtype=DTYPE, device=DEVICE),
+            neighbor_indices=torch.ones((2, 10), dtype=DTYPE, device=DEVICE),
+            neighbor_shifts=None,
+        )
+
+
+def test_shifts_no_cell():
+    calculator = CalculatorTest()
+    match = r"Provided `neighbor_shifts` but no `cell`."
     with pytest.raises(ValueError, match=match):
         calculator.compute(
             positions=POSITIONS_1,
             charges=CHARGES_1,
             cell=None,
-            neighbor_indices=torch.ones((2, 10), dtype=DTYPE, device=DEVICE),
-            neighbor_shifts=None,
+            neighbor_indices=None,
+            neighbor_shifts=torch.ones((10, 3), dtype=DTYPE, device=DEVICE),
         )
 
 
@@ -335,7 +347,7 @@ def test_invalid_shape_neighbor_shifts():
         calculator.compute(
             positions=POSITIONS_1,
             charges=CHARGES_1,
-            cell=None,
+            cell=torch.ones(3, 3, dtype=DTYPE, device=DEVICE),
             neighbor_indices=torch.ones((2, 10), dtype=DTYPE, device=DEVICE),
             neighbor_shifts=torch.ones((10, 2), dtype=DTYPE, device=DEVICE),
         )
@@ -353,7 +365,7 @@ def test_invalid_shape_neighbor_indices_neighbor_shifts():
         calculator.compute(
             positions=POSITIONS_1,
             charges=CHARGES_1,
-            cell=None,
+            cell=torch.ones(3, 3, dtype=DTYPE, device=DEVICE),
             neighbor_indices=torch.ones((2, 10), dtype=DTYPE, device=DEVICE),
             neighbor_shifts=torch.ones((11, 3), dtype=DTYPE, device=DEVICE),
         )
@@ -385,7 +397,7 @@ def test_invalid_device_neighbor_shifts():
         calculator.compute(
             positions=POSITIONS_1,
             charges=CHARGES_1,
-            cell=None,
+            cell=torch.ones([3, 3], dtype=DTYPE, device=DEVICE),
             neighbor_indices=torch.ones((2, 10), dtype=DTYPE, device=DEVICE),
             neighbor_shifts=torch.ones((10, 3), dtype=DTYPE, device="meta"),
         )
