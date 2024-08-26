@@ -42,10 +42,11 @@ jobs:
               mv ../docs/build/html latest
           fi
 
-      - name: deploy to gh-pages
-        if: github.event_name == 'push'
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./gh-pages/
-          force_orphan: true
+      # TODO: enable once repo is public
+      # - name: deploy to gh-pages
+      #   if: github.event_name == 'push'
+      #   uses: peaceiris/actions-gh-pages@v4
+      #   with:
+      #     github_token: ${{ secrets.GITHUB_TOKEN }}
+      #     publish_dir: ./gh-pages/
+      #     force_orphan: true
