@@ -16,13 +16,13 @@ We also provide a return values as a :py:class:`metatensor.TensorMap` in
 
 .. note::
 
-   All calculators compute the potential, from which the "atom-wise" energy :math:`E`
+   All calculators compute the potential, from which the "atom-wise" energy :math:`E_i`
    can be determined by multiplying the potential :math:`V_i` with the charges :math:`q`
-   and dividing by 2.
+   . The total electrostatic energy :math:`E` is then the sum of all :math:`E_i`.
 
    .. math::
 
-      E = \frac{1}{2} q_i \cdot V_i
+      E_i = q_i \cdot V_i
 
 Implemented Calculators
 -----------------------

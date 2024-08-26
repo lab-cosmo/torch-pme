@@ -75,7 +75,8 @@ class _EwaldPotentialImpl(PeriodicBase):
             lr_wavelength=lr_wavelength,
         )
 
-        return potential_sr + potential_lr
+        # Divide by 2 due to double counting of atom pairs
+        return (potential_sr + potential_lr) / 2
 
     def _compute_lr(
         self,
