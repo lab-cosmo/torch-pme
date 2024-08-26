@@ -326,7 +326,7 @@ def test_madelung(crystal_name, scaling_factor, calc_name):
         neighbor_shifts=neighbor_shifts,
     )
     energies = potentials * charges
-    madelung = -torch.sum(energies) / 2 / num_units
+    madelung = -torch.sum(energies) / num_units
 
     torch.testing.assert_close(madelung, madelung_ref, atol=0.0, rtol=rtol)
 
@@ -392,7 +392,7 @@ def test_wigner(crystal_name, scaling_factor):
             neighbor_shifts=neighbor_shifts,
         )
         energies = potentials * charges
-        energies_ref = -torch.ones_like(energies) * madelung_ref
+        energies_ref = -torch.ones_like(energies) * madelung_ref / 2
         torch.testing.assert_close(energies, energies_ref, atol=0.0, rtol=rtol)
 
 
@@ -460,7 +460,7 @@ def test_random_structure(sr_cutoff, frame_index, scaling_factor, ortho, calc_na
     )
 
     # Compute energy, taking into account the double counting of each pair
-    energy = torch.sum(potentials * charges) / 2
+    energy = torch.sum(potentials * charges)
     torch.testing.assert_close(energy, energy_target, atol=0.0, rtol=rtol_e)
 
     # Compute forces

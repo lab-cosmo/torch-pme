@@ -79,7 +79,8 @@ class _PMEPotentialImpl(PeriodicBase):
             lr_wavelength=mesh_spacing,
         )
 
-        return potential_sr + potential_lr
+        # Divide by 2 due to double counting of atom pairs
+        return (potential_sr + potential_lr) / 2
 
     def _compute_lr(
         self,
@@ -220,8 +221,8 @@ class PMEPotential(CalculatorBaseTorch, _PMEPotentialImpl):
     ...     neighbor_indices=neighbor_indices,
     ...     neighbor_shifts=neighbor_shifts,
     ... )
-    tensor([[-2.0384],
-            [ 2.0384]])
+    tensor([[-1.0192],
+            [ 1.0192]])
 
     Which is the close the reference value given above.
     """

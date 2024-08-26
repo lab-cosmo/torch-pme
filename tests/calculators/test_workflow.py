@@ -101,7 +101,7 @@ class TestWorkflow:
         for values in l_values:
             assert_close(
                 MADELUNG_CSCL,
-                -torch.sum(charges * values) / 2,
+                -torch.sum(charges * values),
                 atol=1,
                 rtol=1e-5,
             )
