@@ -459,7 +459,7 @@ def test_random_structure(sr_cutoff, frame_index, scaling_factor, ortho, calc_na
         neighbor_shifts=neighbor_shifts,
     )
 
-    # Compute energy, taking into account the double counting of each pair
+    # Compute energy. The double counting of the pairs is already taken into account.
     energy = torch.sum(potentials * charges)
     torch.testing.assert_close(energy, energy_target, atol=0.0, rtol=rtol_e)
 
