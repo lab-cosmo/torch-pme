@@ -53,6 +53,7 @@ class CalculatorTest(CalculatorBaseTorch):
     ],
 )
 def test_compute_output_shapes(method_name, positions, charges):
+    """Test that output type matches the input type"""
     calculator = CalculatorTest()
     method = getattr(calculator, method_name)
 
@@ -63,12 +64,12 @@ def test_compute_output_shapes(method_name, positions, charges):
         neighbor_indices=None,
         neighbor_shifts=None,
     )
-    if type(result) is list:
+    if type(positions) is list:
+        assert type(result) is list
         for charge_single, result_single in zip(charges, result):
             assert result_single.shape == charge_single.shape
     else:
-        if type(charges) is list:
-            charges = charges[0]
+        assert type(result) is torch.Tensor
         assert result.shape == charges.shape
 
 
