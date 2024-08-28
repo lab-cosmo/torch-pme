@@ -73,6 +73,38 @@ def test_compute_output_shapes(method_name, positions, charges):
         assert result.shape == charges.shape
 
 
+def test_type_check_error():
+    calculator = CalculatorTest()
+
+    for positions_type in [torch.Tensor, list]:
+        for key in ["charges", "cell", "neighbor_indices", "neighbor_shifts"]:
+            kwargs = {
+                "positions": positions_type([1]),
+                "charges": positions_type([1]),
+                "cell": positions_type([1]),
+                "neighbor_indices": positions_type([1]),
+                "neighbor_shifts": positions_type([1]),
+            }
+
+            # Set key of interest to a different type then `positions`
+            if positions_type is torch.Tensor:
+                type_name = "torch.Tensor"
+                item_type = "list"
+                kwargs[key] = [1]
+            else:
+                type_name = "list"
+                item_type = "torch.Tensor"
+                kwargs[key] = torch.tensor([1])
+
+            match = (
+                f"Inconsistent parameter types. `positions` is a {type_name}, while "
+                f"`{key}` is a {item_type}. Both need either be a list or a "
+                "torch.Tensor!"
+            )
+            with pytest.raises(TypeError, match=match):
+                calculator._validate_compute_parameters(**kwargs)
+
+
 # Tests for a mismatch in the number of provided inputs for different variables
 def test_mismatched_numbers_cell():
     calculator = CalculatorTest()

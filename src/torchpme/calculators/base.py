@@ -28,6 +28,29 @@ class CalculatorBaseTorch(torch.nn.Module):
         List[Optional[torch.Tensor]],
         List[Optional[torch.Tensor]],
     ]:
+        # check that all inputs are of the same type
+        for item, item_name in (
+            (charges, "charges"),
+            (cell, "cell"),
+            (neighbor_indices, "neighbor_indices"),
+            (neighbor_shifts, "neighbor_shifts"),
+        ):
+            if item is not None:
+                if isinstance(positions, list):
+                    if isinstance(item, torch.Tensor):
+                        raise TypeError(
+                            "Inconsistent parameter types. `positions` is a "
+                            f"list, while `{item_name}` is a torch.Tensor. Both need "
+                            "either be a list or a torch.Tensor!"
+                        )
+                else:
+                    if isinstance(item, list):
+                        raise TypeError(
+                            "Inconsistent parameter types. `positions` is a "
+                            f"torch.Tensor, while `{item_name}` is a list. Both need "
+                            "either be a list or a torch.Tensor!"
+                        )
+
         # make sure that all provided parameters are lists
         if not isinstance(positions, list):
             positions = [positions]
