@@ -28,6 +28,29 @@ class CalculatorBaseTorch(torch.nn.Module):
         List[Optional[torch.Tensor]],
         List[Optional[torch.Tensor]],
     ]:
+        # check that all inputs are of the same type
+        for item, item_name in (
+            (charges, "charges"),
+            (cell, "cell"),
+            (neighbor_indices, "neighbor_indices"),
+            (neighbor_shifts, "neighbor_shifts"),
+        ):
+            if item is not None:
+                if isinstance(positions, list):
+                    if isinstance(item, torch.Tensor):
+                        raise TypeError(
+                            "Inconsistent parameter types. `positions` is a "
+                            f"list, while `{item_name}` is a torch.Tensor. Both need "
+                            "either be a list or a torch.Tensor!"
+                        )
+                else:
+                    if isinstance(item, list):
+                        raise TypeError(
+                            "Inconsistent parameter types. `positions` is a "
+                            f"torch.Tensor, while `{item_name}` is a list. Both need "
+                            "either be a list or a torch.Tensor!"
+                        )
+
         # make sure that all provided parameters are lists
         if not isinstance(positions, list):
             positions = [positions]
@@ -227,6 +250,9 @@ class CalculatorBaseTorch(torch.nn.Module):
         neighbor_indices: Union[List[Optional[torch.Tensor]], Optional[torch.Tensor]],
         neighbor_shifts: Union[List[Optional[torch.Tensor]], Optional[torch.Tensor]],
     ) -> Union[List[torch.Tensor], torch.Tensor]:
+        # save if the inputs were lists or single tensors
+        input_is_list = isinstance(positions, list)
+
         # Check that all shapes, data types and devices are consistent
         # Furthermore, to handle the special case in which only the inputs for a single
         # structure are provided, turn inputs into a list to be consistent with the
@@ -265,12 +291,10 @@ class CalculatorBaseTorch(torch.nn.Module):
                 )
             )
 
-        # if only a single structure if provided as input, we directly return a single
-        # tensor containing its features rather than a list of tensors
-        if len(positions) == 1:
-            return potentials[0]
-        else:
+        if input_is_list:
             return potentials
+        else:
+            return potentials[0]
 
 
 class PeriodicBase:
