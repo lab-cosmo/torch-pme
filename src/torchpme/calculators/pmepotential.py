@@ -2,8 +2,7 @@ from typing import List, Optional, Union
 
 import torch
 
-from ..lib import generate_kvectors_for_mesh
-from ..lib.mesh_interpolator import MeshInterpolator
+from ..lib import Kvectors, MeshInterpolator
 from .base import CalculatorBaseTorch, PeriodicBase
 
 
@@ -33,6 +32,7 @@ class _PMEPotentialImpl(PeriodicBase):
         if self.subtract_interior:
             subtract_self = True
         self.subtract_self = subtract_self
+        self.kvector_generator = Kvectors()
 
     def _compute_single_system(
         self,
@@ -107,7 +107,7 @@ class _PMEPotentialImpl(PeriodicBase):
         # Step 2: Perform Fourier space convolution (FSC) to get potential on mesh
         # Step 2.1: Generate k-vectors and evaluate kernel function
         # kvectors = self._generate_kvectors(ns=ns, cell=cell)
-        kvectors = generate_kvectors_for_mesh(ns=ns, cell=cell)
+        kvectors = self.kvector_generator.compute(ns=ns, cell=cell)
         knorm_sq = torch.sum(kvectors**2, dim=3)
 
         # Step 2.2: Evaluate kernel function (careful, tensor shapes are different from

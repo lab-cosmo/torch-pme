@@ -2,7 +2,7 @@ from typing import List, Optional, Union
 
 import torch
 
-from ..lib import generate_kvectors_squeezed
+from ..lib import Kvectors
 from .base import CalculatorBaseTorch, PeriodicBase
 
 
@@ -27,6 +27,7 @@ class _EwaldPotentialImpl(PeriodicBase):
         if self.subtract_interior:
             subtract_self = True
         self.subtract_self = subtract_self
+        self.kvector_generator = Kvectors(for_ewald=True)
 
     def _compute_single_system(
         self,
@@ -98,7 +99,7 @@ class _EwaldPotentialImpl(PeriodicBase):
 
         # Generate k-vectors and evaluate
         # kvectors = self._generate_kvectors(ns=ns, cell=cell)
-        kvectors = generate_kvectors_squeezed(ns=ns, cell=cell)
+        kvectors = self.kvector_generator.compute(ns=ns, cell=cell)
         knorm_sq = torch.sum(kvectors**2, dim=1)
 
         # G(k) is the Fourier transform of the Coulomb potential
