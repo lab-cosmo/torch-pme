@@ -113,7 +113,8 @@ class _PMEPotentialImpl(PeriodicBase):
         # Step 2.2: Evaluate kernel function (careful, tensor shapes are different from
         # the pure Ewald implementation since we are no longer flattening)
         G = self.potential.potential_fourier_from_k_sq(knorm_sq, smearing)
-        G[0, 0, 0] = self.potential.potential_fourier_at_zero(smearing)
+        fill_value = self.potential.potential_fourier_at_zero(smearing)
+        G[0, 0, 0] = torch.full([], fill_value, device=G.device)
 
         potential_mesh = rho_mesh
 
@@ -130,9 +131,8 @@ class _PMEPotentialImpl(PeriodicBase):
 
         # Step 4: Remove self-contribution if desired
         if subtract_self:
-            self_contrib = (
-                torch.sqrt(torch.tensor(2.0 / torch.pi, device=cell.device)) / smearing
-            )
+            fill_value = 2.0 / (torch.pi * smearing**2)
+            self_contrib = torch.sqrt(torch.full([], fill_value, device=cell.device))
             interpolated_potential -= charges * self_contrib
 
         return interpolated_potential

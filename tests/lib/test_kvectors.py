@@ -2,7 +2,7 @@ import pytest
 import torch
 from torch.testing import assert_close
 
-from torchpme.lib import generate_kvectors_for_mesh, generate_kvectors_squeezed
+from torchpme.lib import generate_kvectors_for_ewald, generate_kvectors_for_mesh
 
 
 # Generate random cells and mesh parameters
@@ -12,7 +12,7 @@ for _i in range(6):
     L = torch.rand((1,)) * 20 + 1.0
     cells.append(torch.randn((3, 3)) * L)
     ns_list.append(torch.randint(1, 12, size=(3,)))
-kvec_generators = [generate_kvectors_for_mesh, generate_kvectors_squeezed]
+kvec_generators = [generate_kvectors_for_mesh, generate_kvectors_for_ewald]
 
 
 @pytest.mark.parametrize("ns", ns_list)
@@ -51,7 +51,7 @@ def test_duality_of_kvectors_squeezed(cell, ns):
     between them needs to satisfy a_j*b_l=2pi*delta_jl.
     """
     nx, ny, nz = ns
-    kvectors = generate_kvectors_squeezed(ns=ns, cell=cell)
+    kvectors = generate_kvectors_for_ewald(ns=ns, cell=cell)
 
     # Define frequencies with the same convention as in FFT
     # This is essentially a manual implementation of torch.fft.fftfreq
@@ -94,7 +94,7 @@ def test_lenghts_of_kvectors(cell, ns, kvec_type):
         kvectors = generate_kvectors_for_mesh(ns=ns, cell=cell)
         norms_all = torch.linalg.norm(kvectors, dim=3).flatten()
     elif kvec_type == "ewald":
-        kvectors = generate_kvectors_squeezed(ns=ns, cell=cell)
+        kvectors = generate_kvectors_for_ewald(ns=ns, cell=cell)
         norms_all = torch.linalg.norm(kvectors, dim=1).flatten()
 
     assert torch.all(norms_all < norm_bound)
