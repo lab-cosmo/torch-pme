@@ -51,7 +51,7 @@ dynamic = ["version"]
 
 [project.optional-dependencies]
 examples = [
-    "ase >= 3.23.0",
+    "ase >= 3.22.1",
     "chemiscope",
     "matplotlib",
     "vesin"
