@@ -87,7 +87,7 @@ class _PMEPotentialImpl(PeriodicBase):
             smearing=smearing,
             lr_wavelength=mesh_spacing,
         )
-
+        
         # Divide by 2 due to double counting of atom pairs
         return (potential_sr + potential_lr) / 2
 
