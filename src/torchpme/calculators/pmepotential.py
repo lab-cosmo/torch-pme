@@ -34,6 +34,7 @@ class _PMEPotentialImpl(PeriodicBase):
             subtract_self = True
         self.subtract_self = subtract_self
 
+
     def _compute_single_system(
         self,
         positions: torch.Tensor,
@@ -78,7 +79,7 @@ class _PMEPotentialImpl(PeriodicBase):
             smearing=smearing,
             lr_wavelength=mesh_spacing,
         )
-
+        
         # Divide by 2 due to double counting of atom pairs
         return (potential_sr + potential_lr) / 2
 
@@ -112,20 +113,36 @@ class _PMEPotentialImpl(PeriodicBase):
 
         # Step 2.2: Evaluate kernel function (careful, tensor shapes are different from
         # the pure Ewald implementation since we are no longer flattening)
-        G = self.potential.potential_fourier_from_k_sq(knorm_sq, smearing)
+        ivolume = 1/cell.det()
+        
+        # pre-scale with volume to save some multiplications further down
+        G = self.potential.potential_fourier_from_k_sq(knorm_sq, smearing) * ivolume
         fill_value = self.potential.potential_fourier_at_zero(smearing)
         G[0, 0, 0] = torch.full([], fill_value, device=G.device)
 
-        potential_mesh = rho_mesh
-
         # Step 2.3: Perform actual convolution using FFT
-        volume = cell.det()
-        dims = (1, 2, 3)  # dimensions along which to Fourier transform
-        mesh_hat = torch.fft.rfftn(rho_mesh, norm="backward", dim=dims)
-        potential_hat = mesh_hat * G
-        potential_mesh = torch.fft.irfftn(potential_hat, norm="forward", dim=dims)
-        potential_mesh /= volume
-
+        dims = (1, 2, 3)  # dimensions along which to Fourier transform        
+        """
+        rho_hat = torch.fft.rfftn(rho_mesh, norm="backward", dim=dims)        
+        
+        rho_hat *= G # convolution with the kernel
+        
+        potential_mesh = torch.fft.irfftn(rho_hat, norm="forward", dim=dims)
+        """
+        
+        """
+        bmesh = rho_mesh.permute(1,2,3,0)
+        bhat = torch.fft.rfftn(bmesh, norm="backward", dim=(0,1,2))
+        bhat *= G[:,:,:,None]
+        test = torch.fft.irfftn(bhat, norm="forward", dim=(0,1,2)).permute(3,0,1,2)
+        """
+        
+        # it appears that irfftn is best performed on the "slow" dimensions
+        rho_hat = torch.fft.rfftn(rho_mesh, norm="backward", dim=dims)        
+        rho_hat *= G # convolution with the kernel
+        potential_mesh = torch.fft.irfftn(rho_hat.permute(1,2,3,0), 
+                                          norm="forward", dim=(0,1,2)).permute(3,0,1,2)
+                
         # Step 3: Back interpolation
         interpolated_potential = MI.mesh_to_points(potential_mesh)
 
