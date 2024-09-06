@@ -7,7 +7,7 @@ import io
 import pytest
 import torch
 from packaging import version
-from utils_metatensor import add_neighbor_list
+from utils_metatensor import compute_neighbors
 
 import torchpme
 
@@ -62,20 +62,21 @@ class TestWorkflow:
         )
 
         data = mts_torch.TensorBlock(
-            values=torch.tensor([-1.0, 1.0]).reshape(-1, 1),
+            values=torch.tensor([-1.0, 1.0]).unsqueeze(1),
             samples=mts_torch.Labels.range("atom", len(system)),
             components=[],
             properties=mts_torch.Labels("charge", torch.tensor([[0]])),
         )
         system.add_data(name="charges", data=data)
-        add_neighbor_list(system)
+        neighbors = compute_neighbors(system)
 
-        return system.to(device=device)
+        return system.to(device=device), neighbors.to(device=device)
 
     def check_operation(self, calculator, device):
         """Make sure computation runs and returns a metatensor.TensorMap."""
-        descriptor_compute = calculator.compute(self.cscl_system(device))
-        descriptor_forward = calculator.forward(self.cscl_system(device))
+        system, neighbors = self.cscl_system(device)
+        descriptor_compute = calculator.compute(system, neighbors)
+        descriptor_forward = calculator.forward(system, neighbors)
 
         assert isinstance(descriptor_compute, torch.ScriptObject)
         assert isinstance(descriptor_forward, torch.ScriptObject)

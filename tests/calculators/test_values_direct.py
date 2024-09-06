@@ -202,13 +202,13 @@ def test_direct_cell():
     direct = DirectPotential()
 
     positions = torch.tensor([[0.5, 2.5, 0], [4.5, 2.5, 0]])
-    charges = torch.tensor([1.0, -1.0]).reshape(-1, 1)
+    charges = torch.tensor([1.0, -1.0]).unsqueeze(1)
     cell = 5.0 * torch.eye(3)
     neighbor_shifts = torch.tensor([[1, 0, 0], [-1, 0, 0]])
 
     # Test without PBC
     potentials_vacuum = direct.compute(positions=positions, charges=charges)
-    ref_potentials_vacuum = torch.tensor([-1 / 4, 1 / 4]).reshape(-1, 1)
+    ref_potentials_vacuum = torch.tensor([-1 / 4, 1 / 4]).unsqueeze(1)
 
     assert torch.equal(potentials_vacuum, ref_potentials_vacuum)
 
@@ -216,7 +216,7 @@ def test_direct_cell():
     potentials_pbc = direct.compute(
         positions=positions, charges=charges, cell=cell, neighbor_shifts=neighbor_shifts
     )
-    ref_potentials_pbc = torch.tensor([-1, 1]).reshape(-1, 1)
+    ref_potentials_pbc = torch.tensor([-1, 1]).unsqueeze(1)
 
     assert torch.equal(potentials_pbc, ref_potentials_pbc)
 
@@ -234,7 +234,7 @@ def test_direct_neighbor_indices_and_cell():
     direct = DirectPotential()
 
     positions = torch.tensor([[0.5, 2.5, 0], [4.5, 2.5, 0], [0.5, 0.0, 0.0]])
-    charges = torch.tensor([1.0, -1.0, 0.0]).reshape(-1, 1)
+    charges = torch.tensor([1.0, -1.0, 0.0]).unsqueeze(1)
     cell = 5.0 * torch.eye(3)
 
     neighbor_indices = torch.tensor([[1, 0], [0, 1]])
@@ -247,6 +247,6 @@ def test_direct_neighbor_indices_and_cell():
         neighbor_indices=neighbor_indices,
         neighbor_shifts=neighbor_shifts,
     )
-    ref_potentials = torch.tensor([-1, 1, 0]).reshape(-1, 1)
+    ref_potentials = torch.tensor([-1, 1, 0]).unsqueeze(1)
 
     assert torch.equal(potentials, ref_potentials)
