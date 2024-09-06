@@ -231,7 +231,7 @@ def test_invalid_shape_cell():
 def test_invalid_dtype_cell():
     calculator = CalculatorTest()
     match = (
-        r"each `cell` must have the same type torch.float32 as positions, "
+        r"each `cell` must have the same type torch.float32 as `positions`, "
         r"got at least one tensor of type torch.float64"
     )
     with pytest.raises(ValueError, match=match):
@@ -247,7 +247,7 @@ def test_invalid_dtype_cell():
 def test_invalid_device_cell():
     calculator = CalculatorTest()
     match = (
-        r"each `cell` must be on the same device cpu as positions, "
+        r"each `cell` must be on the same device cpu as `positions`, "
         r"got at least one tensor with device meta"
     )
     with pytest.raises(ValueError, match=match):
@@ -299,7 +299,7 @@ def test_invalid_shape_charges():
 def test_invalid_dtype_charges():
     calculator = CalculatorTest()
     match = (
-        r"each `charges` must have the same type torch.float32 as positions, "
+        r"each `charges` must have the same type torch.float32 as `positions`, "
         r"got at least one tensor of type torch.float64"
     )
     with pytest.raises(ValueError, match=match):
@@ -315,7 +315,7 @@ def test_invalid_dtype_charges():
 def test_invalid_device_charges():
     calculator = CalculatorTest()
     match = (
-        r"each `charges` must be on the same device cpu as positions, "
+        r"each `charges` must be on the same device cpu as `positions`, "
         r"got at least one tensor with device meta"
     )
     with pytest.raises(ValueError, match=match):
@@ -407,7 +407,7 @@ def test_invalid_shape_neighbor_indices_neighbor_shifts():
 def test_invalid_device_neighbor_indices():
     calculator = CalculatorTest()
     match = (
-        r"each `neighbor_indices` must be on the same device cpu as positions, "
+        r"each `neighbor_indices` must be on the same device cpu as `positions`, "
         r"got at least one tensor with device meta"
     )
     with pytest.raises(ValueError, match=match):
@@ -423,7 +423,7 @@ def test_invalid_device_neighbor_indices():
 def test_invalid_device_neighbor_shifts():
     calculator = CalculatorTest()
     match = (
-        r"each `neighbor_shifts` must be on the same device cpu as positions, "
+        r"each `neighbor_shifts` must be on the same device cpu as `positions`, "
         r"got at least one tensor with device meta"
     )
     with pytest.raises(ValueError, match=match):

@@ -25,7 +25,7 @@ class DirectPotential(CalculatorBaseMetatensor, _DirectPotentialImpl):
 
     Next we attach the charges to our ``system``
 
-    >>> charges = torch.tensor([1.0, -1.0]).reshape(-1, 1)
+    >>> charges = torch.tensor([1.0, -1.0]).unsqueeze(1)
     >>> data = TensorBlock(
     ...     values=charges,
     ...     samples=Labels.range("atom", charges.shape[0]),
@@ -34,7 +34,9 @@ class DirectPotential(CalculatorBaseMetatensor, _DirectPotentialImpl):
     ... )
     >>> system.add_data(name="charges", data=data)
 
-    and compute the potenial
+    and compute the potenial. Note that you can optionally attach a neighbor list to the
+    system to restrict the computation to certain pairs. See example of
+    :py:class:`torchpme.metatensor.PMEPotential` for details on the process.
 
     >>> direct = DirectPotential()
     >>> potential = direct.compute(system)

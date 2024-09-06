@@ -150,14 +150,14 @@ class CalculatorBaseTorch(torch.nn.Module):
                 if cell_single.dtype != self._dtype:
                     raise ValueError(
                         f"each `cell` must have the same type {self._dtype} as "
-                        "positions, got at least one tensor of type "
+                        "`positions`, got at least one tensor of type "
                         f"{cell_single.dtype}"
                     )
 
                 if cell_single.device != self._device:
                     raise ValueError(
                         f"each `cell` must be on the same device {self._device} as "
-                        "positions, got at least one tensor with device "
+                        "`positions`, got at least one tensor with device "
                         f"{cell_single.device}"
                     )
 
@@ -183,13 +183,14 @@ class CalculatorBaseTorch(torch.nn.Module):
             if charges_single.dtype != self._dtype:
                 raise ValueError(
                     f"each `charges` must have the same type {self._dtype} as "
-                    f"positions, got at least one tensor of type {charges_single.dtype}"
+                    "`positions`, got at least one tensor of type "
+                    f"{charges_single.dtype}"
                 )
 
             if charges_single.device != self._device:
                 raise ValueError(
                     f"each `charges` must be on the same device {self._device} as "
-                    f"positions, got at least one tensor with device "
+                    f"`positions`, got at least one tensor with device "
                     f"{charges_single.device}"
                 )
 
@@ -205,7 +206,7 @@ class CalculatorBaseTorch(torch.nn.Module):
                 if neighbor_indices_single.device != self._device:
                     raise ValueError(
                         f"each `neighbor_indices` must be on the same device "
-                        f"{self._device} as positions, got at least one tensor with "
+                        f"{self._device} as `positions`, got at least one tensor with "
                         f"device {neighbor_indices_single.device}"
                     )
 
@@ -223,7 +224,7 @@ class CalculatorBaseTorch(torch.nn.Module):
                 if neighbor_shifts_single.device != self._device:
                     raise ValueError(
                         f"each `neighbor_shifts` must be on the same device "
-                        f"{self._device} as positions, got at least one tensor with "
+                        f"{self._device} as `positions`, got at least one tensor with "
                         f"device {neighbor_shifts_single.device}"
                     )
 
@@ -280,7 +281,7 @@ class CalculatorBaseTorch(torch.nn.Module):
             neighbor_indices_single,
             neighbor_shifts_single,
         ) in zip(positions, charges, cell, neighbor_indices, neighbor_shifts):
-            # Compute the potentials
+            # `_compute_single_system` is implemented only in child classes!
             potentials.append(
                 self._compute_single_system(
                     positions=positions_single,

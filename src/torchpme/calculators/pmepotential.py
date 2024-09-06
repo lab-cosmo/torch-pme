@@ -185,7 +185,7 @@ class PMEPotential(CalculatorBaseTorch, _PMEPotentialImpl):
     Define crystal structure
 
     >>> positions = torch.tensor([[0.0, 0.0, 0.0], [0.5, 0.5, 0.5]])
-    >>> charges = torch.tensor([1.0, -1.0]).reshape(-1, 1)
+    >>> charges = torch.tensor([1.0, -1.0]).unsqueeze(1)
     >>> cell = torch.eye(3)
 
     Compute the neighbor indices (``"i"``, ``"j"``) and the neighbor shifts ("``S``")
