@@ -93,9 +93,17 @@ class CalculatorBaseMetatensor(torch.nn.Module):
         """
         systems = self._validate_compute_parameters(systems)
         potentials: List[torch.Tensor] = []
-        values_samples: List[List[int]] = []
+        samples_list: List[torch.Tensor] = []
 
         for i_system, system in enumerate(systems):
+            n_atoms = len(system)
+            samples = torch.zeros((n_atoms, 2), device=self._device, dtype=torch.int32)
+            samples[:, 0] = i_system
+            samples[:, 1] = torch.arange(
+                n_atoms, device=self._device, dtype=torch.int32
+            )
+            samples_list.append(samples)
+
             charges = system.get_data("charges").values
 
             if torch.all(system.cell == torch.zeros([3, 3], device=system.cell.device)):
@@ -128,9 +136,25 @@ class CalculatorBaseMetatensor(torch.nn.Module):
                         stacklevel=2,
                     )
 
-                neighbor_list = system.get_neighbor_list(first_full_neighbor_list)
-                neighbor_indices = neighbor_list.samples.values[:, :2].T
-                neighbor_shifts = neighbor_list.samples.values[:, 2:]
+                neighbors = system.get_neighbor_list(first_full_neighbor_list)
+                neighbor_indices = neighbors.samples.view(
+                    ["first_atom", "second_atom"]
+                ).values.T
+                if self._device.type == "cpu":
+                    # move data to 64-bit integers, for some reason indexing with 64-bit
+                    # is a lot faster than using 32-bit integers on CPU. CUDA seems fine
+                    # with either types
+                    neighbor_indices = neighbor_indices.to(
+                        torch.int64, memory_format=torch.contiguous_format
+                    )
+
+                neighbor_shifts = neighbors.samples.view(
+                    ["cell_shift_a", "cell_shift_b", "cell_shift_c"]
+                ).values
+                if self._device.type == "cpu":
+                    neighbor_shifts = neighbor_shifts.to(
+                        torch.int64, memory_format=torch.contiguous_format
+                    )
             else:
                 neighbor_indices = None
                 neighbor_shifts = None
@@ -145,14 +169,13 @@ class CalculatorBaseMetatensor(torch.nn.Module):
                 )
             )
 
-            values_samples += [[i_system, i_atom] for i_atom in range(len(system))]
-
-        samples_values = torch.tensor(values_samples, device=self._device)
-        properties_values = torch.arange(self._n_charges_channels, device=self._device)
+        properties_values = torch.arange(
+            self._n_charges_channels, device=self._device, dtype=torch.int32
+        )
 
         block = TensorBlock(
             values=torch.vstack(potentials),
-            samples=Labels(["system", "atom"], samples_values),
+            samples=Labels(["system", "atom"], torch.vstack(samples_list)),
             components=[],
             properties=Labels("charges_channel", properties_values.reshape(-1, 1)),
         )
