@@ -87,7 +87,7 @@ class _PMEPotentialImpl(PeriodicBase):
             smearing=smearing,
             lr_wavelength=mesh_spacing,
         )
-        
+
         # Divide by 2 due to double counting of atom pairs
         return (potential_sr + potential_lr) / 2
 
@@ -101,6 +101,7 @@ class _PMEPotentialImpl(PeriodicBase):
         subtract_self: bool = True,
     ) -> torch.Tensor:
 
+<<<<<<< HEAD
         dtype = positions.dtype
         device = positions.device
         self._cell_cache = self._cell_cache.to(dtype=dtype, device=device)
@@ -147,6 +148,59 @@ class _PMEPotentialImpl(PeriodicBase):
         dims = (1, 2, 3)  # dimensions along which to Fourier transform
         # convolution with the kernel function `G`
         rho_hat = self._G * torch.fft.rfftn(rho_mesh, norm="backward", dim=dims)
+=======
+        if self._cache is None or (
+            not torch.allclose(self._cache["cell"], cell)
+            or not self._cache["smearing"] == smearing
+            or not self._cache["lr_wavelength"] == lr_wavelength
+        ):
+            self._cache = {
+                "cell": cell.detach().clone(),
+                "smearing": smearing,
+                "lr_wavelength": lr_wavelength,
+            }
+
+            # Step 0 (Preparation): Compute number of times each basis vector of the
+            # reciprocal space can be scaled until the cutoff is reached
+            k_cutoff = 2 * torch.pi / lr_wavelength
+            basis_norms = torch.linalg.norm(cell, dim=1)
+            ns_approx = k_cutoff * basis_norms / 2 / torch.pi
+            ns_actual_approx = 2 * ns_approx + 1  # actual number of mesh points
+            ns = 2 ** torch.ceil(torch.log2(ns_actual_approx)).long()  # [nx, ny, nz]
+
+            # Step 1: Initialize mesh interpolator
+            MI = MeshInterpolator(
+                cell, ns, interpolation_order=self.interpolation_order
+            )
+
+            # Step 2: Perform Fourier space convolution (FSC) to get potential on mesh
+            # Step 2.1: Generate k-vectors and evaluate kernel function
+            # kvectors = self._generate_kvectors(ns=ns, cell=cell)
+            kvectors = generate_kvectors_for_mesh(ns=ns, cell=cell)
+            knorm_sq = torch.sum(kvectors**2, dim=3)
+
+            # Step 2.2: Evaluate kernel function (careful, tensor shapes are different from
+            # the pure Ewald implementation since we are no longer flattening)
+            ivolume = 1.0 / cell.det()
+            # pre-scale with volume to save some multiplications further down
+            G = self.potential.potential_fourier_from_k_sq(knorm_sq, smearing) * ivolume
+            fill_value = self.potential.potential_fourier_at_zero(smearing)
+            G[0, 0, 0] = torch.full([], fill_value, device=G.device)
+
+            self._cache["G"] = G
+            self._cache["MI"] = MI
+        else:
+            G = self._cache["G"]
+            MI = self._cache["MI"]
+
+        MI.compute_interpolation_weights(positions)
+        rho_mesh = MI.points_to_mesh(particle_weights=charges)
+
+        # Step 2.3: Perform actual convolution using FFT
+        dims = (1, 2, 3)  # dimensions along which to Fourier transform
+        rho_hat = torch.fft.rfftn(rho_mesh, norm="backward", dim=dims)
+        rho_hat *= G  # convolution with the kernel
+>>>>>>> 222d8ed (A few marginal optimizations)
         potential_mesh = torch.fft.irfftn(rho_hat, norm="forward", dim=dims)
 
         # Step 3: Back interpolation
