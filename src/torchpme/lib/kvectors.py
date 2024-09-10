@@ -20,7 +20,11 @@ def _generate_kvectors(
 
     if cell.is_cuda:
         # use function that does not synchronize with the CPU
-        inverse_cell = torch.linalg.inv_ex(cell)[0]
+        # inverse_cell = torch.linalg.inv_ex(cell)[0]
+        inverse_cell = torch.zeros_like(cell, device=cell.device)
+        inverse_cell[0,0] = 1/cell[0,0]
+        inverse_cell[1,1] = 1/cell[1,1]
+        inverse_cell[2,2] = 1/cell[2,2]
     else:
         inverse_cell = torch.linalg.inv(cell)
 
