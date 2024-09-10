@@ -1,7 +1,7 @@
 import pytest
 import torch
 from packaging import version
-from utils_metatensor import add_neighbor_list
+from utils_metatensor import compute_neighbors
 from vesin import NeighborList
 
 import torchpme
@@ -9,6 +9,53 @@ import torchpme
 
 mts_torch = pytest.importorskip("metatensor.torch")
 mts_atomistic = pytest.importorskip("metatensor.torch.atomistic")
+
+
+@pytest.fixture
+def system():
+    system = mts_atomistic.System(
+        types=torch.tensor([1, 1]),
+        positions=torch.tensor([[0.0, 0.0, 0.0], [0.0, 0.0, 2.0]]),
+        cell=torch.eye(3),
+    )
+
+    charges = torch.tensor([1.0, -1.0]).unsqueeze(1)
+    data = mts_torch.TensorBlock(
+        values=charges,
+        samples=mts_torch.Labels.range("atom", charges.shape[0]),
+        components=[],
+        properties=mts_torch.Labels.range("charge", charges.shape[1]),
+    )
+
+    system.add_data(name="charges", data=data)
+
+    return system
+
+
+@pytest.fixture
+def neighbors():
+    n_neighbors = 1
+    sample_values = torch.zeros(n_neighbors, 5, dtype=torch.int32)
+    samples = mts_torch.Labels(
+        names=[
+            "first_atom",
+            "second_atom",
+            "cell_shift_a",
+            "cell_shift_b",
+            "cell_shift_c",
+        ],
+        values=sample_values,
+    )
+
+    values = torch.zeros(n_neighbors, 3, 1)
+    neighbors = mts_torch.TensorBlock(
+        values=values,
+        samples=samples,
+        components=[mts_torch.Labels.range("xyz", 3)],
+        properties=mts_torch.Labels.range("distance", 1),
+    )
+
+    return neighbors
 
 
 class CalculatorTest(torchpme.metatensor.base.CalculatorBaseMetatensor):
@@ -25,23 +72,7 @@ class CalculatorTest(torchpme.metatensor.base.CalculatorBaseMetatensor):
 
 
 @pytest.mark.parametrize("method_name", ["compute", "forward"])
-def test_compute_output_shapes_single(method_name):
-    system = mts_atomistic.System(
-        types=torch.tensor([1, 1]),
-        positions=torch.tensor([[0.0, 0.0, 0.0], [0.0, 0.0, 2.0]]),
-        cell=torch.zeros([3, 3]),
-    )
-
-    charges = torch.tensor([1.0, -1.0]).reshape(-1, 1)
-    data = mts_torch.TensorBlock(
-        values=charges,
-        samples=mts_torch.Labels.range("atom", charges.shape[0]),
-        components=[],
-        properties=mts_torch.Labels.range("charge", charges.shape[1]),
-    )
-
-    system.add_data(name="charges", data=data)
-
+def test_compute_output_shapes_single(method_name, system):
     calculator = CalculatorTest()
     method = getattr(calculator, method_name)
     result = method(system)
@@ -58,27 +89,11 @@ def test_compute_output_shapes_single(method_name):
     assert tuple(result[0].values.shape) == (len(system), 1)
 
 
-def test_corrrect_value_extraction():
-    system = mts_atomistic.System(
-        types=torch.tensor([1, 1]),
-        positions=torch.tensor([[0.0, 0.0, 0.0], [0.0, 0.0, 2.0]]),
-        cell=torch.eye(3),
-    )
-
-    charges = torch.tensor([1.0, -1.0]).reshape(-1, 1)
-    data = mts_torch.TensorBlock(
-        values=charges,
-        samples=mts_torch.Labels.range("atom", charges.shape[0]),
-        components=[],
-        properties=mts_torch.Labels.range("charge", charges.shape[1]),
-    )
-
+def test_corrrect_value_extraction(system):
     calculator = CalculatorTest()
 
-    system.add_data(name="charges", data=data)
-
     cutoff = 2.0
-    add_neighbor_list(system, cutoff=cutoff)
+    neighbors = compute_neighbors(system, cutoff=cutoff)
 
     # Compute reference neighborlist
     nl = NeighborList(cutoff=cutoff, full_list=True)
@@ -92,31 +107,14 @@ def test_corrrect_value_extraction():
     neighbor_indices = torch.vstack([i, j])
     neighbor_shifts = torch.from_numpy(S.astype(int))
 
-    calculator.compute(system)
+    calculator.compute(system, neighbors)
 
-    assert torch.equal(calculator._charges, charges)
+    assert torch.equal(calculator._charges, torch.tensor([1.0, -1.0]).unsqueeze(1))
     assert torch.equal(calculator._neighbor_indices, neighbor_indices)
     assert torch.equal(calculator._neighbor_shifts, neighbor_shifts)
 
 
-def test_compute_output_shapes_multiple():
-
-    system = mts_atomistic.System(
-        types=torch.tensor([1, 1]),
-        positions=torch.tensor([[0.0, 0.0, 0.0], [0.0, 0.0, 2.0]]),
-        cell=torch.zeros([3, 3]),
-    )
-
-    charges = torch.tensor([1.0, -1.0]).reshape(-1, 1)
-    data = mts_torch.TensorBlock(
-        values=charges,
-        samples=mts_torch.Labels.range("atom", charges.shape[0]),
-        components=[],
-        properties=mts_torch.Labels.range("charge", charges.shape[1]),
-    )
-
-    system.add_data(name="charges", data=data)
-
+def test_compute_output_shapes_multiple(system):
     calculator = CalculatorTest()
     result = calculator.compute([system, system])
 
@@ -132,100 +130,143 @@ def test_compute_output_shapes_multiple():
     assert tuple(result[0].values.shape) == (2 * len(system), 1)
 
 
-def test_wrong_system_dtype():
-    system1 = mts_atomistic.System(
-        types=torch.tensor([1, 1]),
-        positions=torch.tensor([[0.0, 0.0, 0.0], [0.0, 0.0, 2.0]]),
-        cell=torch.zeros([3, 3]),
-    )
+def test_type_check_error(system, neighbors):
+    calculator = CalculatorTest()
 
-    system2 = mts_atomistic.System(
-        types=torch.tensor([1, 1]),
-        positions=torch.tensor([[0.0, 0.0, 0.0], [0.0, 0.0, 2.0]], dtype=torch.float64),
-        cell=torch.zeros([3, 3], dtype=torch.float64),
+    match = (
+        "Inconsistent parameter types. `systems` is a list, while `neighbors` is a "
+        "TensorBlock. Both need either be a list or System/TensorBlock!"
     )
+    with pytest.raises(TypeError, match=match):
+        calculator._validate_compute_parameters([system], neighbors)
+
+    match = (
+        "Inconsistent parameter types. `systems` is a not a list, while `neighbors` "
+        "is a list. Both need either be a list or System/TensorBlock!"
+    )
+    with pytest.raises(TypeError, match=match):
+        calculator._validate_compute_parameters(system, [neighbors])
+
+
+def test_inconsistent_length(system):
+    calculator = CalculatorTest()
+    match = r"Got inconsistent numbers of systems \(1\) and neighbors \(2\)"
+    with pytest.raises(ValueError, match=match):
+        calculator.compute(systems=[system], neighbors=[None, None])
+
+
+def test_wrong_system_dtype(system):
+    system_float64 = system.to(torch.float64)
 
     calculator = CalculatorTest()
 
-    match = r"`dtype` of all systems must be the same, got 7 and 6"
+    match = (
+        r"`dtype` of all systems must be the same, got torch.float64 and torch.float32"
+    )
     with pytest.raises(ValueError, match=match):
-        calculator.compute([system1, system2])
+        calculator.compute([system, system_float64])
 
 
-def test_wrong_system_device():
-    system1 = mts_atomistic.System(
-        types=torch.tensor([1, 1]),
-        positions=torch.tensor([[0.0, 0.0, 0.0], [0.0, 0.0, 2.0]]),
-        cell=torch.zeros([3, 3]),
-    )
-
-    system2 = mts_atomistic.System(
-        types=torch.tensor([1, 1], device="meta"),
-        positions=torch.tensor([[0.0, 0.0, 0.0], [0.0, 0.0, 2.0]], device="meta"),
-        cell=torch.zeros([3, 3], device="meta"),
-    )
+def test_wrong_system_device(system):
+    system_meta = system.to("meta")
 
     calculator = CalculatorTest()
 
     match = r"`device` of all systems must be the same, got meta and cpu"
     with pytest.raises(ValueError, match=match):
-        calculator.compute([system1, system2])
+        calculator.compute([system, system_meta])
 
 
-def test_wrong_system_not_all_charges():
-    system1 = mts_atomistic.System(
-        types=torch.tensor([1, 1]),
-        positions=torch.tensor([[0.0, 0.0, 0.0], [0.0, 0.0, 2.0]]),
-        cell=torch.zeros([3, 3]),
+def test_wrong_neighbors_dtype(system, neighbors):
+    neighbors = neighbors.to(torch.float64)
+
+    calculator = CalculatorTest()
+    match = (
+        "each `neighbors` must have the same type torch.float32 as "
+        "`systems`, got at least one `neighbors` of type torch.float64"
+    )
+    with pytest.raises(ValueError, match=match):
+        calculator.compute(system, neighbors)
+
+
+def test_wrong_neighbors_device(system, neighbors):
+    neighbors = neighbors.to("meta")
+
+    calculator = CalculatorTest()
+    match = (
+        "each `neighbors` must be on the same device cpu as "
+        "`systems`, got at least one `neighbors` with device meta"
+    )
+    with pytest.raises(ValueError, match=match):
+        calculator.compute(system, neighbors)
+
+
+def test_wrong_neighbors_samples(system, neighbors):
+    neighbors = mts_torch.TensorBlock(
+        values=neighbors.values,
+        samples=neighbors.samples.rename("first_atom", "foo"),
+        components=neighbors.components,
+        properties=neighbors.properties,
     )
 
-    charges = torch.tensor([1.0, -1.0]).reshape(-1, 1)
-    data = mts_torch.TensorBlock(
-        values=charges,
-        samples=mts_torch.Labels.range("atom", charges.shape[0]),
-        components=[],
-        properties=mts_torch.Labels.range("charge", charges.shape[1]),
+    calculator = CalculatorTest()
+    match = (
+        "Invalid samples for `neighbors`: the sample names must be "
+        "'first_atom', 'second_atom', 'cell_shift_a', 'cell_shift_b', "
+        "'cell_shift_c'"
+    )
+    with pytest.raises(ValueError, match=match):
+        calculator.compute(system, neighbors)
+
+
+def test_wrong_neighbors_components(system, neighbors):
+    neighbors = mts_torch.TensorBlock(
+        values=neighbors.values,
+        samples=neighbors.samples,
+        components=[mts_torch.Labels.range("abc", 3)],  # abc instead of xyz
+        properties=neighbors.properties,
     )
 
-    system1.add_data(name="charges", data=data)
+    calculator = CalculatorTest()
+    match = (
+        "Invalid components for `neighbors`: there should be a single "
+        r"'xyz'=\[0, 1, 2\] component"
+    )
+    with pytest.raises(ValueError, match=match):
+        calculator.compute(system, neighbors)
 
-    system2 = mts_atomistic.System(
-        types=torch.tensor(
-            [1, 1],
-        ),
-        positions=torch.tensor([[0.0, 0.0, 0.0], [0.0, 0.0, 2.0]]),
-        cell=torch.zeros([3, 3]),
+
+def test_wrong_neighbors_properties(system, neighbors):
+    neighbors = mts_torch.TensorBlock(
+        values=neighbors.values,
+        samples=neighbors.samples,
+        components=neighbors.components,
+        properties=neighbors.properties.rename("distance", "foo"),
+    )
+
+    calculator = CalculatorTest()
+    match = (
+        "Invalid properties for `neighbors`: there should be a single "
+        "'distance'=0 property"
+    )
+    with pytest.raises(ValueError, match=match):
+        calculator.compute(system, neighbors)
+
+
+def test_wrong_system_not_all_charges(system):
+    system_nocharge = mts_torch.atomistic.System(
+        system.types, system.positions, system.cell
     )
 
     calculator = CalculatorTest()
 
     match = r"`systems` do not consistently contain `charges` data"
     with pytest.raises(ValueError, match=match):
-        calculator.compute([system1, system2])
+        calculator.compute([system, system_nocharge])
 
 
-def test_different_number_charge_channles():
-    system1 = mts_atomistic.System(
-        types=torch.tensor([1, 1]),
-        positions=torch.tensor([[0.0, 0.0, 0.0], [0.0, 0.0, 2.0]]),
-        cell=torch.zeros([3, 3]),
-    )
-
-    charges1 = torch.tensor([1.0, -1.0]).reshape(-1, 1)
-    data1 = mts_torch.TensorBlock(
-        values=charges1,
-        samples=mts_torch.Labels.range("atom", charges1.shape[0]),
-        components=[],
-        properties=mts_torch.Labels.range("charge", charges1.shape[1]),
-    )
-
-    system1.add_data(name="charges", data=data1)
-
-    system2 = mts_atomistic.System(
-        types=torch.tensor([1, 1]),
-        positions=torch.tensor([[0.0, 0.0, 0.0], [0.0, 0.0, 2.0]]),
-        cell=torch.zeros([3, 3]),
-    )
+def test_different_number_charge_channles(system):
+    system_channels = mts_atomistic.System(system.types, system.positions, system.cell)
 
     charges2 = torch.tensor([[1.0, 2.0], [-1.0, -2.0]])
     data2 = mts_torch.TensorBlock(
@@ -234,7 +275,7 @@ def test_different_number_charge_channles():
         components=[],
         properties=mts_torch.Labels.range("charge", charges2.shape[1]),
     )
-    system2.add_data(name="charges", data=data2)
+    system_channels.add_data(name="charges", data=data2)
 
     calculator = CalculatorTest()
 
@@ -243,99 +284,26 @@ def test_different_number_charge_channles():
         r"first system \(1\)"
     )
     with pytest.raises(ValueError, match=match):
-        calculator.compute([system1, system2])
+        calculator.compute([system, system_channels])
 
 
-def test_multiple_neighborlist_warning():
-    system = mts_atomistic.System(
-        types=torch.tensor([1, 1]),
-        positions=torch.tensor([[0.0, 0.0, 0.0], [0.0, 0.0, 2.0]]),
-        cell=torch.eye(3),
-    )
-
-    charges = torch.tensor([1.0, -1.0]).reshape(-1, 1)
-    data = mts_torch.TensorBlock(
-        values=charges,
-        samples=mts_torch.Labels.range("atom", charges.shape[0]),
-        components=[],
-        properties=mts_torch.Labels.range("charge", charges.shape[1]),
-    )
-
-    system.add_data(name="charges", data=data)
-
-    add_neighbor_list(system, cutoff=1.0)
-    add_neighbor_list(system, cutoff=2.0)
-
-    calculator = CalculatorTest()
-
-    match = (
-        r"Multiple neighbor lists found \(2\). Using the full first one with "
-        r"`cutoff=1.0`."
-    )
-    with pytest.warns(UserWarning, match=match):
-        calculator.compute(system)
-
-
-def test_neighborlist_half_error():
-    system = mts_atomistic.System(
-        types=torch.tensor([1, 1]),
-        positions=torch.tensor([[0.0, 0.0, 0.0], [0.0, 0.0, 2.0]]),
-        cell=torch.eye(3),
-    )
-
-    charges = torch.tensor([1.0, -1.0]).reshape(-1, 1)
-    data = mts_torch.TensorBlock(
-        values=charges,
-        samples=mts_torch.Labels.range("atom", charges.shape[0]),
-        components=[],
-        properties=mts_torch.Labels.range("charge", charges.shape[1]),
-    )
-
-    calculator = CalculatorTest()
-
-    system.add_data(name="charges", data=data)
-
-    add_neighbor_list(system, cutoff=1.0, full_list=False)
-
-    match = r"Found 1 neighbor list\(s\) but no full list, which is required."
-    with pytest.raises(ValueError, match=match):
-        calculator.compute(system)
-
-
-def test_systems_with_different_number_of_atoms():
-    system1 = mts_atomistic.System(
+def test_systems_with_different_number_of_atoms(system):
+    """Test that systems with different numnber of atoms are supported."""
+    system_more_atoms = mts_atomistic.System(
         types=torch.tensor([1, 1, 8]),
         positions=torch.tensor([[0.0, 0.0, 0.0], [0.0, 0.0, 2.0], [0.0, 2.0, 2.0]]),
         cell=torch.zeros([3, 3]),
     )
 
-    charges1 = torch.tensor([1.0, -1.0, 2.0]).reshape(-1, 1)
-    data1 = mts_torch.TensorBlock(
-        values=charges1,
-        samples=mts_torch.Labels.range("atom", charges1.shape[0]),
+    charges = torch.tensor([1.0, -1.0, 2.0]).unsqueeze(1)
+    data = mts_torch.TensorBlock(
+        values=charges,
+        samples=mts_torch.Labels.range("atom", charges.shape[0]),
         components=[],
-        properties=mts_torch.Labels.range("charge", charges1.shape[1]),
+        properties=mts_torch.Labels.range("charge", charges.shape[1]),
     )
 
-    system1.add_data(name="charges", data=data1)
+    system_more_atoms.add_data(name="charges", data=data)
 
-    system2 = mts_atomistic.System(
-        types=torch.tensor(
-            [1, 1],
-        ),
-        positions=torch.tensor([[0.0, 0.0, 0.0], [0.0, 0.0, 2.0]]),
-        cell=torch.zeros([3, 3]),
-    )
-
-    charges2 = torch.tensor([1.0, -1.0]).reshape(-1, 1)
-    data2 = mts_torch.TensorBlock(
-        values=charges2,
-        samples=mts_torch.Labels.range("atom", charges2.shape[0]),
-        components=[],
-        properties=mts_torch.Labels.range("charge", charges2.shape[1]),
-    )
-
-    system2.add_data(name="charges", data=data2)
     calculator = CalculatorTest()
-
-    calculator.compute([system1, system2])
+    calculator.compute([system, system_more_atoms])

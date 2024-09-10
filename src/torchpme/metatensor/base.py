@@ -1,5 +1,4 @@
-import warnings
-from typing import List, Union
+from typing import List, Optional, Tuple, Union
 
 import torch
 
@@ -25,31 +24,119 @@ class CalculatorBaseMetatensor(torch.nn.Module):
         self._dtype = torch.float32
         self._n_charges_channels = 0
 
-    def forward(self, systems: Union[List[System], System]) -> TensorMap:
+    def forward(
+        self,
+        systems: Union[List[System], System],
+        neighbors: Union[List[Optional[TensorBlock]], Optional[TensorBlock]] = None,
+    ) -> TensorMap:
         """Forward just calls :py:meth:`compute`."""
-        return self.compute(systems)
+        return self.compute(systems, neighbors)
 
     def _validate_compute_parameters(
-        self, systems: Union[List[System], System]
-    ) -> List[System]:
-        # Make sure that the compute function also works if only a single frame is
-        # provided as input (for convenience of users testing out the code)
-        if not isinstance(systems, list):
-            systems = [systems]
+        self,
+        systems: Union[List[System], System],
+        neighbors: Union[List[Optional[TensorBlock]], Optional[TensorBlock]],
+    ) -> Tuple[List[System], List[Optional[TensorBlock]]]:
+        # check that all inputs are of the same type
 
+        if isinstance(systems, list):
+            if neighbors is not None:
+                if not isinstance(neighbors, list):
+                    raise TypeError(
+                        "Inconsistent parameter types. `systems` is a "
+                        "list, while `neighbors` is a TensorBlock. Both need "
+                        "either be a list or System/TensorBlock!"
+                    )
+        else:
+            systems = [systems]
+            if neighbors is not None:
+                if isinstance(neighbors, list):
+                    raise TypeError(
+                        "Inconsistent parameter types. `systems` is a not "
+                        "a list, while `neighbors` is a list. Both need "
+                        "either be a list or System/TensorBlock!"
+                    )
+
+        if not isinstance(neighbors, list):
+            neighbors = [neighbors]
+
+        # check neighbors
+        if neighbors[0] is None:
+            neighbors = neighbors * len(systems)
+
+        if len(systems) != len(neighbors):
+            raise ValueError(
+                f"Got inconsistent numbers of systems ({len(systems)}) and "
+                f"neighbors ({len(neighbors)})"
+            )
+
+        self._dtype = systems[0].positions.dtype
         self._device = systems[0].positions.device
-        for system in systems:
-            if system.dtype != systems[0].dtype:
+
+        _components_labels = Labels(
+            ["xyz"],
+            torch.arange(3, dtype=torch.int32, device=self._device).unsqueeze(1),
+        )
+        _properties_labels = Labels(
+            ["distance"], torch.zeros(1, 1, dtype=torch.int32, device=self._device)
+        )
+
+        for system, neighbors_single in zip(systems, neighbors):
+            if system.positions.dtype != self._dtype:
                 raise ValueError(
                     "`dtype` of all systems must be the same, got "
-                    f"{system.dtype} and {systems[0].dtype}`"
+                    f"{system.positions.dtype} and {self._dtype}`"
                 )
 
-            if system.device != self._device:
+            if system.positions.device != self._device:
                 raise ValueError(
                     "`device` of all systems must be the same, got "
-                    f"{system.device} and {systems[0].device}`"
+                    f"{system.positions.device} and {self._device}`"
                 )
+
+            if neighbors_single is not None:
+                if neighbors_single.values.dtype != self._dtype:
+                    raise ValueError(
+                        f"each `neighbors` must have the same type {self._dtype} "
+                        "as `systems`, got at least one `neighbors` of type "
+                        f"{neighbors_single.values.dtype}"
+                    )
+
+                if neighbors_single.values.device != self._device:
+                    raise ValueError(
+                        f"each `neighbors` must be on the same device {self._device} "
+                        "as `systems`, got at least one `neighbors` with device "
+                        f"{neighbors_single.values.device}"
+                    )
+
+                # Check metadata of neighbors
+                samples_names = neighbors_single.samples.names
+                if (
+                    len(samples_names) != 5
+                    or samples_names[0] != "first_atom"
+                    or samples_names[1] != "second_atom"
+                    or samples_names[2] != "cell_shift_a"
+                    or samples_names[3] != "cell_shift_b"
+                    or samples_names[4] != "cell_shift_c"
+                ):
+                    raise ValueError(
+                        "Invalid samples for `neighbors`: the sample names must be "
+                        "'first_atom', 'second_atom', 'cell_shift_a', 'cell_shift_b', "
+                        "'cell_shift_c'"
+                    )
+
+                components = neighbors_single.components
+                if len(components) != 1 or components[0] != _components_labels:
+                    raise ValueError(
+                        "Invalid components for `neighbors`: there should be a single "
+                        "'xyz'=[0, 1, 2] component"
+                    )
+
+                if neighbors_single.properties != _properties_labels:
+                    raise ValueError(
+                        "Invalid properties for `neighbors`: there should be a single "
+                        "'distance'=0 property"
+                    )
 
         has_charges = torch.tensor(["charges" in s.known_data() for s in systems])
         if not torch.all(has_charges):
@@ -68,9 +155,13 @@ class CalculatorBaseMetatensor(torch.nn.Module):
                     f"({self._n_charges_channels})"
                 )
 
-        return systems
+        return systems, neighbors
 
-    def compute(self, systems: Union[List[System], System]) -> TensorMap:
+    def compute(
+        self,
+        systems: Union[List[System], System],
+        neighbors: Union[List[Optional[TensorBlock]], Optional[TensorBlock]] = None,
+    ) -> TensorMap:
         """Compute potential for all provided ``systems``.
 
         All ``systems`` must have the same ``dtype`` and the same ``device``. If each
@@ -82,20 +173,30 @@ class CalculatorBaseMetatensor(torch.nn.Module):
         :param systems: single System or list of
             :py:class:`metatensor.torch.atomisic.System` on which to run the
             calculations. The system should have ``"charges"`` using the
-            :py:meth:`add_data <metatensor.torch.atomistic.System.add_data>` method. If
-            periodic computations (Ewald, PME) are performed additionally a **full
-            neighbor list** should be attached using the :py:meth:`add_neighbor_list
-            <metatensor.torch.atomistic.System.add_neighbor_list>` method. If a
-            ``system`` has *multiple* neighbor lists the first full list will taken into
-            account for the computation.
+            :py:meth:`add_data <metatensor.torch.atomistic.System.add_data>` method.
+        :param neighbors: single TensorBlock or list of a
+            :py:class:`metatensor.torch.TensorBlock` containing the **full neighbor
+            list**, required for periodic computations (Ewald, PME) and optional for
+            direct computations. If a neighbor list is attached to a
+            :py:class`metatensor.torch.atomistic.System` it can be extracted with the
+            :py:meth:`get_neighborlist
+            <metatensor.torch.atomistic.System.get_neighborlist>` method.
 
         :return: TensorMap containing the potential of all types.
         """
-        systems = self._validate_compute_parameters(systems)
+        systems, neighbors = self._validate_compute_parameters(systems, neighbors)
         potentials: List[torch.Tensor] = []
-        values_samples: List[List[int]] = []
+        samples_list: List[torch.Tensor] = []
 
-        for i_system, system in enumerate(systems):
+        for i_system, (system, neighbors_single) in enumerate(zip(systems, neighbors)):
+            n_atoms = len(system)
+            samples = torch.zeros((n_atoms, 2), device=self._device, dtype=torch.int32)
+            samples[:, 0] = i_system
+            samples[:, 1] = torch.arange(
+                n_atoms, device=self._device, dtype=torch.int32
+            )
+            samples_list.append(samples)
+
             charges = system.get_data("charges").values
 
             if torch.all(system.cell == torch.zeros([3, 3], device=system.cell.device)):
@@ -103,38 +204,30 @@ class CalculatorBaseMetatensor(torch.nn.Module):
             else:
                 cell = system.cell
 
-            all_neighbor_lists = system.known_neighbor_lists()
-            if all_neighbor_lists:
-                # try to extract neighbor list from system object
-                has_full_neighbor_list = False
-                first_full_neighbor_list = all_neighbor_lists[0]
-                for neighbor_list_options in all_neighbor_lists:
-                    if neighbor_list_options.full_list:
-                        has_full_neighbor_list = True
-                        first_full_neighbor_list = neighbor_list_options
-                        break
-
-                if not has_full_neighbor_list:
-                    raise ValueError(
-                        f"Found {len(all_neighbor_lists)} neighbor list(s) but no full "
-                        "list, which is required."
+            if neighbors_single is not None:
+                neighbor_indices = neighbors_single.samples.view(
+                    ["first_atom", "second_atom"]
+                ).values.T
+                if self._device.type == "cpu":
+                    # move data to 64-bit integers, for some reason indexing with 64-bit
+                    # is a lot faster than using 32-bit integers on CPU. CUDA seems fine
+                    # with either types
+                    neighbor_indices = neighbor_indices.to(
+                        torch.int64, memory_format=torch.contiguous_format
                     )
 
-                if len(system.known_neighbor_lists()) > 1:
-                    warnings.warn(
-                        "Multiple neighbor lists found "
-                        f"({len(all_neighbor_lists)}). Using the full first one "
-                        f"with `cutoff={first_full_neighbor_list.cutoff}`.",
-                        stacklevel=2,
+                neighbor_shifts = neighbors_single.samples.view(
+                    ["cell_shift_a", "cell_shift_b", "cell_shift_c"]
+                ).values
+                if self._device.type == "cpu":
+                    neighbor_shifts = neighbor_shifts.to(
+                        torch.int64, memory_format=torch.contiguous_format
                     )
-
-                neighbor_list = system.get_neighbor_list(first_full_neighbor_list)
-                neighbor_indices = neighbor_list.samples.values[:, :2].T
-                neighbor_shifts = neighbor_list.samples.values[:, 2:]
             else:
                 neighbor_indices = None
                 neighbor_shifts = None
 
+            # `_compute_single_system` is implemented only in child classes!
             potentials.append(
                 self._compute_single_system(
                     positions=system.positions,
@@ -145,17 +238,16 @@ class CalculatorBaseMetatensor(torch.nn.Module):
                 )
             )
 
-            values_samples += [[i_system, i_atom] for i_atom in range(len(system))]
-
-        samples_values = torch.tensor(values_samples, device=self._device)
-        properties_values = torch.arange(self._n_charges_channels, device=self._device)
+        properties_values = torch.arange(
+            self._n_charges_channels, device=self._device, dtype=torch.int32
+        )
 
         block = TensorBlock(
             values=torch.vstack(potentials),
-            samples=Labels(["system", "atom"], samples_values),
+            samples=Labels(["system", "atom"], torch.vstack(samples_list)),
             components=[],
-            properties=Labels("charges_channel", properties_values.reshape(-1, 1)),
+            properties=Labels("charges_channel", properties_values.unsqueeze(1)),
         )
 
-        keys = Labels("_", torch.tensor([[0]], device=self._device))
+        keys = Labels("_", torch.zeros(1, 1, dtype=torch.int32, device=self._device))
         return TensorMap(keys=keys, blocks=[block])

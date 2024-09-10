@@ -29,7 +29,7 @@ class PMEPotential(CalculatorBaseMetatensor, _PMEPotentialImpl):
 
     Next, we attach the charges to our ``system``
 
-    >>> charges = torch.tensor([1.0, -1.0]).reshape(-1, 1)
+    >>> charges = torch.tensor([1.0, -1.0]).unsqueeze(1)
     >>> data = TensorBlock(
     ...     values=charges,
     ...     samples=Labels.range("atom", charges.shape[0]),
@@ -78,7 +78,7 @@ class PMEPotential(CalculatorBaseMetatensor, _PMEPotentialImpl):
     ...     values=sample_values,
     ... )
 
-    And wrap everything together and add it to our ``system``.
+    And wrap everything together.
 
     >>> values = torch.from_numpy(D).reshape(-1, 3, 1)
     >>> values = values.type(system.positions.dtype)
@@ -88,15 +88,12 @@ class PMEPotential(CalculatorBaseMetatensor, _PMEPotentialImpl):
     ...     components=[Labels.range("xyz", 3)],
     ...     properties=Labels.range("distance", 1),
     ... )
-    >>> nl_options = NeighborListOptions(cutoff=cutoff, full_list=True)
-    >>> system.add_neighbor_list(options=nl_options, neighbors=neighbors)
-
 
     Finally, we initlize the potential class and ``compute`` the
     potential for the crystal
 
     >>> pme = PMEPotential()
-    >>> potential = pme.compute(system)
+    >>> potential = pme.compute(systems=system, neighbors=neighbors)
 
     The results are stored inside the ``values`` property inside the first
     :py:class:`TensorBlock <metatensor.torch.TensorBlock>` of the ``potential``.
