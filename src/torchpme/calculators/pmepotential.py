@@ -34,7 +34,14 @@ class _PMEPotentialImpl(PeriodicBase):
             subtract_self = True
         self.subtract_self = subtract_self
 
-        self._cache = None
+        # TorchScript requires to initialize all attributes in __init__
+        self._cell_cache = -1 * torch.ones([3, 3])
+        self._MI = MeshInterpolator(
+            cell=torch.eye(3),
+            ns_mesh=torch.ones(3),
+            interpolation_order=self.interpolation_order,
+        )
+        self._G = torch.zeros(1)
 
     def _compute_single_system(
         self,
@@ -94,16 +101,14 @@ class _PMEPotentialImpl(PeriodicBase):
         subtract_self: bool = True,
     ) -> torch.Tensor:
 
-        if self._cache is None or (
-            not torch.allclose(self._cache["cell"], cell)
-            or not self._cache["smearing"] == smearing
-            or not self._cache["lr_wavelength"] == lr_wavelength
-        ):
-            self._cache = {
-                "cell": cell.detach().clone(),
-                "smearing": smearing,
-                "lr_wavelength": lr_wavelength,
-            }
+        dtype = positions.dtype
+        device = positions.device
+        self._cell_cache = self._cell_cache.to(dtype=dtype, device=device)
+
+        # Kernel function `G` and initialization of `MeshInterpolator` only depend on
+        # `cell`. Caching can save up to 15%.
+        if not torch.allclose(cell, self._cell_cache):
+            self._cell_cache = cell.detach().clone()
 
             # Init 0 (Preparation): Compute number of times each basis vector of the
             # reciprocal space can be scaled until the cutoff is reached
@@ -111,10 +116,11 @@ class _PMEPotentialImpl(PeriodicBase):
             basis_norms = torch.linalg.norm(cell, dim=1)
             ns_approx = k_cutoff * basis_norms / 2 / torch.pi
             ns_actual_approx = 2 * ns_approx + 1  # actual number of mesh points
-            ns = 2 ** torch.ceil(torch.log2(ns_actual_approx)).long()  # [nx, ny, nz]
+            # ns = [nx, ny, nz]
+            ns = torch.tensor(2).pow(torch.ceil(torch.log2(ns_actual_approx)).long())
 
             # Init 1: Initialize mesh interpolator
-            MI = MeshInterpolator(
+            self._MI = MeshInterpolator(
                 cell, ns, interpolation_order=self.interpolation_order
             )
 
@@ -125,36 +131,31 @@ class _PMEPotentialImpl(PeriodicBase):
 
             # 2.2: Evaluate kernel function (careful, tensor shapes are different from
             # the pure Ewald implementation since we are no longer flattening)
-            ivolume = 1.0 / cell.det()
+            ivolume = cell.det().pow(-1)
             # pre-scale with volume to save some multiplications further down
-            G = self.potential.potential_fourier_from_k_sq(knorm_sq, smearing) * ivolume
+            self._G = (
+                self.potential.potential_fourier_from_k_sq(knorm_sq, smearing) * ivolume
+            )
             fill_value = self.potential.potential_fourier_at_zero(smearing)
-            G[0, 0, 0] = torch.full([], fill_value, device=G.device)
-
-            self._cache["G"] = G
-            self._cache["MI"] = MI
-        else:
-            # Retrive cached components
-            G = self._cache["G"]
-            MI = self._cache["MI"]
+            self._G[0, 0, 0] = torch.full([], fill_value, device=device)
 
         # Step 1. Compute density interpolation
-        MI.compute_interpolation_weights(positions)
-        rho_mesh = MI.points_to_mesh(particle_weights=charges)
+        self._MI.compute_interpolation_weights(positions)
+        rho_mesh = self._MI.points_to_mesh(particle_weights=charges)
 
         # Step 2: Perform actual convolution using FFT
         dims = (1, 2, 3)  # dimensions along which to Fourier transform
-        rho_hat = torch.fft.rfftn(rho_mesh, norm="backward", dim=dims)
-        rho_hat *= G  # convolution with the kernel
+        # convolution with the kernel function `G`
+        rho_hat = self._G * torch.fft.rfftn(rho_mesh, norm="backward", dim=dims)
         potential_mesh = torch.fft.irfftn(rho_hat, norm="forward", dim=dims)
 
         # Step 3: Back interpolation
-        interpolated_potential = MI.mesh_to_points(potential_mesh)
+        interpolated_potential = self._MI.mesh_to_points(potential_mesh)
 
         # Step 4: Remove self-contribution if desired
         if subtract_self:
             fill_value = 2.0 / (torch.pi * smearing**2)
-            self_contrib = torch.sqrt(torch.full([], fill_value, device=cell.device))
+            self_contrib = torch.sqrt(torch.full([], fill_value, device=device))
             interpolated_potential -= charges * self_contrib
 
         return interpolated_potential
