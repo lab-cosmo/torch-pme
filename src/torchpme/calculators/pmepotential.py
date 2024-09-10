@@ -160,7 +160,7 @@ class _PMEPotentialImpl(PeriodicBase):
                 "lr_wavelength": lr_wavelength,
             }
 
-            # Step 0 (Preparation): Compute number of times each basis vector of the
+            # Init 0 (Preparation): Compute number of times each basis vector of the
             # reciprocal space can be scaled until the cutoff is reached
             k_cutoff = 2 * torch.pi / lr_wavelength
             basis_norms = torch.linalg.norm(cell, dim=1)
@@ -168,18 +168,17 @@ class _PMEPotentialImpl(PeriodicBase):
             ns_actual_approx = 2 * ns_approx + 1  # actual number of mesh points
             ns = 2 ** torch.ceil(torch.log2(ns_actual_approx)).long()  # [nx, ny, nz]
 
-            # Step 1: Initialize mesh interpolator
+            # Init 1: Initialize mesh interpolator
             MI = MeshInterpolator(
                 cell, ns, interpolation_order=self.interpolation_order
             )
 
-            # Step 2: Perform Fourier space convolution (FSC) to get potential on mesh
-            # Step 2.1: Generate k-vectors and evaluate kernel function
-            # kvectors = self._generate_kvectors(ns=ns, cell=cell)
+            # Init 2: Perform Fourier space convolution (FSC) to get kernel on mesh
+            # 2.1: Generate k-vectors and evaluate kernel function
             kvectors = generate_kvectors_for_mesh(ns=ns, cell=cell)
             knorm_sq = torch.sum(kvectors**2, dim=3)
 
-            # Step 2.2: Evaluate kernel function (careful, tensor shapes are different from
+            # 2.2: Evaluate kernel function (careful, tensor shapes are different from
             # the pure Ewald implementation since we are no longer flattening)
             ivolume = 1.0 / cell.det()
             # pre-scale with volume to save some multiplications further down
@@ -190,13 +189,15 @@ class _PMEPotentialImpl(PeriodicBase):
             self._cache["G"] = G
             self._cache["MI"] = MI
         else:
+            # Retrive cached components
             G = self._cache["G"]
             MI = self._cache["MI"]
 
+        # Step 1. Compute density interpolation
         MI.compute_interpolation_weights(positions)
         rho_mesh = MI.points_to_mesh(particle_weights=charges)
 
-        # Step 2.3: Perform actual convolution using FFT
+        # Step 2: Perform actual convolution using FFT
         dims = (1, 2, 3)  # dimensions along which to Fourier transform
         rho_hat = torch.fft.rfftn(rho_mesh, norm="backward", dim=dims)
         rho_hat *= G  # convolution with the kernel
