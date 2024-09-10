@@ -113,7 +113,7 @@ class _PMEPotentialImpl(PeriodicBase):
 
         # Step 2.2: Evaluate kernel function (careful, tensor shapes are different from
         # the pure Ewald implementation since we are no longer flattening)
-        ivolume = 1/cell.det()        
+        ivolume = 1.0/cell.det()        
         # pre-scale with volume to save some multiplications further down
         G = self.potential.potential_fourier_from_k_sq(knorm_sq, smearing) * ivolume
         fill_value = self.potential.potential_fourier_at_zero(smearing)
