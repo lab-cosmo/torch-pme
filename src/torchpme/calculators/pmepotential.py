@@ -113,8 +113,7 @@ class _PMEPotentialImpl(PeriodicBase):
 
         # Step 2.2: Evaluate kernel function (careful, tensor shapes are different from
         # the pure Ewald implementation since we are no longer flattening)
-        ivolume = 1/cell.det()
-        
+        ivolume = 1/cell.det()        
         # pre-scale with volume to save some multiplications further down
         G = self.potential.potential_fourier_from_k_sq(knorm_sq, smearing) * ivolume
         fill_value = self.potential.potential_fourier_at_zero(smearing)
@@ -122,13 +121,9 @@ class _PMEPotentialImpl(PeriodicBase):
 
         # Step 2.3: Perform actual convolution using FFT
         dims = (1, 2, 3)  # dimensions along which to Fourier transform        
-        """
         rho_hat = torch.fft.rfftn(rho_mesh, norm="backward", dim=dims)        
-        
         rho_hat *= G # convolution with the kernel
-        
         potential_mesh = torch.fft.irfftn(rho_hat, norm="forward", dim=dims)
-        """
         
         """
         bmesh = rho_mesh.permute(1,2,3,0)
@@ -137,12 +132,14 @@ class _PMEPotentialImpl(PeriodicBase):
         test = torch.fft.irfftn(bhat, norm="forward", dim=(0,1,2)).permute(3,0,1,2)
         """
         
+        """
         # it appears that irfftn is best performed on the "slow" dimensions
         rho_hat = torch.fft.rfftn(rho_mesh, norm="backward", dim=dims)        
         rho_hat *= G # convolution with the kernel
         potential_mesh = torch.fft.irfftn(rho_hat.permute(1,2,3,0), 
                                           norm="forward", dim=(0,1,2)).permute(3,0,1,2)
-                
+        """
+        
         # Step 3: Back interpolation
         interpolated_potential = MI.mesh_to_points(potential_mesh)
 
