@@ -1,7 +1,7 @@
 import os
 import subprocess
 import sys
-import tomllib
+import toml
 from datetime import datetime
 
 
@@ -30,8 +30,8 @@ from generate_examples.conf import sphinx_gallery_conf  # noqa
 # The master toctree document.
 master_doc = "index"
 
-with open(os.path.join(ROOT, "pyproject.toml"), "rb") as fp:
-    project_dict = tomllib.load(fp)["project"]
+with open(os.path.join(ROOT, "pyproject.toml"), "r") as fp:
+    project_dict = toml.load(fp)["project"]
 
 project = project_dict["name"]
 author = ", ".join(a["name"] for a in project_dict["authors"])
