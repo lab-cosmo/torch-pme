@@ -75,8 +75,7 @@ class _EwaldPotentialImpl(PeriodicBase):
             lr_wavelength=lr_wavelength,
         )
 
-        # Divide by 2 due to double counting of atom pairs
-        return (potential_sr + potential_lr) / 2
+        return potential_sr + potential_lr
 
     def _compute_lr(
         self,
@@ -150,7 +149,7 @@ class _EwaldPotentialImpl(PeriodicBase):
             )
             energy -= charges * self_contrib
 
-        return energy
+        return energy / 2
 
 
 class EwaldPotential(CalculatorBaseTorch, _EwaldPotentialImpl):
@@ -241,13 +240,13 @@ class EwaldPotential(CalculatorBaseTorch, _EwaldPotentialImpl):
             box/unit cell of the system. Each row should be one of the bounding box
             vector; and columns should contain the x, y, and z components of these
             vectors (i.e. the cell should be given in row-major order).
-        :param neighbor_indices: Optional single or list of 2D tensors of shape ``(2,
-            n)``, where ``n`` is the number of atoms. The two rows correspond to the
-            indices of a **full neighbor list** for the two atoms which are considered
+        :param neighbor_indices: Optional single or list of 2D tensors of shape ``(n,
+            2)``, where ``n`` is the number of atoms. The two columns correspond to the
+            indices of a **half neighbor list** for the two atoms which are considered
             neighbors (e.g. within a cutoff distance).
-        :param neighbor_shifts: Optional single or list of 2D tensors of shape (3, n),
-             where n is the number of atoms. The 3 rows correspond to the shift indices
-             for periodic images of a **full neighbor list**.
+        :param neighbor_shifts: Optional single or list of 2D tensors of shape (n, 3),
+             where n is the number of pairs. The 3 columns correspond to the shift
+             indices for periodic images of a **half neighbor list**.
         :return: Single or list of torch tensors containing the potential(s) for all
             positions. Each tensor in the list is of shape ``(len(positions),
             len(charges))``, where If the inputs are only single tensors only a single

@@ -11,13 +11,13 @@ mts_torch = pytest.importorskip("metatensor.torch")
 mts_atomistic = pytest.importorskip("metatensor.torch.atomistic")
 
 
-def compute_neighbors(system, cutoff: Optional[float] = None, full_list: bool = True):
+def compute_neighbors(system, cutoff: Optional[float] = None):
     if cutoff is None:
         cell_dimensions = torch.linalg.norm(system.cell, dim=1)
         cutoff_torch = torch.min(cell_dimensions) / 2 - 1e-6
         cutoff = cutoff_torch.item()
 
-    nl = NeighborList(cutoff=cutoff, full_list=full_list)
+    nl = NeighborList(cutoff=cutoff, full_list=False)
     i, j, S, D = nl.compute(
         points=system.positions, box=system.cell, periodic=True, quantities="ijSD"
     )
@@ -25,10 +25,10 @@ def compute_neighbors(system, cutoff: Optional[float] = None, full_list: bool = 
     i = torch.from_numpy(i.astype(int))
     j = torch.from_numpy(j.astype(int))
 
-    neighbor_indices = torch.vstack([i, j])
+    neighbor_indices = torch.stack([i, j], dim=1)
     neighbor_shifts = torch.from_numpy(S.astype(int))
 
-    sample_values = torch.hstack([neighbor_indices.T, neighbor_shifts])
+    sample_values = torch.hstack([neighbor_indices, neighbor_shifts])
     samples = mts_torch.Labels(
         names=[
             "first_atom",

@@ -175,7 +175,7 @@ class CalculatorBaseMetatensor(torch.nn.Module):
             calculations. The system should have ``"charges"`` using the
             :py:meth:`add_data <metatensor.torch.atomistic.System.add_data>` method.
         :param neighbors: single TensorBlock or list of a
-            :py:class:`metatensor.torch.TensorBlock` containing the **full neighbor
+            :py:class:`metatensor.torch.TensorBlock` containing the **half neighbor
             list**, required for periodic computations (Ewald, PME) and optional for
             direct computations. If a neighbor list is attached to a
             :py:class`metatensor.torch.atomistic.System` it can be extracted with the
@@ -207,7 +207,7 @@ class CalculatorBaseMetatensor(torch.nn.Module):
             if neighbors_single is not None:
                 neighbor_indices = neighbors_single.samples.view(
                     ["first_atom", "second_atom"]
-                ).values.T
+                ).values
                 if self._device.type == "cpu":
                     # move data to 64-bit integers, for some reason indexing with 64-bit
                     # is a lot faster than using 32-bit integers on CPU. CUDA seems fine

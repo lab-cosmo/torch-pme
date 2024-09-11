@@ -36,8 +36,8 @@ class _DirectPotentialImpl:
 
         potentials_bare = self.potential.potential_from_dist(dists)
 
-        atom_is = neighbor_indices_tensor[0]
-        atom_js = neighbor_indices_tensor[1]
+        atom_is = neighbor_indices_tensor[:, 0]
+        atom_js = neighbor_indices_tensor[:, 1]
 
         contributions = charges[atom_js] * potentials_bare.unsqueeze(-1)
 
@@ -129,13 +129,13 @@ class DirectPotential(CalculatorBaseTorch, _DirectPotentialImpl):
             box/unit cell of the system. Each row should be one of the bounding box
             vector; and columns should contain the x, y, and z components of these
             vectors (i.e. the cell should be given in row-major order).
-        :param neighbor_indices: Optional single or list of 2D tensors of shape ``(2,
-            n)``, where ``n`` is the number of atoms. The two rows correspond to the
-            indices of a **full neighbor list** for the two atoms which are considered
+        :param neighbor_indices: Optional single or list of 2D tensors of shape ``(n,
+            2)``, where ``n`` is the number of atoms. The two rows correspond to the
+            indices of a **half neighbor list** for the two atoms which are considered
             neighbors (e.g. within a cutoff distance).
-        :param neighbor_shifts: Optional single or list of 2D tensors of shape (3, n),
-             where n is the number of atoms. The 3 rows correspond to the shift indices
-             for periodic images of a **full neighbor list**.
+        :param neighbor_shifts: Optional single or list of 2D tensors of shape ``(n,
+             3)``, where n is the number of atoms. The 3 rows correspond to the shift
+             indices for periodic images of a **half neighbor list**.
         :return: Single or List of torch Tensors containing the potential(s) for all
             positions. Each tensor in the list is of shape ``(len(positions),
             len(charges))``, where If the inputs are only single tensors only a single

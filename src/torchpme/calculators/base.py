@@ -196,9 +196,9 @@ class CalculatorBaseTorch(torch.nn.Module):
 
             # check shape, dtype and device of neighbor_indices and neighbor_shifts
             if neighbor_indices_single is not None:
-                if neighbor_indices_single.shape[0] != 2:
+                if neighbor_indices_single.shape[1] != 2:
                     raise ValueError(
-                        "neighbor_indices is expected to have shape [2, num_neighbors]"
+                        "neighbor_indices is expected to have shape [num_neighbors, 2]"
                         f", but got {list(neighbor_indices_single.shape)} for one "
                         "structure"
                     )
@@ -232,10 +232,10 @@ class CalculatorBaseTorch(torch.nn.Module):
                 neighbor_indices_single is not None
                 and neighbor_shifts_single is not None
             ):
-                if neighbor_shifts_single.shape[0] != neighbor_indices_single.shape[1]:
+                if neighbor_shifts_single.shape[0] != neighbor_indices_single.shape[0]:
                     raise ValueError(
                         "`neighbor_indices` and `neighbor_shifts` need to have shapes "
-                        "[2, num_neighbors] and [num_neighbors, 3]. For at least one "
+                        "[num_neighbors, 2] and [num_neighbors, 3]. For at least one "
                         f"structure, got {list(neighbor_indices_single.shape)} and "
                         f"{list(neighbor_shifts_single.shape)}, "
                         "which is inconsistent"
@@ -356,8 +356,8 @@ class PeriodicBase:
         else:
             potentials_bare = self.potential.potential_sr_from_dist(dists, smearing)
 
-        atom_is = neighbor_indices[0]
-        atom_js = neighbor_indices[1]
+        atom_is = neighbor_indices[:, 0]
+        atom_js = neighbor_indices[:, 1]
 
         contributions = charges[atom_js] * potentials_bare.unsqueeze(-1)
 

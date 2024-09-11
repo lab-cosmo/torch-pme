@@ -96,7 +96,7 @@ def test_corrrect_value_extraction(system):
     neighbors = compute_neighbors(system, cutoff=cutoff)
 
     # Compute reference neighborlist
-    nl = NeighborList(cutoff=cutoff, full_list=True)
+    nl = NeighborList(cutoff=cutoff, full_list=False)
     i, j, S = nl.compute(
         points=system.positions, box=system.cell, periodic=True, quantities="ijS"
     )
@@ -104,7 +104,7 @@ def test_corrrect_value_extraction(system):
     i = torch.from_numpy(i.astype(int))
     j = torch.from_numpy(j.astype(int))
 
-    neighbor_indices = torch.vstack([i, j])
+    neighbor_indices = torch.stack([i, j], dim=1)
     neighbor_shifts = torch.from_numpy(S.astype(int))
 
     calculator.compute(system, neighbors)

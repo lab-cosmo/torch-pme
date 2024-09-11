@@ -46,17 +46,17 @@ positions = torch.tensor([(0, 0, 0), (0.5, 0.5, 0.5)])
 cell = torch.eye(3)
 
 # %%
-# Based on the system we compute the corresponding full neighbor list using `vesin
+# Based on the system we compute the corresponding half neighbor list using `vesin
 # <https://luthaf.fr/vesin>`_ and rearrange the results to be suitable for the
 # calculations below.
 
-nl = NeighborList(cutoff=cutoff, full_list=True)
+nl = NeighborList(cutoff=cutoff, full_list=False)
 
 i, j, S, D = nl.compute(points=positions, box=cell, periodic=True, quantities="ijSD")
 
 i = torch.from_numpy(i.astype(int))
 j = torch.from_numpy(j.astype(int))
-neighbor_indices = torch.vstack([i, j])
+neighbor_indices = torch.stack([i, j], dim=1)
 neighbor_shifts = torch.from_numpy(S.astype(int))
 
 distances = torch.from_numpy(D).reshape(-1, 3, 1)
@@ -176,11 +176,8 @@ system = System(types=types, positions=positions, cell=cell)
 # %%
 # We first add the neighbor list to the ``system``. This requires creating a
 # ``NeighborList`` object to store the *neighbor indices*, *distances*, and *shifts*.
-# The :py:class:`NeighborListOptions <metatensor.torch.atomistic.NeighborListOptions>`
-# class is used to specify the ``cutoff`` distance and whether to use the ``full``
-# neighbor list.
 
-sample_values = torch.hstack([neighbor_indices.T, neighbor_shifts])
+sample_values = torch.hstack([neighbor_indices, neighbor_shifts])
 samples = Labels(
     names=[
         "first_atom",

@@ -45,7 +45,7 @@ class PMEPotential(CalculatorBaseMetatensor, _PMEPotentialImpl):
 
     >>> cell_dimensions = torch.linalg.norm(system.cell, dim=1)
     >>> cutoff = torch.min(cell_dimensions) / 2 - 1e-6
-    >>> nl = NeighborList(cutoff=cutoff, full_list=True)
+    >>> nl = NeighborList(cutoff=cutoff, full_list=False)
     >>> i, j, S, D = nl.compute(
     ...     points=system.positions, box=system.cell, periodic=True, quantities="ijSD"
     ... )

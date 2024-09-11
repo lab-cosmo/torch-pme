@@ -88,8 +88,7 @@ class _PMEPotentialImpl(PeriodicBase):
             lr_wavelength=mesh_spacing,
         )
 
-        # Divide by 2 due to double counting of atom pairs
-        return (potential_sr + potential_lr) / 2
+        return potential_sr + potential_lr
 
     def _compute_lr(
         self,
@@ -158,7 +157,7 @@ class _PMEPotentialImpl(PeriodicBase):
             self_contrib = torch.sqrt(torch.full([], fill_value, device=device))
             interpolated_potential -= charges * self_contrib
 
-        return interpolated_potential
+        return interpolated_potential / 2
 
 
 class PMEPotential(CalculatorBaseTorch, _PMEPotentialImpl):
@@ -218,7 +217,7 @@ class PMEPotential(CalculatorBaseTorch, _PMEPotentialImpl):
 
     >>> cell_dimensions = torch.linalg.norm(cell, dim=1)
     >>> cutoff = torch.min(cell_dimensions) / 2 - 1e-6
-    >>> nl = NeighborList(cutoff=cutoff, full_list=True)
+    >>> nl = NeighborList(cutoff=cutoff, full_list=False)
     >>> i, j, S = nl.compute(
     ...     points=positions, box=cell, periodic=True, quantities="ijS"
     ... )
@@ -228,7 +227,7 @@ class PMEPotential(CalculatorBaseTorch, _PMEPotentialImpl):
 
     >>> i = torch.from_numpy(i.astype(int))
     >>> j = torch.from_numpy(j.astype(int))
-    >>> neighbor_indices = torch.vstack([i, j])
+    >>> neighbor_indices = torch.stack([i, j], dim=1)
     >>> neighbor_shifts = torch.from_numpy(S.astype(int))
 
     If you inspect the neighborlist you will notice that they are empty for the given
@@ -294,13 +293,13 @@ class PMEPotential(CalculatorBaseTorch, _PMEPotentialImpl):
             box/unit cell of the system. Each row should be one of the bounding box
             vector; and columns should contain the x, y, and z components of these
             vectors (i.e. the cell should be given in row-major order).
-        :param neighbor_indices: Optional single or list of 2D tensors of shape ``(2,
-            n)``, where ``n`` is the number of atoms. The two rows correspond to the
-            indices of a **full neighbor list** for the two atoms which are considered
+        :param neighbor_indices: Optional single or list of 2D tensors of shape ``(n,
+            2)``, where ``n`` is the number of atoms. The two columns correspond to the
+            indices of a **half neighbor list** for the two atoms which are considered
             neighbors (e.g. within a cutoff distance).
-        :param neighbor_shifts: Optional single or list of 2D tensors of shape (3, n),
-             where n is the number of atoms. The 3 rows correspond to the shift indices
-             for periodic images of a **full neighbor list**.
+        :param neighbor_shifts: Optional single or list of 2D tensors of shape (n, 3),
+             where n is the number of pairs. The 3 columns correspond to the shift
+             indices for periodic images of a **half neighbor list**.
         :return: Single or list of torch tensors containing the potential(s) for all
             positions. Each tensor in the list is of shape ``(len(positions),
             len(charges))``, where If the inputs are only single tensors only a single

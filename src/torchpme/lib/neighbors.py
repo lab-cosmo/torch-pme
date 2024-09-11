@@ -21,9 +21,12 @@ def all_neighbor_indices(
     -------
     >>> neighbor_indices = all_neighbor_indices(num_atoms=3)
     >>> print(neighbor_indices)
-    tensor([[1, 2, 0, 2, 0, 1],
-            [0, 0, 1, 1, 2, 2]])
-
+    tensor([[1, 0],
+            [2, 0],
+            [0, 1],
+            [2, 1],
+            [0, 2],
+            [1, 2]])
     """
     indices = torch.arange(num_atoms, dtype=dtype, device=device).repeat(num_atoms, 1)
 
@@ -33,7 +36,7 @@ def all_neighbor_indices(
     # Filter out the self pairs
     mask = atom_is != atom_js
 
-    return torch.vstack((atom_is[mask], atom_js[mask]))
+    return torch.stack((atom_is[mask], atom_js[mask]), dim=1)
 
 
 def distances(
@@ -47,7 +50,7 @@ def distances(
 
     :param positions: Tensor of shape ``(num_atoms, 3)`` containing the positions of
         each atom.
-    :param neighbor_indices: Tensor of shape ``(2, num_pairs)`` containing pairs of atom
+    :param neighbor_indices: Tensor of shape ``(num_pairs, 2)`` containing pairs of atom
         indices.
     :param cell: Optional tensor of shape ``(3, 3)`` representing the periodic boundary
         conditions (PBC) cell vectors.
@@ -62,7 +65,7 @@ def distances(
     -------
     >>> import torch
     >>> positions = torch.tensor([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]])
-    >>> neighbor_indices = torch.tensor([[0, 0, 1], [1, 2, 2]])
+    >>> neighbor_indices = torch.tensor([[0, 1], [0, 2], [1, 2]])
     >>> dists = distances(positions, neighbor_indices)
     >>> print(dists)
     tensor([1.0000, 1.0000, 1.4142])
@@ -75,8 +78,8 @@ def distances(
     >>> print(dists)
     tensor([1.0000, 1.4142, 1.4142])
     """
-    atom_is = neighbor_indices[0]
-    atom_js = neighbor_indices[1]
+    atom_is = neighbor_indices[:, 0]
+    atom_js = neighbor_indices[:, 1]
 
     pos_is = positions[atom_is]
     pos_js = positions[atom_js]

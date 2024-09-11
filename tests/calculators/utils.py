@@ -15,13 +15,13 @@ def neighbor_list_torch(
         cutoff_torch = torch.min(cell_dimensions) / 2 - 1e-6
         cutoff = cutoff_torch.item()
 
-    nl = NeighborList(cutoff=cutoff, full_list=True)
+    nl = NeighborList(cutoff=cutoff, full_list=False)
     i, j, S = nl.compute(points=positions, box=cell, periodic=True, quantities="ijS")
 
     i = torch.from_numpy(i.astype(int))
     j = torch.from_numpy(j.astype(int))
 
-    neighbor_indices = torch.vstack([i, j])
+    neighbor_indices = torch.stack([i, j], dim=1)
     neighbor_shifts = torch.from_numpy(S.astype(int))
 
     return neighbor_indices, neighbor_shifts
