@@ -117,7 +117,7 @@ class TestWorkflow:
         calculator = CalculatorClass(**params)
         if periodic:
             cell = torch.eye(3, dtype=dtype, device=device)
-            neighbor_indices = torch.tensor([0, 0]).reshape(-1, 1)
+            neighbor_indices = torch.tensor([0, 0]).unsqueeze(1)
             neighbor_shifts = torch.tensor([0, 0, 0]).reshape(1, -1)
             potential = calculator.compute(
                 positions=positions,

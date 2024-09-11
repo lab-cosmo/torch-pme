@@ -67,7 +67,7 @@ class DirectPotential(CalculatorBaseTorch, _DirectPotentialImpl):
     Define simple example structure
 
     >>> positions = torch.tensor([[0.0, 0.0, 0.0], [0.0, 0.0, 2.0]])
-    >>> charges = torch.tensor([1.0, -1.0]).reshape(-1, 1)
+    >>> charges = torch.tensor([1.0, -1.0]).unsqueeze(1)
 
     Compute features
 
@@ -78,6 +78,10 @@ class DirectPotential(CalculatorBaseTorch, _DirectPotentialImpl):
 
     Which is the expected potential since :math:`V \propto 1/r` where :math:`r` is the
     distance between the particles.
+
+    Note that you can optionally pass ``neighbor_indices`` to the system to restrict the
+    computation to certain pairs. See example of :py:class:`torchpme.PMEPotential` for
+    details on the process.
     """
 
     def __init__(self, exponent: float = 1.0):

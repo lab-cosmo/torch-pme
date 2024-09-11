@@ -28,7 +28,7 @@ manipulating atomic structures.
 # %%
 import torch
 from metatensor.torch import Labels, TensorBlock
-from metatensor.torch.atomistic import NeighborListOptions, System
+from metatensor.torch.atomistic import System
 from vesin import NeighborList
 
 import torchpme
@@ -194,12 +194,9 @@ samples = Labels(
 
 components = Labels(names=["xyz"], values=torch.tensor([[0, 1, 2]]).T)
 properties = Labels(names=["distance"], values=torch.tensor([[0]]))
-neighbor_list = TensorBlock(
+neighbors = TensorBlock(
     torch.tensor(distances).view(-1, 3, 1), samples, [components], properties
 )
-
-nl_options = NeighborListOptions(cutoff=cutoff, full_list=True)
-system.add_neighbor_list(options=nl_options, neighbors=neighbor_list)
 
 # %%
 # Now the ``system`` is ready to be used inside the calculators
@@ -225,7 +222,7 @@ system.add_data(name="charges", data=data)
 # %%
 # We now calculate the potential using the MetaPMEPotential calculator
 
-potential_metatensor = calculator_metatensor.compute(system)
+potential_metatensor = calculator_metatensor.compute(system, neighbors)
 
 # %%
 # The calculated potential is wrapped inside a :py:class:`TensorMap
@@ -270,7 +267,7 @@ system.add_data(name="charges", data=data_one_hot, override=True)
 
 # %%
 # Finally, we calculate the potential using ``calculator_metatensor``
-potential = calculator_metatensor.compute(system)
+potential = calculator_metatensor.compute(system, neighbors)
 
 # %%
 # And as above, the values of the potential are the same.

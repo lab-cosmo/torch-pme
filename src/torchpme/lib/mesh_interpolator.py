@@ -47,6 +47,13 @@ class MeshInterpolator:
             )
 
         self.cell = cell
+        self.inverse_cell = cell.clone()
+        if self.cell.is_cuda:
+            # use function that does not synchronize with the CPU
+            self.inverse_cell = torch.linalg.inv_ex(cell)[0]
+        else:
+            self.inverse_cell = torch.linalg.inv(cell)
+
         self.ns_mesh = ns_mesh
         self.interpolation_order = interpolation_order
 
@@ -54,15 +61,15 @@ class MeshInterpolator:
         self._device = cell.device
 
         # TorchScript requires to initialize all attributes in __init__
-        self.interpolation_weights: torch.Tensor = torch.tensor(
-            0, device=self._device, dtype=self._dtype
+        self.interpolation_weights: torch.Tensor = torch.zeros(
+            1, device=self._device, dtype=self._dtype
         )
-        self.x_shifts: torch.Tensor = torch.tensor(0, device=self._device)
-        self.y_shifts: torch.Tensor = torch.tensor(0, device=self._device)
-        self.z_shifts: torch.Tensor = torch.tensor(0, device=self._device)
-        self.x_indices: torch.Tensor = torch.tensor(0, device=self._device)
-        self.y_indices: torch.Tensor = torch.tensor(0, device=self._device)
-        self.z_indices: torch.Tensor = torch.tensor(0, device=self._device)
+        self.x_shifts: torch.Tensor = torch.zeros(1, device=self._device)
+        self.y_shifts: torch.Tensor = torch.zeros(1, device=self._device)
+        self.z_shifts: torch.Tensor = torch.zeros(1, device=self._device)
+        self.x_indices: torch.Tensor = torch.zeros(1, device=self._device)
+        self.y_indices: torch.Tensor = torch.zeros(1, device=self._device)
+        self.z_indices: torch.Tensor = torch.zeros(1, device=self._device)
 
     def _compute_1d_weights(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -145,8 +152,7 @@ class MeshInterpolator:
             )
 
         # Compute positions relative to the mesh basis vectors
-        positions_rel = torch.matmul(positions, torch.inverse(self.cell))
-        positions_rel *= self.ns_mesh
+        positions_rel = self.ns_mesh * torch.matmul(positions, self.inverse_cell)
 
         # Calculate positions and distances based on interpolation order
         if self.interpolation_order % 2 == 0:

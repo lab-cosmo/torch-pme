@@ -11,9 +11,7 @@ mts_torch = pytest.importorskip("metatensor.torch")
 mts_atomistic = pytest.importorskip("metatensor.torch.atomistic")
 
 
-def add_neighbor_list(
-    system, cutoff: Optional[float] = None, full_list: bool = True
-) -> None:
+def compute_neighbors(system, cutoff: Optional[float] = None, full_list: bool = True):
     if cutoff is None:
         cell_dimensions = torch.linalg.norm(system.cell, dim=1)
         cutoff_torch = torch.min(cell_dimensions) / 2 - 1e-6
@@ -51,5 +49,4 @@ def add_neighbor_list(
         properties=mts_torch.Labels.range("distance", 1),
     )
 
-    nl_options = mts_atomistic.NeighborListOptions(cutoff=cutoff, full_list=full_list)
-    system.add_neighbor_list(options=nl_options, neighbors=neighbors)
+    return neighbors
