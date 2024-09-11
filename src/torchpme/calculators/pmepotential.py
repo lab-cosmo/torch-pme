@@ -11,8 +11,8 @@ class _PMEPotentialImpl(PeriodicBase):
     def __init__(
         self,
         exponent: float,
-        atomic_smearing: Union[None, float],
-        mesh_spacing: Union[None, float],
+        atomic_smearing: Optional[float],
+        mesh_spacing: Optional[float],
         interpolation_order: int,
         subtract_self: bool,
         subtract_interior: bool,
@@ -47,9 +47,9 @@ class _PMEPotentialImpl(PeriodicBase):
         self,
         positions: torch.Tensor,
         charges: torch.Tensor,
-        cell: Optional[torch.Tensor],
-        neighbor_indices: Optional[torch.Tensor],
-        neighbor_shifts: Optional[torch.Tensor],
+        cell: torch.Tensor,
+        neighbor_indices: torch.Tensor,
+        neighbor_distances: torch.Tensor,
     ) -> torch.Tensor:
         # Set the defaut values of convergence parameters The total computational cost =
         # cost of SR part + cost of LR part Bigger smearing increases the cost of the SR
@@ -58,11 +58,7 @@ class _PMEPotentialImpl(PeriodicBase):
         # the cost of the LR part. The auxilary parameter mesh_spacing then controls the
         # convergence of the SR and LR sums, respectively. The default values are chosen
         # to reach a convergence on the order of 1e-4 to 1e-5 for the test structures.
-        cell, neighbor_indices, neighbor_shifts, smearing = self._prepare(
-            cell=cell,
-            neighbor_indices=neighbor_indices,
-            neighbor_shifts=neighbor_shifts,
-        )
+        smearing = self._estimate_smearing(cell)
 
         if self.mesh_spacing is None:
             mesh_spacing = smearing / 8.0
@@ -71,12 +67,10 @@ class _PMEPotentialImpl(PeriodicBase):
 
         # Compute short-range (SR) part using a real space sum
         potential_sr = self._compute_sr(
-            positions=positions,
-            charges=charges,
-            cell=cell,
             smearing=smearing,
+            charges=charges,
             neighbor_indices=neighbor_indices,
-            neighbor_shifts=neighbor_shifts,
+            neighbor_distances=neighbor_distances,
         )
 
         # Compute long-range (LR) part using a Fourier / reciprocal space sum
@@ -161,7 +155,7 @@ class _PMEPotentialImpl(PeriodicBase):
 
 
 class PMEPotential(CalculatorBaseTorch, _PMEPotentialImpl):
-    r"""Specie-wise long-range potential using a particle mesh-based Ewald (PME).
+    r"""Potential using a particle mesh-based Ewald (PME).
 
     Scaling as :math:`\mathcal{O}(NlogN)` with respect to the number of particles
     :math:`N` used as a reference to test faster implementations.
@@ -202,13 +196,15 @@ class PMEPotential(CalculatorBaseTorch, _PMEPotentialImpl):
     reference value is :math:`2 \cdot 1.7626 / \sqrt{3} \approx 2.0354`.
 
     >>> import torch
-    >>> from vesin import NeighborList
+    >>> from vesin.torch import NeighborList
 
     Define crystal structure
 
-    >>> positions = torch.tensor([[0.0, 0.0, 0.0], [0.5, 0.5, 0.5]])
-    >>> charges = torch.tensor([1.0, -1.0]).unsqueeze(1)
-    >>> cell = torch.eye(3)
+    >>> positions = torch.tensor(
+    ...     [[0.0, 0.0, 0.0], [0.5, 0.5, 0.5]], dtype=torch.float64
+    ... )
+    >>> charges = torch.tensor([1.0, -1.0], dtype=torch.float64).unsqueeze(1)
+    >>> cell = torch.eye(3, dtype=torch.float64)
 
     Compute the neighbor indices (``"i"``, ``"j"``) and the neighbor shifts ("``S``")
     using the ``vesin`` package. Refer to the `documentation
@@ -218,8 +214,8 @@ class PMEPotential(CalculatorBaseTorch, _PMEPotentialImpl):
     >>> cell_dimensions = torch.linalg.norm(cell, dim=1)
     >>> cutoff = torch.min(cell_dimensions) / 2 - 1e-6
     >>> nl = NeighborList(cutoff=cutoff, full_list=False)
-    >>> i, j, S = nl.compute(
-    ...     points=positions, box=cell, periodic=True, quantities="ijS"
+    >>> i, j, d = nl.compute(
+    ...     points=positions, box=cell, periodic=True, quantities="ijd"
     ... )
 
     The ``vesin`` calculator returned the indices and the neighbor shifts. We know stack
@@ -228,7 +224,7 @@ class PMEPotential(CalculatorBaseTorch, _PMEPotentialImpl):
     >>> i = torch.from_numpy(i.astype(int))
     >>> j = torch.from_numpy(j.astype(int))
     >>> neighbor_indices = torch.stack([i, j], dim=1)
-    >>> neighbor_shifts = torch.from_numpy(S.astype(int))
+    >>> neighbor_distances = d
 
     If you inspect the neighborlist you will notice that they are empty for the given
     system, which means the the whole potential will be calculated using the long range
@@ -241,7 +237,7 @@ class PMEPotential(CalculatorBaseTorch, _PMEPotentialImpl):
     ...     charges=charges,
     ...     cell=cell,
     ...     neighbor_indices=neighbor_indices,
-    ...     neighbor_shifts=neighbor_shifts,
+    ...     neighbor_distances=neighbor_distances,
     ... )
     tensor([[-1.0192],
             [ 1.0192]])
@@ -273,9 +269,9 @@ class PMEPotential(CalculatorBaseTorch, _PMEPotentialImpl):
         self,
         positions: Union[List[torch.Tensor], torch.Tensor],
         charges: Union[List[torch.Tensor], torch.Tensor],
-        cell: Union[List[Optional[torch.Tensor]], Optional[torch.Tensor]],
-        neighbor_indices: Union[List[Optional[torch.Tensor]], Optional[torch.Tensor]],
-        neighbor_shifts: Union[List[Optional[torch.Tensor]], Optional[torch.Tensor]],
+        cell: Union[List[torch.Tensor], torch.Tensor],
+        neighbor_indices: Union[List[torch.Tensor], torch.Tensor],
+        neighbor_distances: Union[List[torch.Tensor], torch.Tensor],
     ) -> Union[torch.Tensor, List[torch.Tensor]]:
         """Compute potential for all provided "systems" stacked inside list.
 
@@ -293,13 +289,12 @@ class PMEPotential(CalculatorBaseTorch, _PMEPotentialImpl):
             box/unit cell of the system. Each row should be one of the bounding box
             vector; and columns should contain the x, y, and z components of these
             vectors (i.e. the cell should be given in row-major order).
-        :param neighbor_indices: Optional single or list of 2D tensors of shape ``(n,
-            2)``, where ``n`` is the number of atoms. The two columns correspond to the
-            indices of a **half neighbor list** for the two atoms which are considered
-            neighbors (e.g. within a cutoff distance).
-        :param neighbor_shifts: Optional single or list of 2D tensors of shape (n, 3),
-             where n is the number of pairs. The 3 columns correspond to the shift
-             indices for periodic images of a **half neighbor list**.
+        :param neighbor_indices: Single or list of 2D tensors of shape ``(n, 2)``, where
+            ``n`` is the number of neighbors. The two columns correspond to the indices
+            of a **half neighbor list** for the two atoms which are considered neighbors
+            (e.g. within a cutoff distance).
+        :param neighbor_distances: single or list of 1D tensors containing the distance
+            between the ``n`` pairs corresponding to a **half neighbor list**.
         :return: Single or list of torch tensors containing the potential(s) for all
             positions. Each tensor in the list is of shape ``(len(positions),
             len(charges))``, where If the inputs are only single tensors only a single
@@ -311,16 +306,16 @@ class PMEPotential(CalculatorBaseTorch, _PMEPotentialImpl):
             cell=cell,
             charges=charges,
             neighbor_indices=neighbor_indices,
-            neighbor_shifts=neighbor_shifts,
+            neighbor_distances=neighbor_distances,
         )
 
     def forward(
         self,
         positions: Union[List[torch.Tensor], torch.Tensor],
         charges: Union[List[torch.Tensor], torch.Tensor],
-        cell: Union[List[Optional[torch.Tensor]], Optional[torch.Tensor]],
-        neighbor_indices: Union[List[Optional[torch.Tensor]], Optional[torch.Tensor]],
-        neighbor_shifts: Union[List[Optional[torch.Tensor]], Optional[torch.Tensor]],
+        cell: Union[List[torch.Tensor], torch.Tensor],
+        neighbor_indices: Union[List[torch.Tensor], torch.Tensor],
+        neighbor_distances: Union[List[torch.Tensor], torch.Tensor],
     ) -> Union[torch.Tensor, List[torch.Tensor]]:
         """Forward just calls :py:meth:`compute`."""
         return self.compute(
@@ -328,5 +323,5 @@ class PMEPotential(CalculatorBaseTorch, _PMEPotentialImpl):
             charges=charges,
             cell=cell,
             neighbor_indices=neighbor_indices,
-            neighbor_shifts=neighbor_shifts,
+            neighbor_distances=neighbor_distances,
         )

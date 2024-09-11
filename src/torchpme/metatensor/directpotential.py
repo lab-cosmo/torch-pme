@@ -3,7 +3,7 @@ from .base import CalculatorBaseMetatensor
 
 
 class DirectPotential(CalculatorBaseMetatensor, _DirectPotentialImpl):
-    r"""Specie-wise long-range potential using a direct summation over all atoms.
+    r"""Potential using a direct summation.
 
     Refer to :class:`torchpme.DirectPotential` for parameter documentation.
 

@@ -13,56 +13,61 @@ CHARGES_2 = torch.ones((5, 3), dtype=DTYPE, device=DEVICE)
 POSITIONS_2 = 0.7 * torch.arange(15, dtype=DTYPE, device=DEVICE).reshape((5, 3))
 CELL_1 = torch.eye(3, dtype=DTYPE, device=DEVICE)
 CELL_2 = torch.arange(9, dtype=DTYPE, device=DEVICE).reshape((3, 3))
+NEIGHBOR_INDICES = torch.ones(3, 2)
+NEIGHBOR_DISTANCES = torch.ones(3)
 
 
 class CalculatorTest(CalculatorBaseTorch):
-    def compute(self, positions, charges, cell, neighbor_indices, neighbor_shifts):
+    def compute(self, positions, charges, cell, neighbor_indices, neighbor_distances):
         return self._compute_impl(
             positions=positions,
             charges=charges,
             cell=cell,
             neighbor_indices=neighbor_indices,
-            neighbor_shifts=neighbor_shifts,
+            neighbor_distances=neighbor_distances,
         )
 
-    def forward(self, positions, charges, cell, neighbor_indices, neighbor_shifts):
+    def forward(self, positions, charges, cell, neighbor_indices, neighbor_distances):
         return self._compute_impl(
             positions=positions,
             charges=charges,
             cell=cell,
             neighbor_indices=neighbor_indices,
-            neighbor_shifts=neighbor_shifts,
+            neighbor_distances=neighbor_distances,
         )
 
     def _compute_single_system(
-        self, positions, charges, cell, neighbor_indices, neighbor_shifts
+        self, positions, charges, cell, neighbor_indices, neighbor_distances
     ):
         return charges
 
 
 @pytest.mark.parametrize("method_name", ["compute", "forward"])
-@pytest.mark.parametrize(
-    "positions, charges",
-    [
-        (torch.ones([2, 3]), torch.ones(2).reshape((-1, 1))),
-        ([torch.ones([2, 3])], [torch.ones(2).reshape((-1, 1))]),
-        (
-            [torch.ones([2, 3]), torch.ones([4, 3])],
-            [torch.ones(2).reshape((-1, 1)), torch.ones(4).reshape((-1, 1))],
-        ),
-    ],
-)
-def test_compute_output_shapes(method_name, positions, charges):
+@pytest.mark.parametrize("n_elements", (0, 1, 2))
+def test_compute_output_shapes(method_name, n_elements):
     """Test that output type matches the input type"""
     calculator = CalculatorTest()
     method = getattr(calculator, method_name)
 
+    if n_elements > 0:
+        positions = n_elements * [POSITIONS_1]
+        charges = n_elements * [CHARGES_1]
+        cell = n_elements * [CELL_1]
+        neighbor_indices = n_elements * [NEIGHBOR_INDICES]
+        neighbor_distances = n_elements * [NEIGHBOR_DISTANCES]
+    else:
+        positions = POSITIONS_1
+        charges = CHARGES_1
+        cell = CELL_1
+        neighbor_indices = NEIGHBOR_INDICES
+        neighbor_distances = NEIGHBOR_DISTANCES
+
     result = method(
         positions=positions,
         charges=charges,
-        cell=None,
-        neighbor_indices=None,
-        neighbor_shifts=None,
+        cell=cell,
+        neighbor_indices=neighbor_indices,
+        neighbor_distances=neighbor_distances,
     )
     if type(positions) is list:
         assert type(result) is list
@@ -77,13 +82,13 @@ def test_type_check_error():
     calculator = CalculatorTest()
 
     for positions_type in [torch.Tensor, list]:
-        for key in ["charges", "cell", "neighbor_indices", "neighbor_shifts"]:
+        for key in ["charges", "cell", "neighbor_indices", "neighbor_distances"]:
             kwargs = {
                 "positions": positions_type([1]),
                 "charges": positions_type([1]),
                 "cell": positions_type([1]),
                 "neighbor_indices": positions_type([1]),
-                "neighbor_shifts": positions_type([1]),
+                "neighbor_distances": positions_type([1]),
             }
 
             # Set key of interest to a different type then `positions`
@@ -114,8 +119,8 @@ def test_mismatched_numbers_cell():
             positions=[POSITIONS_1, POSITIONS_2],
             charges=[CHARGES_1, CHARGES_2],
             cell=[CELL_1, CELL_2, torch.eye(3)],
-            neighbor_indices=None,
-            neighbor_shifts=None,
+            neighbor_indices=[NEIGHBOR_INDICES, NEIGHBOR_INDICES],
+            neighbor_distances=[NEIGHBOR_DISTANCES, NEIGHBOR_DISTANCES],
         )
 
 
@@ -126,9 +131,9 @@ def test_mismatched_numbers_charges():
         calculator.compute(
             positions=[POSITIONS_1, POSITIONS_2],
             charges=[CHARGES_1, CHARGES_2, CHARGES_2],
-            cell=None,
-            neighbor_indices=None,
-            neighbor_shifts=None,
+            cell=[CELL_1, CELL_2],
+            neighbor_indices=[NEIGHBOR_INDICES, NEIGHBOR_INDICES],
+            neighbor_distances=[NEIGHBOR_DISTANCES, NEIGHBOR_DISTANCES],
         )
 
 
@@ -139,22 +144,26 @@ def test_mismatched_numbers_neighbor_indices():
         calculator.compute(
             positions=[POSITIONS_1, POSITIONS_2],
             charges=[CHARGES_1, CHARGES_2],
-            cell=None,
-            neighbor_indices=[CHARGES_1, CHARGES_2, POSITIONS_1],
-            neighbor_shifts=None,
+            cell=[CELL_1, CELL_2],
+            neighbor_indices=[NEIGHBOR_INDICES, NEIGHBOR_INDICES, NEIGHBOR_INDICES],
+            neighbor_distances=[NEIGHBOR_DISTANCES, NEIGHBOR_DISTANCES],
         )
 
 
-def test_mismatched_numbers_neighbor_shiftss():
+def test_mismatched_numbers_neighbor_distances():
     calculator = CalculatorTest()
-    match = r"Got inconsistent numbers of positions \(2\) and neighbor_shifts \(3\)"
+    match = r"Got inconsistent numbers of positions \(2\) and neighbor_distances \(3\)"
     with pytest.raises(ValueError, match=match):
         calculator.compute(
             positions=[POSITIONS_1, POSITIONS_2],
             charges=[CHARGES_1, CHARGES_2],
-            cell=None,
-            neighbor_indices=None,
-            neighbor_shifts=[CHARGES_1, CHARGES_2, POSITIONS_1],
+            cell=[CELL_1, CELL_2],
+            neighbor_indices=[NEIGHBOR_INDICES, NEIGHBOR_INDICES],
+            neighbor_distances=[
+                NEIGHBOR_DISTANCES,
+                NEIGHBOR_DISTANCES,
+                NEIGHBOR_DISTANCES,
+            ],
         )
 
 
@@ -169,9 +178,9 @@ def test_invalid_shape_positions():
         calculator.compute(
             positions=torch.ones((4, 5), dtype=DTYPE, device=DEVICE),
             charges=CHARGES_1,
-            cell=None,
-            neighbor_indices=None,
-            neighbor_shifts=None,
+            cell=CELL_1,
+            neighbor_indices=NEIGHBOR_INDICES,
+            neighbor_distances=NEIGHBOR_DISTANCES,
         )
 
 
@@ -187,9 +196,9 @@ def test_invalid_dtype_positions():
         calculator.compute(
             positions=[POSITIONS_1, positions_2_wrong_dtype],
             charges=[CHARGES_1, CHARGES_2],
-            cell=None,
-            neighbor_indices=None,
-            neighbor_shifts=None,
+            cell=[CELL_1, CELL_2],
+            neighbor_indices=[NEIGHBOR_INDICES, NEIGHBOR_INDICES],
+            neighbor_distances=[NEIGHBOR_DISTANCES, NEIGHBOR_DISTANCES],
         )
 
 
@@ -200,14 +209,14 @@ def test_invalid_device_positions():
         r"first provided one. Got at least one tensor on device "
         r"meta"
     )
-    positions_2_wrong_device = torch.ones((5, 3), dtype=DTYPE, device="meta")
+    positions_2_wrong_device = POSITIONS_1.to(dtype=DTYPE, device="meta")
     with pytest.raises(ValueError, match=match):
         calculator.compute(
             positions=[POSITIONS_1, positions_2_wrong_device],
             charges=[CHARGES_1, CHARGES_2],
-            cell=None,
-            neighbor_indices=None,
-            neighbor_shifts=None,
+            cell=[CELL_1, CELL_2],
+            neighbor_indices=[NEIGHBOR_INDICES, NEIGHBOR_INDICES],
+            neighbor_distances=[NEIGHBOR_DISTANCES, NEIGHBOR_DISTANCES],
         )
 
 
@@ -223,8 +232,8 @@ def test_invalid_shape_cell():
             positions=POSITIONS_1,
             charges=CHARGES_1,
             cell=torch.ones([2, 2], dtype=DTYPE, device=DEVICE),
-            neighbor_indices=None,
-            neighbor_shifts=None,
+            neighbor_indices=NEIGHBOR_INDICES,
+            neighbor_distances=NEIGHBOR_DISTANCES,
         )
 
 
@@ -239,8 +248,8 @@ def test_invalid_dtype_cell():
             positions=POSITIONS_1,
             charges=CHARGES_1,
             cell=torch.ones([3, 3], dtype=torch.float64, device=DEVICE),
-            neighbor_indices=None,
-            neighbor_shifts=None,
+            neighbor_indices=NEIGHBOR_INDICES,
+            neighbor_distances=NEIGHBOR_DISTANCES,
         )
 
 
@@ -255,8 +264,8 @@ def test_invalid_device_cell():
             positions=POSITIONS_1,
             charges=CHARGES_1,
             cell=torch.ones([3, 3], dtype=DTYPE, device="meta"),
-            neighbor_indices=None,
-            neighbor_shifts=None,
+            neighbor_indices=NEIGHBOR_INDICES,
+            neighbor_distances=NEIGHBOR_DISTANCES,
         )
 
 
@@ -272,9 +281,9 @@ def test_invalid_dim_charges():
         calculator.compute(
             positions=POSITIONS_1,
             charges=torch.ones(len(POSITIONS_1), dtype=DTYPE, device=DEVICE),
-            cell=None,
-            neighbor_indices=None,
-            neighbor_shifts=None,
+            cell=CELL_1,
+            neighbor_indices=NEIGHBOR_DISTANCES,
+            neighbor_distances=NEIGHBOR_DISTANCES,
         )
 
 
@@ -290,9 +299,9 @@ def test_invalid_shape_charges():
         calculator.compute(
             positions=POSITIONS_1,
             charges=torch.ones((6, 2), dtype=DTYPE, device=DEVICE),
-            cell=None,
-            neighbor_indices=None,
-            neighbor_shifts=None,
+            cell=CELL_1,
+            neighbor_indices=NEIGHBOR_INDICES,
+            neighbor_distances=NEIGHBOR_DISTANCES,
         )
 
 
@@ -306,9 +315,9 @@ def test_invalid_dtype_charges():
         calculator.compute(
             positions=POSITIONS_1,
             charges=torch.ones((4, 2), dtype=torch.float64, device=DEVICE),
-            cell=None,
-            neighbor_indices=None,
-            neighbor_shifts=None,
+            cell=CELL_1,
+            neighbor_indices=NEIGHBOR_INDICES,
+            neighbor_distances=NEIGHBOR_DISTANCES,
         )
 
 
@@ -322,35 +331,9 @@ def test_invalid_device_charges():
         calculator.compute(
             positions=POSITIONS_1,
             charges=torch.ones((4, 2), dtype=DTYPE, device="meta"),
-            cell=None,
-            neighbor_indices=None,
-            neighbor_shifts=None,
-        )
-
-
-def test_cell_no_shifts():
-    calculator = CalculatorTest()
-    match = r"Provided `cell` but no `neighbor_shifts`."
-    with pytest.raises(ValueError, match=match):
-        calculator.compute(
-            positions=POSITIONS_1,
-            charges=CHARGES_1,
-            cell=torch.ones([3, 3], dtype=DTYPE, device=DEVICE),
-            neighbor_indices=torch.ones((2, 10), dtype=DTYPE, device=DEVICE),
-            neighbor_shifts=None,
-        )
-
-
-def test_shifts_no_cell():
-    calculator = CalculatorTest()
-    match = r"Provided `neighbor_shifts` but no `cell`."
-    with pytest.raises(ValueError, match=match):
-        calculator.compute(
-            positions=POSITIONS_1,
-            charges=CHARGES_1,
-            cell=None,
-            neighbor_indices=None,
-            neighbor_shifts=torch.ones((10, 3), dtype=DTYPE, device=DEVICE),
+            cell=CELL_1,
+            neighbor_indices=NEIGHBOR_INDICES,
+            neighbor_distances=NEIGHBOR_DISTANCES,
         )
 
 
@@ -364,33 +347,17 @@ def test_invalid_shape_neighbor_indices():
         calculator.compute(
             positions=POSITIONS_1,
             charges=CHARGES_1,
-            cell=None,
+            cell=CELL_1,
             neighbor_indices=torch.ones((4, 10), dtype=DTYPE, device=DEVICE),
-            neighbor_shifts=torch.ones((10, 3), dtype=DTYPE, device=DEVICE),
+            neighbor_distances=NEIGHBOR_DISTANCES,
         )
 
 
-def test_invalid_shape_neighbor_shifts():
+def test_invalid_shape_neighbor_indices_neighbor_distances():
     calculator = CalculatorTest()
     match = (
-        r"neighbor_shifts is expected to have shape \[num_neighbors, 3\]"
-        r", but got \[10, 2\] for one structure"
-    )
-    with pytest.raises(ValueError, match=match):
-        calculator.compute(
-            positions=POSITIONS_1,
-            charges=CHARGES_1,
-            cell=torch.ones(3, 3, dtype=DTYPE, device=DEVICE),
-            neighbor_indices=torch.ones((10, 2), dtype=DTYPE, device=DEVICE),
-            neighbor_shifts=torch.ones((10, 2), dtype=DTYPE, device=DEVICE),
-        )
-
-
-def test_invalid_shape_neighbor_indices_neighbor_shifts():
-    calculator = CalculatorTest()
-    match = (
-        r"`neighbor_indices` and `neighbor_shifts` need to have shapes "
-        r"\[num_neighbors, 2\] and \[num_neighbors, 3\]. For at least one "
+        r"`neighbor_indices` and `neighbor_distances` need to have shapes "
+        r"\[num_neighbors, 2\] and \[num_neighbors\]. For at least one "
         r"structure, got \[10, 2\] and "
         r"\[11, 3\], which is inconsistent"
     )
@@ -398,9 +365,9 @@ def test_invalid_shape_neighbor_indices_neighbor_shifts():
         calculator.compute(
             positions=POSITIONS_1,
             charges=CHARGES_1,
-            cell=torch.ones(3, 3, dtype=DTYPE, device=DEVICE),
+            cell=CELL_1,
             neighbor_indices=torch.ones((10, 2), dtype=DTYPE, device=DEVICE),
-            neighbor_shifts=torch.ones((11, 3), dtype=DTYPE, device=DEVICE),
+            neighbor_distances=torch.ones((11, 3), dtype=DTYPE, device=DEVICE),
         )
 
 
@@ -414,25 +381,25 @@ def test_invalid_device_neighbor_indices():
         calculator.compute(
             positions=POSITIONS_1,
             charges=CHARGES_1,
-            cell=None,
+            cell=CELL_1,
             neighbor_indices=torch.ones((10, 2), dtype=DTYPE, device="meta"),
-            neighbor_shifts=torch.ones((10, 3), dtype=DTYPE, device=DEVICE),
+            neighbor_distances=torch.ones((10), dtype=DTYPE, device=DEVICE),
         )
 
 
-def test_invalid_device_neighbor_shifts():
+def test_invalid_device_neighbor_distances():
     calculator = CalculatorTest()
     match = (
-        r"each `neighbor_shifts` must be on the same device cpu as `positions`, "
+        r"each `neighbor_distances` must be on the same device cpu as `positions`, "
         r"got at least one tensor with device meta"
     )
     with pytest.raises(ValueError, match=match):
         calculator.compute(
             positions=POSITIONS_1,
             charges=CHARGES_1,
-            cell=torch.ones([3, 3], dtype=DTYPE, device=DEVICE),
+            cell=CELL_1,
             neighbor_indices=torch.ones((10, 2), dtype=DTYPE, device=DEVICE),
-            neighbor_shifts=torch.ones((10, 3), dtype=DTYPE, device="meta"),
+            neighbor_distances=torch.ones((10), dtype=DTYPE, device="meta"),
         )
 
 
@@ -457,18 +424,11 @@ def periodic_base():
 
 
 def test_prepare_no_cell():
-    match = r"provide `cell` for periodic calculation"
+    cell = torch.zeros(3, 3)
+    match = (
+        "provided `cell` has a determinant of 0 and therefore is not valid for "
+        "periodic calculation"
+    )
+    print(match)
     with pytest.raises(ValueError, match=match):
-        periodic_base()._prepare(None, torch.tensor([0]), torch.tensor([0]))
-
-
-def test_prepare_no_neighbor_indices():
-    match = r"provide `neighbor_indices` for periodic calculation"
-    with pytest.raises(ValueError, match=match):
-        periodic_base()._prepare(torch.tensor([0]), None, torch.tensor([0]))
-
-
-def test_prepare_no_neighbor_shifts():
-    match = r"provide `neighbor_shifts` for periodic calculation"
-    with pytest.raises(ValueError, match=match):
-        periodic_base()._prepare(torch.tensor([0]), torch.tensor([0]), None)
+        periodic_base()._estimate_smearing(cell=cell)

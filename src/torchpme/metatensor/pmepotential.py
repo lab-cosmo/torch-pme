@@ -5,7 +5,7 @@ from .base import CalculatorBaseMetatensor
 
 
 class PMEPotential(CalculatorBaseMetatensor, _PMEPotentialImpl):
-    r"""Specie-wise long-range potential using a particle mesh-based Ewald (PME).
+    r"""Potential using a particle mesh-based Ewald (PME).
 
     Refer to :class:`torchpme.PMEPotential` for parameter documentation.
 
@@ -17,7 +17,7 @@ class PMEPotential(CalculatorBaseMetatensor, _PMEPotentialImpl):
     >>> import torch
     >>> from metatensor.torch import Labels, TensorBlock
     >>> from metatensor.torch.atomistic import System, NeighborListOptions
-    >>> from vesin import NeighborList
+    >>> from vesin.torch import NeighborList
 
     Define simple example structure
 
@@ -25,7 +25,7 @@ class PMEPotential(CalculatorBaseMetatensor, _PMEPotentialImpl):
     ...     types=torch.tensor([55, 17]),
     ...     positions=torch.tensor([[0.0, 0.0, 0.0], [0.5, 0.5, 0.5]]),
     ...     cell=torch.eye(3),
-    ... )
+    ... ).to(dtype=torch.float64)
 
     Next, we attach the charges to our ``system``
 
@@ -40,8 +40,7 @@ class PMEPotential(CalculatorBaseMetatensor, _PMEPotentialImpl):
 
     Compute the neighbor indices (``"i"``, ``"j"``) and the neighbor shifts ("``S``")
     using the ``vesin`` package. Refer to the `documentation
-    <https://luthaf.fr/vesin>`_ for details on the API. Similarly you can also use
-    ``ase``'s :py:func:`neighbor_list <ase.neighborlist.neighbor_list>`.
+    <https://luthaf.fr/vesin>`_ for details on the API.
 
     >>> cell_dimensions = torch.linalg.norm(system.cell, dim=1)
     >>> cutoff = torch.min(cell_dimensions) / 2 - 1e-6
@@ -53,20 +52,17 @@ class PMEPotential(CalculatorBaseMetatensor, _PMEPotentialImpl):
     The ``vesin`` calculator returned the indices and the neighbor shifts. We know stack
     the together and convert them into the suitable types
 
-    >>> i = torch.from_numpy(i.astype(int))
-    >>> j = torch.from_numpy(j.astype(int))
-    >>> neighbor_indices = torch.vstack([i, j])
-    >>> neighbor_shifts = torch.from_numpy(S.astype(int))
+    >>> neighbor_indices = torch.stack([i, j], dim=1)
 
-    If you inspect the neighborlist you will notice that they are empty for the given
-    system, which means the the whole potential will be calculated using the long range
-    part of the potential.
+    If you inspect the ``neighbor_indices`` you will notice that they are empty for the
+    given system, which means the the whole potential will be calculated using the long
+    range part of the potential.
 
     We now attach the neighbor list to the above defined ``system`` object. For this we
     first create the ``samples`` metatadata for the :py:class:`TensorBlock
     <metatensor.torch.TensorBlock>` which will hold the neighbor list.
 
-    >>> sample_values = torch.hstack([neighbor_indices.T, neighbor_shifts])
+    >>> sample_values = torch.hstack([neighbor_indices, S])
     >>> samples = Labels(
     ...     names=[
     ...         "first_atom",
