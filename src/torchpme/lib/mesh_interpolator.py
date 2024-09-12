@@ -50,6 +50,7 @@ class MeshInterpolator:
             )
 
         self.cell = cell
+        self.inverse_cell = cell.clone()
         if self.cell.is_cuda:
             # use function that does not synchronize with the CPU
             self.inverse_cell = torch.linalg.inv_ex(cell)[0]
