@@ -4,6 +4,7 @@ import torch
 
 from ..lib import generate_kvectors_for_mesh
 from ..lib.mesh_interpolator import MeshInterpolator
+from ..lib.potentials import gamma
 from .base import CalculatorBaseTorch, PeriodicBase
 
 
@@ -16,6 +17,7 @@ class _PMEPotentialImpl(PeriodicBase):
         interpolation_order: int,
         subtract_self: bool,
         subtract_interior: bool,
+        correct_net_charge: bool,
     ):
         if interpolation_order not in [1, 2, 3, 4, 5]:
             raise ValueError("Only `interpolation_order` from 1 to 5 are allowed")
@@ -33,6 +35,10 @@ class _PMEPotentialImpl(PeriodicBase):
         if self.subtract_interior:
             subtract_self = True
         self.subtract_self = subtract_self
+
+        # Store whether a correction term should be added in case the net charge in a
+        # cell is not zero.
+        self.correct_net_charge = correct_net_charge
 
         # TorchScript requires to initialize all attributes in __init__
         self._cell_cache = -1 * torch.ones([3, 3])
@@ -105,6 +111,9 @@ class _PMEPotentialImpl(PeriodicBase):
         device = positions.device
         self._cell_cache = self._cell_cache.to(dtype=dtype, device=device)
 
+        # Inverse of cell volume for later use
+        ivolume = cell.det().pow(-1)
+
         # Kernel function `G` and initialization of `MeshInterpolator` only depend on
         # `cell`. Caching can save up to 15%.
         if not torch.allclose(cell, self._cell_cache):
@@ -131,7 +140,6 @@ class _PMEPotentialImpl(PeriodicBase):
 
             # 2.2: Evaluate kernel function (careful, tensor shapes are different from
             # the pure Ewald implementation since we are no longer flattening)
-            ivolume = cell.det().pow(-1)
             # pre-scale with volume to save some multiplications further down
             self._G = (
                 self.potential.potential_fourier_from_k_sq(knorm_sq, smearing) * ivolume
@@ -157,6 +165,17 @@ class _PMEPotentialImpl(PeriodicBase):
             fill_value = 2.0 / (torch.pi * smearing**2)
             self_contrib = torch.sqrt(torch.full([], fill_value, device=device))
             interpolated_potential -= charges * self_contrib
+
+        # Step 5: The method requires that the unit cell is charge-neutral.
+        # If the cell has a net charge (i.e. if sum(charges) != 0), the method
+        # implicitly assumes that a homogeneous background charge of the opposite sign
+        # is present to make the cell neutral. In this case, the potential has to be
+        # adjusted to compensate for this.
+        if self.correct_net_charge:
+            charge_tot = torch.sum(charges, dim=0)
+            prefac = torch.pi**1.5 * (2 * smearing**2) ** ((3 - self.exponent) / 2)
+            prefac /= (3 - self.exponent) * gamma(torch.tensor(self.exponent / 2))
+            interpolated_potential -= prefac * charge_tot * ivolume
 
         return interpolated_potential
 
@@ -196,6 +215,10 @@ class PMEPotential(CalculatorBaseTorch, _PMEPotentialImpl):
         atom the contributions to the potential arising from all atoms within the cutoff
         Note that if set to true, the self contribution (see previous) is also
         subtracted by default.
+    :param correct_net_charge: If set to :py:obj:`True`, add to the features of atoms an
+        additional term that compensates the effect of a net charge for non-neutral
+        systems. It is not recommended to change this parameter from the default value
+        unless you know exactly what you are doing.
 
     Example
     -------
@@ -258,6 +281,7 @@ class PMEPotential(CalculatorBaseTorch, _PMEPotentialImpl):
         interpolation_order: int = 3,
         subtract_self: bool = True,
         subtract_interior: bool = False,
+        correct_net_charge: bool = True,
     ):
         _PMEPotentialImpl.__init__(
             self,
@@ -267,6 +291,7 @@ class PMEPotential(CalculatorBaseTorch, _PMEPotentialImpl):
             interpolation_order=interpolation_order,
             subtract_self=subtract_self,
             subtract_interior=subtract_interior,
+            correct_net_charge=correct_net_charge,
         )
         CalculatorBaseTorch.__init__(self)
 

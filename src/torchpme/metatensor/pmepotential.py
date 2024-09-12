@@ -113,6 +113,7 @@ class PMEPotential(CalculatorBaseMetatensor, _PMEPotentialImpl):
         interpolation_order: int = 3,
         subtract_self: bool = True,
         subtract_interior: bool = False,
+        correct_net_charge: bool = True,
     ):
         _PMEPotentialImpl.__init__(
             self,
@@ -122,5 +123,6 @@ class PMEPotential(CalculatorBaseMetatensor, _PMEPotentialImpl):
             interpolation_order=interpolation_order,
             subtract_self=subtract_self,
             subtract_interior=subtract_interior,
+            correct_net_charge=correct_net_charge,
         )
         CalculatorBaseMetatensor.__init__(self)
