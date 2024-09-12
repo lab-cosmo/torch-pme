@@ -4,8 +4,8 @@ Examples of the ``MeshInterpolator`` class
 
 :Authors: Michele Ceriotti `@ceriottm <https://github.com/ceriottm/>`_
 
-This notebook showcases the functionality of ``torch-pme`` by going 
-step-by-step through the process of projecting an atom density onto a 
+This notebook showcases the functionality of ``torch-pme`` by going
+step-by-step through the process of projecting an atom density onto a
 grid, and interpolating the grid values on (possibly different) points.
 """
 
