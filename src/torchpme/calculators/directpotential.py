@@ -105,21 +105,26 @@ class DirectPotential(CalculatorBaseTorch, _DirectPotentialImpl):
         """
 
         # Create dummy cell to follow method synopsis
-        cell: Union[List[torch.Tensor], torch.Tensor] = []
         if isinstance(positions, list):
-            cell = len(positions) * [
+            cell = len(charges) * [
                 torch.zeros(3, 3, dtype=positions[0].dtype, device=positions[0].device)
             ]
+            return self._compute_impl(
+                positions=positions,
+                charges=charges,
+                cell=cell,
+                neighbor_indices=neighbor_indices,
+                neighbor_distances=neighbor_distances,
+            )
         else:
             cell = torch.zeros(3, 3, dtype=positions.dtype, device=positions.device)
-
-        return self._compute_impl(
-            positions=positions,
-            charges=charges,
-            cell=cell,
-            neighbor_indices=neighbor_indices,
-            neighbor_distances=neighbor_distances,
-        )
+            return self._compute_impl(
+                positions=positions,
+                charges=charges,
+                cell=cell,
+                neighbor_indices=neighbor_indices,
+                neighbor_distances=neighbor_distances,
+            )
 
     # This function is kept to keep torch-pme compatible with the broader pytorch
     # infrastructure, which require a "forward" function. We name this function

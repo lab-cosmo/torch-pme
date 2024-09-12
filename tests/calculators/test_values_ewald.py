@@ -314,7 +314,7 @@ def test_madelung(crystal_name, scaling_factor, calc_name):
 
     # Compute neighbor list
     neighbor_indices, neighbor_shifts = neighbor_list_torch(
-        positions=pos, cell=cell, cutoff=sr_cutoff
+        positions=pos, periodic=True, box=cell, cutoff=sr_cutoff
     )
 
     # Compute potential and compare against target value using default hypers
@@ -364,7 +364,7 @@ def test_wigner(crystal_name, scaling_factor):
 
     # Compute neighbor list
     neighbor_indices, neighbor_shifts = neighbor_list_torch(
-        positions=positions, cell=cell
+        positions=positions, periodic=True, box=cell
     )
 
     # Due to the slow convergence, we do not use the default values of the smearing,
@@ -435,7 +435,7 @@ def test_random_structure(sr_cutoff, frame_index, scaling_factor, ortho, calc_na
 
     # Compute neighbor list
     neighbor_indices, neighbor_shifts = neighbor_list_torch(
-        positions=positions, cell=cell, cutoff=sr_cutoff
+        positions=positions, periodic=True, box=cell, cutoff=sr_cutoff
     )
 
     # Enable backward for positions

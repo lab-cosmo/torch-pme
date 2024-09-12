@@ -14,7 +14,7 @@ def neighbor_list_torch(
 ) -> Tuple[torch.tensor, torch.tensor]:
 
     if box is None:
-        box = torch.zeros(3, 3)
+        box = torch.zeros(3, 3, dtype=positions.dtype, device=positions.device)
 
     if cutoff is None:
         cell_dimensions = torch.linalg.norm(box, dim=1)
