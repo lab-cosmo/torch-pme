@@ -12,5 +12,5 @@ if __name__ == "__main__":
         confdir=HERE,
         outdir=os.path.join(HERE, "..", "build"),
         doctreedir=os.path.join(HERE, "..", "build"),
-        buildername="html",
+        buildername="html"        
     )
