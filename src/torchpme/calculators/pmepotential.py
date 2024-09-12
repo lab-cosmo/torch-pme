@@ -162,9 +162,8 @@ class _PMEPotentialImpl(PeriodicBase):
 
         # Step 4: Remove self-contribution if desired
         if subtract_self:
-            # ill_value = 2.0 / (torch.pi * smearing**2)
             phalf = self.exponent / 2
-            fill_value = 1 / gamma(torch.tensor(phalf+1)) / (2*smearing**2)**phalf
+            fill_value = 1 / gamma(torch.tensor(phalf + 1)) / (2 * smearing**2) ** phalf
             self_contrib = torch.full([], fill_value, device=device)
             interpolated_potential -= charges * self_contrib
 
