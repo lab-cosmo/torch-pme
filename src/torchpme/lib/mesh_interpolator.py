@@ -47,7 +47,6 @@ class MeshInterpolator:
             )
 
         self.cell = cell
-        self.inverse_cell = cell.clone()
         if self.cell.is_cuda:
             # use function that does not synchronize with the CPU
             self.inverse_cell = torch.linalg.inv_ex(cell)[0]
@@ -70,6 +69,34 @@ class MeshInterpolator:
         self.x_indices: torch.Tensor = torch.zeros(1, device=self._device)
         self.y_indices: torch.Tensor = torch.zeros(1, device=self._device)
         self.z_indices: torch.Tensor = torch.zeros(1, device=self._device)
+
+    def get_mesh_xyz(self):
+        """
+        Returns the Cartesian positions of the mesh points.
+
+        :return: torch.tensor of shape ``(nx, ny, nz, 3)``
+            containing the positions of the grid points
+        """
+
+        grid_scaled = torch.stack(
+            torch.meshgrid(
+                torch.arange(
+                    self.ns_mesh[0], dtype=self.cell.dtype, device=self.cell.device
+                )
+                / self.ns_mesh[0],
+                torch.arange(
+                    self.ns_mesh[1], dtype=self.cell.dtype, device=self.cell.device
+                )
+                / self.ns_mesh[1],
+                torch.arange(
+                    self.ns_mesh[2], dtype=self.cell.dtype, device=self.cell.device
+                )
+                / self.ns_mesh[2],
+            ),
+            dim=-1,
+        )
+        grid_cartesian = torch.matmul(grid_scaled, self.cell)
+        return grid_cartesian
 
     def _compute_1d_weights(self, x: torch.Tensor) -> torch.Tensor:
         """

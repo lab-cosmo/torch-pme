@@ -1,8 +1,9 @@
 import os
 import subprocess
 import sys
-import toml
 from datetime import datetime
+
+import toml
 
 
 # When importing metatensor-torch, this will change the definition of the classes
@@ -69,6 +70,7 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinx_gallery.gen_gallery",
     "sphinx_toggleprompt",
+    "chemiscope.sphinx",
 ]
 
 # List of patterns, relative to source directory, that match files and
