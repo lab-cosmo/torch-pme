@@ -313,7 +313,7 @@ def test_madelung(crystal_name, scaling_factor, calc_name):
         rtol = 9e-4
 
     # Compute neighbor list
-    neighbor_indices, neighbor_shifts = neighbor_list_torch(
+    neighbor_indices, neighbor_distances = neighbor_list_torch(
         positions=pos, periodic=True, box=cell, cutoff=sr_cutoff
     )
 
@@ -323,7 +323,7 @@ def test_madelung(crystal_name, scaling_factor, calc_name):
         charges=charges,
         cell=cell,
         neighbor_indices=neighbor_indices,
-        neighbor_shifts=neighbor_shifts,
+        neighbor_distances=neighbor_distances,
     )
     energies = potentials * charges
     madelung = -torch.sum(energies) / num_units
@@ -363,7 +363,7 @@ def test_wigner(crystal_name, scaling_factor):
     madelung_ref /= scaling_factor
 
     # Compute neighbor list
-    neighbor_indices, neighbor_shifts = neighbor_list_torch(
+    neighbor_indices, neighbor_distances = neighbor_list_torch(
         positions=positions, periodic=True, box=cell
     )
 
@@ -389,7 +389,7 @@ def test_wigner(crystal_name, scaling_factor):
             charges=charges,
             cell=cell,
             neighbor_indices=neighbor_indices,
-            neighbor_shifts=neighbor_shifts,
+            neighbor_distances=neighbor_distances,
         )
         energies = potentials * charges
         energies_ref = -torch.ones_like(energies) * madelung_ref / 2
@@ -428,18 +428,19 @@ def test_random_structure(sr_cutoff, frame_index, scaling_factor, ortho, calc_na
 
     # Convert into input format suitable for torch-pme
     positions = scaling_factor * (torch.tensor(frame.positions, dtype=DTYPE) @ ortho)
+
+    # Enable backward for positions
+    positions.requires_grad = True
+
     cell = scaling_factor * torch.tensor(np.array(frame.cell), dtype=DTYPE) @ ortho
     charges = torch.tensor([1, 1, 1, 1, -1, -1, -1, -1], dtype=DTYPE).reshape((-1, 1))
     sr_cutoff = scaling_factor * sr_cutoff
     atomic_smearing = sr_cutoff / 5.0
 
     # Compute neighbor list
-    neighbor_indices, neighbor_shifts = neighbor_list_torch(
+    neighbor_indices, neighbor_distances = neighbor_list_torch(
         positions=positions, periodic=True, box=cell, cutoff=sr_cutoff
     )
-
-    # Enable backward for positions
-    positions.requires_grad = True
 
     # Compute potential using torch-pme and compare against reference values
     if calc_name == "ewald":
@@ -456,7 +457,7 @@ def test_random_structure(sr_cutoff, frame_index, scaling_factor, ortho, calc_na
         charges=charges,
         cell=cell,
         neighbor_indices=neighbor_indices,
-        neighbor_shifts=neighbor_shifts,
+        neighbor_distances=neighbor_distances,
     )
 
     # Compute energy. The double counting of the pairs is already taken into account.

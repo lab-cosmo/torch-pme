@@ -9,21 +9,19 @@ distance calculations between particles are included in the computational graph.
 ensures that the force computations respect the dependencies between particle positions
 and distances, allowing for accurate gradients during backpropagation.
 
-.. figure:: ../../../static/images/backprop-path.*
-    :width: 600px
-    :align: center
+.. figure:: ../../static/images/backprop-path.*
 
     Visualization of the data flow to compute the energy from the ``cell``,
     ``positions`` and ``charges`` through a neighborlist calculator and the potential
     calculator. All operations on the red line have to be tracked to obtain the correct
-    computation of derivatives on the positions.
+    computation of derivatives on the ``positions``.
 
 In this tutorial, we demonstrate two methods for maintaining differentiability when
 computing distances between particles. The **first method** manually recomputes
 ``distances`` within the computational graph using ``positions``, ``cell`` information,
-and neighbor shifts, making it suitable for any neighbor list like the one in ASE.
+and neighbor shifts, making it suitable for any neighbor list code.
 
-The **second method** uses a backpropagable neighbor list from the `vesin
+The **second method** uses a backpropagable neighbor list from the `vesin-torch
 <https://luthaf.fr/vesin>`_ library, which automatically ensures that the distance
 calculations remain differentiable.
 
@@ -31,14 +29,14 @@ calculations remain differentiable.
 
     While both approaches yield the same result, a backpropagable neighbor list is
     generally preferred because it eliminates the need to manually recompute distances.
-    This not only simplifies the code but also improves performance.
+    This not only simplifies your code but also improves performance.
 """
 
 # %%
 from typing import Optional
 
 import ase
-import ase.visualize.plot
+import chemiscope
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
@@ -53,10 +51,10 @@ from torchpme import PMEPotential
 # The test system
 # ---------------
 #
-# As a test system, we use a 2x2x2 supercell of an NaCl crystal in a cubic cell.
+# As a test system, we use a 2x2x2 supercell of an CsCl crystal in a cubic cell.
 
 atoms_unitcell = ase.Atoms(
-    symbols=["Na", "Cl"],
+    symbols=["Cs", "Cl"],
     positions=np.array([(0, 0, 0), (0.5, 0.5, 0.5)]),
     cell=np.eye(3),
     pbc=True,
@@ -75,17 +73,11 @@ rng = np.random.default_rng(42)
 displacement = rng.normal(loc=0.0, scale=0.1, size=(len(atoms), 3))
 atoms.positions += displacement
 
-# %%
-#
-# The system was generated based on a simple cubic (sc) cell with a
-# lattice constant of a = 3.641 Å. After initializing the velocities, the system
-# was run for 100 ps with the same parameters we will use below. The final state can
-# be visualized as follows:
-
-ax = ase.visualize.plot.plot_atoms(atoms, radii=0.5)
-ax.set_xlabel("$\\AA$")
-ax.set_ylabel("$\\AA$")
-plt.show()
+chemiscope.show(
+    frames=[atoms],
+    mode="structure",
+    settings=chemiscope.quick_settings(structure_settings={"unitCell": True}),
+)
 
 # %%
 #
@@ -93,7 +85,7 @@ plt.show()
 # --------------------
 #
 # One usual workflow is to compute the distance vectors using default tools like the
-# the default vesin neighborlist that works with numpy arrays.
+# the default (NumPy) version of the vesin neighbor list.
 
 nl = vesin.NeighborList(cutoff=1.0, full_list=False)
 i, j, S = nl.compute(
@@ -101,8 +93,9 @@ i, j, S = nl.compute(
 )
 
 # %%
-# We now define a function that computes the distances in a way that torch can track the
-# operations.
+#
+# We now define a function that (re-)computes the distances in a way that torch can
+# track these operations.
 
 
 def distances(
@@ -133,23 +126,25 @@ def distances(
 
 # %%
 #
-# To use this function, we first convert the output into the proper format and enable
-# the tracking of operations.
+# To use this function, we first convert the ``positions``, ``charges`` and the ``cell``
+# from NumPu arrays into torch tensors and enable the tracking of operations by setting
+# the :py:attr:`requires_grad <torch.Tensor.requires_grad>` property to :py:obj:`True`.
 
 positions = torch.from_numpy(atoms.positions)
 charges = torch.from_numpy(charges).unsqueeze(1)
 cell = torch.from_numpy(atoms.cell.array)
+
+positions.requires_grad = True
 
 i = torch.from_numpy(i.astype(int))
 j = torch.from_numpy(j.astype(int))
 neighbor_indices = torch.stack([i, j], dim=1)
 neighbor_shifts = torch.from_numpy(S)
 
-positions.requires_grad = True
 
 # %%
 #
-# Now, we start to (re-)compute the distances.
+# Now, we start to re-compute the distances
 
 neighbor_distances = distances(
     positions=positions,
@@ -160,7 +155,7 @@ neighbor_distances = distances(
 
 # %%
 #
-# Initialize a PME instance and compute the potential.
+# and initialize a PME instance to compute the potential.
 
 pme = PMEPotential()
 potential = pme.compute(
@@ -175,7 +170,7 @@ print(potential)
 
 # %%
 #
-# The energy is given by the scalar product with the potential.
+# The energy is given by the scalar product of the potential with the charges.
 
 energy = charges.T @ potential
 
@@ -192,11 +187,12 @@ print(forces)
 # Backpropagable Neighborlist
 # ---------------------------
 #
-# We now repeat the computation of the forces, but instead of using a generic
-# neighbor list and our custom function, we directly use a neighbor list function
-# that tracks the operations, as implemented by the vesin-torch library.
+# We now repeat the computation of the forces, but instead of using a generic neighbor
+# list and our custom ``distances`` function, we directly use a neighbor list function
+# that tracks the operations, as implemented by the ``vesin-torch`` library.
 #
-# We first ``detach`` and ``clone`` the position tensor to create a new graph.
+# We first ``detach`` and ``clone`` the position tensor to create a new computational
+# graph
 
 positions_new = positions.detach().clone()
 positions_new.requires_grad = True
@@ -233,8 +229,8 @@ print(forces_new)
 # The forces are the same as those we printed above. For better comparison, we can also
 # plot the scalar force for each method.
 
-plt.plot(torch.linalg.norm(forces, dim=1), "o-", label="ASE Neighborlist")
-plt.plot(torch.linalg.norm(forces_new, dim=1), ".-", label="vesin Neighborlist")
+plt.plot(torch.linalg.norm(forces, dim=1), "o-", label="normal Neighborlist")
+plt.plot(torch.linalg.norm(forces_new, dim=1), ".-", label="torch Neighborlist")
 plt.legend()
 
 plt.xlabel("atom index")

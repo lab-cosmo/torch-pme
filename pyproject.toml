@@ -52,7 +52,9 @@ dynamic = ["version"]
 [project.optional-dependencies]
 examples = [
     "ase >= 3.22.1",
+    "chemiscope",
     "matplotlib",
+    "vesin@git+https://github.com/luthaf/vesin@torch#subdirectory=python/vesin",
     "vesin-torch@git+https://github.com/luthaf/vesin@torch#subdirectory=python/vesin-torch"
 ]
 metatensor = [

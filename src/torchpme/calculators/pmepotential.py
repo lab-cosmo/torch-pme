@@ -203,33 +203,25 @@ class PMEPotential(CalculatorBaseTorch, _PMEPotentialImpl):
     >>> positions = torch.tensor(
     ...     [[0.0, 0.0, 0.0], [0.5, 0.5, 0.5]], dtype=torch.float64
     ... )
-    >>> charges = torch.tensor([1.0, -1.0], dtype=torch.float64).unsqueeze(1)
+    >>> charges = torch.tensor([[1.0], [-1.0]], dtype=torch.float64)
     >>> cell = torch.eye(3, dtype=torch.float64)
 
-    Compute the neighbor indices (``"i"``, ``"j"``) and the neighbor shifts ("``S``")
-    using the ``vesin`` package. Refer to the `documentation
-    <https://luthaf.fr/vesin>`_ for details on the API. Similarly you can also use
-    ``ase``'s :py:func:`neighbor_list <ase.neighborlist.neighbor_list>`.
+    Compute the neighbor indices (``"i"``, ``"j"``) and the neighbor distances ("``d``")
+    using the ``vesin`` package. Refer to the `documentation <https://luthaf.fr/vesin>`_
+    for details on the API.
 
     >>> cell_dimensions = torch.linalg.norm(cell, dim=1)
     >>> cutoff = torch.min(cell_dimensions) / 2 - 1e-6
     >>> nl = NeighborList(cutoff=cutoff, full_list=False)
-    >>> i, j, d = nl.compute(
+    >>> i, j, neighbor_distances = nl.compute(
     ...     points=positions, box=cell, periodic=True, quantities="ijd"
     ... )
-
-    The ``vesin`` calculator returned the indices and the neighbor shifts. We know stack
-    the together and convert them into the suitable types
-
-    >>> i = torch.from_numpy(i.astype(int))
-    >>> j = torch.from_numpy(j.astype(int))
     >>> neighbor_indices = torch.stack([i, j], dim=1)
-    >>> neighbor_distances = d
 
-    If you inspect the neighborlist you will notice that they are empty for the given
-    system, which means the the whole potential will be calculated using the long range
-    part of the potential. Finally, we initlize the potential class and ``compute`` the
-    potential for the crystal
+    If you inspect the neighbor list you will notice that the tensors are empty for the
+    given system, which means the the whole potential will be calculated using the long
+    range part of the potential. Finally, we initlize the potential class and
+    ``compute`` the potential for the crystal.
 
     >>> pme = PMEPotential()
     >>> pme.compute(
@@ -240,7 +232,7 @@ class PMEPotential(CalculatorBaseTorch, _PMEPotentialImpl):
     ...     neighbor_distances=neighbor_distances,
     ... )
     tensor([[-1.0192],
-            [ 1.0192]])
+            [ 1.0192]], dtype=torch.float64)
 
     Which is the close the reference value given above.
     """

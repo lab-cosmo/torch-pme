@@ -27,9 +27,9 @@ manipulating atomic structures.
 
 # %%
 import torch
+import vesin.torch
 from metatensor.torch import Labels, TensorBlock
 from metatensor.torch.atomistic import System
-from vesin.torch import NeighborList
 
 import torchpme
 
@@ -50,12 +50,13 @@ cell = torch.eye(3, dtype=torch.float64)
 # <https://luthaf.fr/vesin>`_ and rearrange the results to be suitable for the
 # calculations below.
 
-nl = NeighborList(cutoff=cutoff, full_list=False)
+nl = vesin.torch.NeighborList(cutoff=cutoff, full_list=False)
 
-i, j, S, D = nl.compute(points=positions, box=cell, periodic=True, quantities="ijSD")
+i, j, S, D, neighbor_distances = nl.compute(
+    points=positions, box=cell, periodic=True, quantities="ijSDd"
+)
 
 neighbor_indices = torch.stack([i, j], dim=1)
-neighbor_distances = torch.linalg.norm(D, dim=1)
 
 # %%
 # Next, we initialize the :py:class:`PMEPotential` calculator with an ``exponent`` of

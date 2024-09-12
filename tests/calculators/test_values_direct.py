@@ -6,7 +6,9 @@ from utils import neighbor_list_torch
 
 from torchpme import DirectPotential
 
+
 DTYPE = torch.float64
+
 
 def define_molecule(molecule_name="dimer"):
     """
@@ -99,17 +101,12 @@ def define_molecule(molecule_name="dimer"):
         raise ValueError(f"unknown molecule_name {molecule_name}")
 
     charges = charges.reshape((-1, 1))
-    # Choose a large cutoff that covers all atoms
-    neighbor_indices, neighbor_distances = neighbor_list_torch(
-        positions=positions, periodic=False, cutoff=10
-    )
     potentials = potentials.reshape((-1, 1))
 
-    return positions, charges, neighbor_indices, neighbor_distances, potentials
+    return positions, charges, potentials
 
 
 def generate_orthogonal_transformations():
-    dtype = torch.float64
 
     # first rotation matrix: identity
     rot_1 = torch.eye(3, dtype=DTYPE)
@@ -143,7 +140,7 @@ def generate_orthogonal_transformations():
 
 molecules = ["dimer", "triangle", "square", "tetrahedron"]
 molecule_charges = ["", "_positive", "_negative"]
-scaling_factors = torch.tensor([0.079, 1.0, 5.54], dtype=torch.float64)
+scaling_factors = [0.079, 1.0, 5.54]
 orthogonal_transformations = generate_orthogonal_transformations()
 
 
@@ -167,11 +164,20 @@ def test_coulomb_exact(
 
     # Compute potential at the position of the atoms for the specified structure
     molecule_name = molecule + molecule_charge
-    positions, charges, neighbor_indices, neighbor_distances, ref_potentials = (
-        define_molecule(molecule_name)
-    )
+    positions, charges, ref_potentials = define_molecule(molecule_name)
     positions = scaling_factor * (positions @ orthogonal_transformation)
-    potentials = direct.compute(positions, charges=charges, neighbor_indices=neighbor_indices, neighbor_distances=neighbor_distances)
+
+    # Choose a large cutoff that covers all atoms
+    neighbor_indices, neighbor_distances = neighbor_list_torch(
+        positions=positions, periodic=False, cutoff=scaling_factor * 10
+    )
+
+    potentials = direct.compute(
+        positions,
+        charges=charges,
+        neighbor_indices=neighbor_indices,
+        neighbor_distances=neighbor_distances,
+    )
     ref_potentials /= scaling_factor
 
     torch.testing.assert_close(potentials, ref_potentials, atol=2e-15, rtol=1e-14)

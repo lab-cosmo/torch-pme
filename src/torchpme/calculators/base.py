@@ -310,12 +310,14 @@ class PeriodicBase:
         atom_is = neighbor_indices[:, 0]
         atom_js = neighbor_indices[:, 1]
 
-        contributions = charges[atom_js] * potentials_bare.unsqueeze(-1)
+        contributions_is = charges[atom_js] * potentials_bare.unsqueeze(-1)
+        contributions_js = charges[atom_is] * potentials_bare.unsqueeze(-1)
 
         potential = torch.zeros_like(charges)
-        potential.index_add_(0, atom_is, contributions)
+        potential.index_add_(0, atom_is, contributions_is)
+        potential.index_add_(0, atom_js, contributions_js)
 
-        return potential
+        return potential / 2
 
     def _estimate_smearing(
         self,

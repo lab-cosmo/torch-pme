@@ -29,7 +29,7 @@ class PMEPotential(CalculatorBaseMetatensor, _PMEPotentialImpl):
 
     Next, we attach the charges to our ``system``
 
-    >>> charges = torch.tensor([1.0, -1.0]).unsqueeze(1)
+    >>> charges = torch.tensor([[1.0], [-1.0]], dtype=torch.float64)
     >>> data = TensorBlock(
     ...     values=charges,
     ...     samples=Labels.range("atom", charges.shape[0]),
@@ -38,9 +38,8 @@ class PMEPotential(CalculatorBaseMetatensor, _PMEPotentialImpl):
     ... )
     >>> system.add_data(name="charges", data=data)
 
-    Compute the neighbor indices (``"i"``, ``"j"``) and the neighbor shifts ("``S``")
-    using the ``vesin`` package. Refer to the `documentation
-    <https://luthaf.fr/vesin>`_ for details on the API.
+    We now compute the neighbor list using the ``vesin`` package. Refer to the
+    `documentation <https://luthaf.fr/vesin>`_ for details on the API.
 
     >>> cell_dimensions = torch.linalg.norm(system.cell, dim=1)
     >>> cutoff = torch.min(cell_dimensions) / 2 - 1e-6
@@ -50,15 +49,11 @@ class PMEPotential(CalculatorBaseMetatensor, _PMEPotentialImpl):
     ... )
 
     The ``vesin`` calculator returned the indices and the neighbor shifts. We know stack
-    the together and convert them into the suitable types
+    them together
 
     >>> neighbor_indices = torch.stack([i, j], dim=1)
 
-    If you inspect the ``neighbor_indices`` you will notice that they are empty for the
-    given system, which means the the whole potential will be calculated using the long
-    range part of the potential.
-
-    We now attach the neighbor list to the above defined ``system`` object. For this we
+    an attach the neighbor list to the above defined ``system`` object. For this we
     first create the ``samples`` metatadata for the :py:class:`TensorBlock
     <metatensor.torch.TensorBlock>` which will hold the neighbor list.
 
@@ -76,8 +71,7 @@ class PMEPotential(CalculatorBaseMetatensor, _PMEPotentialImpl):
 
     And wrap everything together.
 
-    >>> values = torch.from_numpy(D).reshape(-1, 3, 1)
-    >>> values = values.type(system.positions.dtype)
+    >>> values = D.reshape(-1, 3, 1)
     >>> neighbors = TensorBlock(
     ...     values=values,
     ...     samples=samples,
@@ -85,8 +79,11 @@ class PMEPotential(CalculatorBaseMetatensor, _PMEPotentialImpl):
     ...     properties=Labels.range("distance", 1),
     ... )
 
-    Finally, we initlize the potential class and ``compute`` the
-    potential for the crystal
+    If you inspect the neighbor list you will notice that the TensorBlock is empty for
+    the given system, which means the the whole potential will be calculated using the
+    long range part of the potential. Finally, we initlize the potential class and
+    ``compute`` the potential for the crystal. Finally, we initlize the potential class
+    and ``compute`` the potential for the crystal
 
     >>> pme = PMEPotential()
     >>> potential = pme.compute(systems=system, neighbors=neighbors)
@@ -96,7 +93,7 @@ class PMEPotential(CalculatorBaseMetatensor, _PMEPotentialImpl):
 
     >>> potential[0].values
     tensor([[-1.0192],
-            [ 1.0192]])
+            [ 1.0192]], dtype=torch.float64)
 
     Which is the same as the reference value given above.
     """

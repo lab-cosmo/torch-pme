@@ -24,10 +24,12 @@ class _DirectPotentialImpl:
         atom_is = neighbor_indices[:, 0]
         atom_js = neighbor_indices[:, 1]
 
-        contributions = charges[atom_js] * potentials_bare.unsqueeze(-1)
+        contributions_is = charges[atom_js] * potentials_bare.unsqueeze(-1)
+        contributions_js = charges[atom_is] * potentials_bare.unsqueeze(-1)
 
         potential = torch.zeros_like(charges)
-        potential.index_add_(0, atom_is, contributions)
+        potential.index_add_(0, atom_is, contributions_is)
+        potential.index_add_(0, atom_js, contributions_js)
 
         return potential
 
@@ -48,18 +50,38 @@ class DirectPotential(CalculatorBaseTorch, _DirectPotentialImpl):
     We compute the energy of two charges which are sepearated by 2 along the z-axis.
 
     >>> import torch
+    >>> from vesin.torch import NeighborList
 
     Define simple example structure
 
-    >>> positions = torch.tensor([[0.0, 0.0, 0.0], [0.0, 0.0, 2.0]])
-    >>> charges = torch.tensor([1.0, -1.0]).unsqueeze(1)
+    >>> positions = torch.tensor(
+    ...     [[0.0, 0.0, 0.0], [0.0, 0.0, 2.0]], dtype=torch.float64
+    ... )
+    >>> charges = torch.tensor([[1.0], [-1.0]], dtype=torch.float64)
 
-    Compute features
+    Compute the neighbor indices (``"i"``, ``"j"``) and the neighbor distances ("``d``")
+    using the ``vesin`` package. Refer to the `documentation <https://luthaf.fr/vesin>`_
+    for details on the API. We define a dummy cell
+
+    >>> cell = torch.zeros(3, 3, dtype=torch.float64)
+    >>> nl = NeighborList(cutoff=3.0, full_list=False)
+    >>> i, j, neighbor_distances = nl.compute(
+    ...     points=positions, box=cell, periodic=False, quantities="ijd"
+    ... )
+    >>> neighbor_indices = torch.stack([i, j], dim=1)
+
+    Finally, we initlize the potential class and ``compute`` the potential for the
+    system.
 
     >>> direct = DirectPotential()
-    >>> direct.compute(positions=positions, charges=charges)
+    >>> direct.compute(
+    ...     positions=positions,
+    ...     charges=charges,
+    ...     neighbor_indices=neighbor_indices,
+    ...     neighbor_distances=neighbor_distances,
+    ... )
     tensor([[-0.5000],
-            [ 0.5000]])
+            [ 0.5000]], dtype=torch.float64)
 
     Which is the expected potential since :math:`V \propto 1/r` where :math:`r` is the
     distance between the particles.
@@ -104,7 +126,8 @@ class DirectPotential(CalculatorBaseTorch, _DirectPotentialImpl):
             torch tensor with the potentials is returned.
         """
 
-        # Create dummy cell to follow method synopsis
+        # Create dummy cell to follow method synopsis. Due to limitations of torchscript
+        # we have to make the code very explicit here.
         if isinstance(positions, list):
             cell = len(charges) * [
                 torch.zeros(3, 3, dtype=positions[0].dtype, device=positions[0].device)
