@@ -254,6 +254,8 @@ mesh_charges = MI_fine.mesh_to_points(rho_mesh_fine)
 fig, ax = plt.subplots(1, 1, figsize=(6, 4), constrained_layout=True)
 
 ax.scatter(charges.flatten(), mesh_charges.flatten())
+ax.set_xlabel("pseudo-charges")
+ax.set_ylabel("interpolated values")
 
 # %%
 # However, we can use
@@ -261,12 +263,81 @@ ax.scatter(charges.flatten(), mesh_charges.flatten())
 # to interpolate arbitrary functions defined on the grid.
 # For instance, here we define a product of sine functions along
 # the three Cartesian directions,
-# :math:`\sin(2\pi x/L)\sin(2\pi y/L)\sin(2\pi z/L)`
+# :math:`\cos(2\pi x/L)\cos(2\pi y/L)\cos(2\pi z/L)`
 
-xyz_mesh = MI_fine.get_mesh_xyz().detach().numpy()
+xyz_mesh = MI_fine.get_mesh_xyz()
+mesh_2pil = xyz_mesh * np.pi * 2 / MI_fine.cell[0, 0]
 f_mesh = (
-    torch.sin(xyz_mesh[..., 0])
-    * torch.sin(xyz_mesh[..., 1])
-    * torch.sin(xyz_mesh[..., 2])
-)
+    torch.cos(mesh_2pil[..., 0])
+    * torch.cos(mesh_2pil[..., 1])
+    * torch.cos(mesh_2pil[..., 2])
+).reshape(1, *mesh_2pil.shape[:-1])
+
+print(f_mesh.shape)
 f_points = MI_fine.mesh_to_points(f_mesh)
+
+dummy = ase.Atoms(
+    positions=xyz_mesh.reshape(-1, 3), symbols="H" * len(xyz_mesh.reshape(-1, 3))
+)
+chemiscope.show(
+    frames=[structure + dummy],
+    properties={
+        "f": {
+            "target": "atom",
+            "values": np.concatenate([f_points.flatten(), f_mesh.flatten()]),
+        }
+    },
+    mode="structure",
+    settings=chemiscope.quick_settings(
+        structure_settings={
+            "unitCell": True,
+            "bonds": False,
+            "environments": {"activated": False},
+            "color": {
+                "property": "f",
+                "min": -1,
+                "max": 1,
+                "transform": "linear",
+                "palette": "seismic",
+            },
+        }
+    ),
+    environments=chemiscope.all_atomic_environments([structure + dummy]),
+)
+
+
+# %%
+# Interpolating on different points
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# If you want to interpolate on a different set of points than
+# the ones a :py:class:`MeshInterpolator <torchpme.lib.MeshInterpolator>`
+# object was initialized on, it is easy to do by either creating a
+# new one or simply calling again
+# :py:func:`compute_interpolation_weights
+# <torchpme.lib.MeshInterpolator.compute_interpolation_weights>`
+# for the new set of points
+
+new_points = torch.normal(mean=3, std=1, size=(10, 3), dtype=dtype, device=device)
+MI_fine.compute_interpolation_weights(new_points)
+new_f = MI_fine.mesh_to_points(f_mesh)
+new_ref = (
+    torch.cos(new_points[..., 0])
+    * torch.cos(new_points[..., 1])
+    * torch.cos(new_points[..., 2])
+).reshape(1, *new_points.shape[:-1])
+
+
+# %%
+# Even though the interpolated values are not accurate (this is a pretty
+# coarse grid for this function resolution) that the class can interpolate
+# on arbitrary point positions
+
+fig, ax = plt.subplots(1, 1, figsize=(6, 4), constrained_layout=True)
+
+ax.scatter(new_ref.flatten(), new_f.flatten())
+ax.plot([-0.7, 0.7], [-0.7, 0.7], "k--")
+ax.set_xlabel(r"$f$ value")
+ax.set_ylabel(r"$f$ interpolated")
+
+
+# %%
