@@ -338,6 +338,3 @@ ax.scatter(new_ref.flatten(), new_f.flatten())
 ax.plot([-0.7, 0.7], [-0.7, 0.7], "k--")
 ax.set_xlabel(r"$f$ value")
 ax.set_ylabel(r"$f$ interpolated")
-
-
-# %%

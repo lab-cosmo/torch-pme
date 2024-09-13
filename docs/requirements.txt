@@ -3,13 +3,4 @@ toml
 sphinx > 7.0
 sphinx-gallery
 sphinx-toggleprompt
-
-# examples
 chemiscope
-metatensor
-matplotlib
-numpy
-rascaline @ git+https://github.com/Luthaf/rascaline@ca957642f512e141c7570e987aadc05c7ac71983
-skmatter
-scikit-learn==1.4.0
-ase==3.22.1

@@ -93,6 +93,7 @@ class MeshInterpolator:
                     self.ns_mesh[2], dtype=self.cell.dtype, device=self.cell.device
                 )
                 / self.ns_mesh[2],
+                indexing="ij",
             ),
             dim=-1,
         )
