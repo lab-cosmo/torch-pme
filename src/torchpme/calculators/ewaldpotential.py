@@ -1,4 +1,4 @@
-from typing import Optional, Union
+from typing import List, Optional, Tuple, Union
 
 import torch
 
@@ -66,6 +66,137 @@ class EwaldPotential(CalculatorBaseTorch):
         if atomic_smearing is not None and atomic_smearing <= 0:
             raise ValueError(f"`atomic_smearing` {atomic_smearing} has to be positive")
         self.atomic_smearing = atomic_smearing
+
+    @classmethod
+    def from_accuracy(
+        cls,
+        accuracy: float,
+        positions: Union[List[torch.Tensor], torch.Tensor],
+        charges: Union[List[torch.Tensor], torch.Tensor],
+        cell: Union[List[Optional[torch.Tensor]], Optional[torch.Tensor]],
+        subtract_interior: bool = False,
+        max_steps: int = 10000,
+    ) -> Tuple["EwaldPotential", float]:
+        """Initialize based on a desired accuracy.
+
+        :return: Tuple containing the initialized object and the optimal cutoff value
+            for the neighborlist computation.
+        """
+
+        # TODO create valid dummy values to verify `positions`, `charges` and `cell`
+        neighbor_indices = torch.tensor(0)
+        neighbor_shifts = torch.tensor(0)
+        # (
+        #     positions,
+        #     charges,
+        #     cell,
+        #     _,
+        #     _,
+        # ) = cls._validate_compute_parameters(
+        #     positions=positions,
+        #     charges=charges,
+        #     cell=cell,
+        #     neighbor_indices=neighbor_indices,
+        #     neighbor_shifts=neighbor_shifts,
+        # )
+        # Compute optimal values for atomic_smearing, lr_wavelength, and cutoff
+        atomic_smearing, lr_wavelength, cutoff = cls._compute_optimal_parameters(
+            accuracy=accuracy,
+            positions=positions,
+            charges=charges,
+            cell=cell,
+            max_steps=max_steps,
+        )
+
+        # Initialize the EwaldPotential object with the computed parameters
+        ewald_potential = cls(
+            atomic_smearing=atomic_smearing,
+            lr_wavelength=lr_wavelength,
+            subtract_interior=subtract_interior,
+        )
+
+        return ewald_potential, cutoff
+
+    @staticmethod
+    def _compute_optimal_parameters(
+        accuracy: float,
+        positions: Union[List[torch.Tensor], torch.Tensor],
+        charges: Union[List[torch.Tensor], torch.Tensor],
+        cell: Union[List[Optional[torch.Tensor]], Optional[torch.Tensor]],
+        max_steps: int,
+    ) -> Tuple[float, float, float]:
+
+        device = positions.device
+        cell_dimensions = torch.linalg.norm(cell, dim=1)
+        max_range = torch.min(cell_dimensions) / 2 - 1e-6
+        G = torch.tensor(
+            [
+                [cell[0] @ cell[0], cell[0] @ cell[1], cell[0] @ cell[2]],
+                [cell[1] @ cell[0], cell[1] @ cell[1], cell[1] @ cell[2]],
+                [cell[2] @ cell[0], cell[2] @ cell[1], cell[2] @ cell[2]],
+            ]
+        )
+        volume = torch.linalg.det(G) ** 0.5
+        n_atoms = len(positions)
+
+        lr_wavelength = (
+            torch.rand(1, device=device).uniform_(0, max_range).requires_grad_(True)
+        )
+        atomic_smearing = (
+            torch.rand(1, device=device).uniform_(0, max_range).requires_grad_(True)
+        )
+        cutoff = (
+            torch.rand(1, device=device).uniform_(0, max_range).requires_grad_(True)
+        )
+
+        # Step1: Find optimal lr_wavelength and atomic_smearing
+        fourier_optimizer = torch.optim.Adam([lr_wavelength, atomic_smearing], lr=0.05)
+        err_Fourier = (
+            lambda lr_wavelength, atomic_smearing: (
+                torch.sum(charges**2) / torch.sqrt(n_atoms)
+            )
+            * 2
+            * atomic_smearing
+            / torch.sqrt(torch.pi * lr_wavelength * volume)
+            * torch.exp(-(lr_wavelength**2) / (4 * atomic_smearing**2))
+        )
+
+        steps = 0
+        while (
+            (
+                result := err_Fourier(
+                    torch.sigmoid(lr_wavelength) * max_range,
+                    torch.sigmoid(atomic_smearing) * max_range,
+                )  # To confine parameters in (0, max_range)
+            )
+            > accuracy
+        ) and (steps < max_steps):
+            result.backward()
+            fourier_optimizer.step()
+            fourier_optimizer.zero_grad()
+            steps += 1
+        lr_wavelength = torch.sigmoid(lr_wavelength).detach() * max_range
+        atomic_smearing = torch.sigmoid(atomic_smearing).detach() * max_range
+
+        real_optimizer = torch.optim.Adam([cutoff], lr=0.05)
+        err_real = (
+            lambda cutoff: (torch.sum(charges**2) / torch.sqrt(n_atoms))
+            * 2
+            / torch.sqrt(cutoff * volume)
+            * torch.exp(-(atomic_smearing**2) * cutoff**2)
+        )
+
+        steps = 0
+        while (
+            (result := err_real(torch.sigmoid(cutoff) * (5 - 1e-6))) > accuracy
+        ) and (steps < 10000):
+            result.backward()
+            real_optimizer.step()
+            real_optimizer.zero_grad()
+            steps += 1
+        cutoff = torch.sigmoid(cutoff).detach() * (5 - 1e-6)
+
+        return atomic_smearing, lr_wavelength, cutoff
 
     def _compute_single_system(
         self,
