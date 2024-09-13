@@ -23,7 +23,7 @@ import torchpme
 
 device = "cpu"
 dtype = torch.float64
-
+torch.manual_seed(12345)
 
 # %%
 # Compute the atom density projection on a mesh
