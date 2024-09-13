@@ -1,4 +1,6 @@
 """
+.. _example-mesh-demo:
+
 Examples of the ``MeshInterpolator`` class
 ==========================================
 
