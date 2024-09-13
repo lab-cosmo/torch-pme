@@ -18,6 +18,9 @@ class MeshInterpolator:
     of calculations is identical, this is performed in a separate function called
     :func:`compute_interpolation_weights`.
 
+    See also the :ref:`example-mesh-demo` for a demonstration of the
+    functionalities of this class.
+
     :param cell: torch.tensor of shape ``(3, 3)``, where ``cell[i]`` is the i-th basis
         vector of the unit cell
     :param ns_mesh: toch.tensor of shape ``(3,)``
