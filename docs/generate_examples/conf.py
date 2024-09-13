@@ -1,7 +1,6 @@
 # Pseudo-sphinx configuration to run sphinx-gallery as a command line tool
 
 import os
-import chemiscope
 from chemiscope.sphinx import ChemiscopeScraper
 
 extensions = [

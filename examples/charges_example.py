@@ -99,7 +99,7 @@ potential = calculator(
 # We find a potential that is close to the Madelung constant of a CsCl crystal which is
 # :math:`2 \cdot 1.76267 / \sqrt{3} \approx 2.0354`.
 
-print(torch.dot(potential.flatten(), charges.flatten()))
+print(charges.T @ potential)
 
 # %%
 # Species-wise One-Hot Encoded Charges

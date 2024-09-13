@@ -54,7 +54,7 @@ examples = [
     "ase >= 3.22.1",
     "chemiscope",
     "matplotlib",
-    "vesin",    
+    "vesin"
 ]
 metatensor = [
     "metatensor-torch <0.6,>=0.5",

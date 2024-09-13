@@ -1,6 +1,5 @@
 furo
-toml
 sphinx > 7.0
 sphinx-gallery
 sphinx-toggleprompt
-chemiscope
+tomli

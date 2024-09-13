@@ -81,21 +81,15 @@ class MeshInterpolator:
         :return: torch.tensor of shape ``(nx, ny, nz, 3)``
             containing the positions of the grid points
         """
+        nx = self.ns_mesh[0]
+        ny = self.ns_mesh[1]
+        nz = self.ns_mesh[2]
 
         grid_scaled = torch.stack(
             torch.meshgrid(
-                torch.arange(
-                    self.ns_mesh[0], dtype=self.cell.dtype, device=self.cell.device
-                )
-                / self.ns_mesh[0],
-                torch.arange(
-                    self.ns_mesh[1], dtype=self.cell.dtype, device=self.cell.device
-                )
-                / self.ns_mesh[1],
-                torch.arange(
-                    self.ns_mesh[2], dtype=self.cell.dtype, device=self.cell.device
-                )
-                / self.ns_mesh[2],
+                torch.arange(nx, dtype=self._dtype, device=self._device) / nx,
+                torch.arange(ny, dtype=self._dtype, device=self._device) / ny,
+                torch.arange(nz, dtype=self._dtype, device=self._device) / nz,
                 indexing="ij",
             ),
             dim=-1,

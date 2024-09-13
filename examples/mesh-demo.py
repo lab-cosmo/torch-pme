@@ -11,9 +11,6 @@ step-by-step through the process of projecting an atom density onto a
 grid, and interpolating the grid values on (possibly different) points.
 """
 
-# %%
-# Import dependencies
-
 import ase
 import chemiscope
 import numpy as np
@@ -23,11 +20,10 @@ from matplotlib import pyplot as plt
 import torchpme
 
 
-device = "cpu"
-dtype = torch.float64
 torch.manual_seed(12345)
 
 # %%
+#
 # Compute the atom density projection on a mesh
 # ---------------------------------------------
 #
@@ -48,17 +44,14 @@ structure = ase.Atoms(
     symbols="NaClClNaClNaNaCl",
 )
 
-# rattle the structure a bit
-structure.positions += np.random.normal(size=(8, 3)) * 2.5e-1
+# %%
+#
+# We now slightly displace the atoms from their initial positions randomly based on a
+# Gaussian distribution.
 
-# also define charges, with a bit of noise for good measure
-# (NB: the structure won't be charge neutral but it does not matter
-# for this example)
-charges = torch.tensor(
-    [{"Cl": -1.0, "Na": 1.0}[s] + np.random.normal() * 0.1 for s in structure.symbols],
-    device=device,
-    dtype=dtype,
-).reshape(-1, 1)
+rng = np.random.default_rng(42)
+displacement = rng.normal(loc=0.0, scale=2.5e-1, size=(len(structure), 3))
+structure.positions += displacement
 
 chemiscope.show(
     frames=[structure],
@@ -68,27 +61,34 @@ chemiscope.show(
 
 # %%
 #
-# We now use :py:class:`MeshInterpolator <torchpme.lib.MeshInterpolator>`
-# to project atomic positions on a grid.
-# Note that ideally this represents a sharp density
-# peaked at atomic positions, so the degree of smoothening
-# depends on the grid resolution (as well as on the interpolation
-# order)
+# We also define the charges, with a bit of noise for good measure. (NB: the structure
+# won't be charge neutral but it does not matter for this example)
+
+charges = np.array([[1.0], [-1.0], [-1.0], [1.0], [-1.0], [1.0], [1.0], [-1.0]])
+charges += rng.normal(scale=0.1, size=(len(charges), 1))
+
+# %%
 #
-# We demonstrate this by computing a projection on two grids with
-# 3 and 7 mesh points.
+# We now use :py:class:`MeshInterpolator <torchpme.lib.MeshInterpolator>` to project
+# atomic positions on a grid. Note that ideally this represents a sharp density peaked
+# at atomic positions, so the degree of smoothening depends on the grid resolution (as
+# well as on the interpolation order)
+#
+# We demonstrate this by computing a projection on two grids with 3 and 7 mesh points.
 
 
-positions = torch.tensor(structure.positions, device=device, dtype=dtype)
+positions = torch.from_numpy(structure.positions).to(torch.float32)
+charges = torch.from_numpy(charges).to(torch.float32)
+cell = torch.from_numpy(structure.cell.array).to(torch.float32)
 
 
 MI = torchpme.lib.MeshInterpolator(
-    cell=torch.tensor(structure.cell),
+    cell=cell,
     ns_mesh=torch.tensor([3, 3, 3]),
     interpolation_order=3,
 )
 MI_fine = torchpme.lib.MeshInterpolator(
-    cell=torch.tensor(structure.cell),
+    cell=cell,
     ns_mesh=torch.tensor([7, 7, 7]),
     interpolation_order=3,
 )
@@ -99,11 +99,10 @@ rho_mesh = MI.points_to_mesh(charges)
 rho_mesh_fine = MI_fine.points_to_mesh(charges)
 
 # %%
-# Note that the meshing can be also used for multiple
-# "pseudo-charge" values per atom simultaneously. In that
-# case,
-# :py:func:`points_to_mesh <torchpme.lib.MeshInterpolator.points_to_mesh>`
-# will return multiple mesh values
+#
+# Note that the meshing can be also used for multiple "pseudo-charge" values per atom
+# simultaneously. In that case, :py:func:`points_to_mesh
+# <torchpme.lib.MeshInterpolator.points_to_mesh>` will return multiple mesh values
 
 pseudo_charges = torch.normal(mean=0, std=1, size=(len(structure), 4))
 pseudo_mesh = MI.points_to_mesh(pseudo_charges)
@@ -112,11 +111,12 @@ print(tuple(pseudo_mesh.shape))
 
 
 # %%
+#
 # Visualizing the mesh
 # --------------------
-# One can extract the mesh to visualize the values of the atom density.
-# The grid is periodic, so we need some manipulations just for
-# the purpose of visualization
+#
+# One can extract the mesh to visualize the values of the atom density. The grid is
+# periodic, so we need some manipulations just for the purpose of visualization
 
 fig, ax = plt.subplots(
     1, 2, figsize=(8, 4), sharey=True, sharex=True, constrained_layout=True
@@ -165,13 +165,15 @@ ax[0].set_ylabel("y / Å")
 ax[0].set_title(r"$n_{\mathrm{grid}}=3$")
 ax[1].set_title(r"$n_{\mathrm{grid}}=7$")
 fig.colorbar(cf_fine, label=r"density / e/Å$^3$")
+fig.show()
 
 
 # %%
+#
 # Mesh visualization in chemiscope
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# We can also plot the points explicitly
-# together with the structure, adding some
+#
+# We can also plot the points explicitly together with the structure, adding some
 # dummy atoms with a "charge" property
 
 xyz_mesh = MI.get_mesh_xyz().detach().numpy()
@@ -205,7 +207,8 @@ chemiscope.show(
 )
 
 # %%
-# ... and for the fine mesh
+#
+# and for the fine mesh
 
 xyz_mesh = MI_fine.get_mesh_xyz().detach().numpy()
 dummy = ase.Atoms(
@@ -238,21 +241,20 @@ chemiscope.show(
 )
 
 # %%
+#
 # Mesh interpolation
 # ------------------
-# Once a mesh has been defined, it is possible to use the
-# :py:class:`MeshInterpolator <torchpme.lib.MeshInterpolator>`
-# object to compute an interpolation of the field on the points
-# for which the weights have been computed.
 #
-# A very important point to grasp is that the charge mapping
-# on the grid is designed to conserve the total charge, and so
-# interpolating it back does not (and is not meant to!) yield
-# the initial value of the atomic "pseudo-charges".
+# Once a mesh has been defined, it is possible to use the :py:class:`MeshInterpolator
+# <torchpme.lib.MeshInterpolator>` object to compute an interpolation of the field on
+# the points for which the weights have been computed.
 #
-# This is also very clear from the mesh plots above, in which
-# the charge assigned to the grid points is much smaller than
-# the atomic charges (that are around ±1)
+# A very important point to grasp is that the charge mapping on the grid is designed to
+# conserve the total charge, and so interpolating it back does not (and is not meant
+# to!) yield the initial value of the atomic "pseudo-charges".
+#
+# This is also very clear from the mesh plots above, in which the charge assigned to the
+# grid points is much smaller than the atomic charges (that are around ±1)
 
 mesh_charges = MI_fine.mesh_to_points(rho_mesh_fine)
 fig, ax = plt.subplots(1, 1, figsize=(6, 4), constrained_layout=True)
@@ -260,14 +262,14 @@ fig, ax = plt.subplots(1, 1, figsize=(6, 4), constrained_layout=True)
 ax.scatter(charges.flatten(), mesh_charges.flatten())
 ax.set_xlabel("pseudo-charges")
 ax.set_ylabel("interpolated values")
+fig.show()
 
 # %%
-# However, we can use
-# :py:func:`points_to_mesh <torchpme.lib.MeshInterpolator.mesh_to_points>`
-# to interpolate arbitrary functions defined on the grid.
-# For instance, here we define a product of sine functions along
-# the three Cartesian directions,
-# :math:`\cos(2\pi x/L)\cos(2\pi y/L)\cos(2\pi z/L)`
+#
+# However, we can use :py:func:`points_to_mesh
+# <torchpme.lib.MeshInterpolator.mesh_to_points>` to interpolate arbitrary functions
+# defined on the grid. For instance, here we define a product of sine functions along
+# the three Cartesian directions, :math:`\cos(2\pi x/L)\cos(2\pi y/L)\cos(2\pi z/L)`
 
 xyz_mesh = MI_fine.get_mesh_xyz()
 mesh_2pil = xyz_mesh * np.pi * 2 / MI_fine.cell[0, 0]
@@ -311,17 +313,18 @@ chemiscope.show(
 
 
 # %%
+#
 # Interpolating on different points
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# If you want to interpolate on a different set of points than
-# the ones a :py:class:`MeshInterpolator <torchpme.lib.MeshInterpolator>`
-# object was initialized on, it is easy to do by either creating a
-# new one or simply calling again
+#
+# If you want to interpolate on a different set of points than the ones a
+# :py:class:`MeshInterpolator <torchpme.lib.MeshInterpolator>` object was initialized
+# on, it is easy to do by either creating a new one or simply calling again
 # :py:func:`compute_interpolation_weights
-# <torchpme.lib.MeshInterpolator.compute_interpolation_weights>`
-# for the new set of points
+# <torchpme.lib.MeshInterpolator.compute_interpolation_weights>` for the new set of
+# points
 
-new_points = torch.normal(mean=3, std=1, size=(10, 3), dtype=dtype, device=device)
+new_points = torch.normal(mean=3, std=1, size=(10, 3))
 MI_fine.compute_interpolation_weights(new_points)
 new_f = MI_fine.mesh_to_points(f_mesh)
 new_ref = (
@@ -342,3 +345,4 @@ ax.scatter(new_ref.flatten(), new_f.flatten())
 ax.plot([-0.7, 0.7], [-0.7, 0.7], "k--")
 ax.set_xlabel(r"$f$ value")
 ax.set_ylabel(r"$f$ interpolated")
+fig.show()
