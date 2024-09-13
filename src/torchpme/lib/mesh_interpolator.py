@@ -96,8 +96,7 @@ class MeshInterpolator:
             ),
             dim=-1,
         )
-        grid_cartesian = torch.matmul(grid_scaled, self.cell)
-        return grid_cartesian
+        return torch.matmul(grid_scaled, self.cell)
 
     def _compute_1d_weights(self, x: torch.Tensor) -> torch.Tensor:
         """
