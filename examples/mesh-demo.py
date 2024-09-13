@@ -50,6 +50,8 @@ structure = ase.Atoms(
 structure.positions += np.random.normal(size=(8, 3)) * 2.5e-1
 
 # also define charges, with a bit of noise for good measure
+# (NB: the structure won't be charge neutral but it does not matter
+# for this example)
 charges = torch.tensor(
     [{"Cl": -1.0, "Na": 1.0}[s] + np.random.normal() * 0.1 for s in structure.symbols],
     device=device,
