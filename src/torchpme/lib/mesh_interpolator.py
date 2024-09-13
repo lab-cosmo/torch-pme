@@ -71,7 +71,7 @@ class MeshInterpolator:
         self.y_indices: torch.Tensor = torch.zeros(1, device=self._device)
         self.z_indices: torch.Tensor = torch.zeros(1, device=self._device)
 
-    def get_mesh_xyz(self):
+    def get_mesh_xyz(self) -> torch.Tensor:
         """
         Returns the Cartesian positions of the mesh points.
 
