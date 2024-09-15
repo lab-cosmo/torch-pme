@@ -18,6 +18,9 @@ class MeshInterpolator:
     of calculations is identical, this is performed in a separate function called
     :func:`compute_interpolation_weights`.
 
+    See also the :ref:`example-mesh-demo` for a demonstration of the
+    functionalities of this class.
+
     :param cell: torch.tensor of shape ``(3, 3)``, where ``cell[i]`` is the i-th basis
         vector of the unit cell
     :param ns_mesh: toch.tensor of shape ``(3,)``
@@ -70,6 +73,28 @@ class MeshInterpolator:
         self.x_indices: torch.Tensor = torch.zeros(1, device=self._device)
         self.y_indices: torch.Tensor = torch.zeros(1, device=self._device)
         self.z_indices: torch.Tensor = torch.zeros(1, device=self._device)
+
+    def get_mesh_xyz(self) -> torch.Tensor:
+        """
+        Returns the Cartesian positions of the mesh points.
+
+        :return: torch.tensor of shape ``(nx, ny, nz, 3)``
+            containing the positions of the grid points
+        """
+        nx = self.ns_mesh[0]
+        ny = self.ns_mesh[1]
+        nz = self.ns_mesh[2]
+
+        grid_scaled = torch.stack(
+            torch.meshgrid(
+                torch.arange(nx, dtype=self._dtype, device=self._device) / nx,
+                torch.arange(ny, dtype=self._dtype, device=self._device) / ny,
+                torch.arange(nz, dtype=self._dtype, device=self._device) / nz,
+                indexing="ij",
+            ),
+            dim=-1,
+        )
+        return torch.matmul(grid_scaled, self.cell)
 
     def _compute_1d_weights(self, x: torch.Tensor) -> torch.Tensor:
         """

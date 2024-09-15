@@ -1,8 +1,9 @@
 import os
 import subprocess
 import sys
-import tomllib
 from datetime import datetime
+
+import tomli
 
 
 # When importing metatensor-torch, this will change the definition of the classes
@@ -10,6 +11,9 @@ from datetime import datetime
 os.environ["METATENSOR_IMPORT_FOR_SPHINX"] = "1"
 
 import torchpme  # noqa: E402
+
+
+suppress_warnings = ["config.cache"]
 
 
 ROOT = os.path.abspath(os.path.join("..", ".."))
@@ -31,7 +35,7 @@ from generate_examples.conf import sphinx_gallery_conf  # noqa
 master_doc = "index"
 
 with open(os.path.join(ROOT, "pyproject.toml"), "rb") as fp:
-    project_dict = tomllib.load(fp)["project"]
+    project_dict = tomli.load(fp)["project"]
 
 project = project_dict["name"]
 author = ", ".join(a["name"] for a in project_dict["authors"])
@@ -69,6 +73,7 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinx_gallery.gen_gallery",
     "sphinx_toggleprompt",
+    "chemiscope.sphinx",
 ]
 
 # List of patterns, relative to source directory, that match files and

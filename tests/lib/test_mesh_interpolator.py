@@ -323,6 +323,20 @@ def mesh_interpolator():
     return MeshInterpolator(cell, ns_mesh, interpolation_order)
 
 
+def test_mexh_xyz_edge():
+    cell = torch.normal(mean=1, std=1, size=(3, 3))
+    mesh_interpolator = MeshInterpolator(cell, torch.tensor([2, 2, 2]), 3)
+    xyz = mesh_interpolator.get_mesh_xyz()
+
+    torch.testing.assert_close(xyz[1, 1, 1], cell.sum(axis=0) / 2, rtol=1e-5, atol=1e-6)
+
+
+def test_mexh_xyz_shape(mesh_interpolator):
+    xyz = mesh_interpolator.get_mesh_xyz()
+
+    assert xyz.shape == (2, 2, 2, 3)
+
+
 def test_positions_wrong_device(mesh_interpolator):
     positions = torch.randn(size=(10, 3), device="meta")  # different device
     match = "`positions` device meta is not the same as instance device cpu"

@@ -1,20 +1,24 @@
 # Pseudo-sphinx configuration to run sphinx-gallery as a command line tool
 
 import os
-
+from sphinx_gallery.sorting import FileNameSortKey
+from chemiscope.sphinx import ChemiscopeScraper
 
 extensions = [
     "sphinx_gallery.gen_gallery",
+    "chemiscope.sphinx",
 ]
 
 HERE = os.path.dirname(__file__)
 ROOT = os.path.realpath(os.path.join(HERE, "..", ".."))
 
 sphinx_gallery_conf = {
-    "filename_pattern": "/*",
-    "examples_dirs": ["../../examples"],
-    "gallery_dirs": ["examples"],
-    "min_reported_time": 60,
-    "reference_url": {"torchpme": None},
-    "prefer_full_module": ["torchpme"],
-}
+     "examples_dirs": ["../../examples"],
+     "filename_pattern": ".*",
+     "gallery_dirs": ["examples"],
+     "image_scrapers": ["matplotlib", ChemiscopeScraper()],
+     "prefer_full_module": ["torchpme"],
+     "reference_url": {"torchpme": None},
+     "remove_config_comments": True,
+     "within_subsection_order": FileNameSortKey,
+ }
