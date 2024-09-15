@@ -42,8 +42,8 @@ cutoff = 1.0
 # Create the properties CsCl unit cell
 symbols = ("Cs", "Cl")
 types = torch.tensor([55, 17])
-positions = torch.tensor([(0, 0, 0), (0.5, 0.5, 0.5)])
-cell = torch.eye(3)
+positions = torch.tensor([(0, 0, 0), (0.5, 0.5, 0.5)], dtype=torch.float64)
+cell = torch.eye(3, dtype=torch.float64)
 
 # %%
 # Based on the system we compute the corresponding half neighbor list using `vesin
