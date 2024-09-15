@@ -5,11 +5,13 @@ torch-pme
     :start-after: marker-introduction
     :end-before: marker-documentation
 
-To compute real-space short-range interactions, ``torch-pme`` requires neighbor
-information, such as the **neighbor indices** and their **distances**. We do not provide
-functionality to compute these neighbor lists, as there are already highly efficient
-libraries, such as `vesin`_, that are specialized in this task and also support
-auto-differentiation.
+.. caution::
+
+    To compute real-space short-range interactions, ``torch-pme`` requires a **half
+    neighbor list**, specifically the **neighbor indices** and their **distances**.
+    We do not provide functionality to compute these half neighbor lists, as there are
+    already highly efficient libraries, such as `vesin`_, that specialize in this task
+    and also support auto-differentiation.
 
 .. _`vesin`: https://luthaf.fr/vesin
 
