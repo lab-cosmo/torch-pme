@@ -5,6 +5,7 @@ from datetime import datetime
 
 import tomli
 
+
 # When importing metatensor-torch, this will change the definition of the classes
 # to include the documentation
 os.environ["METATENSOR_IMPORT_FOR_SPHINX"] = "1"
