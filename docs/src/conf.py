@@ -13,6 +13,9 @@ os.environ["METATENSOR_IMPORT_FOR_SPHINX"] = "1"
 import torchpme  # noqa: E402
 
 
+suppress_warnings = ["config.cache"]
+
+
 ROOT = os.path.abspath(os.path.join("..", ".."))
 
 # We use a second (pseudo) sphinx project located in `docs/generate_examples` to run the
