@@ -114,6 +114,7 @@ class PMEPotential(CalculatorBaseMetatensor, _PMEPotentialImpl):
         subtract_self: bool = True,
         subtract_interior: bool = False,
     ):
+        CalculatorBaseMetatensor.__init__(self)
         _PMEPotentialImpl.__init__(
             self,
             exponent=exponent,
@@ -123,4 +124,3 @@ class PMEPotential(CalculatorBaseMetatensor, _PMEPotentialImpl):
             subtract_self=subtract_self,
             subtract_interior=subtract_interior,
         )
-        CalculatorBaseMetatensor.__init__(self)

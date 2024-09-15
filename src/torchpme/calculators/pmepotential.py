@@ -2,9 +2,32 @@ from typing import List, Optional, Union
 
 import torch
 
-from ..lib import generate_kvectors_for_mesh
+from ..lib.kspace_filter import KSpaceFilter
+from ..lib.kvectors import get_ns_mesh
 from ..lib.mesh_interpolator import MeshInterpolator
 from .base import CalculatorBaseTorch, PeriodicBase
+
+
+class LRFilter(torch.nn.Module):
+    """
+    Helper class to compute a scalar filter corresponding
+    to the long-range part of the Coulomb potential
+    """
+
+    def __init__(self, smearing: torch.Tensor, ivolume: torch.Tensor, potential):
+        super(LRFilter, self).__init__()
+        self.smearing = smearing
+        self.ivolume = ivolume
+        self.potential = potential
+
+    def forward(self, k2: torch.Tensor) -> torch.Tensor:
+        potential = (
+            self.potential.potential_fourier_from_k_sq(k2, self.smearing) * self.ivolume
+        )
+        potential[..., 0, 0, 0] = self.potential.potential_fourier_at_zero(
+            self.smearing
+        )
+        return potential
 
 
 class _PMEPotentialImpl(PeriodicBase):
@@ -35,13 +58,22 @@ class _PMEPotentialImpl(PeriodicBase):
         self.subtract_self = subtract_self
 
         # TorchScript requires to initialize all attributes in __init__
+        self._smearing = 1.0
         self._cell_cache = -1 * torch.ones([3, 3])
         self._MI = MeshInterpolator(
             cell=torch.eye(3),
-            ns_mesh=torch.ones(3),
+            ns_mesh=torch.ones(3, dtype=int),
             interpolation_order=self.interpolation_order,
         )
-        self._G = torch.zeros(1)
+        # Initialize the filter module
+        self._FF = LRFilter(self._smearing, torch.ones(1), self.potential)
+        self._KF = KSpaceFilter(
+            cell=torch.eye(3),
+            ns_mesh=torch.ones(3, dtype=int),
+            kernel=self._FF,
+            fft_norm="backward",
+            ifft_norm="forward",
+        )
 
     def _compute_single_system(
         self,
@@ -58,14 +90,14 @@ class _PMEPotentialImpl(PeriodicBase):
         # the cost of the LR part. The auxilary parameter mesh_spacing then controls the
         # convergence of the SR and LR sums, respectively. The default values are chosen
         # to reach a convergence on the order of 1e-4 to 1e-5 for the test structures.
-        cell, neighbor_indices, neighbor_shifts, smearing = self._prepare(
+        cell, neighbor_indices, neighbor_shifts, self._smearing = self._prepare(
             cell=cell,
             neighbor_indices=neighbor_indices,
             neighbor_shifts=neighbor_shifts,
         )
 
         if self.mesh_spacing is None:
-            mesh_spacing = smearing / 8.0
+            mesh_spacing = self._smearing / 8.0
         else:
             mesh_spacing = self.mesh_spacing
 
@@ -74,7 +106,7 @@ class _PMEPotentialImpl(PeriodicBase):
             positions=positions,
             charges=charges,
             cell=cell,
-            smearing=smearing,
+            smearing=self._smearing,
             neighbor_indices=neighbor_indices,
             neighbor_shifts=neighbor_shifts,
         )
@@ -84,7 +116,6 @@ class _PMEPotentialImpl(PeriodicBase):
             positions=positions,
             charges=charges,
             cell=cell,
-            smearing=smearing,
             lr_wavelength=mesh_spacing,
         )
 
@@ -96,7 +127,6 @@ class _PMEPotentialImpl(PeriodicBase):
         positions: torch.Tensor,
         charges: torch.Tensor,
         cell: torch.Tensor,
-        smearing: float,
         lr_wavelength: float,
         subtract_self: bool = True,
     ) -> torch.Tensor:
@@ -112,57 +142,32 @@ class _PMEPotentialImpl(PeriodicBase):
 
             # Init 0 (Preparation): Compute number of times each basis vector of the
             # reciprocal space can be scaled until the cutoff is reached
-            k_cutoff = 2 * torch.pi / lr_wavelength
-            basis_norms = torch.linalg.norm(cell, dim=1)
-            ns_approx = k_cutoff * basis_norms / 2 / torch.pi
-            ns_actual_approx = 2 * ns_approx + 1  # actual number of mesh points
-            # ns = [nx, ny, nz]
-            ns = torch.tensor(2).pow(torch.ceil(torch.log2(ns_actual_approx)).long())
+            ns = get_ns_mesh(cell, lr_wavelength)
 
             # Init 1: Initialize mesh interpolator
             self._MI = MeshInterpolator(
                 cell, ns, interpolation_order=self.interpolation_order
             )
 
-            # Init 2: Perform Fourier space convolution (FSC) to get kernel on mesh
-            # 2.1: Generate k-vectors and evaluate kernel function
-            kvectors = generate_kvectors_for_mesh(ns=ns, cell=cell)
-            knorm_sq = torch.sum(kvectors**2, dim=3)
-
-            # 2.2: Evaluate kernel function (careful, tensor shapes are different from
-            # the pure Ewald implementation since we are no longer flattening)
-            ivolume = cell.det().pow(-1)
-            # pre-scale with volume to save some multiplications further down
-            self._G = (
-                self.potential.potential_fourier_from_k_sq(knorm_sq, smearing) * ivolume
-            )
-            fill_value = self.potential.potential_fourier_at_zero(smearing)
-            self._G[0, 0, 0] = torch.full([], fill_value, device=device)
+            # Update the mesh for the k-space filter
+            self._FF.ivolume = cell.det().pow(-1)
+            self._FF.smearing = self._smearing
+            self._KF.update_mesh(cell, ns)
+            self._KF.update_filter()
 
         # Step 1. Compute density interpolation
         self._MI.compute_interpolation_weights(positions)
         rho_mesh = self._MI.points_to_mesh(particle_weights=charges)
 
         # Step 2: Perform actual convolution using FFT
-        dims = (1, 2, 3)  # dimensions along which to Fourier transform
-        # convolution with the kernel function `G`
-        rho_hat = self._G * torch.fft.rfftn(rho_mesh, norm="backward", dim=dims)
-        # Step 1. Compute density interpolation
-        self._MI.compute_interpolation_weights(positions)
-        rho_mesh = self._MI.points_to_mesh(particle_weights=charges)
-
-        # Step 2: Perform actual convolution using FFT
-        dims = (1, 2, 3)  # dimensions along which to Fourier transform
-        # convolution with the kernel function `G`
-        rho_hat = self._G * torch.fft.rfftn(rho_mesh, norm="backward", dim=dims)
-        potential_mesh = torch.fft.irfftn(rho_hat, norm="forward", dim=dims)
+        potential_mesh = self._KF.compute(rho_mesh)
 
         # Step 3: Back interpolation
         interpolated_potential = self._MI.mesh_to_points(potential_mesh)
 
         # Step 4: Remove self-contribution if desired
         if subtract_self:
-            fill_value = 2.0 / (torch.pi * smearing**2)
+            fill_value = 2.0 / (torch.pi * self._smearing**2)
             self_contrib = torch.sqrt(torch.full([], fill_value, device=device))
             interpolated_potential -= charges * self_contrib
 
@@ -267,6 +272,7 @@ class PMEPotential(CalculatorBaseTorch, _PMEPotentialImpl):
         subtract_self: bool = True,
         subtract_interior: bool = False,
     ):
+        CalculatorBaseTorch.__init__(self)
         _PMEPotentialImpl.__init__(
             self,
             exponent=exponent,
@@ -276,7 +282,6 @@ class PMEPotential(CalculatorBaseTorch, _PMEPotentialImpl):
             subtract_self=subtract_self,
             subtract_interior=subtract_interior,
         )
-        CalculatorBaseTorch.__init__(self)
 
     def compute(
         self,

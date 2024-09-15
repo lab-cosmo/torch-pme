@@ -85,6 +85,8 @@ class TestWorkflow:
             positions, charges, cell, neighbor_indices, neighbor_shifts = (
                 self.cscl_system(periodic)
             )
+
+            print("CELL IS ", cell)
             l_values = calculator.compute(
                 positions=[positions, positions],
                 cell=[cell, cell],

@@ -6,9 +6,12 @@ Examples of the ``KSpaceFilter`` class
 
 :Authors: Michele Ceriotti `@ceriottm <https://github.com/ceriottm/>`_
 
-This notebook demonstrates the use of the 
+This notebook demonstrates the use of the
 :py:class:`KSpaceFilter <torchpme.lib.KSpaceFilter>` class
 to transform a density by applying a scalar filter in reciprocal space.
+
+The class supports many different use cases, and can be reused several
+times if the filter or the mesh size don't change.
 """
 
 # %%
@@ -49,17 +52,16 @@ mesh_value = (
 # %%
 # We define and apply a Gaussian smearing filter
 
-KF = torchpme.lib.KSpaceFilter(cell, ns_mesh)
 
-
-# this is the filter function. NB it is applied
+# This is the filter function. NB it is applied
 # to the *squared k vector norm*
-def filter(k2):
+def gaussian_smearing(k2):
     sigma2 = 1
     return torch.exp(-k2 * sigma2 / 2)
 
 
-KF.set_filter_mesh(filter)
+KF = torchpme.lib.KSpaceFilter(cell, ns_mesh, kernel=gaussian_smearing)
+KF.update_filter()
 
 mesh_filtered = KF.compute(mesh_value)
 
@@ -159,3 +161,5 @@ chemiscope.show(
     ),
     environments=chemiscope.all_atomic_environments([dummy]),
 )
+
+# %%
