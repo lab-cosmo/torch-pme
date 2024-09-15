@@ -1,8 +1,9 @@
 import os
 import subprocess
 import sys
-import tomllib
 from datetime import datetime
+
+import tomli
 
 
 # When importing metatensor-torch, this will change the definition of the classes
@@ -33,7 +34,7 @@ from generate_examples.conf import sphinx_gallery_conf  # noqa
 master_doc = "index"
 
 with open(os.path.join(ROOT, "pyproject.toml"), "rb") as fp:
-    project_dict = tomllib.load(fp)["project"]
+    project_dict = tomli.load(fp)["project"]
 
 project = project_dict["name"]
 author = ", ".join(a["name"] for a in project_dict["authors"])

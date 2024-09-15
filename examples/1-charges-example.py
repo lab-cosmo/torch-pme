@@ -12,7 +12,7 @@ machine learning task where, for example, one wants to create one potential for 
 species in an atomistic system using a so-called *one-hot encoding* of charges.
 
 Here, we will demonstrate how to use the ability of multiple charge channels for a
-*NaCl* crystal, where we will cover both the Torch and Metatensor interfaces of
+*CsCl* crystal, where we will cover both the Torch and Metatensor interfaces of
 Meshlode.
 
 Torch Version
@@ -39,11 +39,11 @@ import torchpme
 cutoff = 1.0
 
 # %%
-# Create the properties NaCl unit cell
-symbols = ("Na", "Cl")
-types = torch.tensor([11, 17])
-positions = torch.tensor([(0, 0, 0), (0.5, 0.5, 0.5)], dtype=torch.float64)
-cell = torch.eye(3, dtype=torch.float64)
+# Create the properties CsCl unit cell
+symbols = ("Cs", "Cl")
+types = torch.tensor([55, 17])
+positions = torch.tensor([(0, 0, 0), (0.5, 0.5, 0.5)])
+cell = torch.eye(3)
 
 # %%
 # Based on the system we compute the corresponding half neighbor list using `vesin
@@ -92,10 +92,10 @@ potential = calculator(
 )
 
 # %%
-# We find a potential that is close to the Madelung constant of a NaCl crystal which is
-# :math:`2 \cdot 1.7626 / \sqrt{3} \approx 2.0354`.
+# We find a potential that is close to the Madelung constant of a CsCl crystal which is
+# :math:`2 \cdot 1.76267 / \sqrt{3} \approx 2.0354`.
 
-print(potential)
+print(charges.T @ potential)
 
 # %%
 # Species-wise One-Hot Encoded Charges

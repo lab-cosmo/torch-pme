@@ -4,9 +4,9 @@ import os
 from sphinx_gallery.sorting import FileNameSortKey
 from chemiscope.sphinx import ChemiscopeScraper
 
-
 extensions = [
     "sphinx_gallery.gen_gallery",
+    "chemiscope.sphinx",
 ]
 
 HERE = os.path.dirname(__file__)
