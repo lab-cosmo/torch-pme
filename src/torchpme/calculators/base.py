@@ -14,8 +14,8 @@ class CalculatorBaseTorch(torch.nn.Module):
         self._device = torch.device("cpu")
         self._dtype = torch.float32
 
+    @staticmethod
     def _validate_compute_parameters(
-        self,
         positions: Union[List[torch.Tensor], torch.Tensor],
         charges: Union[List[torch.Tensor], torch.Tensor],
         cell: Union[List[Optional[torch.Tensor]], Optional[torch.Tensor]],
@@ -67,10 +67,8 @@ class CalculatorBaseTorch(torch.nn.Module):
         if not isinstance(neighbor_shifts, list):
             neighbor_shifts = [neighbor_shifts]
 
-        # In actual computations, the data type (dtype) and device (e.g. CPU, GPU) of
-        # all remaining variables need to be consistent
-        self._device = positions[0].device
-        self._dtype = positions[0].dtype
+        device = positions[0].device
+        dtype = positions[0].dtype
 
         # check charges
         if len(positions) != len(charges):
@@ -125,16 +123,16 @@ class CalculatorBaseTorch(torch.nn.Module):
                     f"least one tensor with shape {list(positions_single.shape)}"
                 )
 
-            if positions_single.dtype != self._dtype:
+            if positions_single.dtype != dtype:
                 raise ValueError(
-                    f"each `positions` must have the same type {self._dtype} as the "
+                    f"each `positions` must have the same type {dtype} as the "
                     "first provided one. Got at least one tensor of type "
                     f"{positions_single.dtype}"
                 )
 
-            if positions_single.device != self._device:
+            if positions_single.device != device:
                 raise ValueError(
-                    f"each `positions` must be on the same device {self._device} as "
+                    f"each `positions` must be on the same device {device} as "
                     "the first provided one. Got at least one tensor on device "
                     f"{positions_single.device}"
                 )
@@ -147,16 +145,16 @@ class CalculatorBaseTorch(torch.nn.Module):
                         f"one tensor with shape {list(cell_single.shape)}"
                     )
 
-                if cell_single.dtype != self._dtype:
+                if cell_single.dtype != dtype:
                     raise ValueError(
-                        f"each `cell` must have the same type {self._dtype} as "
+                        f"each `cell` must have the same type {dtype} as "
                         "`positions`, got at least one tensor of type "
                         f"{cell_single.dtype}"
                     )
 
-                if cell_single.device != self._device:
+                if cell_single.device != device:
                     raise ValueError(
-                        f"each `cell` must be on the same device {self._device} as "
+                        f"each `cell` must be on the same device {device} as "
                         "`positions`, got at least one tensor with device "
                         f"{cell_single.device}"
                     )
@@ -180,16 +178,16 @@ class CalculatorBaseTorch(torch.nn.Module):
                     f"positions contains {len(positions_single)} atoms"
                 )
 
-            if charges_single.dtype != self._dtype:
+            if charges_single.dtype != dtype:
                 raise ValueError(
-                    f"each `charges` must have the same type {self._dtype} as "
+                    f"each `charges` must have the same type {dtype} as "
                     "`positions`, got at least one tensor of type "
                     f"{charges_single.dtype}"
                 )
 
-            if charges_single.device != self._device:
+            if charges_single.device != device:
                 raise ValueError(
-                    f"each `charges` must be on the same device {self._device} as "
+                    f"each `charges` must be on the same device {device} as "
                     f"`positions`, got at least one tensor with device "
                     f"{charges_single.device}"
                 )
@@ -203,10 +201,10 @@ class CalculatorBaseTorch(torch.nn.Module):
                         "structure"
                     )
 
-                if neighbor_indices_single.device != self._device:
+                if neighbor_indices_single.device != device:
                     raise ValueError(
                         f"each `neighbor_indices` must be on the same device "
-                        f"{self._device} as `positions`, got at least one tensor with "
+                        f"{device} as `positions`, got at least one tensor with "
                         f"device {neighbor_indices_single.device}"
                     )
 
@@ -221,10 +219,10 @@ class CalculatorBaseTorch(torch.nn.Module):
                         "structure"
                     )
 
-                if neighbor_shifts_single.device != self._device:
+                if neighbor_shifts_single.device != device:
                     raise ValueError(
                         f"each `neighbor_shifts` must be on the same device "
-                        f"{self._device} as `positions`, got at least one tensor with "
+                        f"{device} as `positions`, got at least one tensor with "
                         f"device {neighbor_shifts_single.device}"
                     )
 
@@ -271,6 +269,11 @@ class CalculatorBaseTorch(torch.nn.Module):
             neighbor_indices=neighbor_indices,
             neighbor_shifts=neighbor_shifts,
         )
+
+        # In actual computations, the data type (dtype) and device (e.g. CPU, GPU) of
+        # all remaining variables need to be consistent
+        self._device = positions[0].device
+        self._dtype = positions[0].dtype
 
         # compute and append into a list the features of each structure
         potentials = []
