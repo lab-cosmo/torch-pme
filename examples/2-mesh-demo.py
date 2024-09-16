@@ -20,6 +20,8 @@ from matplotlib import pyplot as plt
 import torchpme
 
 
+device = "cpu"
+dtype = torch.float32
 torch.manual_seed(12345)
 
 # %%
@@ -77,10 +79,9 @@ charges += rng.normal(scale=0.1, size=(len(charges), 1))
 # We demonstrate this by computing a projection on two grids with 3 and 7 mesh points.
 
 
-positions = torch.from_numpy(structure.positions).to(torch.float32)
-charges = torch.from_numpy(charges).to(torch.float32)
-cell = torch.from_numpy(structure.cell.array).to(torch.float32)
-
+positions = torch.from_numpy(structure.positions).to(device=device, dtype=dtype)
+charges = torch.from_numpy(charges).to(device=device, dtype=dtype)
+cell = torch.from_numpy(structure.cell.array).to(device=device, dtype=dtype)
 
 MI = torchpme.lib.MeshInterpolator(
     cell=cell,

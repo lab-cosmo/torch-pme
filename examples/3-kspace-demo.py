@@ -27,7 +27,7 @@ import torchpme
 
 
 device = "cpu"
-dtype = torch.float64
+dtype = torch.float32
 torch.manual_seed(12345)
 
 # %%
