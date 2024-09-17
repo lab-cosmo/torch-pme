@@ -86,7 +86,6 @@ class TestWorkflow:
                 self.cscl_system(periodic)
             )
 
-            print("CELL IS ", cell)
             l_values = calculator.compute(
                 positions=[positions, positions],
                 cell=[cell, cell],
