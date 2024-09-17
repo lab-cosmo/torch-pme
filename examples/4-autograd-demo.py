@@ -163,3 +163,95 @@ sigma.grad
 # %%
 a0.grad
 # %%
+
+
+# %%
+# A ``torch`` module based on ``torchpme``
+# ----------------------------------------
+#
+
+class PMEModule(torch.nn.Module):
+    def __init__(self, mesh_spacing : float=0.5, sigma2 : float=1.0, hidden_sizes=[10,10]):
+        super(PMEModule, self).__init__()
+        self._mesh_spacing = mesh_spacing
+        
+        # degree of smearing as an optimizable parameter
+        self._sigma2 = torch.nn.Parameter(torch.tensor(sigma2, dtype=dtype, device=device))
+
+        dummy_cell = torch.eye(3)
+        self._MI = torchpme.lib.MeshInterpolator(
+                cell=dummy_cell,
+                ns_mesh=torch.tensor([1, 1, 1]),
+                interpolation_order=3,
+            )
+        self._KF = torchpme.lib.KSpaceFilter(
+            cell=dummy_cell,
+            ns_mesh=torch.tensor([1, 1, 1]),
+            kernel=self.kspace_kernel
+        )
+
+        # a neural network to process "charge and potential"
+        last_size = 2 # input is charge and potential
+        self._layers = torch.nn.ModuleList()
+        for hidden_size in hidden_sizes:
+            self._layers.append(torch.nn.Linear(last_size, hidden_size, dtype=dtype, device=device))
+            self._layers.append(torch.nn.Tanh())
+            last_size = hidden_size
+        self._output_layer = torch.nn.Linear(last_size, 1, dtype=dtype, device=device) # outputs one value
+
+
+    def kspace_kernel(self, k2):
+        potential = torch.exp(-k2*self._sigma2*0.5) / k2
+        potential[...,0,0,0] = 0.0
+        return potential
+    
+    def forward(self, positions,  cell, charges):
+        
+        ns_mesh = torchpme.lib.get_ns_mesh(cell, self._mesh_spacing)
+        self._MI = torchpme.lib.MeshInterpolator(
+                cell=cell,
+                ns_mesh=ns_mesh,
+                interpolation_order=3,
+            )
+        self._MI.compute_interpolation_weights(positions)
+        mesh = self._MI.points_to_mesh(charges)
+    
+        self._KF.update_mesh(cell, ns_mesh)
+        self._KF.update_filter()
+        mesh = self._KF.compute(mesh)
+        pot = self._MI.mesh_to_points(mesh)
+
+        x = torch.vstack([charges, pot])
+        for layer in self._layers:
+            x = layer(x)
+        # Output layer
+        x = self._output_layer(x)
+        return x.sum()
+
+# %%
+
+my_module = PMEModule(sigma2=1, mesh_spacing=1, hidden_sizes=[10,4,10])
+
+# %%
+if charges.grad is not None:
+    charges.grad.zero_()
+if positions.grad is not None:
+    positions.grad.zero_()
+if cell.grad is not None:
+    cell.grad.zero_()
+
+positions.requires_grad_(True)
+cell.requires_grad_(True)
+value = my_module.forward(positions, cell, charges)
+# %%
+value.backward()
+
+# %%
+charges.grad
+# %%
+positions.grad
+# %%
+cell.grad
+# %%
+cell
+# %%
