@@ -11,6 +11,9 @@ step-by-step through the process of projecting an atom density onto a
 grid, and interpolating the grid values on (possibly different) points.
 """
 
+# %%
+# Import and global settings
+
 import ase
 import chemiscope
 import numpy as np
@@ -21,8 +24,9 @@ import torchpme
 
 
 device = "cpu"
-dtype = torch.float32
-torch.manual_seed(12345)
+dtype = torch.float64
+rng = torch.Generator()
+rng.manual_seed(32)
 
 # %%
 #
@@ -51,9 +55,10 @@ structure = ase.Atoms(
 # We now slightly displace the atoms from their initial positions randomly based on a
 # Gaussian distribution.
 
-rng = np.random.default_rng(42)
-displacement = rng.normal(loc=0.0, scale=2.5e-1, size=(len(structure), 3))
-structure.positions += displacement
+displacement = torch.normal(
+    mean=0.0, std=2.5e-1, size=(len(structure), 3), generator=rng
+)
+structure.positions += displacement.numpy()
 
 chemiscope.show(
     frames=[structure],
@@ -65,9 +70,16 @@ chemiscope.show(
 #
 # We also define the charges, with a bit of noise for good measure. (NB: the structure
 # won't be charge neutral but it does not matter for this example)
+# Also load positions and cells into torch tensors
 
-charges = np.array([[1.0], [-1.0], [-1.0], [1.0], [-1.0], [1.0], [1.0], [-1.0]])
-charges += rng.normal(scale=0.1, size=(len(charges), 1))
+charges = torch.tensor(
+    [[1.0], [-1.0], [-1.0], [1.0], [-1.0], [1.0], [1.0], [-1.0]],
+    dtype=dtype,
+    device=device,
+)
+charges += torch.normal(mean=0.0, std=1e-1, size=(len(charges), 1), generator=rng)
+positions = torch.from_numpy(structure.positions).to(device=device, dtype=dtype)
+cell = torch.from_numpy(structure.cell.array).to(device=device, dtype=dtype)
 
 # %%
 #
@@ -77,11 +89,6 @@ charges += rng.normal(scale=0.1, size=(len(charges), 1))
 # well as on the interpolation order)
 #
 # We demonstrate this by computing a projection on two grids with 3 and 7 mesh points.
-
-
-positions = torch.from_numpy(structure.positions).to(device=device, dtype=dtype)
-charges = torch.from_numpy(charges).to(device=device, dtype=dtype)
-cell = torch.from_numpy(structure.cell.array).to(device=device, dtype=dtype)
 
 MI = torchpme.lib.MeshInterpolator(
     cell=cell,
@@ -325,7 +332,7 @@ chemiscope.show(
 # <torchpme.lib.MeshInterpolator.compute_interpolation_weights>` for the new set of
 # points
 
-new_points = torch.normal(mean=3, std=1, size=(10, 3))
+new_points = torch.normal(mean=3, std=1, size=(10, 3), dtype=dtype, device=device)
 MI_fine.compute_interpolation_weights(new_points)
 new_f = MI_fine.mesh_to_points(f_mesh)
 new_ref = (
@@ -347,3 +354,5 @@ ax.plot([-0.7, 0.7], [-0.7, 0.7], "k--")
 ax.set_xlabel(r"$f$ value")
 ax.set_ylabel(r"$f$ interpolated")
 fig.show()
+
+# %%

@@ -57,6 +57,12 @@ class KSpaceFilter(torch.nn.Module):
 
         self._fft_norm = fft_norm
         self._ifft_norm = ifft_norm
+        if fft_norm not in ["ortho", "forward", "backward"]:
+            raise ValueError(f"Invalid option {fft_norm} for the `fft_norm` parameter.")
+        if ifft_norm not in ["ortho", "forward", "backward"]:
+            raise ValueError(
+                f"Invalid option {ifft_norm} for the `ifft_norm` parameter."
+            )
 
     @torch.jit.export
     def update_filter(self):
@@ -137,7 +143,7 @@ class KSpaceFilter(torch.nn.Module):
             filter_hat,
             norm=self._ifft_norm,
             dim=dims,
-            # NB: we must specify the sie of the output
+            # NB: we must specify the size of the output
             # as for certain mesh sizes the inverse FT is not
             # well-defined
             s=mesh_values.shape[1:4],
