@@ -2,4 +2,4 @@ ase >= 3.23
 coverage[toml]
 pytest
 pytest-cov
-vesin-torch@git+https://github.com/luthaf/vesin@torch#subdirectory=python/vesin-torch
+vesin-torch >= 0.2.0
