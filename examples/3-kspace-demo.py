@@ -27,7 +27,7 @@ import torchpme
 
 
 device = "cpu"
-dtype = torch.float32
+dtype = torch.float64
 torch.manual_seed(12345)
 
 # %%
@@ -40,7 +40,7 @@ torch.manual_seed(12345)
 # simplicity to generate the grid) and computing a
 # sharp Gaussian field in the :math:`xy` plane.
 
-cell = torch.eye(3) * 6.0
+cell = torch.eye(3, dtype=dtype, device=device) * 6.0
 ns_mesh = torch.tensor([9, 9, 9])
 MI = torchpme.lib.MeshInterpolator(cell, ns_mesh, interpolation_order=2)
 xyz_mesh = MI.get_mesh_xyz()

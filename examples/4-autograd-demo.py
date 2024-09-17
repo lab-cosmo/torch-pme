@@ -172,12 +172,26 @@ print(cell.grad)
 # ----------------------------------------
 #
 
+class SmearedCoulomb(torch.nn.Module):
+    def __init__(self, sigma2):
+        super().__init__()
+        self._sigma2=sigma2
 
-class PMEModule(torch.nn.Module):
+    def forward(self, k2):
+        mask = torch.ones_like(k2, dtype=torch.bool, device=k2.device)
+        mask[..., 0, 0, 0] = False
+        potential = torch.zeros_like(k2)
+        potential[mask] = torch.exp(-k2[mask] * self._sigma2 * 0.5) / k2[mask]
+        return potential
+
+class KSpaceModule(torch.nn.Module):
+    """
+    A 
+    """
     def __init__(
         self, mesh_spacing: float = 0.5, sigma2: float = 1.0, hidden_sizes=[10, 10]
     ):
-        super(PMEModule, self).__init__()
+        super().__init__()
         self._mesh_spacing = mesh_spacing
 
         # degree of smearing as an optimizable parameter
@@ -192,7 +206,8 @@ class PMEModule(torch.nn.Module):
             interpolation_order=3,
         )
         self._KF = torchpme.lib.KSpaceFilter(
-            cell=dummy_cell, ns_mesh=torch.tensor([1, 1, 1]), kernel=self.kspace_kernel
+            cell=dummy_cell, ns_mesh=torch.tensor([1, 1, 1]), 
+            kernel=SmearedCoulomb(self._sigma2)
         )
 
         # a neural network to process "charge and potential"
@@ -207,13 +222,6 @@ class PMEModule(torch.nn.Module):
         self._output_layer = torch.nn.Linear(
             last_size, 1, dtype=dtype, device=device
         )  # outputs one value
-
-    def kspace_kernel(self, k2):
-        mask = torch.ones_like(k2, dtype=bool, device=device)
-        mask[..., 0, 0, 0] = False
-        potential = torch.zeros_like(k2, dtype=dtype, device=device)
-        potential[mask] = torch.exp(-k2[mask] * self._sigma2 * 0.5) / k2[mask]
-        return potential
 
     def forward(self, positions, cell, charges):
 
@@ -242,7 +250,7 @@ class PMEModule(torch.nn.Module):
 
 # %%
 
-my_module = PMEModule(sigma2=1, mesh_spacing=1, hidden_sizes=[10, 4, 10])
+my_module = KSpaceModule(sigma2=1, mesh_spacing=1, hidden_sizes=[10, 4, 10])
 
 # %%
 if charges.grad is not None:
@@ -266,5 +274,23 @@ positions.grad
 # %%
 cell.grad
 # %%
-cell
+my_tsmod = torch.jit.script(my_module)
+
+# %%
+if charges.grad is not None:
+    charges.grad.zero_()
+if positions.grad is not None:
+    positions.grad.zero_()
+if cell.grad is not None:
+    cell.grad.zero_()
+
+positions.requires_grad_(True)
+cell.requires_grad_(True)
+value = my_tsmod.forward(positions, cell, charges)
+
+# %%
+value.backward()
+
+# %%
+cell.grad
 # %%
