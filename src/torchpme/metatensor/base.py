@@ -32,8 +32,8 @@ class CalculatorBaseMetatensor(torch.nn.Module):
         """Forward just calls :py:meth:`compute`."""
         return self.compute(systems, neighbors)
 
+    @staticmethod
     def _validate_compute_parameters(
-        self,
         systems: Union[List[System], System],
         neighbors: Union[List[TensorBlock], TensorBlock],
     ) -> Tuple[List[System], List[TensorBlock]]:
@@ -63,40 +63,40 @@ class CalculatorBaseMetatensor(torch.nn.Module):
                 f"neighbors ({len(neighbors)})"
             )
 
-        self._dtype = systems[0].positions.dtype
-        self._device = systems[0].positions.device
+        dtype = systems[0].positions.dtype
+        device = systems[0].positions.device
 
         _components_labels = Labels(
             ["xyz"],
-            torch.arange(3, dtype=torch.int32, device=self._device).unsqueeze(1),
+            torch.arange(3, dtype=torch.int32, device=device).unsqueeze(1),
         )
         _properties_labels = Labels(
-            ["distance"], torch.zeros(1, 1, dtype=torch.int32, device=self._device)
+            ["distance"], torch.zeros(1, 1, dtype=torch.int32, device=device)
         )
 
         for system, neighbors_single in zip(systems, neighbors):
-            if system.positions.dtype != self._dtype:
+            if system.positions.dtype != dtype:
                 raise ValueError(
                     "`dtype` of all systems must be the same, got "
-                    f"{system.positions.dtype} and {self._dtype}`"
+                    f"{system.positions.dtype} and {dtype}`"
                 )
 
-            if system.positions.device != self._device:
+            if system.positions.device != device:
                 raise ValueError(
                     "`device` of all systems must be the same, got "
-                    f"{system.positions.device} and {self._device}`"
+                    f"{system.positions.device} and {device}`"
                 )
 
-            if neighbors_single.values.dtype != self._dtype:
+            if neighbors_single.values.dtype != dtype:
                 raise ValueError(
-                    f"each `neighbors` must have the same type {self._dtype} "
+                    f"each `neighbors` must have the same type {dtype} "
                     "as `systems`, got at least one `neighbors` of type "
                     f"{neighbors_single.values.dtype}"
                 )
 
-            if neighbors_single.values.device != self._device:
+            if neighbors_single.values.device != device:
                 raise ValueError(
-                    f"each `neighbors` must be on the same device {self._device} "
+                    f"each `neighbors` must be on the same device {device} "
                     "as `systems`, got at least one `neighbors` with device "
                     f"{neighbors_single.values.device}"
                 )
@@ -136,15 +136,15 @@ class CalculatorBaseMetatensor(torch.nn.Module):
 
         # Metatensor will issue a warning because `charges` are not a default member of
         # a System object
-        self._n_charges_channels = systems[0].get_data("charges").values.shape[1]
+        n_charges_channels = systems[0].get_data("charges").values.shape[1]
 
         for i_system, system in enumerate(systems):
             n_channels = system.get_data("charges").values.shape[1]
-            if n_channels != self._n_charges_channels:
+            if n_channels != n_charges_channels:
                 raise ValueError(
                     f"number of charges-channels in system index {i_system} "
                     f"({n_channels}) is inconsistent with first system "
-                    f"({self._n_charges_channels})"
+                    f"({n_charges_channels})"
                 )
 
         return systems, neighbors
@@ -177,6 +177,13 @@ class CalculatorBaseMetatensor(torch.nn.Module):
         :return: TensorMap containing the potential of all types.
         """
         systems, neighbors = self._validate_compute_parameters(systems, neighbors)
+
+        # In actual computations, the data type (dtype) and device (e.g. CPU, GPU) of
+        # all remaining variables need to be consistent
+        self._dtype = systems[0].positions.dtype
+        self._device = systems[0].positions.device
+        self._n_charges_channels = systems[0].get_data("charges").values.shape[1]
+
         potentials: List[torch.Tensor] = []
         samples_list: List[torch.Tensor] = []
 
