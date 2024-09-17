@@ -115,7 +115,7 @@ mesh = MI.points_to_mesh(charges)
 
 class ParamKernel(torch.nn.Module):
     def __init__(self, sigma: torch.Tensor, a0: torch.Tensor):
-        super(ParamKernel, self).__init__()
+        super().__init__()
         self._sigma = sigma
         self._a0 = a0
 

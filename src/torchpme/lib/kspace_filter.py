@@ -6,8 +6,8 @@ from .kvectors import generate_kvectors_for_mesh
 
 
 class KSpaceFilter(torch.nn.Module):
-    r"""
-    Class for applying a reciprocal-space filter to a real-space mesh.
+    r"""Apply a reciprocal-space filter to a real-space mesh.
+
     The class combines the costruction of a reciprocal-space grid
     :math:`\{mathbf{k}_n\}`
     (that should be commensurate to the grid in real space, so the class takes
