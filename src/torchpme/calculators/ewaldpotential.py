@@ -126,7 +126,7 @@ class EwaldPotential(CalculatorBaseTorch):
         max_steps: int,
     ) -> Tuple[float, float, float]:
 
-        device = positions.device
+        device = positions[0].device
         cell_dimensions = torch.linalg.norm(cell, dim=1)
         max_range = torch.min(cell_dimensions) / 2 - 1e-6
         G = torch.tensor(
@@ -137,7 +137,7 @@ class EwaldPotential(CalculatorBaseTorch):
             ]
         )
         volume = torch.linalg.det(G) ** 0.5
-        n_atoms = len(positions)
+        n_atoms = torch.tensor(len(positions), device=device)
 
         lr_wavelength = (
             torch.rand(1, device=device).uniform_(0, max_range).requires_grad_(True)
@@ -150,9 +150,29 @@ class EwaldPotential(CalculatorBaseTorch):
         )
 
         # Step1: Find optimal lr_wavelength and atomic_smearing
-        fourier_optimizer = torch.optim.Adam([lr_wavelength, atomic_smearing], lr=0.05)
+        real_optimizer = torch.optim.Adam([atomic_smearing, cutoff], lr=0.1)
+        err_real = (
+            lambda atomic_smearing, cutoff: (torch.sum(charges**2) / torch.sqrt(n_atoms))
+            * 2
+            / torch.sqrt(cutoff * volume)
+            * torch.exp(-(atomic_smearing**2) * cutoff**2)
+        )
+
+        steps = 0
+        while ((result := err_real(atomic_smearing, torch.sigmoid(cutoff) * max_range)) > accuracy) and (
+            steps < max_steps
+        ):
+            print(steps, result)
+            result.backward()
+            real_optimizer.step()
+            real_optimizer.zero_grad()
+            steps += 1
+        atomic_smearing = atomic_smearing.detach()
+        cutoff = torch.sigmoid(cutoff).detach() * max_range
+
+        fourier_optimizer = torch.optim.Adam([lr_wavelength], lr=0.1)
         err_Fourier = (
-            lambda lr_wavelength, atomic_smearing: (
+            lambda lr_wavelength: (
                 torch.sum(charges**2) / torch.sqrt(n_atoms)
             )
             * 2
@@ -162,39 +182,15 @@ class EwaldPotential(CalculatorBaseTorch):
         )
 
         steps = 0
-        while (
-            (
-                result := err_Fourier(
-                    torch.sigmoid(lr_wavelength) * max_range,
-                    torch.sigmoid(atomic_smearing) * max_range,
-                )  # To confine parameters in (0, max_range)
-            )
-            > accuracy
-        ) and (steps < max_steps):
+        while ((result := err_Fourier(lr_wavelength)) > accuracy) and (
+            steps < max_steps
+        ):
+            print(steps, result)
             result.backward()
             fourier_optimizer.step()
             fourier_optimizer.zero_grad()
             steps += 1
-        lr_wavelength = torch.sigmoid(lr_wavelength).detach() * max_range
-        atomic_smearing = torch.sigmoid(atomic_smearing).detach() * max_range
-
-        real_optimizer = torch.optim.Adam([cutoff], lr=0.05)
-        err_real = (
-            lambda cutoff: (torch.sum(charges**2) / torch.sqrt(n_atoms))
-            * 2
-            / torch.sqrt(cutoff * volume)
-            * torch.exp(-(atomic_smearing**2) * cutoff**2)
-        )
-
-        steps = 0
-        while (
-            (result := err_real(torch.sigmoid(cutoff) * (5 - 1e-6))) > accuracy
-        ) and (steps < 10000):
-            result.backward()
-            real_optimizer.step()
-            real_optimizer.zero_grad()
-            steps += 1
-        cutoff = torch.sigmoid(cutoff).detach() * (5 - 1e-6)
+        lr_wavelength = lr_wavelength.detach()
 
         return atomic_smearing, lr_wavelength, cutoff
 
