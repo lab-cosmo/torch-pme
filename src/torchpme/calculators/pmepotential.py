@@ -2,37 +2,10 @@ from typing import List, Optional, Union
 
 import torch
 
-from ..lib.kspace_filter import KSpaceFilter, KSpaceKernel
+from ..lib.kspace_filter import KSpaceFilter
 from ..lib.kvectors import get_ns_mesh
 from ..lib.mesh_interpolator import MeshInterpolator
 from .base import CalculatorBaseTorch, PeriodicBase
-
-
-class LRKernel(KSpaceKernel):
-    """
-    -- DRAFT --
-    Temporary, this should be integrated in the potential calculator
-    Helper class to compute a scalar filter corresponding
-    to the long-range part of the Coulomb potential
-    """
-
-    def __init__(self, smearing: torch.Tensor, ivolume: torch.Tensor, potential):
-        super(LRKernel, self).__init__()
-        self.smearing = smearing
-        self.ivolume = ivolume
-        self.potential = potential
-
-    def from_k_sq(self, k2: torch.Tensor) -> torch.Tensor:
-        mask = torch.ones_like(k2, dtype=torch.bool, device=k2.device)
-        mask[..., 0, 0, 0] = False
-        potential = torch.full_like(
-            k2, fill_value=self.potential.fourier_at_zero(self.smearing)
-        )
-
-        potential[mask] = (
-            self.potential.from_k_sq(k2[mask], self.smearing) * self.ivolume
-        )
-        return potential
 
 
 class _PMEPotentialImpl(PeriodicBase):
