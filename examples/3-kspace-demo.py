@@ -284,7 +284,7 @@ fig.colorbar(cfs[0], cax=cbar_ax, orientation="vertical")
 # Jit-ting of the k-space filter
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # The k-space filter can also be compiled to torch-script, for
-# faster execution.
+# faster execution (the impact is marginal for this very simple case)
 
 multi_filtered = multi_KF.compute(multi_mesh)
 start = time()

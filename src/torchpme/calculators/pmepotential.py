@@ -130,7 +130,6 @@ class _PMEPotentialImpl(PeriodicBase):
             self.potential.smearing = self.smearing
             self.potential.kspace_scaling = cell.det().pow(-1)  # 1/V scaling
             self._KF.update_mesh(cell, ns)
-            self._KF.update_filter()
 
         # Step 1. Compute density interpolation
         self._MI.compute_interpolation_weights(positions)

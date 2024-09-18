@@ -91,41 +91,42 @@ class KSpaceFilter(torch.nn.Module):
         self._fft_norm = fft_norm
         self._ifft_norm = ifft_norm
         if fft_norm not in ["ortho", "forward", "backward"]:
-            raise ValueError(f"Invalid option {fft_norm} for the `fft_norm` parameter.")
+            raise ValueError(
+                f"Invalid option '{fft_norm}' for the `fft_norm` parameter."
+            )
         if ifft_norm not in ["ortho", "forward", "backward"]:
             raise ValueError(
-                f"Invalid option {ifft_norm} for the `ifft_norm` parameter."
+                f"Invalid option '{ifft_norm}' for the `ifft_norm` parameter."
             )
-        
+
         self._kernel = kernel
         self.update_mesh(cell, ns_mesh)
-
 
     @torch.jit.export
     def update_filter(self):
         r"""
         Applies one or more scalar filter functions to the squared norms of the
         reciprocal space mesh grids, storing it so it can be applied multiple times.
-
-        :param filter: a callable (or a list of callables) containing
-            :math:`\mathbb{R}^+\rightarrow \mathbb{R} functions that will be
-            applied to the tensor containing the squared norm of the k-vectors
-            to prepare the convolution filter arrays
+        Uses the :py:func:`KSpaceKernel.from_k_sq` method of the
+        :py:class:`KSpaceKernel`-derived object provided upon initialization
+        to compute the kernel values over the grid points.
         """
 
         self._kfilter = self._kernel.from_k_sq(self._knorm_sq)
 
     @torch.jit.export
     def update_mesh(self, cell: torch.Tensor, ns_mesh: torch.Tensor):
-        """
-        Updates the k-space mesh vectors.
+        """Update the k-space mesh vectors.
+
+        Should have a size consistent with that of the mesh used to
+        store the real-space functions that will be filtered.
 
         :param cell: torch.tensor of shape ``(3, 3)``, where `
             `cell[i]`` is the i-th basis vector of the unit cell
         :param ns_mesh: toch.tensor of shape ``(3,)``
             Number of mesh points to use along each of the three axes
         """
-        
+
         # Check that the provided parameters match the specifications
         if cell.shape != (3, 3):
             raise ValueError(
@@ -190,7 +191,14 @@ class KSpaceFilter(torch.nn.Module):
 
         dims = (1, 2, 3)  # dimensions along which to Fourier transform
         mesh_hat = torch.fft.rfftn(mesh_values, norm=self._fft_norm, dim=dims)
+
+        if mesh_hat.shape[-3:] != self._kfilter.shape[-3]:
+            raise ValueError(
+                "RThe real-space mesh is inconsistent with the k-space grid."
+            )
+
         filter_hat = mesh_hat * self._kfilter
+
         mesh_kernel = torch.fft.irfftn(
             filter_hat,
             norm=self._ifft_norm,
