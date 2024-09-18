@@ -17,31 +17,32 @@ DTYPE = torch.float64
 
 def generate_orthogonal_transformations():
 
-    # second rotation matrix: rotation by angle phi around z-axis
+    # first rotation matrix: rotation by angle phi around z-axis
     phi = 0.82321
-    rot_2 = torch.zeros((3, 3), dtype=DTYPE)
-    rot_2[0, 0] = rot_2[1, 1] = math.cos(phi)
-    rot_2[0, 1] = -math.sin(phi)
-    rot_2[1, 0] = math.sin(phi)
-    rot_2[2, 2] = 1.0
+    rot_1 = torch.zeros((3, 3), dtype=DTYPE)
+    rot_1[0, 0] = rot_1[1, 1] = math.cos(phi)
+    rot_1[0, 1] = -math.sin(phi)
+    rot_1[1, 0] = math.sin(phi)
+    rot_1[2, 2] = 1.0
 
-    # third rotation matrix: second matrix followed by rotation by angle theta around y
+    # second rotation matrix: second matrix followed by rotation by angle theta around y
     theta = 1.23456
-    rot_3 = torch.zeros((3, 3), dtype=DTYPE)
-    rot_3[0, 0] = rot_3[2, 2] = math.cos(theta)
-    rot_3[0, 2] = math.sin(theta)
-    rot_3[2, 0] = -math.sin(theta)
-    rot_3[1, 1] = 1.0
-    rot_3 = rot_3 @ rot_2
+    rot_2 = torch.zeros((3, 3), dtype=DTYPE)
+    rot_2[0, 0] = rot_2[2, 2] = math.cos(theta)
+    rot_2[0, 2] = math.sin(theta)
+    rot_2[2, 0] = -math.sin(theta)
+    rot_2[1, 1] = 1.0
+    rot_2 = rot_2 @ rot_1
 
     # add additional orthogonal transformations by combining inversion
-    transformations = [rot_2, rot_3]
+    transformations = [rot_1, rot_2]
 
     # make sure that the generated transformations are indeed orthogonal
     for q in transformations:
         id = torch.eye(3, dtype=DTYPE)
         id_2 = q.T @ q
         torch.testing.assert_close(id, id_2, atol=2e-15, rtol=1e-14)
+
     return transformations
 
 
@@ -396,9 +397,9 @@ def test_wigner(crystal_name, scaling_factor):
         torch.testing.assert_close(energies, energies_ref, atol=0.0, rtol=rtol)
 
 
-@pytest.mark.parametrize("sr_cutoff", [2.01, 5.5])
+@pytest.mark.parametrize("sr_cutoff", [5.54, 6.01])
 @pytest.mark.parametrize("frame_index", [0, 1, 2])
-@pytest.mark.parametrize("scaling_factor", [0.4325, 2.0353610])
+@pytest.mark.parametrize("scaling_factor", [0.4325, 1.3353610])
 @pytest.mark.parametrize("ortho", generate_orthogonal_transformations())
 @pytest.mark.parametrize("calc_name", ["ewald", "pme"])
 def test_random_structure(sr_cutoff, frame_index, scaling_factor, ortho, calc_name):
