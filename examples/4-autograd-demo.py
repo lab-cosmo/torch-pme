@@ -1,12 +1,15 @@
 """
-.. _example-kspace-demo:
+.. _example-autograd-demo:
 
 Custom ``torch-pme`` models with automatic differentiation
 ==========================================================
 
 :Authors: Michele Ceriotti `@ceriottm <https://github.com/ceriottm/>`_
 
-TBD - esplanation
+DRAFT
+This is intended to showcase all possible perverse ways one could
+use the ``torchpme`` building blocks to do crazy stuff, expliting
+to the fullest the availability of automatic differentiation.
 
 """
 
@@ -14,18 +17,24 @@ TBD - esplanation
 # Import dependencies
 
 import ase
-import chemiscope
-import numpy as np
+
+# import chemiscope
+# import numpy as np
 import torch
-from matplotlib import pyplot as plt
 
 import torchpme
 
 
+# from matplotlib import pyplot as plt
+
+
 device = "cpu"
 dtype = torch.float64
-torch.manual_seed(12345)
-rng = np.random.default_rng(12345)
+rng = torch.Generator()
+rng.manual_seed(32)
+
+# %%
+# Generate trial structure
 
 structure = ase.Atoms(
     positions=[
@@ -48,29 +57,19 @@ structure = ase.Atoms(
 # Gaussian distribution.
 
 
-displacement = rng.normal(loc=0.0, scale=2.5e-1, size=(len(structure), 3))
-structure.positions += displacement
-
-charges_np = np.array(
-    [
-        [1.0, 1.0],
-        [-1.0, 1.0],
-        [-1.0, 1.0],
-        [1.0, 1.0],
-        [-1.0, 1.0],
-        [1.0, 1.0],
-        [1.0, 1.0],
-        [-1.0, 1.0],
-    ]
+displacement = torch.normal(
+    mean=0.0, std=2.5e-1, size=(len(structure), 3), generator=rng
 )
-charges_np += rng.normal(scale=0.1, size=(len(charges_np), 1))
+structure.positions += displacement.numpy()
 
-
-# %%
-#
-# We also define the charges, with a bit of noise for good measure. (NB: the structure
-# won't be charge neutral but it does not matter for this example)
-
+charges = torch.tensor(
+    [[1.0], [-1.0], [-1.0], [1.0], [-1.0], [1.0], [1.0], [-1.0]],
+    dtype=dtype,
+    device=device,
+)
+charges += torch.normal(mean=0.0, std=1e-1, size=(len(charges), 1), generator=rng)
+positions = torch.from_numpy(structure.positions).to(device=device, dtype=dtype)
+cell = torch.from_numpy(structure.cell.array).to(device=device, dtype=dtype)
 
 # %%
 #
@@ -81,11 +80,7 @@ charges_np += rng.normal(scale=0.1, size=(len(charges_np), 1))
 #
 # We demonstrate this by computing a projection on two grids with 3 and 7 mesh points.
 
-
-positions = torch.from_numpy(structure.positions).to(device=device, dtype=dtype)
-charges = torch.from_numpy(charges_np).to(device=device, dtype=dtype)
-cell = torch.from_numpy(structure.cell.array).to(device=device, dtype=dtype)
-
+positions.requires_grad_(True)
 charges.requires_grad_(True)
 cell.requires_grad_(True)
 
@@ -113,13 +108,13 @@ mesh = MI.points_to_mesh(charges)
 # three channels
 
 
-class ParamKernel(torch.nn.Module):
+class ParametricKernel(torch.nn.Module):
     def __init__(self, sigma: torch.Tensor, a0: torch.Tensor):
         super().__init__()
         self._sigma = sigma
         self._a0 = a0
 
-    def forward(self, k2):
+    def from_k_sq(self, k2):
 
         filter = torch.stack([torch.exp(-k2 * s**2 / 2) for s in self._sigma])
         filter[0, :] *= self._a0[0] / (1 + k2)
@@ -135,7 +130,7 @@ a0 = torch.tensor([1.0, 1.0], dtype=dtype, device=device)
 sigma.requires_grad_(True)
 a0.requires_grad_(True)
 
-kernel = ParamKernel(sigma, a0)
+kernel = ParametricKernel(sigma, a0)
 KF = torchpme.lib.KSpaceFilter(cell, ns, kernel=kernel)
 
 filtered = KF.compute(mesh)
@@ -165,31 +160,34 @@ sigma.grad
 # %%
 a0.grad
 # %%
-print(cell.grad)
+cell.grad
 
 # %%
 # A ``torch`` module based on ``torchpme``
 # ----------------------------------------
 #
 
-class SmearedCoulomb(torch.nn.Module):
+
+class SmearedCoulomb(torchpme.lib.KSpaceKernel):
     def __init__(self, sigma2):
         super().__init__()
-        self._sigma2=sigma2
+        self._sigma2 = sigma2
 
-    def forward(self, k2):
+    def from_k_sq(self, k2):
         mask = torch.ones_like(k2, dtype=torch.bool, device=k2.device)
         mask[..., 0, 0, 0] = False
         potential = torch.zeros_like(k2)
         potential[mask] = torch.exp(-k2[mask] * self._sigma2 * 0.5) / k2[mask]
         return potential
 
+
 class KSpaceModule(torch.nn.Module):
     """
-    A 
+    A
     """
+
     def __init__(
-        self, mesh_spacing: float = 0.5, sigma2: float = 1.0, hidden_sizes=[10, 10]
+        self, mesh_spacing: float = 0.5, sigma2: float = 1.0, hidden_sizes=None
     ):
         super().__init__()
         self._mesh_spacing = mesh_spacing
@@ -206,10 +204,13 @@ class KSpaceModule(torch.nn.Module):
             interpolation_order=3,
         )
         self._KF = torchpme.lib.KSpaceFilter(
-            cell=dummy_cell, ns_mesh=torch.tensor([1, 1, 1]), 
-            kernel=SmearedCoulomb(self._sigma2)
+            cell=dummy_cell,
+            ns_mesh=torch.tensor([1, 1, 1]),
+            kernel=SmearedCoulomb(self._sigma2),
         )
 
+        if hidden_sizes is None:  # default architecture
+            hidden_sizes = [10, 10]
         # a neural network to process "charge and potential"
         last_size = 2  # input is charge and potential
         self._layers = torch.nn.ModuleList()
@@ -239,8 +240,8 @@ class KSpaceModule(torch.nn.Module):
         self._KF.update_filter()
         mesh = self._KF.compute(mesh)
         pot = self._MI.mesh_to_points(mesh)
-        return (pot * charges).sum()
-        x = torch.vstack([charges, pot])
+
+        x = torch.hstack([charges, pot])
         for layer in self._layers:
             x = layer(x)
         # Output layer
@@ -274,6 +275,8 @@ positions.grad
 # %%
 cell.grad
 # %%
+# this can also be jitted!
+old_cell_grad = cell.grad
 my_tsmod = torch.jit.script(my_module)
 
 # %%
@@ -293,4 +296,7 @@ value.backward()
 
 # %%
 cell.grad
+
+# %%
+cell.grad - old_cell_grad
 # %%

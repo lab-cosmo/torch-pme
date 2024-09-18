@@ -17,6 +17,8 @@ times if the filter or the mesh size don't change.
 # %%
 # Import dependencies
 
+from time import time
+
 import ase
 import chemiscope
 import numpy as np
@@ -28,7 +30,6 @@ import torchpme
 
 device = "cpu"
 dtype = torch.float64
-torch.manual_seed(12345)
 
 # %%
 # Demonstrates the application of a k-space filter
@@ -50,17 +51,27 @@ mesh_value = (
 ).reshape(1, *xyz_mesh.shape[:-1])
 
 # %%
-# We define and apply a Gaussian smearing filter
+# We define and apply a Gaussian smearing filter.
+# We first define the convolution kernel that must be applied
+# in the Fourier domain, and then use it as a parameter of the
+# filter class.
 
 
 # This is the filter function. NB it is applied
 # to the *squared k vector norm*
-def gaussian_smearing(k2):
-    sigma2 = 1
-    return torch.exp(-k2 * sigma2 / 2)
+class GaussianSmearingKernel(torchpme.lib.KSpaceKernel):
+
+    def __init__(self, sigma2: float):
+        self._sigma2 = sigma2
+
+    def from_k_sq(self, k2):
+        return torch.exp(-k2 * self._sigma2 * 0.5)
 
 
-KF = torchpme.lib.KSpaceFilter(cell, ns_mesh, kernel=gaussian_smearing)
+# This is the filter
+KF = torchpme.lib.KSpaceFilter(cell, ns_mesh, kernel=GaussianSmearingKernel(sigma2=1.0))
+
+# Apply the filter to the mesh
 mesh_filtered = KF.compute(mesh_value)
 
 # %%
@@ -187,12 +198,12 @@ multi_mesh = torch.stack(
 # three channels
 
 
-class MultiKernel(torch.nn.Module):
+class MultiKernel(torchpme.lib.KSpaceKernel):
     def __init__(self, sigma: torch.Tensor):
-        super(MultiKernel, self).__init__()
+        super().__init__()
         self._sigma = sigma
 
-    def forward(self, k2):
+    def from_k_sq(self, k2):
 
         filter = torch.stack([torch.exp(-k2 * s**2 / 2) for s in self._sigma])
         return filter
@@ -201,7 +212,7 @@ class MultiKernel(torch.nn.Module):
 # %%
 # This can be used just as a simple filter
 
-multi_kernel = MultiKernel(torch.tensor([0.25, 0.5, 1.0]))
+multi_kernel = MultiKernel(torch.tensor([0.25, 0.5, 1.0], dtype=dtype, device=device))
 multi_KF = torchpme.lib.KSpaceFilter(cell, ns_mesh, kernel=multi_kernel)
 multi_filtered = multi_KF.compute(multi_mesh)
 
@@ -215,7 +226,9 @@ multi_KF.update_filter()
 multi_filtered_2 = multi_KF.compute(multi_mesh)
 
 # %%
-# The firs colum shows the input function (the
+# Visualize the application of the filters
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# The first colum shows the input function (the
 # three channels contain the same function as in
 # the previous example, but with different orientations,
 # which explains the different appearence when sliced
@@ -224,9 +237,8 @@ multi_filtered_2 = multi_KF.compute(multi_mesh)
 # The second and third columns show the same three
 # channels with the Gaussian smearings defined above.
 
-
 fig, ax = plt.subplots(
-    3, 3, figsize=(9, 9), sharey=True, sharex=True, tight_layout=True
+    3, 3, figsize=(9, 9), sharey=True, sharex=True, constrained_layout=True
 )
 
 # reuse the same mesh_extent given the mesh is cubic
@@ -269,3 +281,22 @@ cbar_ax = fig.add_axes(
 fig.colorbar(cfs[0], cax=cbar_ax, orientation="vertical")
 
 # %%
+# Jit-ting of the k-space filter
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# The k-space filter can also be compiled to torch-script, for
+# faster execution.
+
+multi_filtered = multi_KF.compute(multi_mesh)
+start = time()
+for _i in range(100):
+    multi_filtered = multi_KF.compute(multi_mesh)
+time_python = (time() - start) * 1e6 / 100
+
+jitted_KF = torch.jit.script(multi_KF)
+jit_filtered = jitted_KF.compute(multi_mesh)
+start = time()
+for _i in range(100):
+    jit_filtered = jitted_KF.compute(multi_mesh)
+time_jit = (time() - start) * 1e6 / 100
+
+print(f"Evaluation time:\nPytorch: {time_python}µs\nJitted:  {time_jit}µs")

@@ -1,8 +1,45 @@
-from typing import Callable
-
 import torch
 
 from .kvectors import generate_kvectors_for_mesh
+
+
+class KSpaceKernel(torch.nn.Module):
+    r"""Base class defining the interface for a reciprocal-space kernel helper.
+
+    Provides an interface to compute the reciprocal-space convolution kernel
+    that is used e.g. to compute potentials using Fourier transforms. Parameters
+    of the kernel in derived classes should be defined and stored in the
+    ``__init__`` method.
+
+    NB: we need this slightly convoluted way of implementing what often amounts
+    to a simple, pure function of :math:`|\mathbf{k}|^2` in order to be able to
+    provide a customizable filter class that can be jitted.
+    """
+
+    def __init__(self):
+        super().__init__()
+
+    def from_k(self, k: torch.Tensor) -> torch.Tensor:
+        r"""Computes the reciprocal-space kernel on a grid of k points given a
+        tensor containing :math:`|\mathbf{k}|`.
+
+        :param k: torch.tensor containing the k vector moduli at which the kernel
+            is to be evaluated.
+        """
+
+        return self.from_k_sq(k**2)
+
+    def from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
+        r"""Computes the reciprocal-space kernel on a grid of k points given a
+        tensor containing :math:`|\mathbf{k}|^2`.
+
+        :param k_sq: torch.tensor containing the squared k vector moduli
+            at which the kernel is to be evaluated.
+        """
+
+        raise NotImplementedError(
+            f"from_k_sq is not implemented for {self.__class__.__name__}"
+        )
 
 
 class KSpaceFilter(torch.nn.Module):
@@ -28,9 +65,9 @@ class KSpaceFilter(torch.nn.Module):
         vector of the unit cell
     :param ns_mesh: toch.tensor of shape ``(3,)``
         Number of mesh points to use along each of the three axes
-    :param kernel: Callable
-        A callable (a function, or a :py:class:`torch.nn.Module` if one needs to store
-        parameters) that evaluates :math:`\psi` given the square modulus of
+    :param kernel: KSpaceKernel
+        A KSpaceKernel-derived class providing a ``from_k_sq`` method that
+        evaluates :math:`\psi` given the square modulus of
         the k-space mesh points
     :param fft_norm: str
         The normalization applied to the forward FT. Can be
@@ -44,7 +81,7 @@ class KSpaceFilter(torch.nn.Module):
         self,
         cell: torch.Tensor,
         ns_mesh: torch.Tensor,
-        kernel: Callable,
+        kernel: KSpaceKernel,
         fft_norm: str = "ortho",
         ifft_norm: str = "ortho",
     ):
@@ -76,7 +113,7 @@ class KSpaceFilter(torch.nn.Module):
             to prepare the convolution filter arrays
         """
 
-        self._kfilter = self._kernel(self._knorm_sq)
+        self._kfilter = self._kernel.from_k_sq(self._knorm_sq)
 
     @torch.jit.export
     def update_mesh(self, cell: torch.Tensor, ns_mesh: torch.Tensor):

@@ -3,12 +3,62 @@ import math
 import torch
 from torch.special import gammainc, gammaincc, gammaln
 
+from .kspace_filter import KSpaceKernel
+
 
 # since pytorch has implemented the incomplete Gamma functions, but not the much more
 # commonly used (complete) Gamma function, we define it in a custom way to make autograd
 # work as in https://discuss.pytorch.org/t/is-there-a-gamma-function-in-pytorch/17122
 def gamma(x: torch.Tensor) -> torch.Tensor:
     return torch.exp(gammaln(x))
+
+
+class BasePotential(torch.nn.Module):
+    r"""Base class defining the interface for a pair potential energy function.
+
+    Internal state variables and parameters in derived classes should be defined
+    in the ``__init__``  method. Supports computing the potential starting from a
+    list of distances or a list of squared distances.
+    """
+
+    def __init__(self):
+        super().__init__()
+
+    def from_dist(self, dist: torch.Tensor) -> torch.Tensor:
+        """Computes a pair potential given a tensor of interatomic distances.
+
+        :param dist: torch.tensor containing the distances at which the potential
+            is to be evaluated.
+        """
+
+        raise NotImplementedError(
+            f"from_dist is not implemented for {self.__class__.__name__}"
+        )
+
+    def from_dist_sq(self, dist_sq: torch.Tensor) -> torch.Tensor:
+        """Computes a pair potential given a tensor of squared distances.
+
+        :param dist_sq: torch.tensor containing the squared distances at which
+            the potential is to be evaluated.
+        """
+
+        return self.from_dist(torch.sqrt(dist_sq))
+
+
+class RangeSeparatedPotential(BasePotential, KSpaceKernel):
+
+    def __init__(self):
+        super().__init__()
+
+    def from_dist_sr(self, dist: torch.Tensor) -> torch.Tensor:
+        raise NotImplementedError(
+            f"from_dist_sr is not implemented for {self.__class__.__name__}"
+        )
+
+    def from_dist_lr(self, dist: torch.Tensor) -> torch.Tensor:
+        raise NotImplementedError(
+            f"from_dist_lr is not implemented for {self.__class__.__name__}"
+        )
 
 
 class InversePowerLawPotential:
