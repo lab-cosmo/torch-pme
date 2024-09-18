@@ -143,6 +143,7 @@ class _EwaldPotentialImpl(PeriodicBase):
             )
             energy -= charges * self_contrib
 
+        # Compensate for double counting of pairs (i,j) and (j,i)
         return energy / 2
 
 

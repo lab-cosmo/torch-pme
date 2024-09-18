@@ -151,6 +151,7 @@ class _PMEPotentialImpl(PeriodicBase):
             self_contrib = torch.sqrt(torch.full([], fill_value, device=device))
             interpolated_potential -= charges * self_contrib
 
+        # Compensate for double counting of pairs (i,j) and (j,i)
         return interpolated_potential / 2
 
 
