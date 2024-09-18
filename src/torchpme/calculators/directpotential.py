@@ -6,8 +6,9 @@ from ..lib import InversePowerLawPotential, all_neighbor_indices, distances
 from .base import CalculatorBaseTorch
 
 
-class _DirectPotentialImpl:
-    def __init__(self, exponent):
+class _DirectPotentialImpl(torch.nn.Module):
+    def __init__(self, exponent: float = 1.0):
+        super().__init__()
         self.exponent = exponent
         self.potential = InversePowerLawPotential(exponent=exponent)
 
@@ -34,7 +35,7 @@ class _DirectPotentialImpl:
             neighbor_shifts=neighbor_shifts,
         )
 
-        potentials_bare = self.potential.potential_from_dist(dists)
+        potentials_bare = self.potential.from_dist(dists)
 
         atom_is = neighbor_indices_tensor[0]
         atom_js = neighbor_indices_tensor[1]

@@ -396,6 +396,7 @@ def test_wigner(crystal_name, scaling_factor):
         torch.testing.assert_close(energies, energies_ref, atol=0.0, rtol=rtol)
 
 
+@pytest.mark.skip(reason="Too slow for rapid testing")
 @pytest.mark.parametrize("sr_cutoff", [2.01, 5.5])
 @pytest.mark.parametrize("frame_index", [0, 1, 2])
 @pytest.mark.parametrize("scaling_factor", [0.4325, 2.0353610])

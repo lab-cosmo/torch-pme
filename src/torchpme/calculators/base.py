@@ -301,7 +301,7 @@ class CalculatorBaseTorch(torch.nn.Module):
             return potentials[0]
 
 
-class PeriodicBase:
+class PeriodicBase(torch.nn.Module):
     """Base class providing general funtionality for periodic calculations.
 
     :param exponent: the exponent :math:`p` in :math:`1/r^p` potentials
@@ -322,6 +322,8 @@ class PeriodicBase:
         atomic_smearing: Union[None, float],
         subtract_interior: bool,
     ):
+        super().__init__()
+
         if exponent < 0.0 or exponent > 3.0:
             raise ValueError(f"`exponent` p={exponent} has to satisfy 0 < p <= 3")
         if atomic_smearing is not None and atomic_smearing <= 0:
@@ -331,8 +333,11 @@ class PeriodicBase:
         # power-law potential for later convenience
         self.exponent = exponent
         self.atomic_smearing = atomic_smearing
+        self.smearing = 1.0 if atomic_smearing is None else atomic_smearing
         self.subtract_interior = subtract_interior
-        self.potential = InversePowerLawPotential(exponent=exponent)
+        self.potential = InversePowerLawPotential(
+            exponent=exponent, smearing=self.smearing
+        )
 
     def _compute_sr(
         self,
@@ -352,12 +357,12 @@ class PeriodicBase:
         # If the contribution from all atoms within the cutoff is to be subtracted
         # this short-range part will simply use -V_LR as the potential
         if self.subtract_interior:
-            potentials_bare = -self.potential.potential_lr_from_dist(dists, smearing)
+            potentials_bare = -self.potential.from_dist_lr(dists)
         # In the remaining cases, we simply use the usual V_SR to get the full
         # 1/r^p potential when combined with the long-range part implemented in
         # reciprocal space
         else:
-            potentials_bare = self.potential.potential_sr_from_dist(dists, smearing)
+            potentials_bare = self.potential.from_dist_sr(dists)
 
         atom_is = neighbor_indices[0]
         atom_js = neighbor_indices[1]
@@ -388,5 +393,9 @@ class PeriodicBase:
             smearing = max_cutoff.item() / 5.0
         else:
             smearing = self.atomic_smearing
+
+        # also sets the internal state of the smearing
+        self.smearing = smearing
+        self.potential.smearing = smearing
 
         return cell, neighbor_indices, neighbor_shifts, smearing

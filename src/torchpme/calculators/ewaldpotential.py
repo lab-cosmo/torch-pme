@@ -9,11 +9,11 @@ from .base import CalculatorBaseTorch, PeriodicBase
 class _EwaldPotentialImpl(PeriodicBase):
     def __init__(
         self,
-        exponent: float,
-        atomic_smearing: Union[None, float],
-        lr_wavelength: Union[None, float],
-        subtract_self: bool,
-        subtract_interior: bool,
+        exponent: float = 1.0,
+        atomic_smearing: Union[None, float] = None,
+        lr_wavelength: Union[None, float] = None,
+        subtract_self: bool = True,
+        subtract_interior: bool = False,
     ):
         PeriodicBase.__init__(
             self,
@@ -51,6 +51,7 @@ class _EwaldPotentialImpl(PeriodicBase):
             neighbor_shifts=neighbor_shifts,
         )
 
+        # TODO streamline the flow of parameters
         if self.lr_wavelength is None:
             lr_wavelength = 0.5 * smearing
         else:
@@ -87,6 +88,10 @@ class _EwaldPotentialImpl(PeriodicBase):
         lr_wavelength: float,
         subtract_self: bool = True,
     ) -> torch.Tensor:
+
+        # TODO streamline parameter flow
+        self.potential.smearing = smearing
+
         # Define k-space cutoff from required real-space resolution
         k_cutoff = 2 * torch.pi / lr_wavelength
 
@@ -107,8 +112,7 @@ class _EwaldPotentialImpl(PeriodicBase):
         # value to be equal to zero. This mathematically corresponds
         # to the requirement that the net charge of the cell is zero.
         # G = 4 * torch.pi * torch.exp(-0.5 * smearing**2 * knorm_sq) / knorm_sq
-        G = self.potential.potential_fourier_from_k_sq(knorm_sq, smearing)
-        G[0] = self.potential.potential_fourier_at_zero(smearing)
+        G = self.potential.from_k_sq(knorm_sq)
 
         # Compute the energy using the explicit method that
         # follows directly from the Poisson summation formula.
@@ -199,6 +203,8 @@ class EwaldPotential(CalculatorBaseTorch, _EwaldPotentialImpl):
         subtract_self: bool = True,
         subtract_interior: bool = False,
     ):
+        CalculatorBaseTorch.__init__(self)
+
         _EwaldPotentialImpl.__init__(
             self,
             exponent=exponent,
@@ -207,7 +213,6 @@ class EwaldPotential(CalculatorBaseTorch, _EwaldPotentialImpl):
             subtract_self=subtract_self,
             subtract_interior=subtract_interior,
         )
-        CalculatorBaseTorch.__init__(self)
 
     def compute(
         self,

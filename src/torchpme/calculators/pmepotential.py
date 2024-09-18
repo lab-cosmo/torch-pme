@@ -26,12 +26,11 @@ class LRKernel(KSpaceKernel):
         mask = torch.ones_like(k2, dtype=torch.bool, device=k2.device)
         mask[..., 0, 0, 0] = False
         potential = torch.full_like(
-            k2, fill_value=self.potential.potential_fourier_at_zero(self.smearing)
+            k2, fill_value=self.potential.fourier_at_zero(self.smearing)
         )
 
         potential[mask] = (
-            self.potential.potential_fourier_from_k_sq(k2[mask], self.smearing)
-            * self.ivolume
+            self.potential.from_k_sq(k2[mask], self.smearing) * self.ivolume
         )
         return potential
 
@@ -39,12 +38,12 @@ class LRKernel(KSpaceKernel):
 class _PMEPotentialImpl(PeriodicBase):
     def __init__(
         self,
-        exponent: float,
-        atomic_smearing: Union[None, float],
-        mesh_spacing: Union[None, float],
-        interpolation_order: int,
-        subtract_self: bool,
-        subtract_interior: bool,
+        exponent: float = 1.0,
+        atomic_smearing: Optional[float] = None,
+        mesh_spacing: Optional[float] = None,
+        interpolation_order: int = 3,
+        subtract_self: bool = True,
+        subtract_interior: bool = False,
     ):
         if interpolation_order not in [1, 2, 3, 4, 5]:
             raise ValueError("Only `interpolation_order` from 1 to 5 are allowed")
@@ -64,19 +63,18 @@ class _PMEPotentialImpl(PeriodicBase):
         self.subtract_self = subtract_self
 
         # TorchScript requires to initialize all attributes in __init__
-        self._smearing = 1.0
         self._cell_cache = -1 * torch.ones([3, 3])
         self._MI = MeshInterpolator(
             cell=torch.eye(3),
             ns_mesh=torch.ones(3, dtype=int),
             interpolation_order=self.interpolation_order,
         )
+
         # Initialize the filter module
-        self._FF = LRKernel(self._smearing, torch.ones(1), self.potential)
         self._KF = KSpaceFilter(
             cell=torch.eye(3),
             ns_mesh=torch.ones(3, dtype=int),
-            kernel=self._FF,
+            kernel=self.potential,
             fft_norm="backward",
             ifft_norm="forward",
         )
@@ -96,14 +94,14 @@ class _PMEPotentialImpl(PeriodicBase):
         # the cost of the LR part. The auxilary parameter mesh_spacing then controls the
         # convergence of the SR and LR sums, respectively. The default values are chosen
         # to reach a convergence on the order of 1e-4 to 1e-5 for the test structures.
-        cell, neighbor_indices, neighbor_shifts, self._smearing = self._prepare(
+        cell, neighbor_indices, neighbor_shifts, self.smearing = self._prepare(
             cell=cell,
             neighbor_indices=neighbor_indices,
             neighbor_shifts=neighbor_shifts,
         )
 
         if self.mesh_spacing is None:
-            mesh_spacing = self._smearing / 8.0
+            mesh_spacing = self.smearing / 8.0
         else:
             mesh_spacing = self.mesh_spacing
 
@@ -112,7 +110,7 @@ class _PMEPotentialImpl(PeriodicBase):
             positions=positions,
             charges=charges,
             cell=cell,
-            smearing=self._smearing,
+            smearing=self.smearing,
             neighbor_indices=neighbor_indices,
             neighbor_shifts=neighbor_shifts,
         )
@@ -156,8 +154,8 @@ class _PMEPotentialImpl(PeriodicBase):
             )
 
             # Update the mesh for the k-space filter
-            self._FF.ivolume = cell.det().pow(-1)
-            self._FF.smearing = self._smearing
+            self.potential.smearing = self.smearing
+            self.potential.kspace_scaling = cell.det().pow(-1)  # 1/V scaling
             self._KF.update_mesh(cell, ns)
             self._KF.update_filter()
 
@@ -173,7 +171,7 @@ class _PMEPotentialImpl(PeriodicBase):
 
         # Step 4: Remove self-contribution if desired
         if subtract_self:
-            fill_value = 2.0 / (torch.pi * self._smearing**2)
+            fill_value = 2.0 / (torch.pi * self.smearing**2)
             self_contrib = torch.sqrt(torch.full([], fill_value, device=device))
             interpolated_potential -= charges * self_contrib
 
