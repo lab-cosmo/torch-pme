@@ -1,40 +1,9 @@
-from typing import List, Union
-
 import torch
 
-from ..lib import InversePowerLawPotential
 from .base import CalculatorBaseTorch
 
 
-class _DirectPotentialImpl:
-    def __init__(self, exponent):
-        self.exponent = exponent
-        self.potential = InversePowerLawPotential(exponent=exponent)
-
-    def _compute_single_system(
-        self,
-        positions: torch.Tensor,
-        charges: torch.Tensor,
-        cell: torch.Tensor,
-        neighbor_indices: torch.Tensor,
-        neighbor_distances: torch.Tensor,
-    ) -> torch.Tensor:
-        potentials_bare = self.potential.potential_from_dist(neighbor_distances)
-
-        atom_is = neighbor_indices[:, 0]
-        atom_js = neighbor_indices[:, 1]
-
-        contributions_is = charges[atom_js] * potentials_bare.unsqueeze(-1)
-        contributions_js = charges[atom_is] * potentials_bare.unsqueeze(-1)
-
-        potential = torch.zeros_like(charges)
-        potential.index_add_(0, atom_is, contributions_is)
-        potential.index_add_(0, atom_js, contributions_js)
-
-        return potential / 2
-
-
-class DirectPotential(CalculatorBaseTorch, _DirectPotentialImpl):
+class DirectPotential(CalculatorBaseTorch):
     r"""Potential using a direct summation.
 
     Scaling as :math:`\mathcal{O}(N^2)` with respect to the number of particles
@@ -63,7 +32,11 @@ class DirectPotential(CalculatorBaseTorch, _DirectPotentialImpl):
     using the ``vesin`` package. Refer to the `documentation <https://luthaf.fr/vesin>`_
     for details on the API. We define a dummy cell
 
-    >>> cell = torch.zeros(3, 3, dtype=torch.float64)
+    >>> cell = torch.eye(3, dtype=torch.float64)
+
+    The ``cell`` and ``positions`` argument **are ignored** in the actual calculations
+    but is required for a consistent API with the other calculators.
+
     >>> nl = NeighborList(cutoff=3.0, full_list=False)
     >>> i, j, neighbor_distances = nl.compute(
     ...     points=positions, box=cell, periodic=False, quantities="ijd"
@@ -74,9 +47,10 @@ class DirectPotential(CalculatorBaseTorch, _DirectPotentialImpl):
     system.
 
     >>> direct = DirectPotential()
-    >>> direct.compute(
+    >>> direct.forward(
     ...     positions=positions,
     ...     charges=charges,
+    ...     cell=cell,
     ...     neighbor_indices=neighbor_indices,
     ...     neighbor_distances=neighbor_distances,
     ... )
@@ -88,77 +62,22 @@ class DirectPotential(CalculatorBaseTorch, _DirectPotentialImpl):
     """
 
     def __init__(self, exponent: float = 1.0):
-        _DirectPotentialImpl.__init__(self, exponent=exponent)
-        CalculatorBaseTorch.__init__(self)
+        super().__init__(exponent=exponent)
 
-    def compute(
+    def _compute_single_system(
         self,
-        positions: Union[List[torch.Tensor], torch.Tensor],
-        charges: Union[List[torch.Tensor], torch.Tensor],
-        neighbor_indices: Union[List[torch.Tensor], torch.Tensor],
-        neighbor_distances: Union[List[torch.Tensor], torch.Tensor],
-    ) -> Union[torch.Tensor, List[torch.Tensor]]:
-        """Compute potential for all provided "systems".
+        positions: torch.Tensor,
+        charges: torch.Tensor,
+        cell: torch.Tensor,
+        neighbor_indices: torch.Tensor,
+        neighbor_distances: torch.Tensor,
+    ) -> torch.Tensor:
 
-        The computation is performed on the same ``device`` as ``dtype`` is the input is
-        stored on. The ``dtype`` of the output tensors will be the same as the input.
-
-        :param positions: Single or 2D tensor of shape (``len(charges), 3``) containing
-            the Cartesian positions of all point charges in the system.
-        :param charges: Single 2D tensor or list of 2D tensor of shape (``n_channels,
-            len(positions))``. ``n_channels`` is the number of charge channels the
-            potential should be calculated for a standard potential ``n_channels=1``. If
-            more than one "channel" is provided multiple potentials for the same
-            position but different are computed.
-        :param neighbor_indices: Single or list of 2D tensors of shape ``(n, 2)``, where
-            ``n`` is the number of neighbors. The two columns correspond to the indices
-            of a **half neighbor list** for the two atoms which are considered neighbors
-            (e.g. within a cutoff distance).
-        :param neighbor_distances: single or list of 1D tensors containing the distance
-            between the ``n`` pairs corresponding to a **half neighbor list**.
-        :return: Single or List of torch Tensors containing the potential(s) for all
-            positions. Each tensor in the list is of shape ``(len(positions),
-            len(charges))``, where If the inputs are only single tensors only a single
-            torch tensor with the potentials is returned.
-        """
-
-        # Create dummy cell to follow method synopsis. Due to limitations of torchscript
-        # we have to make the code very explicit here.
-        if isinstance(positions, list):
-            cell = len(charges) * [
-                torch.zeros(3, 3, dtype=positions[0].dtype, device=positions[0].device)
-            ]
-            return self._compute_impl(
-                positions=positions,
-                charges=charges,
-                cell=cell,
-                neighbor_indices=neighbor_indices,
-                neighbor_distances=neighbor_distances,
-            )
-        else:
-            cell = torch.zeros(3, 3, dtype=positions.dtype, device=positions.device)
-            return self._compute_impl(
-                positions=positions,
-                charges=charges,
-                cell=cell,
-                neighbor_indices=neighbor_indices,
-                neighbor_distances=neighbor_distances,
-            )
-
-    # This function is kept to keep torch-pme compatible with the broader pytorch
-    # infrastructure, which require a "forward" function. We name this function
-    # "compute" instead, for compatibility with other COSMO software.
-    def forward(
-        self,
-        positions: Union[List[torch.Tensor], torch.Tensor],
-        charges: Union[List[torch.Tensor], torch.Tensor],
-        neighbor_indices: Union[List[torch.Tensor], torch.Tensor],
-        neighbor_distances: Union[List[torch.Tensor], torch.Tensor],
-    ) -> Union[torch.Tensor, List[torch.Tensor]]:
-        """Forward just calls :py:meth:`compute`."""
-        return self.compute(
-            positions=positions,
+        return self._compute_sr(
+            is_periodic=False,
+            smearing=0.0,
             charges=charges,
             neighbor_indices=neighbor_indices,
             neighbor_distances=neighbor_distances,
+            subtract_interior=False,  # ignored since `is_periodic=False`
         )

@@ -87,16 +87,11 @@ class TestWorkflow:
     def check_operation(self, calculator, device):
         """Make sure computation runs and returns a metatensor.TensorMap."""
         system, neighbors = self.system(device)
-        descriptor_compute = calculator.compute(system, neighbors)
-        descriptor_forward = calculator.forward(system, neighbors)
+        descriptor = calculator.forward(system, neighbors)
 
-        assert isinstance(descriptor_compute, torch.ScriptObject)
-        assert isinstance(descriptor_forward, torch.ScriptObject)
+        assert isinstance(descriptor, torch.ScriptObject)
         if version.parse(torch.__version__) >= version.parse("2.1"):
-            assert descriptor_compute._type().name() == "TensorMap"
-            assert descriptor_forward._type().name() == "TensorMap"
-
-        assert mts_torch.equal(descriptor_forward, descriptor_compute)
+            assert descriptor._type().name() == "TensorMap"
 
     @pytest.mark.parametrize("device", AVAILABLE_DEVICES)
     def test_operation_as_python(self, CalculatorClass, params, device):

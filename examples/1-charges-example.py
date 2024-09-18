@@ -213,7 +213,7 @@ system.add_data(name="charges", data=data)
 # %%
 # We now calculate the potential using the MetaPMEPotential calculator
 
-potential_metatensor = calculator_metatensor.compute(system, neighbors)
+potential_metatensor = calculator_metatensor.forward(system, neighbors)
 
 # %%
 # The calculated potential is wrapped inside a :py:class:`TensorMap
@@ -258,7 +258,7 @@ system.add_data(name="charges", data=data_one_hot, override=True)
 
 # %%
 # Finally, we calculate the potential using ``calculator_metatensor``
-potential = calculator_metatensor.compute(system, neighbors)
+potential = calculator_metatensor.forward(system, neighbors)
 
 # %%
 # And as above, the values of the potential are the same.

@@ -2,5 +2,5 @@ DirectPotential
 ###############
 
 .. autoclass:: torchpme.DirectPotential
-    :members:
+    :members: forward
     :undoc-members:

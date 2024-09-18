@@ -6,13 +6,84 @@ from ..lib import InversePowerLawPotential
 
 
 class CalculatorBaseTorch(torch.nn.Module):
-    """Base calculator for the torch interface."""
+    """Base calculator for the torch interface.
 
-    def __init__(self):
+    :param exponent: the exponent :math:`p` in :math:`1/r^p` potentials
+    """
+
+    def __init__(self, exponent: float):
         super().__init__()
         # TorchScript requires to initialize all attributes in __init__
         self._device = torch.device("cpu")
         self._dtype = torch.float32
+
+        if exponent < 0.0 or exponent > 3.0:
+            raise ValueError(f"`exponent` p={exponent} has to satisfy 0 < p <= 3")
+        else:
+            self.exponent = exponent
+            self.potential = InversePowerLawPotential(exponent=exponent)
+
+    def _compute_sr(
+        self,
+        is_periodic: bool,
+        smearing: float,
+        charges: torch.Tensor,
+        neighbor_indices: torch.Tensor,
+        neighbor_distances: torch.Tensor,
+        subtract_interior: bool,
+    ) -> torch.Tensor:
+
+        if is_periodic:
+            # If the contribution from all atoms within the cutoff is to be subtracted
+            # this short-range part will simply use -V_LR as the potential
+            if subtract_interior:
+                potentials_bare = -self.potential.potential_lr_from_dist(
+                    neighbor_distances, smearing
+                )
+            # In the remaining cases, we simply use the usual V_SR to get the full
+            # 1/r^p potential when combined with the long-range part implemented in
+            # reciprocal space
+            else:
+                potentials_bare = self.potential.potential_sr_from_dist(
+                    neighbor_distances, smearing
+                )
+        else:  # is_direct
+            potentials_bare = self.potential.potential_from_dist(neighbor_distances)
+
+        atom_is = neighbor_indices[:, 0]
+        atom_js = neighbor_indices[:, 1]
+
+        contributions_is = charges[atom_js] * potentials_bare.unsqueeze(-1)
+        contributions_js = charges[atom_is] * potentials_bare.unsqueeze(-1)
+
+        potential = torch.zeros_like(charges)
+        potential.index_add_(0, atom_is, contributions_is)
+        potential.index_add_(0, atom_js, contributions_js)
+
+        # Compensate for double counting of pairs (i,j) and (j,i)
+        return potential / 2
+
+    @staticmethod
+    def estimate_smearing(
+        cell: torch.Tensor,
+    ) -> float:
+        """Estimate the smearing for ewald calculators.
+
+        :param cell: A 3x3 tensor representing the periodic system
+        :returns: estimated smearing
+        """
+        if torch.equal(
+            cell.det(), torch.full([], 0, dtype=cell.dtype, device=cell.device)
+        ):
+            raise ValueError(
+                "provided `cell` has a determinant of 0 and therefore is not valid "
+                "for periodic calculation"
+            )
+
+        cell_dimensions = torch.linalg.norm(cell, dim=1)
+        max_cutoff = torch.min(cell_dimensions) / 2 - 1e-6
+
+        return max_cutoff.item() / 5.0
 
     @staticmethod
     def _validate_compute_parameters(
@@ -196,14 +267,41 @@ class CalculatorBaseTorch(torch.nn.Module):
 
         return positions, charges, cell, neighbor_indices, neighbor_distances
 
-    def _compute_impl(
+    def forward(
         self,
         positions: Union[List[torch.Tensor], torch.Tensor],
         charges: Union[List[torch.Tensor], torch.Tensor],
         cell: Union[List[torch.Tensor], torch.Tensor],
         neighbor_indices: Union[List[torch.Tensor], torch.Tensor],
         neighbor_distances: Union[List[torch.Tensor], torch.Tensor],
-    ) -> Union[List[torch.Tensor], torch.Tensor]:
+    ) -> Union[torch.Tensor, List[torch.Tensor]]:
+        """Compute potential for all provided "systems" stacked inside list.
+
+        The computation is performed on the same ``device`` as ``dtype`` is the input is
+        stored on. The ``dtype`` of the output tensors will be the same as the input.
+
+        :param positions: Single or 2D tensor of shape (``len(charges), 3``) containing
+            the Cartesian positions of all point charges in the system.
+        :param charges: Single 2D tensor or list of 2D tensor of shape (``n_channels,
+            len(positions))``. ``n_channels`` is the number of charge channels the
+            potential should be calculated for a standard potential ``n_channels=1``. If
+            more than one "channel" is provided multiple potentials for the same
+            position but different are computed.
+        :param cell: single or 2D tensor of shape (3, 3), describing the bounding
+            box/unit cell of the system. Each row should be one of the bounding box
+            vector; and columns should contain the x, y, and z components of these
+            vectors (i.e. the cell should be given in row-major order).
+        :param neighbor_indices: Single or list of 2D tensors of shape ``(n, 2)``, where
+            ``n`` is the number of neighbors. The two columns correspond to the indices
+            of a **half neighbor list** for the two atoms which are considered neighbors
+            (e.g. within a cutoff distance).
+        :param neighbor_distances: single or list of 1D tensors containing the distance
+            between the ``n`` pairs corresponding to a **half neighbor list**.
+        :return: Single or list of torch tensors containing the potential(s) for all
+            positions. Each tensor in the list is of shape ``(len(positions),
+            len(charges))``, where If the inputs are only single tensors only a single
+            torch tensor with the potentials is returned.
+        """
         # save if the inputs were lists or single tensors
         input_is_list = isinstance(positions, list)
 
@@ -254,91 +352,3 @@ class CalculatorBaseTorch(torch.nn.Module):
             return potentials
         else:
             return potentials[0]
-
-
-class PeriodicBase:
-    """Base class providing general funtionality for periodic calculations.
-
-    :param exponent: the exponent :math:`p` in :math:`1/r^p` potentials
-    :param atomic_smearing: Width of the atom-centered Gaussian used to split the
-        Coulomb potential into the short- and long-range parts. A reasonable value for
-        most systems is to set it to ``1/5`` times the neighbor list cutoff. If
-        :py:obj:`None` ,it will be set to 1/5 times of half the largest box vector
-        (separately for each structure).
-    :param subtract_interior: If set to :py:obj:`True`, subtract from the features of an
-        atom the contributions to the potential arising from all atoms within the cutoff
-        Note that if set to true, the self contribution (see previous) is also
-        subtracted by default.
-    """
-
-    def __init__(
-        self,
-        exponent: float,
-        atomic_smearing: Union[None, float],
-        subtract_interior: bool,
-    ):
-        if exponent < 0.0 or exponent > 3.0:
-            raise ValueError(f"`exponent` p={exponent} has to satisfy 0 < p <= 3")
-        if atomic_smearing is not None and atomic_smearing <= 0:
-            raise ValueError(f"`atomic_smearing` {atomic_smearing} has to be positive")
-
-        # Attach the function handling all computations related to the
-        # power-law potential for later convenience
-        self.exponent = exponent
-        self.atomic_smearing = atomic_smearing
-        self.subtract_interior = subtract_interior
-        self.potential = InversePowerLawPotential(exponent=exponent)
-
-    def _compute_sr(
-        self,
-        smearing: float,
-        charges: torch.Tensor,
-        neighbor_indices: torch.Tensor,
-        neighbor_distances: torch.Tensor,
-    ) -> torch.Tensor:
-        # If the contribution from all atoms within the cutoff is to be subtracted
-        # this short-range part will simply use -V_LR as the potential
-        if self.subtract_interior:
-            potentials_bare = -self.potential.potential_lr_from_dist(
-                neighbor_distances, smearing
-            )
-        # In the remaining cases, we simply use the usual V_SR to get the full
-        # 1/r^p potential when combined with the long-range part implemented in
-        # reciprocal space
-        else:
-            potentials_bare = self.potential.potential_sr_from_dist(
-                neighbor_distances, smearing
-            )
-
-        atom_is = neighbor_indices[:, 0]
-        atom_js = neighbor_indices[:, 1]
-
-        contributions_is = charges[atom_js] * potentials_bare.unsqueeze(-1)
-        contributions_js = charges[atom_is] * potentials_bare.unsqueeze(-1)
-
-        potential = torch.zeros_like(charges)
-        potential.index_add_(0, atom_is, contributions_is)
-        potential.index_add_(0, atom_js, contributions_js)
-
-        return potential / 2
-
-    def _estimate_smearing(
-        self,
-        cell: torch.Tensor,
-    ) -> float:
-        if torch.equal(
-            cell.det(), torch.full([], 0, dtype=cell.dtype, device=cell.device)
-        ):
-            raise ValueError(
-                "provided `cell` has a determinant of 0 and therefore is not valid "
-                "for periodic calculation"
-            )
-
-        if self.atomic_smearing is None:
-            cell_dimensions = torch.linalg.norm(cell, dim=1)
-            max_cutoff = torch.min(cell_dimensions) / 2 - 1e-6
-            smearing = max_cutoff.item() / 5.0
-        else:
-            smearing = self.atomic_smearing
-
-        return smearing

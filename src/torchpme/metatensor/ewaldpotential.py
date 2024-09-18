@@ -1,10 +1,10 @@
 from typing import Optional
 
-from ..calculators.ewaldpotential import _EwaldPotentialImpl
+from ..calculators.ewaldpotential import EwaldPotential as EwaldPotentialTorch
 from .base import CalculatorBaseMetatensor
 
 
-class EwaldPotential(CalculatorBaseMetatensor, _EwaldPotentialImpl):
+class EwaldPotential(CalculatorBaseMetatensor):
     r"""Potential computed using the Ewald sum.
 
     Refer to :class:`torchpme.EwaldPotential` for parameter documentation.
@@ -20,11 +20,10 @@ class EwaldPotential(CalculatorBaseMetatensor, _EwaldPotentialImpl):
         lr_wavelength: Optional[float] = None,
         subtract_interior: bool = False,
     ):
-        _EwaldPotentialImpl.__init__(
-            self,
+        super().__init__()
+        self.calculator = EwaldPotentialTorch(
             exponent=exponent,
             atomic_smearing=atomic_smearing,
             lr_wavelength=lr_wavelength,
             subtract_interior=subtract_interior,
         )
-        CalculatorBaseMetatensor.__init__(self)

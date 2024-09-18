@@ -323,7 +323,7 @@ def test_madelung(crystal_name, scaling_factor, calc_name):
     )
 
     # Compute potential and compare against target value using default hypers
-    potentials = calc.compute(
+    potentials = calc.forward(
         positions=pos,
         charges=charges,
         cell=cell,
@@ -387,7 +387,7 @@ def test_wigner(crystal_name, scaling_factor):
 
         # Compute potential and compare against reference
         calc = EwaldPotential(atomic_smearing=smeareff)
-        potentials = calc.compute(
+        potentials = calc.forward(
             positions=positions,
             charges=charges,
             cell=cell,
@@ -455,7 +455,7 @@ def test_random_structure(sr_cutoff, frame_index, scaling_factor, ortho, calc_na
         rtol_e = 4.5e-3
         rtol_f = 3.5e-3
 
-    potentials = calc.compute(
+    potentials = calc.forward(
         positions=positions,
         charges=charges,
         cell=cell,
