@@ -1,8 +1,8 @@
-from typing import List, Optional, Tuple, Union
+from typing import List, Tuple, Union
 
 import torch
 
-from ..lib import InversePowerLawPotential, distances
+from ..lib import InversePowerLawPotential
 
 
 class CalculatorBaseTorch(torch.nn.Module):
@@ -18,38 +18,38 @@ class CalculatorBaseTorch(torch.nn.Module):
     def _validate_compute_parameters(
         positions: Union[List[torch.Tensor], torch.Tensor],
         charges: Union[List[torch.Tensor], torch.Tensor],
-        cell: Union[List[Optional[torch.Tensor]], Optional[torch.Tensor]],
-        neighbor_indices: Union[List[Optional[torch.Tensor]], Optional[torch.Tensor]],
-        neighbor_shifts: Union[List[Optional[torch.Tensor]], Optional[torch.Tensor]],
+        cell: Union[List[torch.Tensor], torch.Tensor],
+        neighbor_indices: Union[List[torch.Tensor], torch.Tensor],
+        neighbor_distances: Union[List[torch.Tensor], torch.Tensor],
     ) -> Tuple[
         List[torch.Tensor],
         List[torch.Tensor],
-        List[Optional[torch.Tensor]],
-        List[Optional[torch.Tensor]],
-        List[Optional[torch.Tensor]],
+        List[torch.Tensor],
+        List[torch.Tensor],
+        List[torch.Tensor],
     ]:
+
         # check that all inputs are of the same type
         for item, item_name in (
             (charges, "charges"),
             (cell, "cell"),
             (neighbor_indices, "neighbor_indices"),
-            (neighbor_shifts, "neighbor_shifts"),
+            (neighbor_distances, "neighbor_distances"),
         ):
-            if item is not None:
-                if isinstance(positions, list):
-                    if isinstance(item, torch.Tensor):
-                        raise TypeError(
-                            "Inconsistent parameter types. `positions` is a "
-                            f"list, while `{item_name}` is a torch.Tensor. Both need "
-                            "either be a list or a torch.Tensor!"
-                        )
-                else:
-                    if isinstance(item, list):
-                        raise TypeError(
-                            "Inconsistent parameter types. `positions` is a "
-                            f"torch.Tensor, while `{item_name}` is a list. Both need "
-                            "either be a list or a torch.Tensor!"
-                        )
+            if isinstance(positions, list):
+                if isinstance(item, torch.Tensor):
+                    raise TypeError(
+                        "Inconsistent parameter types. `positions` is a "
+                        f"list, while `{item_name}` is a torch.Tensor. Both need "
+                        "either be a list or a torch.Tensor!"
+                    )
+            else:
+                if isinstance(item, list):
+                    raise TypeError(
+                        "Inconsistent parameter types. `positions` is a "
+                        f"torch.Tensor, while `{item_name}` is a list. Both need "
+                        "either be a list or a torch.Tensor!"
+                    )
 
         # make sure that all provided parameters are lists
         if not isinstance(positions, list):
@@ -64,48 +64,23 @@ class CalculatorBaseTorch(torch.nn.Module):
         if not isinstance(neighbor_indices, list):
             neighbor_indices = [neighbor_indices]
 
-        if not isinstance(neighbor_shifts, list):
-            neighbor_shifts = [neighbor_shifts]
+        if not isinstance(neighbor_distances, list):
+            neighbor_distances = [neighbor_distances]
 
         device = positions[0].device
         dtype = positions[0].dtype
 
-        # check charges
-        if len(positions) != len(charges):
-            raise ValueError(
-                f"Got inconsistent numbers of positions ({len(positions)}) and "
-                f"charges ({len(charges)})"
-            )
-
-        # check cell
-        if cell[0] is None:
-            cell = cell * len(positions)
-
-        if len(positions) != len(cell):
-            raise ValueError(
-                f"Got inconsistent numbers of positions ({len(positions)}) and "
-                f"cell ({len(cell)})"
-            )
-
-        # check neighbor_indices
-        if neighbor_indices[0] is None:
-            neighbor_indices = neighbor_indices * len(positions)
-
-        if len(positions) != len(neighbor_indices):
-            raise ValueError(
-                f"Got inconsistent numbers of positions ({len(positions)}) and "
-                f"neighbor_indices ({len(neighbor_indices)})"
-            )
-
-        # check neighbor_shifts
-        if neighbor_shifts[0] is None:
-            neighbor_shifts = neighbor_shifts * len(positions)
-
-        if len(positions) != len(neighbor_shifts):
-            raise ValueError(
-                f"Got inconsistent numbers of positions ({len(positions)}) and "
-                f"neighbor_shifts ({len(neighbor_shifts)})"
-            )
+        for item, item_name in (
+            (charges, "charges"),
+            (cell, "cell"),
+            (neighbor_indices, "neighbor_indices"),
+            (neighbor_distances, "neighbor_distances"),
+        ):
+            if len(positions) != len(item):
+                raise ValueError(
+                    f"Got inconsistent numbers of positions ({len(positions)}) and "
+                    f"{item_name} ({len(item)})"
+                )
 
         # check that all devices and data types (dtypes) are consistent
         for (
@@ -113,8 +88,8 @@ class CalculatorBaseTorch(torch.nn.Module):
             cell_single,
             charges_single,
             neighbor_indices_single,
-            neighbor_shifts_single,
-        ) in zip(positions, cell, charges, neighbor_indices, neighbor_shifts):
+            neighbor_distances_single,
+        ) in zip(positions, cell, charges, neighbor_indices, neighbor_distances):
             # check shape, dtype and device of positions
             num_atoms = len(positions_single)
             if list(positions_single.shape) != [num_atoms, 3]:
@@ -138,31 +113,27 @@ class CalculatorBaseTorch(torch.nn.Module):
                 )
 
             # check shape, dtype and device of cell
-            if cell_single is not None:
-                if list(cell_single.shape) != [3, 3]:
-                    raise ValueError(
-                        "each `cell` must be a tensor with shape [3, 3], got at least "
-                        f"one tensor with shape {list(cell_single.shape)}"
-                    )
+            if list(cell_single.shape) != [3, 3]:
+                raise ValueError(
+                    "each `cell` must be a tensor with shape [3, 3], got at least "
+                    f"one tensor with shape {list(cell_single.shape)}"
+                )
 
-                if cell_single.dtype != dtype:
-                    raise ValueError(
-                        f"each `cell` must have the same type {dtype} as "
-                        "`positions`, got at least one tensor of type "
-                        f"{cell_single.dtype}"
-                    )
+            if cell_single.dtype != dtype:
+                raise ValueError(
+                    f"each `cell` must have the same type {dtype} as "
+                    "`positions`, got at least one tensor of type "
+                    f"{cell_single.dtype}"
+                )
 
-                if cell_single.device != device:
-                    raise ValueError(
-                        f"each `cell` must be on the same device {device} as "
-                        "`positions`, got at least one tensor with device "
-                        f"{cell_single.device}"
-                    )
+            if cell_single.device != device:
+                raise ValueError(
+                    f"each `cell` must be on the same device {device} as "
+                    "`positions`, got at least one tensor with device "
+                    f"{cell_single.device}"
+                )
 
-                if neighbor_shifts_single is None:
-                    raise ValueError("Provided `cell` but no `neighbor_shifts`.")
-
-            # check shape, dtype and device of charges
+            # check shape, dtype & device of `charges`
             if charges_single.dim() != 2:
                 raise ValueError(
                     "each `charges` needs to be a 2-dimensional tensor, got at least "
@@ -192,62 +163,46 @@ class CalculatorBaseTorch(torch.nn.Module):
                     f"{charges_single.device}"
                 )
 
-            # check shape, dtype and device of neighbor_indices and neighbor_shifts
-            if neighbor_indices_single is not None:
-                if neighbor_indices_single.shape[0] != 2:
-                    raise ValueError(
-                        "neighbor_indices is expected to have shape [2, num_neighbors]"
-                        f", but got {list(neighbor_indices_single.shape)} for one "
-                        "structure"
-                    )
+            # check shape, dtype & device of `neighbor_indices` and `neighbor_distances`
+            if neighbor_indices_single.shape[1] != 2:
+                raise ValueError(
+                    "neighbor_indices is expected to have shape [num_neighbors, 2]"
+                    f", but got {list(neighbor_indices_single.shape)} for one "
+                    "structure"
+                )
 
-                if neighbor_indices_single.device != device:
-                    raise ValueError(
-                        f"each `neighbor_indices` must be on the same device "
-                        f"{device} as `positions`, got at least one tensor with "
-                        f"device {neighbor_indices_single.device}"
-                    )
+            if neighbor_indices_single.device != device:
+                raise ValueError(
+                    f"each `neighbor_indices` must be on the same device "
+                    f"{device} as `positions`, got at least one tensor with "
+                    f"device {neighbor_indices_single.device}"
+                )
 
-            if neighbor_shifts_single is not None:
-                if cell_single is None:
-                    raise ValueError("Provided `neighbor_shifts` but no `cell`.")
+            if neighbor_distances_single.shape != neighbor_indices_single[:, 0].shape:
+                raise ValueError(
+                    "`neighbor_indices` and `neighbor_distances` need to have shapes "
+                    "[num_neighbors, 2] and [num_neighbors]. For at least one "
+                    f"structure, got {list(neighbor_indices_single.shape)} and "
+                    f"{list(neighbor_distances_single.shape)}, "
+                    "which is inconsistent"
+                )
 
-                if neighbor_shifts_single.shape[1] != 3:
-                    raise ValueError(
-                        "neighbor_shifts is expected to have shape [num_neighbors, 3]"
-                        f", but got {list(neighbor_shifts_single.shape)} for one "
-                        "structure"
-                    )
+            if neighbor_distances_single.device != device:
+                raise ValueError(
+                    f"each `neighbor_distances` must be on the same device "
+                    f"{device} as `positions`, got at least one tensor with "
+                    f"device {neighbor_distances_single.device}"
+                )
 
-                if neighbor_shifts_single.device != device:
-                    raise ValueError(
-                        f"each `neighbor_shifts` must be on the same device "
-                        f"{device} as `positions`, got at least one tensor with "
-                        f"device {neighbor_shifts_single.device}"
-                    )
-
-            if (
-                neighbor_indices_single is not None
-                and neighbor_shifts_single is not None
-            ):
-                if neighbor_shifts_single.shape[0] != neighbor_indices_single.shape[1]:
-                    raise ValueError(
-                        "`neighbor_indices` and `neighbor_shifts` need to have shapes "
-                        "[2, num_neighbors] and [num_neighbors, 3]. For at least one "
-                        f"structure, got {list(neighbor_indices_single.shape)} and "
-                        f"{list(neighbor_shifts_single.shape)}, "
-                        "which is inconsistent"
-                    )
-
-        return positions, charges, cell, neighbor_indices, neighbor_shifts
+        return positions, charges, cell, neighbor_indices, neighbor_distances
 
     def _compute_impl(
         self,
         positions: Union[List[torch.Tensor], torch.Tensor],
         charges: Union[List[torch.Tensor], torch.Tensor],
-        cell: Union[List[Optional[torch.Tensor]], Optional[torch.Tensor]],
-        neighbor_indices: Union[List[Optional[torch.Tensor]], Optional[torch.Tensor]],
-        neighbor_shifts: Union[List[Optional[torch.Tensor]], Optional[torch.Tensor]],
+        cell: Union[List[torch.Tensor], torch.Tensor],
+        neighbor_indices: Union[List[torch.Tensor], torch.Tensor],
+        neighbor_distances: Union[List[torch.Tensor], torch.Tensor],
     ) -> Union[List[torch.Tensor], torch.Tensor]:
         # save if the inputs were lists or single tensors
         input_is_list = isinstance(positions, list)
@@ -261,13 +216,13 @@ class CalculatorBaseTorch(torch.nn.Module):
             charges,
             cell,
             neighbor_indices,
-            neighbor_shifts,
+            neighbor_distances,
         ) = self._validate_compute_parameters(
             positions=positions,
             charges=charges,
             cell=cell,
             neighbor_indices=neighbor_indices,
-            neighbor_shifts=neighbor_shifts,
+            neighbor_distances=neighbor_distances,
         )
 
         # In actual computations, the data type (dtype) and device (e.g. CPU, GPU) of
@@ -282,8 +237,8 @@ class CalculatorBaseTorch(torch.nn.Module):
             charges_single,
             cell_single,
             neighbor_indices_single,
-            neighbor_shifts_single,
-        ) in zip(positions, charges, cell, neighbor_indices, neighbor_shifts):
+            neighbor_distances_single,
+        ) in zip(positions, charges, cell, neighbor_indices, neighbor_distances):
             # `_compute_single_system` is implemented only in child classes!
             potentials.append(
                 self._compute_single_system(
@@ -291,7 +246,7 @@ class CalculatorBaseTorch(torch.nn.Module):
                     charges=charges_single,
                     cell=cell_single,
                     neighbor_indices=neighbor_indices_single,
-                    neighbor_shifts=neighbor_shifts_single,
+                    neighbor_distances=neighbor_distances_single,
                 )
             )
 
@@ -336,51 +291,48 @@ class PeriodicBase:
 
     def _compute_sr(
         self,
-        positions: torch.Tensor,
-        charges: torch.Tensor,
-        cell: torch.Tensor,
         smearing: float,
+        charges: torch.Tensor,
         neighbor_indices: torch.Tensor,
-        neighbor_shifts: torch.Tensor,
+        neighbor_distances: torch.Tensor,
     ) -> torch.Tensor:
-        dists = distances(
-            positions=positions,
-            cell=cell,
-            neighbor_indices=neighbor_indices,
-            neighbor_shifts=neighbor_shifts,
-        )
         # If the contribution from all atoms within the cutoff is to be subtracted
         # this short-range part will simply use -V_LR as the potential
         if self.subtract_interior:
-            potentials_bare = -self.potential.potential_lr_from_dist(dists, smearing)
+            potentials_bare = -self.potential.potential_lr_from_dist(
+                neighbor_distances, smearing
+            )
         # In the remaining cases, we simply use the usual V_SR to get the full
         # 1/r^p potential when combined with the long-range part implemented in
         # reciprocal space
         else:
-            potentials_bare = self.potential.potential_sr_from_dist(dists, smearing)
+            potentials_bare = self.potential.potential_sr_from_dist(
+                neighbor_distances, smearing
+            )
 
-        atom_is = neighbor_indices[0]
-        atom_js = neighbor_indices[1]
+        atom_is = neighbor_indices[:, 0]
+        atom_js = neighbor_indices[:, 1]
 
-        contributions = charges[atom_js] * potentials_bare.unsqueeze(-1)
+        contributions_is = charges[atom_js] * potentials_bare.unsqueeze(-1)
+        contributions_js = charges[atom_is] * potentials_bare.unsqueeze(-1)
 
         potential = torch.zeros_like(charges)
-        potential.index_add_(0, atom_is, contributions)
+        potential.index_add_(0, atom_is, contributions_is)
+        potential.index_add_(0, atom_js, contributions_js)
 
-        return potential
+        return potential / 2
 
-    def _prepare(
+    def _estimate_smearing(
         self,
-        cell: Optional[torch.Tensor],
-        neighbor_indices: Optional[torch.Tensor],
-        neighbor_shifts: Optional[torch.Tensor],
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, float]:
-        if cell is None:
-            raise ValueError("provide `cell` for periodic calculation")
-        if neighbor_indices is None:
-            raise ValueError("provide `neighbor_indices` for periodic calculation")
-        if neighbor_shifts is None:
-            raise ValueError("provide `neighbor_shifts` for periodic calculation")
+        cell: torch.Tensor,
+    ) -> float:
+        if torch.equal(
+            cell.det(), torch.full([], 0, dtype=cell.dtype, device=cell.device)
+        ):
+            raise ValueError(
+                "provided `cell` has a determinant of 0 and therefore is not valid "
+                "for periodic calculation"
+            )
 
         if self.atomic_smearing is None:
             cell_dimensions = torch.linalg.norm(cell, dim=1)
@@ -389,4 +341,4 @@ class PeriodicBase:
         else:
             smearing = self.atomic_smearing
 
-        return cell, neighbor_indices, neighbor_shifts, smearing
+        return smearing

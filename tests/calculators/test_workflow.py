@@ -7,7 +7,6 @@ import math
 import pytest
 import torch
 from torch.testing import assert_close
-from utils import neighbor_list_torch
 
 from torchpme import DirectPotential, EwaldPotential, PMEPotential
 
@@ -57,21 +56,25 @@ class TestWorkflow:
 
         positions = torch.tensor([[0, 0, 0], [0.5, 0.5, 0.5]])
         charges = torch.tensor([1.0, -1.0]).reshape((-1, 1))
+        neighbor_indices = torch.tensor([[0, 1]], dtype=torch.int64)
+        neighbor_distances = torch.tensor([0.8660])
         if periodic:
             cell = torch.eye(3)
 
-            neighbor_indices, neighbor_shifts = neighbor_list_torch(
-                positions=positions, cell=cell
-            )
             return (
                 positions.to(device=device),
                 charges.to(device=device),
                 cell.to(device=device),
                 neighbor_indices.to(device=device),
-                neighbor_shifts.to(device=device),
+                neighbor_distances.to(device=device),
             )
         else:
-            return positions.to(device=device), charges.to(device=device)
+            return (
+                positions.to(device=device),
+                charges.to(device=device),
+                neighbor_indices.to(device=device),
+                neighbor_distances.to(device=device),
+            )
 
     def test_interpolation_order_error(self, CalculatorClass, params, periodic):
         if type(CalculatorClass) in [PMEPotential]:
@@ -82,7 +85,7 @@ class TestWorkflow:
     def test_multi_frame(self, CalculatorClass, params, periodic):
         calculator = CalculatorClass(**params)
         if periodic:
-            positions, charges, cell, neighbor_indices, neighbor_shifts = (
+            positions, charges, cell, neighbor_indices, neighbor_distance = (
                 self.cscl_system(periodic)
             )
             l_values = calculator.compute(
@@ -90,12 +93,17 @@ class TestWorkflow:
                 cell=[cell, cell],
                 charges=[charges, charges],
                 neighbor_indices=[neighbor_indices, neighbor_indices],
-                neighbor_shifts=[neighbor_shifts, neighbor_shifts],
+                neighbor_distances=[neighbor_distance, neighbor_distance],
             )
         else:
-            positions, charges = self.cscl_system(periodic)
+            positions, charges, neighbor_indices, neighbor_distance = self.cscl_system(
+                periodic
+            )
             l_values = calculator.compute(
-                positions=[positions, positions], charges=[charges, charges]
+                positions=[positions, positions],
+                charges=[charges, charges],
+                neighbor_indices=[neighbor_indices, neighbor_indices],
+                neighbor_distances=[neighbor_distance, neighbor_distance],
             )
 
         for values in l_values:
@@ -113,21 +121,26 @@ class TestWorkflow:
 
         positions = torch.tensor([[0.0, 0.0, 0.0]], dtype=dtype, device=device)
         charges = torch.ones((1, 2), dtype=dtype, device=device)
+        neighbor_indices = torch.tensor([[0, 0]], device=device)
+        neighbor_distances = torch.tensor([0.1], device=device)
 
         calculator = CalculatorClass(**params)
         if periodic:
             cell = torch.eye(3, dtype=dtype, device=device)
-            neighbor_indices = torch.tensor([0, 0]).unsqueeze(1)
-            neighbor_shifts = torch.tensor([0, 0, 0]).reshape(1, -1)
             potential = calculator.compute(
                 positions=positions,
                 charges=charges,
                 cell=cell,
                 neighbor_indices=neighbor_indices,
-                neighbor_shifts=neighbor_shifts,
+                neighbor_distances=neighbor_distances,
             )
         else:
-            potential = calculator.compute(positions=positions, charges=charges)
+            potential = calculator.compute(
+                positions=positions,
+                charges=charges,
+                neighbor_indices=neighbor_indices,
+                neighbor_distances=neighbor_distances,
+            )
 
         assert potential.dtype == dtype
         assert potential.device.type == device
