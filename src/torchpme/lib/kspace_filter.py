@@ -192,9 +192,9 @@ class KSpaceFilter(torch.nn.Module):
         dims = (1, 2, 3)  # dimensions along which to Fourier transform
         mesh_hat = torch.fft.rfftn(mesh_values, norm=self._fft_norm, dim=dims)
 
-        if mesh_hat.shape[-3:] != self._kfilter.shape[-3]:
+        if mesh_hat.shape[-3:] != self._kfilter.shape[-3:]:
             raise ValueError(
-                "RThe real-space mesh is inconsistent with the k-space grid."
+                "The real-space mesh is inconsistent with the k-space grid."
             )
 
         filter_hat = mesh_hat * self._kfilter
