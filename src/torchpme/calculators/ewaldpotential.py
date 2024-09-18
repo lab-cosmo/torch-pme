@@ -3,6 +3,7 @@ from typing import List, Optional, Union
 import torch
 
 from ..lib import generate_kvectors_for_ewald
+from ..lib.potentials import gamma
 from .base import CalculatorBaseTorch, PeriodicBase
 
 
@@ -12,7 +13,6 @@ class _EwaldPotentialImpl(PeriodicBase):
         exponent: float,
         atomic_smearing: Union[None, float],
         lr_wavelength: Union[None, float],
-        subtract_self: bool,
         subtract_interior: bool,
     ):
         PeriodicBase.__init__(
@@ -22,11 +22,6 @@ class _EwaldPotentialImpl(PeriodicBase):
             subtract_interior=subtract_interior,
         )
         self.lr_wavelength = lr_wavelength
-
-        # If interior contributions are to be subtracted, also do so for self term
-        if self.subtract_interior:
-            subtract_self = True
-        self.subtract_self = subtract_self
 
     def _compute_single_system(
         self,
@@ -85,7 +80,6 @@ class _EwaldPotentialImpl(PeriodicBase):
         cell: torch.Tensor,
         smearing: float,
         lr_wavelength: float,
-        subtract_self: bool = True,
     ) -> torch.Tensor:
         # Define k-space cutoff from required real-space resolution
         k_cutoff = 2 * torch.pi / lr_wavelength
@@ -140,15 +134,15 @@ class _EwaldPotentialImpl(PeriodicBase):
             ) + torch.sum(G * sin_all[:, i] * sin_summed, dim=sum_idx - 1)
         energy /= torch.abs(cell.det())
 
-        # Remove self contribution if desired
-        # For now, this is the expression for the Coulomb potential p=1
-        # TODO: modify to expression for general p
-        if subtract_self:
-            self_contrib = (
-                torch.sqrt(torch.tensor(2.0 / torch.pi, device=positions.device))
-                / smearing
-            )
-            energy -= charges * self_contrib
+        # Remove the self-contribution: Using the Coulomb potential as an
+        # example, this is the potential generated at the origin by the fictituous
+        # Gaussian charge density in order to split the potential into a SR and LR part.
+        # This contribution always should be subtracted since it depends on the smearing
+        # parameter, which is purely a convergence parameter.
+        phalf = self.exponent / 2
+        fill_value = 1 / gamma(torch.tensor(phalf + 1)) / (2 * smearing**2) ** phalf
+        self_contrib = torch.full([], fill_value)
+        energy -= charges * self_contrib
 
         return energy
 
@@ -180,9 +174,6 @@ class EwaldPotential(CalculatorBaseTorch, _EwaldPotentialImpl):
         wavelength >= this value will be kept. If not set to a global value, it will be
         set to half the atomic_smearing parameter to ensure convergence of the
         long-range part to a relative precision of 1e-5.
-    :param subtract_self: If set to :py:obj:`True`, subtract from the features of an
-        atom the contributions to the potential arising from that atom itself (but not
-        the periodic images).
     :param subtract_interior: If set to :py:obj:`True`, subtract from the features of an
         atom the contributions to the potential arising from all atoms within the cutoff
         Note that if set to true, the self contribution (see previous) is also
@@ -196,7 +187,6 @@ class EwaldPotential(CalculatorBaseTorch, _EwaldPotentialImpl):
         exponent: float = 1.0,
         atomic_smearing: Optional[float] = None,
         lr_wavelength: Optional[float] = None,
-        subtract_self: bool = True,
         subtract_interior: bool = False,
     ):
         _EwaldPotentialImpl.__init__(
@@ -204,7 +194,6 @@ class EwaldPotential(CalculatorBaseTorch, _EwaldPotentialImpl):
             exponent=exponent,
             atomic_smearing=atomic_smearing,
             lr_wavelength=lr_wavelength,
-            subtract_self=subtract_self,
             subtract_interior=subtract_interior,
         )
         CalculatorBaseTorch.__init__(self)

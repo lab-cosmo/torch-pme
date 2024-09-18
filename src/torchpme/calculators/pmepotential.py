@@ -15,9 +15,7 @@ class _PMEPotentialImpl(PeriodicBase):
         atomic_smearing: Union[None, float],
         mesh_spacing: Union[None, float],
         interpolation_order: int,
-        subtract_self: bool,
         subtract_interior: bool,
-        correct_net_charge: bool,
     ):
         if interpolation_order not in [1, 2, 3, 4, 5]:
             raise ValueError("Only `interpolation_order` from 1 to 5 are allowed")
@@ -30,15 +28,6 @@ class _PMEPotentialImpl(PeriodicBase):
         )
         self.mesh_spacing = mesh_spacing
         self.interpolation_order = interpolation_order
-
-        # If interior contributions are to be subtracted, also do so for self term
-        if self.subtract_interior:
-            subtract_self = True
-        self.subtract_self = subtract_self
-
-        # Store whether a correction term should be added in case the net charge in a
-        # cell is not zero.
-        self.correct_net_charge = correct_net_charge
 
         # TorchScript requires to initialize all attributes in __init__
         self._cell_cache = -1 * torch.ones([3, 3])
@@ -104,7 +93,6 @@ class _PMEPotentialImpl(PeriodicBase):
         cell: torch.Tensor,
         smearing: float,
         lr_wavelength: float,
-        subtract_self: bool = True,
     ) -> torch.Tensor:
 
         dtype = positions.dtype
@@ -160,23 +148,25 @@ class _PMEPotentialImpl(PeriodicBase):
         # Step 3: Back interpolation
         interpolated_potential = self._MI.mesh_to_points(potential_mesh)
 
-        # Step 4: Remove self-contribution if desired
-        if subtract_self:
-            phalf = self.exponent / 2
-            fill_value = 1 / gamma(torch.tensor(phalf + 1)) / (2 * smearing**2) ** phalf
-            self_contrib = torch.full([], fill_value, device=device)
-            interpolated_potential -= charges * self_contrib
+        # Step 4: Remove the self-contribution: Using the Coulomb potential as an
+        # example, this is the potential generated at the origin by the fictituous
+        # Gaussian charge density in order to split the potential into a SR and LR part.
+        # This contribution always should be subtracted since it depends on the smearing
+        # parameter, which is purely a convergence parameter.
+        phalf = self.exponent / 2
+        fill_value = 1 / gamma(torch.tensor(phalf + 1)) / (2 * smearing**2) ** phalf
+        self_contrib = torch.full([], fill_value, device=device)
+        interpolated_potential -= charges * self_contrib
 
         # Step 5: The method requires that the unit cell is charge-neutral.
         # If the cell has a net charge (i.e. if sum(charges) != 0), the method
         # implicitly assumes that a homogeneous background charge of the opposite sign
         # is present to make the cell neutral. In this case, the potential has to be
         # adjusted to compensate for this.
-        if self.correct_net_charge:
-            charge_tot = torch.sum(charges, dim=0)
-            prefac = torch.pi**1.5 * (2 * smearing**2) ** ((3 - self.exponent) / 2)
-            prefac /= (3 - self.exponent) * gamma(torch.tensor(self.exponent / 2))
-            interpolated_potential -= prefac * charge_tot * ivolume
+        charge_tot = torch.sum(charges, dim=0)
+        prefac = torch.pi**1.5 * (2 * smearing**2) ** ((3 - self.exponent) / 2)
+        prefac /= (3 - self.exponent) * gamma(torch.tensor(self.exponent / 2))
+        interpolated_potential -= prefac * charge_tot * ivolume
 
         return interpolated_potential
 
@@ -209,17 +199,10 @@ class PMEPotential(CalculatorBaseTorch, _PMEPotentialImpl):
     :param interpolation_order: Interpolation order for mapping onto the grid, where an
         interpolation order of p corresponds to interpolation by a polynomial of degree
         ``p - 1`` (e.g. ``p = 4`` for cubic interpolation).
-    :param subtract_self: If set to :py:obj:`True`, subtract from the features of an
-        atom the contributions to the potential arising from that atom itself (but not
-        the periodic images).
     :param subtract_interior: If set to :py:obj:`True`, subtract from the features of an
         atom the contributions to the potential arising from all atoms within the cutoff
         Note that if set to true, the self contribution (see previous) is also
         subtracted by default.
-    :param correct_net_charge: If set to :py:obj:`True`, add to the features of atoms an
-        additional term that compensates the effect of a net charge for non-neutral
-        systems. It is not recommended to change this parameter from the default value
-        unless you know exactly what you are doing.
 
     Example
     -------
@@ -271,7 +254,7 @@ class PMEPotential(CalculatorBaseTorch, _PMEPotentialImpl):
     tensor([[-1.0192],
             [ 1.0192]])
 
-    Which is the close the reference value given above.
+    Which is close to the reference value given above.
     """
 
     def __init__(
@@ -280,9 +263,7 @@ class PMEPotential(CalculatorBaseTorch, _PMEPotentialImpl):
         atomic_smearing: Optional[float] = None,
         mesh_spacing: Optional[float] = None,
         interpolation_order: int = 3,
-        subtract_self: bool = True,
         subtract_interior: bool = False,
-        correct_net_charge: bool = True,
     ):
         _PMEPotentialImpl.__init__(
             self,
@@ -290,9 +271,7 @@ class PMEPotential(CalculatorBaseTorch, _PMEPotentialImpl):
             atomic_smearing=atomic_smearing,
             mesh_spacing=mesh_spacing,
             interpolation_order=interpolation_order,
-            subtract_self=subtract_self,
             subtract_interior=subtract_interior,
-            correct_net_charge=correct_net_charge,
         )
         CalculatorBaseTorch.__init__(self)
 

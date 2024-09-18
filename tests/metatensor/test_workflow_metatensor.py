@@ -22,8 +22,6 @@ ATOMIC_SMEARING = 0.1
 LR_WAVELENGTH = ATOMIC_SMEARING / 4
 MESH_SPACING = ATOMIC_SMEARING / 4
 INTERPOLATION_ORDER = 2
-SUBTRACT_SELF = True
-CORRECT_NET_CHARGE = True
 
 
 @pytest.mark.parametrize(
@@ -35,7 +33,6 @@ CORRECT_NET_CHARGE = True
             {
                 "atomic_smearing": ATOMIC_SMEARING,
                 "lr_wavelength": LR_WAVELENGTH,
-                "subtract_self": SUBTRACT_SELF,
             },
         ),
         (
@@ -44,8 +41,6 @@ CORRECT_NET_CHARGE = True
                 "atomic_smearing": ATOMIC_SMEARING,
                 "mesh_spacing": MESH_SPACING,
                 "interpolation_order": INTERPOLATION_ORDER,
-                "subtract_self": SUBTRACT_SELF,
-                "correct_net_charge": CORRECT_NET_CHARGE,
             },
         ),
     ],

@@ -21,7 +21,6 @@ ATOMIC_SMEARING = 0.1
 LR_WAVELENGTH = ATOMIC_SMEARING / 4
 MESH_SPACING = ATOMIC_SMEARING / 4
 INTERPOLATION_ORDER = 2
-SUBTRACT_SELF = True
 
 
 @pytest.mark.parametrize(
@@ -33,7 +32,6 @@ SUBTRACT_SELF = True
             {
                 "atomic_smearing": ATOMIC_SMEARING,
                 "lr_wavelength": LR_WAVELENGTH,
-                "subtract_self": SUBTRACT_SELF,
             },
             True,
         ),
@@ -43,7 +41,6 @@ SUBTRACT_SELF = True
                 "atomic_smearing": ATOMIC_SMEARING,
                 "mesh_spacing": MESH_SPACING,
                 "interpolation_order": INTERPOLATION_ORDER,
-                "subtract_self": SUBTRACT_SELF,
             },
             True,
         ),
