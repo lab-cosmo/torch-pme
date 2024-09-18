@@ -38,7 +38,7 @@ class KSpaceKernel(torch.nn.Module):
         """
 
         raise NotImplementedError(
-            f"from_k_sq is not implemented for {self.__class__.__name__}"
+            f"from_k_sq is not implemented for '{self.__class__.__name__}'"
         )
 
 
@@ -87,10 +87,6 @@ class KSpaceFilter(torch.nn.Module):
     ):
 
         super(KSpaceFilter, self).__init__()
-        # TorchScript requires to initialize all attributes in __init__
-        self._kernel = kernel
-        self.update_mesh(cell, ns_mesh)
-        self.update_filter()
 
         self._fft_norm = fft_norm
         self._ifft_norm = ifft_norm
@@ -100,6 +96,10 @@ class KSpaceFilter(torch.nn.Module):
             raise ValueError(
                 f"Invalid option {ifft_norm} for the `ifft_norm` parameter."
             )
+        
+        self._kernel = kernel
+        self.update_mesh(cell, ns_mesh)
+
 
     @torch.jit.export
     def update_filter(self):
@@ -125,11 +125,26 @@ class KSpaceFilter(torch.nn.Module):
         :param ns_mesh: toch.tensor of shape ``(3,)``
             Number of mesh points to use along each of the three axes
         """
+        
+        # Check that the provided parameters match the specifications
+        if cell.shape != (3, 3):
+            raise ValueError(
+                f"cell of shape {list(cell.shape)} should be of shape (3, 3)"
+            )
+        if ns_mesh.shape != (3,):
+            raise ValueError(f"shape {list(ns_mesh.shape)} of `ns_mesh` has to be (3,)")
+        if cell.device != ns_mesh.device:
+            raise ValueError(
+                "`cell` and `ns_mesh` are on different devices, got "
+                f"{cell.device} and {ns_mesh.device}"
+            )
 
         self._cell = cell
         self._ns_mesh = ns_mesh
         self._kvectors = generate_kvectors_for_mesh(ns=ns_mesh, cell=cell)
         self._knorm_sq = torch.sum(self._kvectors**2, dim=3)
+        # also updates filter to reduce the risk it'd go out of sync
+        self.update_filter()
 
     @torch.jit.export
     def compute(
