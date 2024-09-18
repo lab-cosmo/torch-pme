@@ -31,7 +31,7 @@ class _DirectPotentialImpl:
         potential.index_add_(0, atom_is, contributions_is)
         potential.index_add_(0, atom_js, contributions_js)
 
-        return potential
+        return potential / 2
 
 
 class DirectPotential(CalculatorBaseTorch, _DirectPotentialImpl):
@@ -80,8 +80,8 @@ class DirectPotential(CalculatorBaseTorch, _DirectPotentialImpl):
     ...     neighbor_indices=neighbor_indices,
     ...     neighbor_distances=neighbor_distances,
     ... )
-    tensor([[-0.5000],
-            [ 0.5000]], dtype=torch.float64)
+    tensor([[-0.2500],
+            [ 0.2500]], dtype=torch.float64)
 
     Which is the expected potential since :math:`V \propto 1/r` where :math:`r` is the
     distance between the particles.
@@ -110,10 +110,6 @@ class DirectPotential(CalculatorBaseTorch, _DirectPotentialImpl):
             potential should be calculated for a standard potential ``n_channels=1``. If
             more than one "channel" is provided multiple potentials for the same
             position but different are computed.
-        :param cell: single or 2D tensor of shape (3, 3), describing the bounding
-            box/unit cell of the system. Each row should be one of the bounding box
-            vector; and columns should contain the x, y, and z components of these
-            vectors (i.e. the cell should be given in row-major order).
         :param neighbor_indices: Single or list of 2D tensors of shape ``(n, 2)``, where
             ``n`` is the number of neighbors. The two columns correspond to the indices
             of a **half neighbor list** for the two atoms which are considered neighbors

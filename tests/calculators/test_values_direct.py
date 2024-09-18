@@ -178,6 +178,7 @@ def test_coulomb_exact(
         neighbor_indices=neighbor_indices,
         neighbor_distances=neighbor_distances,
     )
-    ref_potentials /= scaling_factor
+    # Divide by 2 due to double counting of atom pairs
+    ref_potentials /= 2 * scaling_factor
 
     torch.testing.assert_close(potentials, ref_potentials, atol=2e-15, rtol=1e-14)

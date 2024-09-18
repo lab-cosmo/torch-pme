@@ -85,8 +85,8 @@ class DirectPotential(CalculatorBaseMetatensor, _DirectPotentialImpl):
     :py:class:`TensorBlock <metatensor.torch.TensorBlock>` of the ``potential``.
 
     >>> potential[0].values
-    tensor([[-0.5000],
-            [ 0.5000]], dtype=torch.float64)
+    tensor([[-0.2500],
+            [ 0.2500]], dtype=torch.float64)
 
     Which is the expected potential since :math:`V \propto 1/r` where :math:`r` is the
     distance between the particles.
