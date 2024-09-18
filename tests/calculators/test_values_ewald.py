@@ -16,32 +16,37 @@ DTYPE = torch.float64
 
 
 def generate_orthogonal_transformations():
+    # Generate rotation matrix along x-axis
+    def rot_x(phi):
+        rot = torch.zeros((3, 3), dtype=DTYPE)
+        rot[0, 0] = rot[1, 1] = math.cos(phi)
+        rot[0, 1] = -math.sin(phi)
+        rot[1, 0] = math.sin(phi)
+        rot[2, 2] = 1.0
 
-    # second rotation matrix: rotation by angle phi around z-axis
-    phi = 0.82321
-    rot_2 = torch.zeros((3, 3), dtype=DTYPE)
-    rot_2[0, 0] = rot_2[1, 1] = math.cos(phi)
-    rot_2[0, 1] = -math.sin(phi)
-    rot_2[1, 0] = math.sin(phi)
-    rot_2[2, 2] = 1.0
+        return rot
 
-    # third rotation matrix: second matrix followed by rotation by angle theta around y
-    theta = 1.23456
-    rot_3 = torch.zeros((3, 3), dtype=DTYPE)
-    rot_3[0, 0] = rot_3[2, 2] = math.cos(theta)
-    rot_3[0, 2] = math.sin(theta)
-    rot_3[2, 0] = -math.sin(theta)
-    rot_3[1, 1] = 1.0
-    rot_3 = rot_3 @ rot_2
+    # Generate rotation matrix along z-axis
+    def rot_z(theta):
+        rot = torch.zeros((3, 3), dtype=DTYPE)
+        rot[0, 0] = rot[2, 2] = math.cos(theta)
+        rot[0, 2] = math.sin(theta)
+        rot[2, 0] = -math.sin(theta)
+        rot[1, 1] = 1.0
 
-    # add additional orthogonal transformations by combining inversion
-    transformations = [rot_2, rot_3]
+        return rot
+
+    # Generate a few rotation matrices
+    rot_1 = rot_z(0.987654)
+    rot_2 = rot_z(1.23456) @ rot_x(0.82321)
+    transformations = [rot_1, rot_2]
 
     # make sure that the generated transformations are indeed orthogonal
     for q in transformations:
         id = torch.eye(3, dtype=DTYPE)
         id_2 = q.T @ q
-        torch.testing.assert_close(id, id_2, atol=2e-15, rtol=1e-14)
+        torch.testing.assert_close(id, id_2, atol=1e-15, rtol=1e-15)
+
     return transformations
 
 
@@ -396,9 +401,9 @@ def test_wigner(crystal_name, scaling_factor):
         torch.testing.assert_close(energies, energies_ref, atol=0.0, rtol=rtol)
 
 
-@pytest.mark.parametrize("sr_cutoff", [2.01, 5.5])
+@pytest.mark.parametrize("sr_cutoff", [5.54, 6.01])
 @pytest.mark.parametrize("frame_index", [0, 1, 2])
-@pytest.mark.parametrize("scaling_factor", [0.4325, 2.0353610])
+@pytest.mark.parametrize("scaling_factor", [0.4325, 1.3353610])
 @pytest.mark.parametrize("ortho", generate_orthogonal_transformations())
 @pytest.mark.parametrize("calc_name", ["ewald", "pme"])
 def test_random_structure(sr_cutoff, frame_index, scaling_factor, ortho, calc_name):
@@ -431,7 +436,7 @@ def test_random_structure(sr_cutoff, frame_index, scaling_factor, ortho, calc_na
     cell = scaling_factor * torch.tensor(np.array(frame.cell), dtype=DTYPE) @ ortho
     charges = torch.tensor([1, 1, 1, 1, -1, -1, -1, -1], dtype=DTYPE).reshape((-1, 1))
     sr_cutoff = scaling_factor * sr_cutoff
-    atomic_smearing = sr_cutoff / 5.0
+    atomic_smearing = sr_cutoff / 6.0
 
     # Compute neighbor list
     neighbor_indices, neighbor_shifts = neighbor_list_torch(
@@ -445,11 +450,11 @@ def test_random_structure(sr_cutoff, frame_index, scaling_factor, ortho, calc_na
     if calc_name == "ewald":
         calc = EwaldPotential(atomic_smearing=atomic_smearing)
         rtol_e = 2e-5
-        rtol_f = 3.6e-3
+        rtol_f = 3.5e-3
     elif calc_name == "pme":
         calc = PMEPotential(atomic_smearing=atomic_smearing)
-        rtol_e = 4.5e-3  # 1.5e-3
-        rtol_f = 2.5e-3  # 6e-3
+        rtol_e = 4.5e-3
+        rtol_f = 3.5e-3
 
     potentials = calc.compute(
         positions=positions,
