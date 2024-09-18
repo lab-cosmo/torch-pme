@@ -138,61 +138,47 @@ class EwaldPotential(CalculatorBaseTorch):
         )
         volume = torch.linalg.det(G) ** 0.5
         n_atoms = torch.tensor(len(positions), device=device)
-
-        lr_wavelength = (
-            torch.rand(1, device=device).uniform_(0, max_range).requires_grad_(True)
+        err_Fourier = (
+            lambda atomic_smearing, K: (torch.sum(charges**2) / torch.sqrt(n_atoms))
+            * 2
+            * atomic_smearing
+            / torch.sqrt(torch.pi * K * volume)
+            * torch.exp(-(K**2) / (4 * atomic_smearing**2))
         )
-        atomic_smearing = (
-            torch.rand(1, device=device).uniform_(0, max_range).requires_grad_(True)
-        )
-        cutoff = (
-            torch.rand(1, device=device).uniform_(0, max_range).requires_grad_(True)
-        )
-
-        # Step1: Find optimal lr_wavelength and atomic_smearing
-        real_optimizer = torch.optim.Adam([atomic_smearing, cutoff], lr=0.1)
         err_real = (
-            lambda atomic_smearing, cutoff: (torch.sum(charges**2) / torch.sqrt(n_atoms))
+            lambda atomic_smearing, cutoff: (
+                torch.sum(charges**2) / torch.sqrt(n_atoms)
+            )
             * 2
             / torch.sqrt(cutoff * volume)
             * torch.exp(-(atomic_smearing**2) * cutoff**2)
         )
 
-        steps = 0
-        while ((result := err_real(atomic_smearing, torch.sigmoid(cutoff) * max_range)) > accuracy) and (
-            steps < max_steps
-        ):
-            print(steps, result)
-            result.backward()
-            real_optimizer.step()
-            real_optimizer.zero_grad()
-            steps += 1
-        atomic_smearing = atomic_smearing.detach()
-        cutoff = torch.sigmoid(cutoff).detach() * max_range
-
-        fourier_optimizer = torch.optim.Adam([lr_wavelength], lr=0.1)
-        err_Fourier = (
-            lambda lr_wavelength: (
-                torch.sum(charges**2) / torch.sqrt(n_atoms)
-            )
-            * 2
-            * atomic_smearing
-            / torch.sqrt(torch.pi * lr_wavelength * volume)
-            * torch.exp(-(lr_wavelength**2) / (4 * atomic_smearing**2))
+        params = (
+            torch.rand(3, device=device).uniform_(0, max_range).requires_grad_(True)
         )
-
+        optimizer = torch.optim.Adam([params], lr=1e-1)
         steps = 0
-        while ((result := err_Fourier(lr_wavelength)) > accuracy) and (
-            steps < max_steps
-        ):
-            print(steps, result)
-            result.backward()
-            fourier_optimizer.step()
-            fourier_optimizer.zero_grad()
-            steps += 1
-        lr_wavelength = lr_wavelength.detach()
+        while True:
+            result = (
+                err_Fourier(
+                    1 / (2**0.5 * params[0]),
+                    (
+                        2
+                        * torch.pi
+                        / (2 * torch.sigmoid(params[1]) + torch.tensor(5e-2)) ** 0.5
+                    ),
+                )
+                + err_real(1 / (2**0.5 * params[0]), params[2]) ** 2
+            )
+            loss = result
+            loss.backward()
+            optimizer.step()
+            optimizer.zero_grad()
+            if (steps > max_steps) or (result < accuracy):
+                break
 
-        return atomic_smearing, lr_wavelength, cutoff
+        return params[0], 2 * torch.sigmoid(params[1]) + torch.tensor(5e-2), params[2]
 
     def _compute_single_system(
         self,
