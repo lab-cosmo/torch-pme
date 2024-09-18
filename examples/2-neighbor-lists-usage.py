@@ -1,6 +1,6 @@
 """
-Auto-differentiable energies from a general neighbor list
-=========================================================
+Advanced neighbor list usage
+============================
 
 Accurately calculating forces as derivatives from energy is crucial for predicting
 system dynamics as well as in training machine learning models. In systems where forces
