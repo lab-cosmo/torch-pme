@@ -1,33 +1,115 @@
-from typing import List, Optional, Union
+from typing import Optional
 
 import torch
 
 from ..lib import generate_kvectors_for_mesh
 from ..lib.mesh_interpolator import MeshInterpolator
 from ..lib.potentials import gamma
-from .base import CalculatorBaseTorch, PeriodicBase
+from .base import CalculatorBaseTorch
 
 
-class _PMEPotentialImpl(PeriodicBase):
+class PMEPotential(CalculatorBaseTorch):
+    r"""Potential using a particle mesh-based Ewald (PME).
+
+    Scaling as :math:`\mathcal{O}(NlogN)` with respect to the number of particles
+    :math:`N` used as a reference to test faster implementations.
+
+    For computing a **neighborlist** a reasonable ``cutoff`` is half the length of
+    the shortest cell vector, which can be for example computed according as
+
+    .. code-block:: python
+
+        cell_dimensions = torch.linalg.norm(cell, dim=1)
+        cutoff = torch.min(cell_dimensions) / 2 - 1e-6
+
+    This ensures a accuracy of the short range part of ``1e-5``.
+
+    :param exponent: the exponent :math:`p` in :math:`1/r^p` potentials
+    :param atomic_smearing: Width of the atom-centered Gaussian used to split the
+        Coulomb potential into the short- and long-range parts. A reasonable value for
+        most systems is to set it to ``1/5`` times the neighbor list cutoff. If
+        :py:obj:`None` ,it will be set to 1/5 times of half the largest box vector
+        (separately for each structure).
+    :param mesh_spacing: Value that determines the umber of Fourier-space grid points
+        that will be used along each axis. If set to None, it will automatically be set
+        to half of ``atomic_smearing``.
+    :param interpolation_order: Interpolation order for mapping onto the grid, where an
+        interpolation order of p corresponds to interpolation by a polynomial of degree
+        ``p - 1`` (e.g. ``p = 4`` for cubic interpolation).
+    :param subtract_interior: If set to :py:obj:`True`, subtract from the features of an
+        atom the contributions to the potential arising from all atoms within the cutoff
+        Note that if set to true, the self contribution (see previous) is also
+        subtracted by default.
+
+    Example
+    -------
+    We calculate the Madelung constant of a CsCl (Cesium-Chloride) crystal. The
+    reference value is :math:`2 \cdot 1.7626 / \sqrt{3} \approx 2.0354`.
+
+    >>> import torch
+    >>> from vesin.torch import NeighborList
+
+    Define crystal structure
+
+    >>> positions = torch.tensor(
+    ...     [[0.0, 0.0, 0.0], [0.5, 0.5, 0.5]], dtype=torch.float64
+    ... )
+    >>> charges = torch.tensor([[1.0], [-1.0]], dtype=torch.float64)
+    >>> cell = torch.eye(3, dtype=torch.float64)
+
+    Compute the neighbor indices (``"i"``, ``"j"``) and the neighbor distances ("``d``")
+    using the ``vesin`` package. Refer to the `documentation <https://luthaf.fr/vesin>`_
+    for details on the API.
+
+    >>> cell_dimensions = torch.linalg.norm(cell, dim=1)
+    >>> cutoff = torch.min(cell_dimensions) / 2 - 1e-6
+    >>> nl = NeighborList(cutoff=cutoff, full_list=False)
+    >>> i, j, neighbor_distances = nl.compute(
+    ...     points=positions, box=cell, periodic=True, quantities="ijd"
+    ... )
+    >>> neighbor_indices = torch.stack([i, j], dim=1)
+
+    If you inspect the neighbor list you will notice that the tensors are empty for the
+    given system, which means the the whole potential will be calculated using the long
+    range part of the potential. Finally, we initlize the potential class and
+    ``compute`` the potential for the crystal.
+
+    >>> pme = PMEPotential()
+    >>> pme.forward(
+    ...     positions=positions,
+    ...     charges=charges,
+    ...     cell=cell,
+    ...     neighbor_indices=neighbor_indices,
+    ...     neighbor_distances=neighbor_distances,
+    ... )
+    tensor([[-1.0192],
+            [ 1.0192]], dtype=torch.float64)
+
+    Which is close to the reference value given above.
+    """
+
     def __init__(
         self,
-        exponent: float,
-        atomic_smearing: Optional[float],
-        mesh_spacing: Optional[float],
-        interpolation_order: int,
-        subtract_interior: bool,
+        exponent: float = 1.0,
+        atomic_smearing: Optional[float] = None,
+        mesh_spacing: Optional[float] = None,
+        interpolation_order: int = 3,
+        subtract_interior: bool = False,
     ):
+        super().__init__(exponent=exponent)
+
+        self.mesh_spacing = mesh_spacing
+        self.subtract_interior = subtract_interior
+
+        if atomic_smearing is not None and atomic_smearing <= 0:
+            raise ValueError(f"`atomic_smearing` {atomic_smearing} has to be positive")
+        else:
+            self.atomic_smearing = atomic_smearing
+
         if interpolation_order not in [1, 2, 3, 4, 5]:
             raise ValueError("Only `interpolation_order` from 1 to 5 are allowed")
-
-        PeriodicBase.__init__(
-            self,
-            exponent=exponent,
-            atomic_smearing=atomic_smearing,
-            subtract_interior=subtract_interior,
-        )
-        self.mesh_spacing = mesh_spacing
-        self.interpolation_order = interpolation_order
+        else:
+            self.interpolation_order = interpolation_order
 
         # TorchScript requires to initialize all attributes in __init__
         self._cell_cache = -1 * torch.ones([3, 3])
@@ -53,7 +135,10 @@ class _PMEPotentialImpl(PeriodicBase):
         # the cost of the LR part. The auxilary parameter mesh_spacing then controls the
         # convergence of the SR and LR sums, respectively. The default values are chosen
         # to reach a convergence on the order of 1e-4 to 1e-5 for the test structures.
-        smearing = self._estimate_smearing(cell)
+        if self.atomic_smearing is None:
+            smearing = self.estimate_smearing(cell)
+        else:
+            smearing = self.atomic_smearing
 
         if self.mesh_spacing is None:
             mesh_spacing = smearing / 8.0
@@ -62,10 +147,12 @@ class _PMEPotentialImpl(PeriodicBase):
 
         # Compute short-range (SR) part using a real space sum
         potential_sr = self._compute_sr(
+            is_periodic=True,
             smearing=smearing,
             charges=charges,
             neighbor_indices=neighbor_indices,
             neighbor_distances=neighbor_distances,
+            subtract_interior=self.subtract_interior,
         )
 
         # Compute long-range (LR) part using a Fourier / reciprocal space sum
@@ -164,163 +251,3 @@ class _PMEPotentialImpl(PeriodicBase):
 
         # Compensate for double counting of pairs (i,j) and (j,i)
         return interpolated_potential / 2
-
-
-class PMEPotential(CalculatorBaseTorch, _PMEPotentialImpl):
-    r"""Potential using a particle mesh-based Ewald (PME).
-
-    Scaling as :math:`\mathcal{O}(NlogN)` with respect to the number of particles
-    :math:`N` used as a reference to test faster implementations.
-
-    For computing a **neighborlist** a reasonable ``cutoff`` is half the length of
-    the shortest cell vector, which can be for example computed according as
-
-    .. code-block:: python
-
-        cell_dimensions = torch.linalg.norm(cell, dim=1)
-        cutoff = torch.min(cell_dimensions) / 2 - 1e-6
-
-    This ensures a accuracy of the short range part of ``1e-5``.
-
-    :param exponent: the exponent :math:`p` in :math:`1/r^p` potentials
-    :param atomic_smearing: Width of the atom-centered Gaussian used to split the
-        Coulomb potential into the short- and long-range parts. A reasonable value for
-        most systems is to set it to ``1/5`` times the neighbor list cutoff. If
-        :py:obj:`None` ,it will be set to 1/5 times of half the largest box vector
-        (separately for each structure).
-    :param mesh_spacing: Value that determines the umber of Fourier-space grid points
-        that will be used along each axis. If set to None, it will automatically be set
-        to half of ``atomic_smearing``.
-    :param interpolation_order: Interpolation order for mapping onto the grid, where an
-        interpolation order of p corresponds to interpolation by a polynomial of degree
-        ``p - 1`` (e.g. ``p = 4`` for cubic interpolation).
-    :param subtract_interior: If set to :py:obj:`True`, subtract from the features of an
-        atom the contributions to the potential arising from all atoms within the cutoff
-        Note that if set to true, the self contribution (see previous) is also
-        subtracted by default.
-
-    Example
-    -------
-    We calculate the Madelung constant of a CsCl (Cesium-Chloride) crystal. The
-    reference value is :math:`2 \cdot 1.7626 / \sqrt{3} \approx 2.0354`.
-
-    >>> import torch
-    >>> from vesin.torch import NeighborList
-
-    Define crystal structure
-
-    >>> positions = torch.tensor(
-    ...     [[0.0, 0.0, 0.0], [0.5, 0.5, 0.5]], dtype=torch.float64
-    ... )
-    >>> charges = torch.tensor([[1.0], [-1.0]], dtype=torch.float64)
-    >>> cell = torch.eye(3, dtype=torch.float64)
-
-    Compute the neighbor indices (``"i"``, ``"j"``) and the neighbor distances ("``d``")
-    using the ``vesin`` package. Refer to the `documentation <https://luthaf.fr/vesin>`_
-    for details on the API.
-
-    >>> cell_dimensions = torch.linalg.norm(cell, dim=1)
-    >>> cutoff = torch.min(cell_dimensions) / 2 - 1e-6
-    >>> nl = NeighborList(cutoff=cutoff, full_list=False)
-    >>> i, j, neighbor_distances = nl.compute(
-    ...     points=positions, box=cell, periodic=True, quantities="ijd"
-    ... )
-    >>> neighbor_indices = torch.stack([i, j], dim=1)
-
-    If you inspect the neighbor list you will notice that the tensors are empty for the
-    given system, which means the the whole potential will be calculated using the long
-    range part of the potential. Finally, we initlize the potential class and
-    ``compute`` the potential for the crystal.
-
-    >>> pme = PMEPotential()
-    >>> pme.compute(
-    ...     positions=positions,
-    ...     charges=charges,
-    ...     cell=cell,
-    ...     neighbor_indices=neighbor_indices,
-    ...     neighbor_distances=neighbor_distances,
-    ... )
-    tensor([[-1.0192],
-            [ 1.0192]], dtype=torch.float64)
-
-    Which is close to the reference value given above.
-    """
-
-    def __init__(
-        self,
-        exponent: float = 1.0,
-        atomic_smearing: Optional[float] = None,
-        mesh_spacing: Optional[float] = None,
-        interpolation_order: int = 3,
-        subtract_interior: bool = False,
-    ):
-        _PMEPotentialImpl.__init__(
-            self,
-            exponent=exponent,
-            atomic_smearing=atomic_smearing,
-            mesh_spacing=mesh_spacing,
-            interpolation_order=interpolation_order,
-            subtract_interior=subtract_interior,
-        )
-        CalculatorBaseTorch.__init__(self)
-
-    def compute(
-        self,
-        positions: Union[List[torch.Tensor], torch.Tensor],
-        charges: Union[List[torch.Tensor], torch.Tensor],
-        cell: Union[List[torch.Tensor], torch.Tensor],
-        neighbor_indices: Union[List[torch.Tensor], torch.Tensor],
-        neighbor_distances: Union[List[torch.Tensor], torch.Tensor],
-    ) -> Union[torch.Tensor, List[torch.Tensor]]:
-        """Compute potential for all provided "systems" stacked inside list.
-
-        The computation is performed on the same ``device`` as ``dtype`` is the input is
-        stored on. The ``dtype`` of the output tensors will be the same as the input.
-
-        :param positions: Single or 2D tensor of shape (``len(charges), 3``) containing
-            the Cartesian positions of all point charges in the system.
-        :param charges: Single 2D tensor or list of 2D tensor of shape (``n_channels,
-            len(positions))``. ``n_channels`` is the number of charge channels the
-            potential should be calculated for a standard potential ``n_channels=1``. If
-            more than one "channel" is provided multiple potentials for the same
-            position but different are computed.
-        :param cell: single or 2D tensor of shape (3, 3), describing the bounding
-            box/unit cell of the system. Each row should be one of the bounding box
-            vector; and columns should contain the x, y, and z components of these
-            vectors (i.e. the cell should be given in row-major order).
-        :param neighbor_indices: Single or list of 2D tensors of shape ``(n, 2)``, where
-            ``n`` is the number of neighbors. The two columns correspond to the indices
-            of a **half neighbor list** for the two atoms which are considered neighbors
-            (e.g. within a cutoff distance).
-        :param neighbor_distances: single or list of 1D tensors containing the distance
-            between the ``n`` pairs corresponding to a **half neighbor list**.
-        :return: Single or list of torch tensors containing the potential(s) for all
-            positions. Each tensor in the list is of shape ``(len(positions),
-            len(charges))``, where If the inputs are only single tensors only a single
-            torch tensor with the potentials is returned.
-        """
-
-        return self._compute_impl(
-            positions=positions,
-            cell=cell,
-            charges=charges,
-            neighbor_indices=neighbor_indices,
-            neighbor_distances=neighbor_distances,
-        )
-
-    def forward(
-        self,
-        positions: Union[List[torch.Tensor], torch.Tensor],
-        charges: Union[List[torch.Tensor], torch.Tensor],
-        cell: Union[List[torch.Tensor], torch.Tensor],
-        neighbor_indices: Union[List[torch.Tensor], torch.Tensor],
-        neighbor_distances: Union[List[torch.Tensor], torch.Tensor],
-    ) -> Union[torch.Tensor, List[torch.Tensor]]:
-        """Forward just calls :py:meth:`compute`."""
-        return self.compute(
-            positions=positions,
-            charges=charges,
-            cell=cell,
-            neighbor_indices=neighbor_indices,
-            neighbor_distances=neighbor_distances,
-        )

@@ -24,14 +24,6 @@ class CalculatorBaseMetatensor(torch.nn.Module):
         self._dtype = torch.float32
         self._n_charges_channels = 0
 
-    def forward(
-        self,
-        systems: Union[List[System], System],
-        neighbors: Union[List[TensorBlock], TensorBlock],
-    ) -> TensorMap:
-        """Forward just calls :py:meth:`compute`."""
-        return self.compute(systems, neighbors)
-
     @staticmethod
     def _validate_compute_parameters(
         systems: Union[List[System], System],
@@ -149,7 +141,7 @@ class CalculatorBaseMetatensor(torch.nn.Module):
 
         return systems, neighbors
 
-    def compute(
+    def forward(
         self,
         systems: Union[List[System], System],
         neighbors: Union[List[TensorBlock], TensorBlock],
@@ -211,9 +203,9 @@ class CalculatorBaseMetatensor(torch.nn.Module):
                 neighbors_single.values, dim=1
             ).squeeze(1)
 
-            # `_compute_single_system` is implemented only in child classes!
+            # `calculator._compute_single_system` is implemented only in child classes!
             potentials.append(
-                self._compute_single_system(
+                self.calculator._compute_single_system(
                     positions=system.positions,
                     charges=system.get_data("charges").values,
                     cell=system.cell,

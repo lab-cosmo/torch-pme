@@ -158,7 +158,7 @@ neighbor_distances = distances(
 # and initialize a PME instance to compute the potential.
 
 pme = PMEPotential()
-potential = pme.compute(
+potential = pme(
     positions=positions,
     charges=charges,
     cell=cell,
@@ -210,7 +210,7 @@ neighbor_indices_new = torch.stack([i, j], dim=1)
 #
 # Following the same steps as above, we compute the forces.
 
-potential_new = pme.compute(
+potential_new = pme(
     positions=positions_new,
     charges=charges,
     cell=cell,

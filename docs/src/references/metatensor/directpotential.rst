@@ -2,5 +2,5 @@ DirectPotential
 ###############
 
 .. autoclass:: torchpme.metatensor.DirectPotential
-    :members: compute, forward
+    :members: forward
     :undoc-members:

@@ -1,10 +1,10 @@
 from typing import Optional
 
-from ..calculators.pmepotential import _PMEPotentialImpl
+from ..calculators.pmepotential import PMEPotential as PMEPotentialTorch
 from .base import CalculatorBaseMetatensor
 
 
-class PMEPotential(CalculatorBaseMetatensor, _PMEPotentialImpl):
+class PMEPotential(CalculatorBaseMetatensor):
     r"""Potential using a particle mesh-based Ewald (PME).
 
     Refer to :class:`torchpme.PMEPotential` for parameter documentation.
@@ -86,7 +86,7 @@ class PMEPotential(CalculatorBaseMetatensor, _PMEPotentialImpl):
     and ``compute`` the potential for the crystal
 
     >>> pme = PMEPotential()
-    >>> potential = pme.compute(systems=system, neighbors=neighbors)
+    >>> potential = pme.forward(systems=system, neighbors=neighbors)
 
     The results are stored inside the ``values`` property inside the first
     :py:class:`TensorBlock <metatensor.torch.TensorBlock>` of the ``potential``.
@@ -95,7 +95,7 @@ class PMEPotential(CalculatorBaseMetatensor, _PMEPotentialImpl):
     tensor([[-1.0192],
             [ 1.0192]], dtype=torch.float64)
 
-    Which is the same as the reference value given above.
+    Which is close to the reference value given above.
     """
 
     def __init__(
@@ -106,12 +106,11 @@ class PMEPotential(CalculatorBaseMetatensor, _PMEPotentialImpl):
         interpolation_order: int = 3,
         subtract_interior: bool = False,
     ):
-        _PMEPotentialImpl.__init__(
-            self,
+        super().__init__()
+        self.calculator = PMEPotentialTorch(
             exponent=exponent,
             atomic_smearing=atomic_smearing,
             mesh_spacing=mesh_spacing,
             interpolation_order=interpolation_order,
             subtract_interior=subtract_interior,
         )
-        CalculatorBaseMetatensor.__init__(self)

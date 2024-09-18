@@ -3,6 +3,7 @@ import torch
 from packaging import version
 
 import torchpme
+import torchpme.calculators
 
 
 mts_torch = pytest.importorskip("metatensor.torch")
@@ -56,7 +57,7 @@ def neighbors():
     return neighbors
 
 
-class CalculatorTest(torchpme.metatensor.base.CalculatorBaseMetatensor):
+class CalculatorTestTorch(torchpme.calculators.base.CalculatorBaseTorch):
     def _compute_single_system(
         self, positions, charges, cell, neighbor_indices, neighbor_distances
     ):
@@ -69,11 +70,15 @@ class CalculatorTest(torchpme.metatensor.base.CalculatorBaseMetatensor):
         return charges
 
 
-@pytest.mark.parametrize("method_name", ["compute", "forward"])
-def test_compute_output_shapes_single(method_name, system, neighbors):
+class CalculatorTest(torchpme.metatensor.base.CalculatorBaseMetatensor):
+    def __init__(self):
+        super().__init__()
+        self.calculator = CalculatorTestTorch(exponent=1.0)
+
+
+def test_compute_output_shapes_single(system, neighbors):
     calculator = CalculatorTest()
-    method = getattr(calculator, method_name)
-    result = method(system, neighbors)
+    result = calculator.forward(system, neighbors)
 
     assert isinstance(result, torch.ScriptObject)
     if version.parse(torch.__version__) >= version.parse("2.1"):
@@ -89,19 +94,21 @@ def test_compute_output_shapes_single(method_name, system, neighbors):
 
 def test_corrrect_value_extraction_from_neighbors_tensormap(system, neighbors):
     calculator = CalculatorTest()
-    calculator.compute(system, neighbors)
+    calculator.forward(system, neighbors)
 
     neighbor_indices = neighbors.samples.view(["first_atom", "second_atom"]).values
     neighbor_distances = torch.linalg.norm(neighbors.values, dim=1).squeeze(1)
 
-    assert torch.equal(calculator._charges, torch.tensor([[1.0], [-0.5], [-0.5]]))
-    assert torch.equal(calculator._neighbor_indices, neighbor_indices)
-    assert torch.equal(calculator._neighbor_distances, neighbor_distances)
+    assert torch.equal(
+        calculator.calculator._charges, torch.tensor([[1.0], [-0.5], [-0.5]])
+    )
+    assert torch.equal(calculator.calculator._neighbor_indices, neighbor_indices)
+    assert torch.equal(calculator.calculator._neighbor_distances, neighbor_distances)
 
 
 def test_compute_output_shapes_multiple(system, neighbors):
     calculator = CalculatorTest()
-    result = calculator.compute([system, system], [neighbors, neighbors])
+    result = calculator.forward([system, system], [neighbors, neighbors])
 
     assert isinstance(result, torch.ScriptObject)
     if version.parse(torch.__version__) >= version.parse("2.1"):
@@ -137,7 +144,7 @@ def test_inconsistent_length(system):
     calculator = CalculatorTest()
     match = r"Got inconsistent numbers of systems \(1\) and neighbors \(2\)"
     with pytest.raises(ValueError, match=match):
-        calculator.compute(systems=[system], neighbors=[None, None])
+        calculator.forward(systems=[system], neighbors=[None, None])
 
 
 def test_wrong_system_dtype(system, neighbors):
@@ -149,7 +156,7 @@ def test_wrong_system_dtype(system, neighbors):
         r"`dtype` of all systems must be the same, got torch.float64 and torch.float32"
     )
     with pytest.raises(ValueError, match=match):
-        calculator.compute([system, system_float64], [neighbors, neighbors])
+        calculator.forward([system, system_float64], [neighbors, neighbors])
 
 
 def test_wrong_system_device(system, neighbors):
@@ -159,7 +166,7 @@ def test_wrong_system_device(system, neighbors):
 
     match = r"`device` of all systems must be the same, got meta and cpu"
     with pytest.raises(ValueError, match=match):
-        calculator.compute([system, system_meta], [neighbors, neighbors])
+        calculator.forward([system, system_meta], [neighbors, neighbors])
 
 
 def test_wrong_neighbors_dtype(system, neighbors):
@@ -171,7 +178,7 @@ def test_wrong_neighbors_dtype(system, neighbors):
         "`systems`, got at least one `neighbors` of type torch.float64"
     )
     with pytest.raises(ValueError, match=match):
-        calculator.compute(system, neighbors)
+        calculator.forward(system, neighbors)
 
 
 def test_wrong_neighbors_device(system, neighbors):
@@ -183,7 +190,7 @@ def test_wrong_neighbors_device(system, neighbors):
         "`systems`, got at least one `neighbors` with device meta"
     )
     with pytest.raises(ValueError, match=match):
-        calculator.compute(system, neighbors)
+        calculator.forward(system, neighbors)
 
 
 def test_wrong_neighbors_samples(system, neighbors):
@@ -201,7 +208,7 @@ def test_wrong_neighbors_samples(system, neighbors):
         "'cell_shift_c'"
     )
     with pytest.raises(ValueError, match=match):
-        calculator.compute(system, neighbors)
+        calculator.forward(system, neighbors)
 
 
 def test_wrong_neighbors_components(system, neighbors):
@@ -218,7 +225,7 @@ def test_wrong_neighbors_components(system, neighbors):
         r"'xyz'=\[0, 1, 2\] component"
     )
     with pytest.raises(ValueError, match=match):
-        calculator.compute(system, neighbors)
+        calculator.forward(system, neighbors)
 
 
 def test_wrong_neighbors_properties(system, neighbors):
@@ -235,7 +242,7 @@ def test_wrong_neighbors_properties(system, neighbors):
         "'distance'=0 property"
     )
     with pytest.raises(ValueError, match=match):
-        calculator.compute(system, neighbors)
+        calculator.forward(system, neighbors)
 
 
 def test_wrong_system_not_all_charges(system, neighbors):
@@ -247,7 +254,7 @@ def test_wrong_system_not_all_charges(system, neighbors):
 
     match = r"`systems` do not consistently contain `charges` data"
     with pytest.raises(ValueError, match=match):
-        calculator.compute([system, system_nocharge], [neighbors, neighbors])
+        calculator.forward([system, system_nocharge], [neighbors, neighbors])
 
 
 def test_different_number_charge_channels(system, neighbors):
@@ -269,7 +276,7 @@ def test_different_number_charge_channels(system, neighbors):
         r"first system \(1\)"
     )
     with pytest.raises(ValueError, match=match):
-        calculator.compute([system, system_channels], [neighbors, neighbors])
+        calculator.forward([system, system_channels], [neighbors, neighbors])
 
 
 def test_systems_with_different_number_of_atoms(system, neighbors):
@@ -291,4 +298,4 @@ def test_systems_with_different_number_of_atoms(system, neighbors):
     system_more_atoms.add_data(name="charges", data=data)
 
     calculator = CalculatorTest()
-    calculator.compute([system, system_more_atoms], [neighbors, neighbors])
+    calculator.forward([system, system_more_atoms], [neighbors, neighbors])
