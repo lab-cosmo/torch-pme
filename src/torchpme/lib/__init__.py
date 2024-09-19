@@ -6,7 +6,6 @@ from .kvectors import (
     get_ns_mesh,
 )
 from .kspace_filter import KSpaceFilter, KSpaceKernel
-from .neighbors import distances, all_neighbor_indices
 
 __all__ = [
     "all_neighbor_indices",
