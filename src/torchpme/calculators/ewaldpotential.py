@@ -1,6 +1,7 @@
 from typing import List, Optional, Tuple, Union
 
 import torch
+from torch.nn import ReLU
 
 from ..lib import generate_kvectors_for_ewald
 from ..lib.potentials import gamma
@@ -76,6 +77,8 @@ class EwaldPotential(CalculatorBaseTorch):
         cell: Union[List[Optional[torch.Tensor]], Optional[torch.Tensor]],
         subtract_interior: bool = False,
         max_steps: int = 10000,
+        lr: float = 1e-1,
+        verbose: bool = False,
     ) -> Tuple["EwaldPotential", float]:
         """Initialize based on a desired accuracy.
 
@@ -106,6 +109,8 @@ class EwaldPotential(CalculatorBaseTorch):
             charges=charges,
             cell=cell,
             max_steps=max_steps,
+            lr=lr,
+            verbose=verbose,
         )
 
         # Initialize the EwaldPotential object with the computed parameters
@@ -124,11 +129,13 @@ class EwaldPotential(CalculatorBaseTorch):
         charges: Union[List[torch.Tensor], torch.Tensor],
         cell: Union[List[Optional[torch.Tensor]], Optional[torch.Tensor]],
         max_steps: int,
+        lr: float = 1e-1,
+        verbose: bool = False,
     ) -> Tuple[float, float, float]:
 
         device = positions[0].device
         cell_dimensions = torch.linalg.norm(cell, dim=1)
-        max_range = torch.min(cell_dimensions) / 2 - 1e-6
+        max_range = torch.randn(1, device=device) / 1e6 + torch.min(cell_dimensions) / 2 - 1e-6
         G = torch.tensor(
             [
                 [cell[0] @ cell[0], cell[0] @ cell[1], cell[0] @ cell[2]],
@@ -154,31 +161,39 @@ class EwaldPotential(CalculatorBaseTorch):
             * torch.exp(-(atomic_smearing**2) * cutoff**2)
         )
 
-        params = (
-            torch.rand(3, device=device).uniform_(0, max_range).requires_grad_(True)
-        )
-        optimizer = torch.optim.Adam([params], lr=1e-1)
+        params = torch.tensor([
+            max_range / 5,
+            max_range,
+            max_range / 10,
+        ], device=device)
+        params += torch.normal(0., 1e-7, (3,), device=device)
+        params.requires_grad = True
+        optimizer = torch.optim.Adam([params], lr=lr)
+        relu = ReLU()
         steps = 0
         while True:
             result = (
                 err_Fourier(
-                    1 / (2**0.5 * params[0]),
+                    1 / (2**0.5 * relu(params[0])),
                     (
                         2
                         * torch.pi
                         / (2 * torch.sigmoid(params[1]) + torch.tensor(5e-2)) ** 0.5
                     ),
-                )
-                + err_real(1 / (2**0.5 * params[0]), params[2]) ** 2
+                ) ** 2
+                + err_real(1 / (2**0.5 * relu(params[0])), relu(params[2])) ** 2
             )
             loss = result
             loss.backward()
             optimizer.step()
             optimizer.zero_grad()
-            if (steps > max_steps) or (result < accuracy):
+            if verbose and (steps % 100 == 0):
+                print(f'{steps}: {result}')
+            steps += 1
+            if (steps > max_steps) or (result < accuracy**2):
                 break
 
-        return params[0], 2 * torch.sigmoid(params[1]) + torch.tensor(5e-2), params[2]
+        return relu(params[0]), 2 * torch.sigmoid(params[1]) + torch.tensor(5e-2), relu(params[2])
 
     def _compute_single_system(
         self,
