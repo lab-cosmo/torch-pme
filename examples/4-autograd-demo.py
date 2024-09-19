@@ -19,9 +19,9 @@ loss, and its optimization) is left as an exercise to the reader.
 # %%
 # Import dependencies
 
-import ase
+from time import time
 
-# import chemiscope
+import ase
 import torch
 
 import torchpme
@@ -88,9 +88,6 @@ cell = torch.from_numpy(structure.cell.array).to(device=device, dtype=dtype)
 positions.requires_grad_(True)
 charges.requires_grad_(True)
 cell.requires_grad_(True)
-positions.grad.zero_()
-charges.grad.zero_()
-cell.grad.zero_()
 
 ns = torch.tensor([5, 5, 5])
 MI = torchpme.lib.MeshInterpolator(
@@ -188,22 +185,13 @@ Charges gradients:
 # --------------------------
 # The operations in a
 # :py:class:`KSpaceFilter <torchpme.lib.KSpaceFilter>`
-# can also be differentiated through
-
-
-# %%
-# Adjustable and multi-channel filters
-# ------------------------------------
-# :py:class:`KSpaceFilter <torchpme.lib.KSpaceFilter>` can
-# also be applied for more complicated use cases. For
-# instance, one can apply multiple filters to multiple
-# real-space mesh channels, and use a
-# :py:class:`torch.nn.Module`-derived class to define an
-# adjustable kernel
+# can also be differentiated through.
 
 # %%
-# We also define a filter with three smearing parameters, corresponding to
-# three channels
+# A parametric k-space filter
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# We define a filter with multiple smearing parameters,
+# that are applied separately to multiple mesh channels
 
 
 class ParametricKernel(torch.nn.Module):
@@ -221,12 +209,48 @@ class ParametricKernel(torch.nn.Module):
 
 
 # %%
-# This can be used just as a simple filter
+# We define a 2D weights (to get a 2D mesh), and
+# define parameters as optimizable quantities
 
-sigma = torch.tensor([1.0, 1.0], dtype=dtype, device=device)
-a0 = torch.tensor([1.0, 1.0], dtype=dtype, device=device)
+weights = torch.tensor(
+    [
+        [1.0, 1.0],
+        [-1.0, 1.0],
+        [-1.0, 1.0],
+        [1.0, 1.0],
+        [-1.0, 1.0],
+        [1.0, 1.0],
+        [1.0, 1.0],
+        [-1.0, 1.0],
+    ],
+    dtype=dtype,
+    device=device,
+)
+
+torch.autograd.set_detect_anomaly(True)
+sigma = torch.tensor([1.0, 0.5], dtype=dtype, device=device)
+a0 = torch.tensor([1.0, 2.0], dtype=dtype, device=device)
+
+positions = positions.detach()
+cell = cell.detach()
+positions.requires_grad_(True)
+cell.requires_grad_(True)
+
+weights = weights.detach()
+sigma = sigma.detach()
+a0 = a0.detach()
+weights.requires_grad_(True)
 sigma.requires_grad_(True)
 a0.requires_grad_(True)
+
+# %%
+# Compute the mesh, apply the filter, and also complete the
+# PME-like operation by evaluating the transformed mesh
+# at the atom positions
+
+MI = torchpme.lib.MeshInterpolator(cell, ns, 3)
+MI.compute_interpolation_weights(positions)
+mesh = MI.points_to_mesh(weights)
 
 kernel = ParametricKernel(sigma, a0)
 KF = torchpme.lib.KSpaceFilter(cell, ns, kernel=kernel)
@@ -236,42 +260,60 @@ filtered = KF.compute(mesh)
 filtered_at_positions = MI.mesh_to_points(filtered)
 
 # %%
-#
+# Computes a (rather arbitrary) function of the outputs,
+# backpropagates and then outputs the gradients.
+# With this messy non-linear function everything has
+# nonzero gradients
 
 value = (charges * filtered_at_positions).sum()
-
-# %%
-print(value)
-
-
-# %%
 value.backward()
 
 # %%
+print(
+    f"""
+Value: {value}
 
-charges.grad
+Position gradients:
+{positions.grad.T}
 
+Cell gradients:
+{cell.grad}
 
-# %%
+Weights gradients:
+{weights.grad.T}
 
-sigma.grad
-# %%
-a0.grad
-# %%
-cell.grad
+Param. a0:
+{a0.grad}
+
+Param. sigma:
+{sigma.grad}
+"""
+)
 
 # %%
 # A ``torch`` module based on ``torchpme``
-# ----------------------------------------
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #
+# It is also possible to combine all this in a
+# custom :py:class:`torch.nn.Module`, which is the
+# first step towards designing a model training pipeline
+# based on a custom ``torchpme`` model.
+
+# %%
+# We start by defining a Yukawa-like potential, and
+# a (rather contrieved) model that combines a Fourier
+# filter, with a multi-layer perceptron to post-process
+# charges and "potential"
 
 
+# Define the kernel
 class SmearedCoulomb(torchpme.lib.KSpaceKernel):
     def __init__(self, sigma2):
         super().__init__()
         self._sigma2 = sigma2
 
     def from_k_sq(self, k2):
+        # we use a mask to set to zero the Gamma-point filter
         mask = torch.ones_like(k2, dtype=torch.bool, device=k2.device)
         mask[..., 0, 0, 0] = False
         potential = torch.zeros_like(k2)
@@ -279,10 +321,9 @@ class SmearedCoulomb(torchpme.lib.KSpaceKernel):
         return potential
 
 
+# Define the module
 class KSpaceModule(torch.nn.Module):
-    """
-    A
-    """
+    """A demonstrative model combining torchpme and a multi-layer perceptron"""
 
     def __init__(
         self, mesh_spacing: float = 0.5, sigma2: float = 1.0, hidden_sizes=None
@@ -309,6 +350,7 @@ class KSpaceModule(torch.nn.Module):
 
         if hidden_sizes is None:  # default architecture
             hidden_sizes = [10, 10]
+
         # a neural network to process "charge and potential"
         last_size = 2  # input is charge and potential
         self._layers = torch.nn.ModuleList()
@@ -323,8 +365,8 @@ class KSpaceModule(torch.nn.Module):
         )  # outputs one value
 
     def forward(self, positions, cell, charges):
-
-        # ns_mesh = torchpme.lib.get_ns_mesh(cell, self._mesh_spacing)
+        # use a helper function to get the mesh size given resolution
+        ns_mesh = torchpme.lib.get_ns_mesh(cell, self._mesh_spacing)
         ns_mesh = torch.tensor([4, 4, 4])
         self._MI = torchpme.lib.MeshInterpolator(
             cell=cell,
@@ -348,53 +390,123 @@ class KSpaceModule(torch.nn.Module):
 
 
 # %%
+# Creates an instance of the model and evaluates it.
 
-my_module = KSpaceModule(sigma2=1, mesh_spacing=1, hidden_sizes=[10, 4, 10])
+my_module = KSpaceModule(sigma2=1.0, mesh_spacing=1.0, hidden_sizes=[10, 4, 10])
 
-# %%
-if charges.grad is not None:
-    charges.grad.zero_()
-if positions.grad is not None:
-    positions.grad.zero_()
-if cell.grad is not None:
-    cell.grad.zero_()
+# (re-)initialize vectors
 
+charges = charges.detach()
+positions = positions.detach()
+cell = cell.detach()
+charges.requires_grad_(True)
 positions.requires_grad_(True)
 cell.requires_grad_(True)
+
 value = my_module.forward(positions, cell, charges)
-# %%
-torch.autograd.set_detect_anomaly(True)
 value.backward()
 
-# %%
-charges.grad
-# %%
-positions.grad
-# %%
-cell.grad
-# %%
-# this can also be jitted!
-old_cell_grad = cell.grad
-my_tsmod = torch.jit.script(my_module)
 
 # %%
-if charges.grad is not None:
-    charges.grad.zero_()
-if positions.grad is not None:
-    positions.grad.zero_()
-if cell.grad is not None:
-    cell.grad.zero_()
+# Gradients are fine!
 
-positions.requires_grad_(True)
-cell.requires_grad_(True)
-value = my_tsmod.forward(positions, cell, charges)
+print(
+    f"""
+Value: {value}
+
+Position gradients:
+{positions.grad.T}
+
+Cell gradients:
+{cell.grad}
+
+Charges gradients:
+{charges.grad.T}
+"""
+)
 
 # %%
-value.backward()
+# ... also on the MLP parameters!
+
+for layer in my_module._layers:
+    print(layer._parameters)
+
 
 # %%
-cell.grad
+# Jitting a custom module
+# ~~~~~~~~~~~~~~~~~~~~~~~
+# The custom module can also be jitted!
+
+old_cell_grad = cell.grad.clone()
+jit_module = torch.jit.script(my_module)
+
+jit_charges = charges.detach()
+jit_positions = positions.detach()
+jit_cell = cell.detach()
+jit_cell.requires_grad_(True)
+jit_charges.requires_grad_(True)
+jit_positions.requires_grad_(True)
+
+jit_value = jit_module.forward(jit_positions, jit_cell, jit_charges)
+jit_value.backward()
 
 # %%
-cell.grad - old_cell_grad
+# Values match within machine precision
+
+# %%
+# Gradients are fine!
+print(
+    f"""
+Delta-Value: {value-jit_value}
+
+Delta-Position gradients:
+{positions.grad.T-jit_positions.grad.T}
+
+Delta-Cell gradients:
+{cell.grad-jit_cell.grad}
+
+Delta-Charges gradients:
+{charges.grad.T-jit_charges.grad.T}
+"""
+)
+
+
+# %%
+# We can also time the difference in execution
+# time between the Pytorch and scripted versions of the
+# module (depending on the system, the relative efficiency
+# of the two evaluations could go either way!)
+
+duration = 0.0
+for _i in range(20):
+    my_module.zero_grad()
+    positions = positions.detach()
+    cell = cell.detach()
+    charges = charges.detach()
+    duration -= time()
+    value = my_module.forward(positions, cell, charges)
+    value.backward()
+    if device == "cuda":
+        torch.cuda.synchronize()
+    duration += time()
+time_python = (duration) * 1e3 / 20
+
+duration = 0.0
+for _i in range(20):
+    jit_module.zero_grad()
+    positions = positions.detach()
+    cell = cell.detach()
+    charges = charges.detach()
+    duration -= time()
+    value = jit_module.forward(positions, cell, charges)
+    value.backward()
+    if device == "cuda":
+        torch.cuda.synchronize()
+    duration += time()
+time_jit = (duration) * 1e3 / 20
+
+
+# %%
+print(f"Evaluation time:\nPytorch: {time_python}ms\nJitted:  {time_jit}ms")
+
 # %%
