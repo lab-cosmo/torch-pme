@@ -1,8 +1,6 @@
 import pytest
 import torch
 from packaging import version
-from utils_metatensor import compute_neighbors
-from vesin import NeighborList
 
 import torchpme
 
@@ -14,12 +12,12 @@ mts_atomistic = pytest.importorskip("metatensor.torch.atomistic")
 @pytest.fixture
 def system():
     system = mts_atomistic.System(
-        types=torch.tensor([1, 1]),
-        positions=torch.tensor([[0.0, 0.0, 0.0], [0.0, 0.0, 2.0]]),
-        cell=torch.eye(3),
+        types=torch.tensor([1, 2, 2]),
+        positions=torch.tensor([[0.0, 0.0, 0.0], [0.0, 0.0, 0.2], [0.0, 0.0, 0.5]]),
+        cell=4.2 * torch.eye(3),
     )
 
-    charges = torch.tensor([1.0, -1.0]).unsqueeze(1)
+    charges = torch.tensor([1.0, -0.5, -0.5]).unsqueeze(1)
     data = mts_torch.TensorBlock(
         values=charges,
         samples=mts_torch.Labels.range("atom", charges.shape[0]),
@@ -60,22 +58,22 @@ def neighbors():
 
 class CalculatorTest(torchpme.metatensor.base.CalculatorBaseMetatensor):
     def _compute_single_system(
-        self, positions, charges, cell, neighbor_indices, neighbor_shifts
+        self, positions, charges, cell, neighbor_indices, neighbor_distances
     ):
         self._positions = positions
         self._charges = charges
         self._cell = cell
         self._neighbor_indices = neighbor_indices
-        self._neighbor_shifts = neighbor_shifts
+        self._neighbor_distances = neighbor_distances
 
         return charges
 
 
 @pytest.mark.parametrize("method_name", ["compute", "forward"])
-def test_compute_output_shapes_single(method_name, system):
+def test_compute_output_shapes_single(method_name, system, neighbors):
     calculator = CalculatorTest()
     method = getattr(calculator, method_name)
-    result = method(system)
+    result = method(system, neighbors)
 
     assert isinstance(result, torch.ScriptObject)
     if version.parse(torch.__version__) >= version.parse("2.1"):
@@ -89,34 +87,21 @@ def test_compute_output_shapes_single(method_name, system):
     assert tuple(result[0].values.shape) == (len(system), 1)
 
 
-def test_corrrect_value_extraction(system):
+def test_corrrect_value_extraction_from_neighbors_tensormap(system, neighbors):
     calculator = CalculatorTest()
-
-    cutoff = 2.0
-    neighbors = compute_neighbors(system, cutoff=cutoff)
-
-    # Compute reference neighborlist
-    nl = NeighborList(cutoff=cutoff, full_list=True)
-    i, j, S = nl.compute(
-        points=system.positions, box=system.cell, periodic=True, quantities="ijS"
-    )
-
-    i = torch.from_numpy(i.astype(int))
-    j = torch.from_numpy(j.astype(int))
-
-    neighbor_indices = torch.vstack([i, j])
-    neighbor_shifts = torch.from_numpy(S.astype(int))
-
     calculator.compute(system, neighbors)
 
-    assert torch.equal(calculator._charges, torch.tensor([1.0, -1.0]).unsqueeze(1))
+    neighbor_indices = neighbors.samples.view(["first_atom", "second_atom"]).values
+    neighbor_distances = torch.linalg.norm(neighbors.values, dim=1).squeeze(1)
+
+    assert torch.equal(calculator._charges, torch.tensor([[1.0], [-0.5], [-0.5]]))
     assert torch.equal(calculator._neighbor_indices, neighbor_indices)
-    assert torch.equal(calculator._neighbor_shifts, neighbor_shifts)
+    assert torch.equal(calculator._neighbor_distances, neighbor_distances)
 
 
-def test_compute_output_shapes_multiple(system):
+def test_compute_output_shapes_multiple(system, neighbors):
     calculator = CalculatorTest()
-    result = calculator.compute([system, system])
+    result = calculator.compute([system, system], [neighbors, neighbors])
 
     assert isinstance(result, torch.ScriptObject)
     if version.parse(torch.__version__) >= version.parse("2.1"):
@@ -155,7 +140,7 @@ def test_inconsistent_length(system):
         calculator.compute(systems=[system], neighbors=[None, None])
 
 
-def test_wrong_system_dtype(system):
+def test_wrong_system_dtype(system, neighbors):
     system_float64 = system.to(torch.float64)
 
     calculator = CalculatorTest()
@@ -164,17 +149,17 @@ def test_wrong_system_dtype(system):
         r"`dtype` of all systems must be the same, got torch.float64 and torch.float32"
     )
     with pytest.raises(ValueError, match=match):
-        calculator.compute([system, system_float64])
+        calculator.compute([system, system_float64], [neighbors, neighbors])
 
 
-def test_wrong_system_device(system):
+def test_wrong_system_device(system, neighbors):
     system_meta = system.to("meta")
 
     calculator = CalculatorTest()
 
     match = r"`device` of all systems must be the same, got meta and cpu"
     with pytest.raises(ValueError, match=match):
-        calculator.compute([system, system_meta])
+        calculator.compute([system, system_meta], [neighbors, neighbors])
 
 
 def test_wrong_neighbors_dtype(system, neighbors):
@@ -253,7 +238,7 @@ def test_wrong_neighbors_properties(system, neighbors):
         calculator.compute(system, neighbors)
 
 
-def test_wrong_system_not_all_charges(system):
+def test_wrong_system_not_all_charges(system, neighbors):
     system_nocharge = mts_torch.atomistic.System(
         system.types, system.positions, system.cell
     )
@@ -262,10 +247,10 @@ def test_wrong_system_not_all_charges(system):
 
     match = r"`systems` do not consistently contain `charges` data"
     with pytest.raises(ValueError, match=match):
-        calculator.compute([system, system_nocharge])
+        calculator.compute([system, system_nocharge], [neighbors, neighbors])
 
 
-def test_different_number_charge_channles(system):
+def test_different_number_charge_channels(system, neighbors):
     system_channels = mts_atomistic.System(system.types, system.positions, system.cell)
 
     charges2 = torch.tensor([[1.0, 2.0], [-1.0, -2.0]])
@@ -284,10 +269,10 @@ def test_different_number_charge_channles(system):
         r"first system \(1\)"
     )
     with pytest.raises(ValueError, match=match):
-        calculator.compute([system, system_channels])
+        calculator.compute([system, system_channels], [neighbors, neighbors])
 
 
-def test_systems_with_different_number_of_atoms(system):
+def test_systems_with_different_number_of_atoms(system, neighbors):
     """Test that systems with different numnber of atoms are supported."""
     system_more_atoms = mts_atomistic.System(
         types=torch.tensor([1, 1, 8]),
@@ -306,4 +291,4 @@ def test_systems_with_different_number_of_atoms(system):
     system_more_atoms.add_data(name="charges", data=data)
 
     calculator = CalculatorTest()
-    calculator.compute([system, system_more_atoms])
+    calculator.compute([system, system_more_atoms], [neighbors, neighbors])

@@ -15,7 +15,6 @@ import torchpme  # noqa: E402
 
 suppress_warnings = ["config.cache"]
 
-
 ROOT = os.path.abspath(os.path.join("..", ".."))
 
 # We use a second (pseudo) sphinx project located in `docs/generate_examples` to run the
@@ -121,6 +120,11 @@ html_theme_options = {
         },
     ],
 }
+
+# Add any paths that contain custom static files (such as style sheets) here,
+# relative to this directory. They are copied after the builtin static files,
+# so a file named "default.css" will overwrite the builtin "default.css".
+html_static_path = ["../static"]
 
 # font-awesome logos (used in the footer)
 html_css_files = [

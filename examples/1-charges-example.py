@@ -27,9 +27,9 @@ manipulating atomic structures.
 
 # %%
 import torch
+import vesin.torch
 from metatensor.torch import Labels, TensorBlock
 from metatensor.torch.atomistic import System
-from vesin import NeighborList
 
 import torchpme
 
@@ -42,25 +42,21 @@ cutoff = 1.0
 # Create the properties CsCl unit cell
 symbols = ("Cs", "Cl")
 types = torch.tensor([55, 17])
-positions = torch.tensor([(0, 0, 0), (0.5, 0.5, 0.5)])
-cell = torch.eye(3)
+positions = torch.tensor([(0, 0, 0), (0.5, 0.5, 0.5)], dtype=torch.float64)
+cell = torch.eye(3, dtype=torch.float64)
 
 # %%
-# Based on the system we compute the corresponding full neighbor list using `vesin
+# Based on the system we compute the corresponding half neighbor list using `vesin
 # <https://luthaf.fr/vesin>`_ and rearrange the results to be suitable for the
 # calculations below.
 
-nl = NeighborList(cutoff=cutoff, full_list=True)
+nl = vesin.torch.NeighborList(cutoff=cutoff, full_list=False)
 
-i, j, S, D = nl.compute(points=positions, box=cell, periodic=True, quantities="ijSD")
+i, j, S, D, neighbor_distances = nl.compute(
+    points=positions, box=cell, periodic=True, quantities="ijSDd"
+)
 
-i = torch.from_numpy(i.astype(int))
-j = torch.from_numpy(j.astype(int))
-neighbor_indices = torch.vstack([i, j])
-neighbor_shifts = torch.from_numpy(S.astype(int))
-
-distances = torch.from_numpy(D).reshape(-1, 3, 1)
-distances = distances.type(positions.dtype)
+neighbor_indices = torch.stack([i, j], dim=1)
 
 # %%
 # Next, we initialize the :py:class:`PMEPotential` calculator with an ``exponent`` of
@@ -75,7 +71,7 @@ calculator = torchpme.PMEPotential(exponent=1.0)
 # As a first application of multiple charge channels, we start simply by using the
 # classic definition of one charge channel per atom.
 
-charges = torch.tensor([[1.0], [-1.0]])
+charges = torch.tensor([[1.0], [-1.0]], dtype=torch.float64)
 
 # %%
 # Any input the meshLODE calculators has to be a 2D array where the *rows* describe the
@@ -92,7 +88,7 @@ potential = calculator(
     cell=cell,
     charges=charges,
     neighbor_indices=neighbor_indices,
-    neighbor_shifts=neighbor_shifts,
+    neighbor_distances=neighbor_distances,
 )
 
 # %%
@@ -118,7 +114,7 @@ print(charges.T @ potential)
 # species-specific potentials and facilitating the learning process for machine learning
 # algorithms.
 
-charges_one_hot = torch.tensor([[1.0, 0.0], [0.0, 1.0]])
+charges_one_hot = torch.tensor([[1.0, 0.0], [0.0, 1.0]], dtype=torch.float64)
 
 # %%
 # While in ``charges`` there was only one row, ``charges_one_hot`` contains two rows
@@ -135,7 +131,7 @@ potential_one_hot = calculator(
     cell=cell,
     charges=charges_one_hot,
     neighbor_indices=neighbor_indices,
-    neighbor_shifts=neighbor_shifts,
+    neighbor_distances=neighbor_distances,
 )
 
 # %%
@@ -176,11 +172,8 @@ system = System(types=types, positions=positions, cell=cell)
 # %%
 # We first add the neighbor list to the ``system``. This requires creating a
 # ``NeighborList`` object to store the *neighbor indices*, *distances*, and *shifts*.
-# The :py:class:`NeighborListOptions <metatensor.torch.atomistic.NeighborListOptions>`
-# class is used to specify the ``cutoff`` distance and whether to use the ``full``
-# neighbor list.
 
-sample_values = torch.hstack([neighbor_indices.T, neighbor_shifts])
+sample_values = torch.hstack([neighbor_indices, S])
 samples = Labels(
     names=[
         "first_atom",
@@ -194,9 +187,7 @@ samples = Labels(
 
 components = Labels(names=["xyz"], values=torch.tensor([[0, 1, 2]]).T)
 properties = Labels(names=["distance"], values=torch.tensor([[0]]))
-neighbors = TensorBlock(
-    torch.tensor(distances).view(-1, 3, 1), samples, [components], properties
-)
+neighbors = TensorBlock(D.reshape(-1, 3, 1), samples, [components], properties)
 
 # %%
 # Now the ``system`` is ready to be used inside the calculators
