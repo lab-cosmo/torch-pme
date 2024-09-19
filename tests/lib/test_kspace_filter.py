@@ -78,7 +78,7 @@ class TestFilter:
         assert mesh.shape[1:3] == self.myfilter1._kvectors.shape[:-2]
 
     def test_meshes_inconsistent_size(self):
-        # make sure we get conistent mesh sizes
+        # make sure we get consistent mesh sizes
         self.mymesh1.compute_interpolation_weights(self.points)
         mesh = self.mymesh1.points_to_mesh(self.weights)
         match = "The real-space mesh is inconsistent with the k-space grid."
