@@ -137,6 +137,18 @@ class _EwaldPotentialImpl(PeriodicBase):
         self_contrib = torch.full([], fill_value)
         energy -= charges * self_contrib
 
+        # Step 5: The method requires that the unit cell is charge-neutral.
+        # If the cell has a net charge (i.e. if sum(charges) != 0), the method
+        # implicitly assumes that a homogeneous background charge of the opposite sign
+        # is present to make the cell neutral. In this case, the potential has to be
+        # adjusted to compensate for this.
+        # An extra factor of 2 is added to compensate for the division by 2 later on
+        ivolume = torch.abs(cell.det()).pow(-1)
+        charge_tot = torch.sum(charges, dim=0)
+        prefac = torch.pi**1.5 * (2 * smearing**2) ** ((3 - self.exponent) / 2)
+        prefac /= (3 - self.exponent) * gamma(torch.tensor(self.exponent / 2))
+        energy -= 2 * prefac * charge_tot * ivolume
+
         # Compensate for double counting of pairs (i,j) and (j,i)
         return energy / 2
 

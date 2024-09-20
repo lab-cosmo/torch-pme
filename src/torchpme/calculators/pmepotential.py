@@ -93,7 +93,7 @@ class _PMEPotentialImpl(PeriodicBase):
         self._cell_cache = self._cell_cache.to(dtype=dtype, device=device)
 
         # Inverse of cell volume for later use
-        ivolume = cell.det().pow(-1)
+        ivolume = torch.abs(cell.det()).pow(-1)
 
         # Kernel function `G` and initialization of `MeshInterpolator` only depend on
         # `cell`. Caching can save up to 15%.
@@ -156,10 +156,11 @@ class _PMEPotentialImpl(PeriodicBase):
         # implicitly assumes that a homogeneous background charge of the opposite sign
         # is present to make the cell neutral. In this case, the potential has to be
         # adjusted to compensate for this.
+        # An extra factor of 2 is added to compensate for the division by 2 later on
         charge_tot = torch.sum(charges, dim=0)
         prefac = torch.pi**1.5 * (2 * smearing**2) ** ((3 - self.exponent) / 2)
         prefac /= (3 - self.exponent) * gamma(torch.tensor(self.exponent / 2))
-        interpolated_potential -= prefac * charge_tot * ivolume
+        interpolated_potential -= 2 * prefac * charge_tot * ivolume
 
         # Compensate for double counting of pairs (i,j) and (j,i)
         return interpolated_potential / 2
