@@ -7,7 +7,6 @@ import io
 import pytest
 import torch
 from packaging import version
-from utils_metatensor import compute_neighbors
 
 import torchpme
 
@@ -46,32 +45,48 @@ INTERPOLATION_ORDER = 2
     ],
 )
 class TestWorkflow:
-    def cscl_system(self, device=None):
-        """CsCl crystal. Same as in the madelung test"""
-
-        if device is None:
-            device = torch.device("cpu")
-
+    def system(self, device=None):
         system = mts_atomistic.System(
-            types=torch.tensor([17, 55]),
-            positions=torch.tensor([[0, 0, 0], [0.5, 0.5, 0.5]]),
-            cell=torch.eye(3),
+            types=torch.tensor([1, 2, 2]),
+            positions=torch.tensor([[0.0, 0.0, 0.0], [0.0, 0.0, 0.2], [0.0, 0.0, 0.5]]),
+            cell=4.2 * torch.eye(3),
         )
 
+        charges = torch.tensor([1.0, -0.5, -0.5]).unsqueeze(1)
         data = mts_torch.TensorBlock(
-            values=torch.tensor([-1.0, 1.0]).unsqueeze(1),
-            samples=mts_torch.Labels.range("atom", len(system)),
+            values=charges,
+            samples=mts_torch.Labels.range("atom", charges.shape[0]),
             components=[],
-            properties=mts_torch.Labels("charge", torch.tensor([[0]])),
+            properties=mts_torch.Labels.range("charge", charges.shape[1]),
         )
+
         system.add_data(name="charges", data=data)
-        neighbors = compute_neighbors(system)
+
+        sample_values = torch.tensor([[0, 1, 0, 0, 0]])
+        samples = mts_torch.Labels(
+            names=[
+                "first_atom",
+                "second_atom",
+                "cell_shift_a",
+                "cell_shift_b",
+                "cell_shift_c",
+            ],
+            values=sample_values,
+        )
+
+        values = torch.tensor([[[0.0], [0.0], [0.2]]])
+        neighbors = mts_torch.TensorBlock(
+            values=values,
+            samples=samples,
+            components=[mts_torch.Labels.range("xyz", 3)],
+            properties=mts_torch.Labels.range("distance", 1),
+        )
 
         return system.to(device=device), neighbors.to(device=device)
 
     def check_operation(self, calculator, device):
         """Make sure computation runs and returns a metatensor.TensorMap."""
-        system, neighbors = self.cscl_system(device)
+        system, neighbors = self.system(device)
         descriptor_compute = calculator.compute(system, neighbors)
         descriptor_forward = calculator.forward(system, neighbors)
 

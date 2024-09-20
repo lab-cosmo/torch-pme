@@ -11,8 +11,8 @@ class _EwaldPotentialImpl(PeriodicBase):
     def __init__(
         self,
         exponent: float,
-        atomic_smearing: Union[None, float],
-        lr_wavelength: Union[None, float],
+        atomic_smearing: Optional[float],
+        lr_wavelength: Optional[float],
         subtract_interior: bool,
     ):
         PeriodicBase.__init__(
@@ -27,9 +27,9 @@ class _EwaldPotentialImpl(PeriodicBase):
         self,
         positions: torch.Tensor,
         charges: torch.Tensor,
-        cell: Optional[torch.Tensor],
-        neighbor_indices: Optional[torch.Tensor],
-        neighbor_shifts: Optional[torch.Tensor],
+        cell: torch.Tensor,
+        neighbor_indices: torch.Tensor,
+        neighbor_distances: torch.Tensor,
     ) -> torch.Tensor:
         # Set the defaut values of convergence parameters
         # The total computational cost = cost of SR part + cost of LR part
@@ -40,11 +40,7 @@ class _EwaldPotentialImpl(PeriodicBase):
         # convergence of the SR and LR sums, respectively. The default values are
         # chosen to reach a convergence on the order of 1e-4 to 1e-5 for the test
         # structures.
-        cell, neighbor_indices, neighbor_shifts, smearing = self._prepare(
-            cell=cell,
-            neighbor_indices=neighbor_indices,
-            neighbor_shifts=neighbor_shifts,
-        )
+        smearing = self._estimate_smearing(cell)
 
         if self.lr_wavelength is None:
             lr_wavelength = 0.5 * smearing
@@ -53,12 +49,10 @@ class _EwaldPotentialImpl(PeriodicBase):
 
         # Compute short-range (SR) part using a real space sum
         potential_sr = self._compute_sr(
-            positions=positions,
-            charges=charges,
-            cell=cell,
             smearing=smearing,
+            charges=charges,
             neighbor_indices=neighbor_indices,
-            neighbor_shifts=neighbor_shifts,
+            neighbor_distances=neighbor_distances,
         )
 
         # Compute long-range (LR) part using a Fourier / reciprocal space sum
@@ -70,8 +64,7 @@ class _EwaldPotentialImpl(PeriodicBase):
             lr_wavelength=lr_wavelength,
         )
 
-        # Divide by 2 due to double counting of atom pairs
-        return (potential_sr + potential_lr) / 2
+        return potential_sr + potential_lr
 
     def _compute_lr(
         self,
@@ -144,11 +137,12 @@ class _EwaldPotentialImpl(PeriodicBase):
         self_contrib = torch.full([], fill_value)
         energy -= charges * self_contrib
 
-        return energy
+        # Compensate for double counting of pairs (i,j) and (j,i)
+        return energy / 2
 
 
 class EwaldPotential(CalculatorBaseTorch, _EwaldPotentialImpl):
-    r"""Specie-wise long-range potential computed using the Ewald sum.
+    r"""Potential computed using the Ewald sum.
 
     Scaling as :math:`\mathcal{O}(N^2)` with respect to the number of particles
     :math:`N`.
@@ -202,9 +196,9 @@ class EwaldPotential(CalculatorBaseTorch, _EwaldPotentialImpl):
         self,
         positions: Union[List[torch.Tensor], torch.Tensor],
         charges: Union[List[torch.Tensor], torch.Tensor],
-        cell: Union[List[Optional[torch.Tensor]], Optional[torch.Tensor]],
-        neighbor_indices: Union[List[Optional[torch.Tensor]], Optional[torch.Tensor]],
-        neighbor_shifts: Union[List[Optional[torch.Tensor]], Optional[torch.Tensor]],
+        cell: Union[List[torch.Tensor], torch.Tensor],
+        neighbor_indices: Union[List[torch.Tensor], torch.Tensor],
+        neighbor_distances: Union[List[torch.Tensor], torch.Tensor],
     ) -> Union[torch.Tensor, List[torch.Tensor]]:
         """Compute potential for all provided "systems" stacked inside list.
 
@@ -230,13 +224,12 @@ class EwaldPotential(CalculatorBaseTorch, _EwaldPotentialImpl):
             box/unit cell of the system. Each row should be one of the bounding box
             vector; and columns should contain the x, y, and z components of these
             vectors (i.e. the cell should be given in row-major order).
-        :param neighbor_indices: Optional single or list of 2D tensors of shape ``(2,
-            n)``, where ``n`` is the number of atoms. The two rows correspond to the
-            indices of a **full neighbor list** for the two atoms which are considered
-            neighbors (e.g. within a cutoff distance).
-        :param neighbor_shifts: Optional single or list of 2D tensors of shape (3, n),
-             where n is the number of atoms. The 3 rows correspond to the shift indices
-             for periodic images of a **full neighbor list**.
+        :param neighbor_indices: Single or list of 2D tensors of shape ``(n, 2)``, where
+            ``n`` is the number of neighbors. The two columns correspond to the indices
+            of a **half neighbor list** for the two atoms which are considered neighbors
+            (e.g. within a cutoff distance).
+        :param neighbor_distances: single or list of 1D tensors containing the distance
+            between the ``n`` pairs corresponding to a **half neighbor list**.
         :return: Single or list of torch tensors containing the potential(s) for all
             positions. Each tensor in the list is of shape ``(len(positions),
             len(charges))``, where If the inputs are only single tensors only a single
@@ -248,7 +241,7 @@ class EwaldPotential(CalculatorBaseTorch, _EwaldPotentialImpl):
             charges=charges,
             cell=cell,
             neighbor_indices=neighbor_indices,
-            neighbor_shifts=neighbor_shifts,
+            neighbor_distances=neighbor_distances,
         )
 
     # This function is kept to keep torch-pme compatible with the broader pytorch
@@ -258,9 +251,9 @@ class EwaldPotential(CalculatorBaseTorch, _EwaldPotentialImpl):
         self,
         positions: Union[List[torch.Tensor], torch.Tensor],
         charges: Union[List[torch.Tensor], torch.Tensor],
-        cell: Union[List[Optional[torch.Tensor]], Optional[torch.Tensor]],
-        neighbor_indices: Union[List[Optional[torch.Tensor]], Optional[torch.Tensor]],
-        neighbor_shifts: Union[List[Optional[torch.Tensor]], Optional[torch.Tensor]],
+        cell: Union[List[torch.Tensor], torch.Tensor],
+        neighbor_indices: Union[List[torch.Tensor], torch.Tensor],
+        neighbor_distances: Union[List[torch.Tensor], torch.Tensor],
     ) -> Union[torch.Tensor, List[torch.Tensor]]:
         """Forward just calls :py:meth:`compute`."""
         return self.compute(
@@ -268,5 +261,5 @@ class EwaldPotential(CalculatorBaseTorch, _EwaldPotentialImpl):
             charges=charges,
             cell=cell,
             neighbor_indices=neighbor_indices,
-            neighbor_shifts=neighbor_shifts,
+            neighbor_distances=neighbor_distances,
         )

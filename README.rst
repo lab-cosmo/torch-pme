@@ -13,9 +13,9 @@ Particle Mesh Ewald (``PME``), standard ``Ewald``, and non-periodic ``direct`` m
 with the flexibility to calculate potentials beyond :math:`1/r` electrostatics,
 including arbitrary order :math:`1/r^p` potentials.
 
-Optimized for both CPU and GPU devices, torch-pme is fully `TorchScriptable`_, allowing
-it to be converted into a format that runs independently of Python, such as in C++,
-making it ideal for high-performance production environments.
+Optimized for both CPU and GPU devices, ``torch-pme`` is fully `TorchScriptable`_,
+allowing it to be converted into a format that runs independently of Python, such as in
+C++, making it ideal for high-performance production environments.
 
 .. _`TorchScriptable`: https://pytorch.org/docs/stable/jit.html
 
