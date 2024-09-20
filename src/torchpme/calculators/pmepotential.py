@@ -137,7 +137,9 @@ class _PMEPotentialImpl(PeriodicBase):
         # This contribution always should be subtracted since it depends on the smearing
         # parameter, which is purely a convergence parameter.
         phalf = self.exponent / 2
-        fill_value = 1 / gamma(torch.tensor(phalf + 1)) / (2 * self.smearing**2) ** phalf
+        fill_value = (
+            1 / gamma(torch.tensor(phalf + 1)) / (2 * self.smearing**2) ** phalf
+        )
         self_contrib = torch.full([], fill_value, device=device)
         interpolated_potential -= charges * self_contrib
 
