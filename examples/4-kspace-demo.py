@@ -225,6 +225,12 @@ multi_kernel._sigma = torch.tensor([1.0, 0.5, 0.25])
 multi_KF.update_filter()
 multi_filtered_2 = multi_KF.compute(multi_mesh)
 
+# NB: when one needs to perform a full update, including the
+# cell, it is possible to call the ``forward`` function of the
+# class
+
+multi_filtered_3 = multi_KF(cell, multi_mesh)
+
 # %%
 # Visualize the application of the filters
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

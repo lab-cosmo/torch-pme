@@ -206,7 +206,23 @@ class KSpaceFilter(torch.nn.Module):
             # NB: we must specify the size of the output
             # as for certain mesh sizes the inverse FT is not
             # well-defined
-            s=mesh_values.shape[1:4],
+            s=mesh_values.shape[-3:],
         )
 
         return mesh_kernel
+
+    def forward(self, cell: torch.Tensor, mesh: torch.Tensor):
+        """Performs a full k-space convolution step.
+
+        The default forward call for `KSpaceFilter` combines
+        the construction or update of the mesh (including the
+        calculation of the filter values) and the Fourier
+        convolution with a given grid.
+
+        The size of the mesh is inferred from the input mesh
+        size.
+        """
+
+        self.update_mesh(cell, torch.tensor(mesh.shape[-3:]))
+
+        return self.compute(mesh)
