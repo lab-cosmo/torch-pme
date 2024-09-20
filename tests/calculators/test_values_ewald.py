@@ -372,12 +372,10 @@ def test_wigner(crystal_name, scaling_factor):
         positions=positions, periodic=True, box=cell
     )
 
-    # Due to the slow convergence, we do not use the default values of the smearing,
-    # but provide a range instead. The first value of 0.1 corresponds to what would be
+    # The first value of 0.1 corresponds to what would be
     # chosen by default for the "wigner_sc" or "wigner_bcc_cubiccell" structure.
     smearings = torch.tensor([0.1, 0.06, 0.019], dtype=torch.float64)
-    tolerances = torch.tensor([3e-2, 1e-2, 1e-3])
-    for smearing, rtol in zip(smearings, tolerances):
+    for smearing in smearings:
         # Readjust smearing parameter to match nearest neighbor distance
         if crystal_name in ["wigner_fcc", "wigner_fcc_cubiccell"]:
             smeareff = smearing / np.sqrt(2)
@@ -398,7 +396,7 @@ def test_wigner(crystal_name, scaling_factor):
         )
         energies = potentials * charges
         energies_ref = -torch.ones_like(energies) * madelung_ref / 2
-        torch.testing.assert_close(energies, energies_ref, atol=0.0, rtol=rtol)
+        torch.testing.assert_close(energies, energies_ref, atol=0.0, rtol=4.2e-6)
 
 
 @pytest.mark.parametrize("sr_cutoff", [5.54, 6.01])

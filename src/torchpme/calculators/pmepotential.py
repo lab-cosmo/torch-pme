@@ -5,6 +5,7 @@ import torch
 from ..lib.kspace_filter import KSpaceFilter
 from ..lib.kvectors import get_ns_mesh
 from ..lib.mesh_interpolator import MeshInterpolator
+from ..lib.potentials import gamma
 from .base import CalculatorBaseTorch, PeriodicBase
 
 
@@ -15,7 +16,6 @@ class _PMEPotentialImpl(PeriodicBase):
         atomic_smearing: Optional[float] = None,
         mesh_spacing: Optional[float] = None,
         interpolation_order: int = 3,
-        subtract_self: bool = True,
         subtract_interior: bool = False,
     ):
         if interpolation_order not in [1, 2, 3, 4, 5]:
@@ -29,11 +29,6 @@ class _PMEPotentialImpl(PeriodicBase):
         )
         self.mesh_spacing = mesh_spacing
         self.interpolation_order = interpolation_order
-
-        # If interior contributions are to be subtracted, also do so for self term
-        if self.subtract_interior:
-            subtract_self = True
-        self.subtract_self = subtract_self
 
         # TorchScript requires to initialize all attributes in __init__
         self._cell_cache = -1 * torch.ones([3, 3])
@@ -98,12 +93,14 @@ class _PMEPotentialImpl(PeriodicBase):
         charges: torch.Tensor,
         cell: torch.Tensor,
         lr_wavelength: float,
-        subtract_self: bool = True,
     ) -> torch.Tensor:
 
         dtype = positions.dtype
         device = positions.device
         self._cell_cache = self._cell_cache.to(dtype=dtype, device=device)
+
+        # Inverse of cell volume for later use
+        ivolume = torch.abs(cell.det()).pow(-1)
 
         # Kernel function `G` and initialization of `MeshInterpolator` only depend on
         # `cell`. Caching can save up to 15%.
@@ -134,11 +131,26 @@ class _PMEPotentialImpl(PeriodicBase):
         # Step 3: Back interpolation
         interpolated_potential = self._MI.mesh_to_points(potential_mesh)
 
-        # Step 4: Remove self-contribution if desired
-        if subtract_self:
-            fill_value = 2.0 / (torch.pi * self.smearing**2)
-            self_contrib = torch.sqrt(torch.full([], fill_value, device=device))
-            interpolated_potential -= charges * self_contrib
+        # Step 4: Remove the self-contribution: Using the Coulomb potential as an
+        # example, this is the potential generated at the origin by the fictituous
+        # Gaussian charge density in order to split the potential into a SR and LR part.
+        # This contribution always should be subtracted since it depends on the smearing
+        # parameter, which is purely a convergence parameter.
+        phalf = self.exponent / 2
+        fill_value = 1 / gamma(torch.tensor(phalf + 1)) / (2 * self.smearing**2) ** phalf
+        self_contrib = torch.full([], fill_value, device=device)
+        interpolated_potential -= charges * self_contrib
+
+        # Step 5: The method requires that the unit cell is charge-neutral.
+        # If the cell has a net charge (i.e. if sum(charges) != 0), the method
+        # implicitly assumes that a homogeneous background charge of the opposite sign
+        # is present to make the cell neutral. In this case, the potential has to be
+        # adjusted to compensate for this.
+        # An extra factor of 2 is added to compensate for the division by 2 later on
+        charge_tot = torch.sum(charges, dim=0)
+        prefac = torch.pi**1.5 * (2 * self.smearing**2) ** ((3 - self.exponent) / 2)
+        prefac /= (3 - self.exponent) * gamma(torch.tensor(self.exponent / 2))
+        interpolated_potential -= 2 * prefac * charge_tot * ivolume
 
         # Compensate for double counting of pairs (i,j) and (j,i)
         return interpolated_potential / 2
@@ -172,9 +184,6 @@ class PMEPotential(CalculatorBaseTorch, _PMEPotentialImpl):
     :param interpolation_order: Interpolation order for mapping onto the grid, where an
         interpolation order of p corresponds to interpolation by a polynomial of degree
         ``p - 1`` (e.g. ``p = 4`` for cubic interpolation).
-    :param subtract_self: If set to :py:obj:`True`, subtract from the features of an
-        atom the contributions to the potential arising from that atom itself (but not
-        the periodic images).
     :param subtract_interior: If set to :py:obj:`True`, subtract from the features of an
         atom the contributions to the potential arising from all atoms within the cutoff
         Note that if set to true, the self contribution (see previous) is also
@@ -224,7 +233,7 @@ class PMEPotential(CalculatorBaseTorch, _PMEPotentialImpl):
     tensor([[-1.0192],
             [ 1.0192]], dtype=torch.float64)
 
-    Which is the close the reference value given above.
+    Which is close to the reference value given above.
     """
 
     def __init__(
@@ -233,7 +242,6 @@ class PMEPotential(CalculatorBaseTorch, _PMEPotentialImpl):
         atomic_smearing: Optional[float] = None,
         mesh_spacing: Optional[float] = None,
         interpolation_order: int = 3,
-        subtract_self: bool = True,
         subtract_interior: bool = False,
     ):
         CalculatorBaseTorch.__init__(self)
@@ -243,7 +251,6 @@ class PMEPotential(CalculatorBaseTorch, _PMEPotentialImpl):
             atomic_smearing=atomic_smearing,
             mesh_spacing=mesh_spacing,
             interpolation_order=interpolation_order,
-            subtract_self=subtract_self,
             subtract_interior=subtract_interior,
         )
 
