@@ -104,7 +104,6 @@ class PMEPotential(CalculatorBaseMetatensor, _PMEPotentialImpl):
         atomic_smearing: Optional[float] = None,
         mesh_spacing: Optional[float] = None,
         interpolation_order: int = 3,
-        subtract_self: bool = True,
         subtract_interior: bool = False,
     ):
         _PMEPotentialImpl.__init__(
@@ -113,7 +112,6 @@ class PMEPotential(CalculatorBaseMetatensor, _PMEPotentialImpl):
             atomic_smearing=atomic_smearing,
             mesh_spacing=mesh_spacing,
             interpolation_order=interpolation_order,
-            subtract_self=subtract_self,
             subtract_interior=subtract_interior,
         )
         CalculatorBaseMetatensor.__init__(self)
