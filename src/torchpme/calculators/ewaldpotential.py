@@ -78,6 +78,7 @@ class EwaldPotential(CalculatorBaseTorch):
         subtract_interior: bool = False,
         max_steps: int = 10000,
         lr: float = 1e-1,
+        decide_by_system_size: bool = False,
         verbose: bool = False,
     ) -> Tuple["EwaldPotential", float]:
         """Initialize based on a desired accuracy.
@@ -110,6 +111,7 @@ class EwaldPotential(CalculatorBaseTorch):
             cell=cell,
             max_steps=max_steps,
             lr=lr,
+            decide_by_system_size=decide_by_system_size,
             verbose=verbose,
         )
 
@@ -130,6 +132,7 @@ class EwaldPotential(CalculatorBaseTorch):
         cell: Union[List[Optional[torch.Tensor]], Optional[torch.Tensor]],
         max_steps: int,
         lr: float = 1e-1,
+        decide_by_system_size: bool = False,
         verbose: bool = False,
     ) -> Tuple[float, float, float]:
 
@@ -145,6 +148,14 @@ class EwaldPotential(CalculatorBaseTorch):
         )
         volume = torch.linalg.det(G) ** 0.5
         n_atoms = torch.tensor(len(positions), device=device)
+
+        if decide_by_system_size:
+            return (
+                torch.tensor(len(positions)**(1/6) / 2**0.5),
+                2 * torch.pi * torch.tensor(len(positions)**(1/6) / 2**0.5),
+                torch.tensor(len(positions)**(1/6) / 2**0.5)
+            )
+
         err_Fourier = (
             lambda atomic_smearing, K: (torch.sum(charges**2) / torch.sqrt(n_atoms))
             * 2
@@ -170,6 +181,7 @@ class EwaldPotential(CalculatorBaseTorch):
         params.requires_grad = True
         optimizer = torch.optim.Adam([params], lr=lr)
         relu = ReLU()
+
         steps = 0
         while True:
             result = (
