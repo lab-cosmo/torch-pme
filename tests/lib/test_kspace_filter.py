@@ -19,6 +19,15 @@ class TestKernel:
             kernel = torch.exp(-k_sq / self.param)
             return kernel
 
+    class NoopKernel(KSpaceKernel):
+        def __init__(self):
+            super().__init__()
+
+        @torch.jit.export
+        def from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
+            kernel = torch.ones_like(k_sq)
+            return kernel
+
     def test_kernel_subclassing(self):
         # check that one can define and use a kernel
         my_krn = self.DemoKernel(1.0)
@@ -47,15 +56,6 @@ def test_not_implemented_kernel():
 
 
 class TestFilter:
-    class DemoKernel(KSpaceKernel):
-        def __init__(self, param: float):
-            super().__init__()
-            self.param = param
-
-        @torch.jit.export
-        def from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
-            kernel = torch.exp(-k_sq / self.param)
-            return kernel
 
     cell1 = torch.randn((3, 3))
     cell2 = torch.randn((3, 3))
@@ -69,6 +69,9 @@ class TestFilter:
     mymesh2 = MeshInterpolator(cell2, ns2, 3)
     points = torch.tensor([[1.0, 2, 3], [0, 1, 1]])
     weights = torch.tensor([[-0.1], [0.4]])
+
+    mykernel_noop = TestKernel.NoopKernel()
+    myfilter_noop = KSpaceFilter(cell1, ns1, mykernel_noop)
 
     def test_meshes_consistent_size(self):
         # make sure we get conistent mesh sizes
@@ -84,6 +87,27 @@ class TestFilter:
         match = "The real-space mesh is inconsistent with the k-space grid."
         with pytest.raises(ValueError, match=match):
             self.myfilter2.compute(mesh)
+
+    def test_kernel_noop(self):
+        # make sure that a filter of ones recovers the initial mesh
+        self.mymesh1.compute_interpolation_weights(self.points)
+        mesh = self.mymesh1.points_to_mesh(self.weights)
+        mesh_transformed = self.myfilter_noop.compute(mesh)
+
+        torch.allclose(mesh, mesh_transformed, atol=1e-6, rtol=0)
+
+    def test_filter_linear(self):
+        # checks that the filter (as well as the mesh interpolator) are linear
+        self.mymesh1.compute_interpolation_weights(self.points)
+        mesh1 = self.mymesh1.points_to_mesh(self.weights)
+
+        mesh2 = torch.exp(mesh1)
+
+        tmesh1 = self.myfilter1.compute(mesh1)
+        tmesh2 = self.myfilter1.compute(mesh2)
+        tmesh12 = self.myfilter1.compute(mesh1 + 0.3 * mesh2)
+
+        torch.allclose(tmesh12, tmesh1 + 0.3 * tmesh2)
 
 
 def test_different_devices_ns_cell():
