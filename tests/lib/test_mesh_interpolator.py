@@ -262,6 +262,53 @@ class TestMeshInterpolatorBackward:
         weight_after = torch.sum(interpolated_values, dim=0)
         torch.testing.assert_close(weight_before, weight_after, rtol=1e-5, atol=1e-6)
 
+    @pytest.mark.parametrize("random_runs", random_runs)
+    @pytest.mark.parametrize("interpolation_order", [2, 3, 4])
+    def test_derivatives(self, interpolation_order, random_runs):
+        """
+        check that derivatives on charges are all ones, and derivatives
+        on cell and positions are zero (should be the case if the interpolation
+        fulfills the sum rules)
+        """
+        # Define some basic parameteres for this test
+        # While we could also loop over these, we are instead varying these
+        # parameters across the various tests to reduce the number of calls
+        n_channels = 3
+        n_points = 12
+        L = torch.tensor(1.7320508)
+
+        # Generate random cell, positions and weights
+        cell = torch.randn((3, 3)) * L
+        ns_mesh = torch.randint(3, 5, size=(3,))
+        positions = torch.randn((n_points, 3)) * L
+        weights = torch.randn((n_points, n_channels))
+
+        # Requires derivatives
+        cell.requires_grad_(True)
+        weights.requires_grad_(True)
+        positions.requires_grad_(True)
+
+        MI = MeshInterpolator(
+            cell=cell, ns_mesh=ns_mesh, interpolation_order=interpolation_order
+        )
+
+        MI.compute_interpolation_weights(positions)
+        mesh_values = MI.points_to_mesh(weights)
+        total_mass = mesh_values.sum()
+
+        # Computes derivatives by backpropagation
+        total_mass.backward()
+
+        torch.testing.assert_close(
+            cell.grad, torch.zeros_like(cell.grad), rtol=0, atol=1e-4
+        )
+        torch.testing.assert_close(
+            positions.grad, torch.zeros_like(positions.grad), rtol=0, atol=1e-5
+        )
+        torch.testing.assert_close(
+            weights.grad, torch.ones_like(weights.grad), rtol=1e-5, atol=1e-6
+        )
+
 
 def test_cell_wrong_shape():
     ns_mesh = torch.tensor([2, 2, 2])
