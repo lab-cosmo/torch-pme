@@ -39,12 +39,12 @@ class CalculatorBaseTorch(torch.nn.Module):
             # If the contribution from all atoms within the cutoff is to be subtracted
             # this short-range part will simply use -V_LR as the potential
             if subtract_interior:
-                potentials_bare = -self.potential.from_dist_lr(neighbor_distances)
+                potentials_bare = -self.potential.lr_from_dist(neighbor_distances)
             # In the remaining cases, we simply use the usual V_SR to get the full
             # 1/r^p potential when combined with the long-range part implemented in
             # reciprocal space
             else:
-                potentials_bare = self.potential.from_dist_sr(neighbor_distances)
+                potentials_bare = self.potential.sr_from_dist(neighbor_distances)
         else:  # is_direct
             potentials_bare = self.potential.from_dist(neighbor_distances)
 

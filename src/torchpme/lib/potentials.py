@@ -59,24 +59,24 @@ class RangeSeparatedPotential(BasePotential, KSpaceKernel):
     to evaluate the long-range part of the potential in the Fourier domain.
     """
 
-    def from_dist_sr(self, dist: torch.Tensor) -> torch.Tensor:
+    def sr_from_dist(self, dist: torch.Tensor) -> torch.Tensor:
         raise NotImplementedError(
-            f"from_dist_sr is not implemented for {self.__class__.__name__}"
+            f"sr_from_dist is not implemented for {self.__class__.__name__}"
         )
 
-    def from_dist_lr(self, dist: torch.Tensor) -> torch.Tensor:
+    def lr_from_dist(self, dist: torch.Tensor) -> torch.Tensor:
         raise NotImplementedError(
-            f"from_dist_lr is not implemented for {self.__class__.__name__}"
+            f"lr_from_dist is not implemented for {self.__class__.__name__}"
         )
 
     def from_dist(self, dist: torch.Tensor) -> torch.Tensor:
         # if someone wants the full potential...
-        return self.from_dist_sr(dist) + self.from_dist_lr(dist)
+        return self.sr_from_dist(dist) + self.lr_from_dist(dist)
 
     def from_dist_sq(self, dist_sq: torch.Tensor) -> torch.Tensor:
         # if someone wants the full potential...
         dist = torch.sqrt(dist_sq)
-        return self.from_dist_sr(dist) + self.from_dist_lr(dist)
+        return self.sr_from_dist(dist) + self.lr_from_dist(dist)
 
     # recycles docstrings
     from_dist.__doc__ = BasePotential.__doc__
@@ -96,7 +96,6 @@ class InversePowerLawPotential(RangeSeparatedPotential):
     3. the Fourier transform of the LR part
 
     :param exponent: the exponent :math:`p` in :math:`1/r^p` potentials
-    :param kspace_scaling: a scale factor applied to the reciprocal space part
     :param smearing: float containing the parameter often called "sigma" in
             publications, which determines the length-scale at which the short-range and
             long-range parts of the naive :math:`1/r^p` potential are separated. For the
@@ -109,7 +108,6 @@ class InversePowerLawPotential(RangeSeparatedPotential):
         self,
         exponent: float,
         smearing: Optional[torch.Tensor] = None,
-        kspace_scaling: Optional[torch.Tensor] = None,
     ):
         super().__init__()
         self.exponent = exponent
@@ -117,10 +115,7 @@ class InversePowerLawPotential(RangeSeparatedPotential):
         # because of torchscript
         if smearing is None:
             smearing = torch.tensor(1.0, dtype=torch.float64)
-        if kspace_scaling is None:
-            kspace_scaling = torch.tensor(1.0, dtype=torch.float64)
         self.smearing = smearing
-        self.kspace_scaling = kspace_scaling
 
     def from_dist(self, dist: torch.Tensor) -> torch.Tensor:
         """
@@ -139,7 +134,7 @@ class InversePowerLawPotential(RangeSeparatedPotential):
         """
         return torch.pow(dist_sq, -self.exponent / 2.0)
 
-    def from_dist_sr(self, dist: torch.Tensor) -> torch.Tensor:
+    def sr_from_dist(self, dist: torch.Tensor) -> torch.Tensor:
         r"""Short-range (SR) part of the range-separated :math:`1/r^p` potential.
 
         More explicitly: it corresponds to `:math:`V_\mathrm{SR}(r)` in :math:`1/r^p =
@@ -163,7 +158,7 @@ class InversePowerLawPotential(RangeSeparatedPotential):
 
         return potential
 
-    def from_dist_lr(self, dist: torch.Tensor) -> torch.Tensor:
+    def lr_from_dist(self, dist: torch.Tensor) -> torch.Tensor:
         """LR part of the range-separated :math:`1/r^p` potential.
 
         Used to subtract out the interior contributions after computing the LR part in
@@ -208,8 +203,7 @@ class InversePowerLawPotential(RangeSeparatedPotential):
         exponent = torch.full([], self.exponent, device=k_sq.device, dtype=k_sq.dtype)
         peff = (3 - exponent) / 2
         prefac = (
-            self.kspace_scaling
-            * (math.pi) ** 1.5
+            (math.pi) ** 1.5
             / gamma(exponent / 2)
             * (2 * self.smearing**2) ** peff
         )

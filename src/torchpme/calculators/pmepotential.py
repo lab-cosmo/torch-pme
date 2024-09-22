@@ -206,7 +206,6 @@ class PMEPotential(CalculatorBaseTorch):
 
             # Update the mesh for the k-space filter
             self.potential.smearing = smearing
-            self.potential.kspace_scaling = cell.det().pow(-1)  # 1/V scaling
             self._KF.update_mesh(cell, ns)
 
         # Step 1. Compute density interpolation
@@ -216,8 +215,8 @@ class PMEPotential(CalculatorBaseTorch):
         # Step 2: Perform actual convolution using FFT
         potential_mesh = self._KF.compute(rho_mesh)
 
-        # Step 3: Back interpolation
-        interpolated_potential = self._MI.mesh_to_points(potential_mesh)
+        # Step 3: Back interpolation, and apply cell volume scaling
+        interpolated_potential = self._MI.mesh_to_points(potential_mesh)*ivolume
 
         # Step 4: Remove the self-contribution: Using the Coulomb potential as an
         # example, this is the potential generated at the origin by the fictituous
