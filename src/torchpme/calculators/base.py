@@ -267,6 +267,22 @@ class CalculatorBaseTorch(torch.nn.Module):
 
         return positions, charges, cell, neighbor_indices, neighbor_distances
 
+    def _compute_single_system(
+        self,
+        positions: torch.Tensor,
+        charges: torch.Tensor,
+        cell: torch.Tensor,
+        neighbor_indices: torch.Tensor,
+        neighbor_distances: torch.Tensor,
+    ) -> torch.Tensor:
+        """Core method for calculations for an individual atomic structure.
+
+        The actual logic has to be implemented in each calculator. Each calculators'
+        main (user-facing) :py:meth:`forward` method then simply loops over all
+        structures to apply this function on each.
+        """
+        raise NotImplementedError("Only implemented in child classes!")
+
     def forward(
         self,
         positions: Union[List[torch.Tensor], torch.Tensor],
@@ -337,7 +353,6 @@ class CalculatorBaseTorch(torch.nn.Module):
             neighbor_indices_single,
             neighbor_distances_single,
         ) in zip(positions, charges, cell, neighbor_indices, neighbor_distances):
-            # `_compute_single_system` is implemented only in child classes!
             potentials.append(
                 self._compute_single_system(
                     positions=positions_single,
