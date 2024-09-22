@@ -1,13 +1,47 @@
-from typing import List, Optional, Union
+from typing import Optional
 
 import torch
 
 from ..lib import generate_kvectors_for_ewald
 from ..lib.potentials import gamma
-from .base import CalculatorBaseTorch, PeriodicBase
+from .base import CalculatorBaseTorch
 
 
-class _EwaldPotentialImpl(PeriodicBase):
+class EwaldPotential(CalculatorBaseTorch):
+    r"""Potential computed using the Ewald sum.
+
+    Scaling as :math:`\mathcal{O}(N^2)` with respect to the number of particles
+    :math:`N`.
+
+    For computing a **neighborlist** a reasonable ``cutoff`` is half the length of
+    the shortest cell vector, which can be for example computed according as
+
+    .. code-block:: python
+
+        cell_dimensions = torch.linalg.norm(cell, dim=1)
+        cutoff = torch.min(cell_dimensions) / 2 - 1e-6
+
+    This ensures a accuracy of the short range part of ``1e-5``.
+
+    :param exponent: the exponent :math:`p` in :math:`1/r^p` potentials
+    :param atomic_smearing: Width of the atom-centered Gaussian used to split the
+        Coulomb potential into the short- and long-range parts. A reasonable value for
+        most systems is to set it to ``1/5`` times the neighbor list cutoff. If
+        :py:obj:`None` ,it will be set to 1/5 times of half the largest box vector
+        (separately for each structure).
+    :param lr_wavelength: Spatial resolution used for the long-range (reciprocal space)
+        part of the Ewald sum. More conretely, all Fourier space vectors with a
+        wavelength >= this value will be kept. If not set to a global value, it will be
+        set to half the atomic_smearing parameter to ensure convergence of the
+        long-range part to a relative precision of 1e-5.
+    :param subtract_interior: If set to :py:obj:`True`, subtract from the features of an
+        atom the contributions to the potential arising from all atoms within the cutoff
+        Note that if set to true, the self contribution (see previous) is also
+        subtracted by default.
+
+    For an **example** on the usage refer to :py:class:`PMEPotential`.
+    """
+
     def __init__(
         self,
         exponent: float = 1.0,
@@ -15,13 +49,15 @@ class _EwaldPotentialImpl(PeriodicBase):
         lr_wavelength: Optional[float] = None,
         subtract_interior: bool = False,
     ):
-        PeriodicBase.__init__(
-            self,
-            exponent=exponent,
-            atomic_smearing=atomic_smearing,
-            subtract_interior=subtract_interior,
-        )
+        super().__init__(exponent=exponent, smearing=atomic_smearing)
+
         self.lr_wavelength = lr_wavelength
+        self.subtract_interior = subtract_interior
+
+        if atomic_smearing is not None and atomic_smearing <= 0:
+            raise ValueError(f"`atomic_smearing` {atomic_smearing} has to be positive")
+        else:
+            self.atomic_smearing = atomic_smearing
 
     def _compute_single_system(
         self,
@@ -40,7 +76,10 @@ class _EwaldPotentialImpl(PeriodicBase):
         # convergence of the SR and LR sums, respectively. The default values are
         # chosen to reach a convergence on the order of 1e-4 to 1e-5 for the test
         # structures.
-        smearing = self._estimate_smearing(cell)
+        if self.atomic_smearing is None:
+            smearing = self.estimate_smearing(cell)
+        else:
+            smearing = self.atomic_smearing
 
         # TODO streamline the flow of parameters
         if self.lr_wavelength is None:
@@ -50,10 +89,11 @@ class _EwaldPotentialImpl(PeriodicBase):
 
         # Compute short-range (SR) part using a real space sum
         potential_sr = self._compute_sr(
-            smearing=smearing,
+            is_periodic=True,
             charges=charges,
             neighbor_indices=neighbor_indices,
             neighbor_distances=neighbor_distances,
+            subtract_interior=self.subtract_interior,
         )
 
         # Compute long-range (LR) part using a Fourier / reciprocal space sum
@@ -75,10 +115,6 @@ class _EwaldPotentialImpl(PeriodicBase):
         smearing: float,
         lr_wavelength: float,
     ) -> torch.Tensor:
-
-        # TODO streamline parameter flow
-        self.potential.smearing = smearing
-
         # Define k-space cutoff from required real-space resolution
         k_cutoff = 2 * torch.pi / lr_wavelength
 
@@ -155,128 +191,3 @@ class _EwaldPotentialImpl(PeriodicBase):
 
         # Compensate for double counting of pairs (i,j) and (j,i)
         return energy / 2
-
-
-class EwaldPotential(CalculatorBaseTorch, _EwaldPotentialImpl):
-    r"""Potential computed using the Ewald sum.
-
-    Scaling as :math:`\mathcal{O}(N^2)` with respect to the number of particles
-    :math:`N`.
-
-    For computing a **neighborlist** a reasonable ``cutoff`` is half the length of
-    the shortest cell vector, which can be for example computed according as
-
-    .. code-block:: python
-
-        cell_dimensions = torch.linalg.norm(cell, dim=1)
-        cutoff = torch.min(cell_dimensions) / 2 - 1e-6
-
-    This ensures a accuracy of the short range part of ``1e-5``.
-
-    :param exponent: the exponent :math:`p` in :math:`1/r^p` potentials
-    :param atomic_smearing: Width of the atom-centered Gaussian used to split the
-        Coulomb potential into the short- and long-range parts. A reasonable value for
-        most systems is to set it to ``1/5`` times the neighbor list cutoff. If
-        :py:obj:`None` ,it will be set to 1/5 times of half the largest box vector
-        (separately for each structure).
-    :param lr_wavelength: Spatial resolution used for the long-range (reciprocal space)
-        part of the Ewald sum. More conretely, all Fourier space vectors with a
-        wavelength >= this value will be kept. If not set to a global value, it will be
-        set to half the atomic_smearing parameter to ensure convergence of the
-        long-range part to a relative precision of 1e-5.
-    :param subtract_interior: If set to :py:obj:`True`, subtract from the features of an
-        atom the contributions to the potential arising from all atoms within the cutoff
-        Note that if set to true, the self contribution (see previous) is also
-        subtracted by default.
-
-    For an **example** on the usage refer to :py:class:`PMEPotential`.
-    """
-
-    def __init__(
-        self,
-        exponent: float = 1.0,
-        atomic_smearing: Optional[float] = None,
-        lr_wavelength: Optional[float] = None,
-        subtract_interior: bool = False,
-    ):
-        CalculatorBaseTorch.__init__(self)
-
-        _EwaldPotentialImpl.__init__(
-            self,
-            exponent=exponent,
-            atomic_smearing=atomic_smearing,
-            lr_wavelength=lr_wavelength,
-            subtract_interior=subtract_interior,
-        )
-
-    def compute(
-        self,
-        positions: Union[List[torch.Tensor], torch.Tensor],
-        charges: Union[List[torch.Tensor], torch.Tensor],
-        cell: Union[List[torch.Tensor], torch.Tensor],
-        neighbor_indices: Union[List[torch.Tensor], torch.Tensor],
-        neighbor_distances: Union[List[torch.Tensor], torch.Tensor],
-    ) -> Union[torch.Tensor, List[torch.Tensor]]:
-        """Compute potential for all provided "systems" stacked inside list.
-
-        The computation is performed on the same ``device`` as ``dtype`` is the input is
-        stored on. The ``dtype`` of the output tensors will be the same as the input.
-
-        For computing a **neighborlist** a reasonable ``cutoff`` is half the length of
-        the shortest cell vector, which can be for example computed according as
-
-        .. code-block:: python
-
-            cell_dimensions = torch.linalg.norm(cell, dim=1)
-            cutoff = torch.min(cell_dimensions) / 2 - 1e-6
-
-        :param positions: Single or 2D tensor of shape (``len(charges), 3``) containing
-            the Cartesian positions of all point charges in the system.
-        :param charges: Single 2D tensor or list of 2D tensor of shape (``n_channels,
-            len(positions))``. ``n_channels`` is the number of charge channels the
-            potential should be calculated for a standard potential ``n_channels=1``. If
-            more than one "channel" is provided multiple potentials for the same
-            position but different are computed.
-        :param cell: single or 2D tensor of shape (3, 3), describing the bounding
-            box/unit cell of the system. Each row should be one of the bounding box
-            vector; and columns should contain the x, y, and z components of these
-            vectors (i.e. the cell should be given in row-major order).
-        :param neighbor_indices: Single or list of 2D tensors of shape ``(n, 2)``, where
-            ``n`` is the number of neighbors. The two columns correspond to the indices
-            of a **half neighbor list** for the two atoms which are considered neighbors
-            (e.g. within a cutoff distance).
-        :param neighbor_distances: single or list of 1D tensors containing the distance
-            between the ``n`` pairs corresponding to a **half neighbor list**.
-        :return: Single or list of torch tensors containing the potential(s) for all
-            positions. Each tensor in the list is of shape ``(len(positions),
-            len(charges))``, where If the inputs are only single tensors only a single
-            torch tensor with the potentials is returned.
-        """
-
-        return self._compute_impl(
-            positions=positions,
-            charges=charges,
-            cell=cell,
-            neighbor_indices=neighbor_indices,
-            neighbor_distances=neighbor_distances,
-        )
-
-    # This function is kept to keep torch-pme compatible with the broader pytorch
-    # infrastructure, which require a "forward" function. We name this function
-    # "compute" instead, for compatibility with other COSMO software.
-    def forward(
-        self,
-        positions: Union[List[torch.Tensor], torch.Tensor],
-        charges: Union[List[torch.Tensor], torch.Tensor],
-        cell: Union[List[torch.Tensor], torch.Tensor],
-        neighbor_indices: Union[List[torch.Tensor], torch.Tensor],
-        neighbor_distances: Union[List[torch.Tensor], torch.Tensor],
-    ) -> Union[torch.Tensor, List[torch.Tensor]]:
-        """Forward just calls :py:meth:`compute`."""
-        return self.compute(
-            positions=positions,
-            charges=charges,
-            cell=cell,
-            neighbor_indices=neighbor_indices,
-            neighbor_distances=neighbor_distances,
-        )

@@ -2,5 +2,5 @@ EwaldPotential
 ##############
 
 .. autoclass:: torchpme.metatensor.EwaldPotential
-    :members: compute, forward
+    :members: forward
     :undoc-members:

@@ -1,8 +1,8 @@
-from ..calculators.directpotential import _DirectPotentialImpl
+from ..calculators.directpotential import DirectPotential as DirectPotentialTorch
 from .base import CalculatorBaseMetatensor
 
 
-class DirectPotential(CalculatorBaseMetatensor, _DirectPotentialImpl):
+class DirectPotential(CalculatorBaseMetatensor):
     r"""Potential using a direct summation.
 
     Refer to :class:`torchpme.DirectPotential` for parameter documentation.
@@ -79,7 +79,7 @@ class DirectPotential(CalculatorBaseMetatensor, _DirectPotentialImpl):
     :py:class:`torchpme.metatensor.PMEPotential` for details on the process.
 
     >>> direct = DirectPotential()
-    >>> potential = direct.compute(system, neighbors)
+    >>> potential = direct.forward(system, neighbors)
 
     The results are stored inside the ``values`` property inside the first
     :py:class:`TensorBlock <metatensor.torch.TensorBlock>` of the ``potential``.
@@ -93,5 +93,5 @@ class DirectPotential(CalculatorBaseMetatensor, _DirectPotentialImpl):
     """
 
     def __init__(self, exponent: float = 1.0):
-        _DirectPotentialImpl.__init__(self, exponent=exponent)
-        CalculatorBaseMetatensor.__init__(self)
+        super().__init__()
+        self.calculator = DirectPotentialTorch(exponent=exponent)

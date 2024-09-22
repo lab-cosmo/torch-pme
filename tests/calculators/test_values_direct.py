@@ -172,9 +172,10 @@ def test_coulomb_exact(
         positions=positions, periodic=False, cutoff=scaling_factor * 10
     )
 
-    potentials = direct.compute(
+    potentials = direct.forward(
         positions,
         charges=charges,
+        cell=torch.eye(3, dtype=DTYPE),  # ignored in actual calculations
         neighbor_indices=neighbor_indices,
         neighbor_distances=neighbor_distances,
     )

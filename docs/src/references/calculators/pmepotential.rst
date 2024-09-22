@@ -2,5 +2,5 @@ PMEPotential
 ############
 
 .. autoclass:: torchpme.PMEPotential
-    :members:
+    :members: forward
     :undoc-members:

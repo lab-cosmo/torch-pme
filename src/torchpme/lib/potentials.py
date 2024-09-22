@@ -1,5 +1,5 @@
 import math
-from typing import Union
+from typing import Optional
 
 import torch
 from torch.special import gammainc, gammaincc, gammaln
@@ -108,8 +108,8 @@ class InversePowerLawPotential(RangeSeparatedPotential):
     def __init__(
         self,
         exponent: float,
-        smearing: Union[None, torch.Tensor] = None,
-        kspace_scaling: Union[None, torch.Tensor] = None,
+        smearing: Optional[torch.Tensor] = None,
+        kspace_scaling: Optional[torch.Tensor] = None,
     ):
         super().__init__()
         self.exponent = exponent

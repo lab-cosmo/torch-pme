@@ -1,7 +1,7 @@
 import pytest
 import torch
 
-from torchpme.calculators.base import CalculatorBaseTorch, PeriodicBase
+from torchpme.calculators.base import CalculatorBaseTorch
 
 
 # Define some example parameters
@@ -18,23 +18,8 @@ NEIGHBOR_DISTANCES = torch.ones(3)
 
 
 class CalculatorTest(CalculatorBaseTorch):
-    def compute(self, positions, charges, cell, neighbor_indices, neighbor_distances):
-        return self._compute_impl(
-            positions=positions,
-            charges=charges,
-            cell=cell,
-            neighbor_indices=neighbor_indices,
-            neighbor_distances=neighbor_distances,
-        )
-
-    def forward(self, positions, charges, cell, neighbor_indices, neighbor_distances):
-        return self._compute_impl(
-            positions=positions,
-            charges=charges,
-            cell=cell,
-            neighbor_indices=neighbor_indices,
-            neighbor_distances=neighbor_distances,
-        )
+    def __init__(self, exponent: float = 1.0):
+        super().__init__(exponent=exponent)
 
     def _compute_single_system(
         self, positions, charges, cell, neighbor_indices, neighbor_distances
@@ -42,12 +27,10 @@ class CalculatorTest(CalculatorBaseTorch):
         return charges
 
 
-@pytest.mark.parametrize("method_name", ["compute", "forward"])
 @pytest.mark.parametrize("n_elements", (0, 1, 2))
-def test_compute_output_shapes(method_name, n_elements):
+def test_compute_output_shapes(n_elements):
     """Test that output type matches the input type"""
     calculator = CalculatorTest()
-    method = getattr(calculator, method_name)
 
     if n_elements > 0:
         positions = n_elements * [POSITIONS_1]
@@ -62,7 +45,7 @@ def test_compute_output_shapes(method_name, n_elements):
         neighbor_indices = NEIGHBOR_INDICES
         neighbor_distances = NEIGHBOR_DISTANCES
 
-    result = method(
+    result = calculator.forward(
         positions=positions,
         charges=charges,
         cell=cell,
@@ -110,12 +93,21 @@ def test_type_check_error():
                 calculator._validate_compute_parameters(**kwargs)
 
 
+def test_exponent_out_of_range():
+    match = r"`exponent` p=.* has to satisfy 0 < p <= 3"
+    with pytest.raises(ValueError, match=match):
+        CalculatorTest(exponent=-1)
+
+    with pytest.raises(ValueError, match=match):
+        CalculatorTest(exponent=4)
+
+
 # Tests for a mismatch in the number of provided inputs for different variables
 def test_mismatched_numbers_cell():
     calculator = CalculatorTest()
     match = r"Got inconsistent numbers of positions \(2\) and cell \(3\)"
     with pytest.raises(ValueError, match=match):
-        calculator.compute(
+        calculator.forward(
             positions=[POSITIONS_1, POSITIONS_2],
             charges=[CHARGES_1, CHARGES_2],
             cell=[CELL_1, CELL_2, torch.eye(3)],
@@ -128,7 +120,7 @@ def test_mismatched_numbers_charges():
     calculator = CalculatorTest()
     match = r"Got inconsistent numbers of positions \(2\) and charges \(3\)"
     with pytest.raises(ValueError, match=match):
-        calculator.compute(
+        calculator.forward(
             positions=[POSITIONS_1, POSITIONS_2],
             charges=[CHARGES_1, CHARGES_2, CHARGES_2],
             cell=[CELL_1, CELL_2],
@@ -141,7 +133,7 @@ def test_mismatched_numbers_neighbor_indices():
     calculator = CalculatorTest()
     match = r"Got inconsistent numbers of positions \(2\) and neighbor_indices \(3\)"
     with pytest.raises(ValueError, match=match):
-        calculator.compute(
+        calculator.forward(
             positions=[POSITIONS_1, POSITIONS_2],
             charges=[CHARGES_1, CHARGES_2],
             cell=[CELL_1, CELL_2],
@@ -154,7 +146,7 @@ def test_mismatched_numbers_neighbor_distances():
     calculator = CalculatorTest()
     match = r"Got inconsistent numbers of positions \(2\) and neighbor_distances \(3\)"
     with pytest.raises(ValueError, match=match):
-        calculator.compute(
+        calculator.forward(
             positions=[POSITIONS_1, POSITIONS_2],
             charges=[CHARGES_1, CHARGES_2],
             cell=[CELL_1, CELL_2],
@@ -175,7 +167,7 @@ def test_invalid_shape_positions():
         r"one tensor with shape \[4, 5\]"
     )
     with pytest.raises(ValueError, match=match):
-        calculator.compute(
+        calculator.forward(
             positions=torch.ones((4, 5), dtype=DTYPE, device=DEVICE),
             charges=CHARGES_1,
             cell=CELL_1,
@@ -193,7 +185,7 @@ def test_invalid_dtype_positions():
     )
     positions_2_wrong_dtype = torch.ones((5, 3), dtype=torch.float64, device=DEVICE)
     with pytest.raises(ValueError, match=match):
-        calculator.compute(
+        calculator.forward(
             positions=[POSITIONS_1, positions_2_wrong_dtype],
             charges=[CHARGES_1, CHARGES_2],
             cell=[CELL_1, CELL_2],
@@ -211,7 +203,7 @@ def test_invalid_device_positions():
     )
     positions_2_wrong_device = POSITIONS_1.to(dtype=DTYPE, device="meta")
     with pytest.raises(ValueError, match=match):
-        calculator.compute(
+        calculator.forward(
             positions=[POSITIONS_1, positions_2_wrong_device],
             charges=[CHARGES_1, CHARGES_2],
             cell=[CELL_1, CELL_2],
@@ -228,7 +220,7 @@ def test_invalid_shape_cell():
         r"with shape \[2, 2\]"
     )
     with pytest.raises(ValueError, match=match):
-        calculator.compute(
+        calculator.forward(
             positions=POSITIONS_1,
             charges=CHARGES_1,
             cell=torch.ones([2, 2], dtype=DTYPE, device=DEVICE),
@@ -244,7 +236,7 @@ def test_invalid_dtype_cell():
         r"got at least one tensor of type torch.float64"
     )
     with pytest.raises(ValueError, match=match):
-        calculator.compute(
+        calculator.forward(
             positions=POSITIONS_1,
             charges=CHARGES_1,
             cell=torch.ones([3, 3], dtype=torch.float64, device=DEVICE),
@@ -260,7 +252,7 @@ def test_invalid_device_cell():
         r"got at least one tensor with device meta"
     )
     with pytest.raises(ValueError, match=match):
-        calculator.compute(
+        calculator.forward(
             positions=POSITIONS_1,
             charges=CHARGES_1,
             cell=torch.ones([3, 3], dtype=DTYPE, device="meta"),
@@ -278,7 +270,7 @@ def test_invalid_dim_charges():
         r"\[4\]"
     )
     with pytest.raises(ValueError, match=match):
-        calculator.compute(
+        calculator.forward(
             positions=POSITIONS_1,
             charges=torch.ones(len(POSITIONS_1), dtype=DTYPE, device=DEVICE),
             cell=CELL_1,
@@ -296,7 +288,7 @@ def test_invalid_shape_charges():
         r"positions contains 4 atoms"
     )
     with pytest.raises(ValueError, match=match):
-        calculator.compute(
+        calculator.forward(
             positions=POSITIONS_1,
             charges=torch.ones((6, 2), dtype=DTYPE, device=DEVICE),
             cell=CELL_1,
@@ -312,7 +304,7 @@ def test_invalid_dtype_charges():
         r"got at least one tensor of type torch.float64"
     )
     with pytest.raises(ValueError, match=match):
-        calculator.compute(
+        calculator.forward(
             positions=POSITIONS_1,
             charges=torch.ones((4, 2), dtype=torch.float64, device=DEVICE),
             cell=CELL_1,
@@ -328,7 +320,7 @@ def test_invalid_device_charges():
         r"got at least one tensor with device meta"
     )
     with pytest.raises(ValueError, match=match):
-        calculator.compute(
+        calculator.forward(
             positions=POSITIONS_1,
             charges=torch.ones((4, 2), dtype=DTYPE, device="meta"),
             cell=CELL_1,
@@ -344,7 +336,7 @@ def test_invalid_shape_neighbor_indices():
         r", but got \[4, 10\] for one structure"
     )
     with pytest.raises(ValueError, match=match):
-        calculator.compute(
+        calculator.forward(
             positions=POSITIONS_1,
             charges=CHARGES_1,
             cell=CELL_1,
@@ -362,7 +354,7 @@ def test_invalid_shape_neighbor_indices_neighbor_distances():
         r"\[11, 3\], which is inconsistent"
     )
     with pytest.raises(ValueError, match=match):
-        calculator.compute(
+        calculator.forward(
             positions=POSITIONS_1,
             charges=CHARGES_1,
             cell=CELL_1,
@@ -378,7 +370,7 @@ def test_invalid_device_neighbor_indices():
         r"got at least one tensor with device meta"
     )
     with pytest.raises(ValueError, match=match):
-        calculator.compute(
+        calculator.forward(
             positions=POSITIONS_1,
             charges=CHARGES_1,
             cell=CELL_1,
@@ -394,7 +386,7 @@ def test_invalid_device_neighbor_distances():
         r"got at least one tensor with device meta"
     )
     with pytest.raises(ValueError, match=match):
-        calculator.compute(
+        calculator.forward(
             positions=POSITIONS_1,
             charges=CHARGES_1,
             cell=CELL_1,
@@ -403,32 +395,10 @@ def test_invalid_device_neighbor_distances():
         )
 
 
-def test_exponent_out_of_range():
-    match = r"`exponent` p=.* has to satisfy 0 < p <= 3"
-    with pytest.raises(ValueError, match=match):
-        PeriodicBase(exponent=-1, atomic_smearing=0.1, subtract_interior=True)
-    with pytest.raises(ValueError, match=match):
-        PeriodicBase(exponent=4, atomic_smearing=0.1, subtract_interior=True)
-
-
-def test_atomic_smearing_non_positive():
-    match = r"`atomic_smearing` .* has to be positive"
-    with pytest.raises(ValueError, match=match):
-        PeriodicBase(exponent=2, atomic_smearing=0, subtract_interior=True)
-    with pytest.raises(ValueError, match=match):
-        PeriodicBase(exponent=2, atomic_smearing=-0.1, subtract_interior=True)
-
-
-def periodic_base():
-    return PeriodicBase(exponent=2, atomic_smearing=0.1, subtract_interior=True)
-
-
-def test_prepare_no_cell():
-    cell = torch.zeros(3, 3)
+def test_no_cell():
     match = (
         "provided `cell` has a determinant of 0 and therefore is not valid for "
         "periodic calculation"
     )
-    print(match)
     with pytest.raises(ValueError, match=match):
-        periodic_base()._estimate_smearing(cell=cell)
+        CalculatorBaseTorch.estimate_smearing(cell=torch.zeros(3, 3))
