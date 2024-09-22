@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Union
 
 import torch
 
@@ -45,7 +45,7 @@ class EwaldPotential(CalculatorBaseTorch):
     def __init__(
         self,
         exponent: float = 1.0,
-        atomic_smearing: Optional[float] = None,
+        atomic_smearing: Union[float, torch.Tensor, None] = None,
         lr_wavelength: Optional[float] = None,
         subtract_interior: bool = False,
     ):

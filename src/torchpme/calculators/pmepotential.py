@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Union
 
 import torch
 
@@ -92,7 +92,7 @@ class PMEPotential(CalculatorBaseTorch):
     def __init__(
         self,
         exponent: float = 1.0,
-        atomic_smearing: Optional[float] = None,
+        atomic_smearing: Union[float, torch.Tensor, None] = None,
         mesh_spacing: Optional[float] = None,
         interpolation_order: int = 3,
         subtract_interior: bool = False,
@@ -120,7 +120,10 @@ class PMEPotential(CalculatorBaseTorch):
             interpolation_order=self.interpolation_order,
         )
 
-        # Initialize the filter module
+        # Initialize the filter module. Set dummy value for smearing to propper
+        # initilize the `KSpaceFilter` below
+        if self.atomic_smearing is None:
+            self.potential.smearing = 1.0
         self._KF = KSpaceFilter(
             cell=torch.eye(3),
             ns_mesh=torch.ones(3, dtype=int),

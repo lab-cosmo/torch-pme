@@ -86,7 +86,7 @@ class KSpaceFilter(torch.nn.Module):
         ifft_norm: str = "ortho",
     ):
 
-        super(KSpaceFilter, self).__init__()
+        super().__init__()
 
         self._fft_norm = fft_norm
         self._ifft_norm = ifft_norm

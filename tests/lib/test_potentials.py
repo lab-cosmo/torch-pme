@@ -57,7 +57,7 @@ def test_potential_from_squared_argument(exponent):
     """
 
     # Compute diverse potentials for this inverse power law
-    ipl = InversePowerLawPotential(exponent=exponent)
+    ipl = InversePowerLawPotential(exponent=exponent, smearing=0.0)
     potential_from_dist = ipl.from_dist(dists)
     potential_from_dist_sq = ipl.from_dist_sq(dists_sq)
 

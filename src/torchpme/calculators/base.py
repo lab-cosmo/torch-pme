@@ -1,4 +1,4 @@
-from typing import List, Optional, Tuple, Union
+from typing import List, Tuple, Union
 
 import torch
 
@@ -12,7 +12,7 @@ class CalculatorBaseTorch(torch.nn.Module):
     :param smearing: TODO
     """
 
-    def __init__(self, exponent: float, smearing: Optional[torch.Tensor] = None):
+    def __init__(self, exponent: float, smearing: Union[float, torch.Tensor] = None):
         super().__init__()
         # TorchScript requires to initialize all attributes in __init__
         self._device = torch.device("cpu")

@@ -62,7 +62,9 @@ class DirectPotential(CalculatorBaseTorch):
     """
 
     def __init__(self, exponent: float = 1.0):
-        super().__init__(exponent=exponent)
+        # Use a dummy value for the smearing. We don't use the methods for smeared
+        # potentials in a direct potential.
+        super().__init__(exponent=exponent, smearing=0.0)
 
     def _compute_single_system(
         self,
