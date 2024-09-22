@@ -202,11 +202,7 @@ class InversePowerLawPotential(RangeSeparatedPotential):
         """
         exponent = torch.full([], self.exponent, device=k_sq.device, dtype=k_sq.dtype)
         peff = (3 - exponent) / 2
-        prefac = (
-            (math.pi) ** 1.5
-            / gamma(exponent / 2)
-            * (2 * self.smearing**2) ** peff
-        )
+        prefac = (math.pi) ** 1.5 / gamma(exponent / 2) * (2 * self.smearing**2) ** peff
         x = 0.5 * self.smearing**2 * k_sq
 
         # The k=0 term often needs to be set separately since for exponents p<=3

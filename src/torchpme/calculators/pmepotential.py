@@ -216,7 +216,7 @@ class PMEPotential(CalculatorBaseTorch):
         potential_mesh = self._KF.compute(rho_mesh)
 
         # Step 3: Back interpolation, and apply cell volume scaling
-        interpolated_potential = self._MI.mesh_to_points(potential_mesh)*ivolume
+        interpolated_potential = self._MI.mesh_to_points(potential_mesh) * ivolume
 
         # Step 4: Remove the self-contribution: Using the Coulomb potential as an
         # example, this is the potential generated at the origin by the fictituous
