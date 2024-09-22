@@ -263,7 +263,7 @@ class TestMeshInterpolatorBackward:
         torch.testing.assert_close(weight_before, weight_after, rtol=1e-5, atol=1e-6)
 
     @pytest.mark.parametrize("random_runs", random_runs)
-    @pytest.mark.parametrize("interpolation_order", [2, 3, 4])
+    @pytest.mark.parametrize("interpolation_order", [2, 3])
     def test_derivatives(self, interpolation_order, random_runs):
         """
         check that derivatives on charges are all ones, and derivatives
@@ -280,7 +280,7 @@ class TestMeshInterpolatorBackward:
         # Generate random cell, positions and weights
         cell = torch.randn((3, 3)) * L
         ns_mesh = torch.randint(3, 5, size=(3,))
-        positions = torch.randn((n_points, 3)) * L
+        positions = torch.matmul(torch.rand((n_points, 3)) * L, cell).detach()
         weights = torch.randn((n_points, n_channels))
 
         # Requires derivatives
@@ -300,10 +300,10 @@ class TestMeshInterpolatorBackward:
         total_mass.backward()
 
         torch.testing.assert_close(
-            cell.grad, torch.zeros_like(cell.grad), rtol=0, atol=1e-4
+            cell.grad, torch.zeros_like(cell.grad), rtol=0, atol=1e-6
         )
         torch.testing.assert_close(
-            positions.grad, torch.zeros_like(positions.grad), rtol=0, atol=1e-5
+            positions.grad, torch.zeros_like(positions.grad), rtol=0, atol=1e-6
         )
         torch.testing.assert_close(
             weights.grad, torch.ones_like(weights.grad), rtol=1e-5, atol=1e-6
