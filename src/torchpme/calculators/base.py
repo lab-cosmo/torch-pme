@@ -9,7 +9,7 @@ class CalculatorBaseTorch(torch.nn.Module):
     """Base calculator for the torch interface.
 
     :param exponent: the exponent :math:`p` in :math:`1/r^p` potentials
-    :param smearing: TODO
+    :param smearing: smearing parameter of a range separated potential
     """
 
     def __init__(self, exponent: float, smearing: Union[float, torch.Tensor] = None):
