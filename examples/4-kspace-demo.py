@@ -14,9 +14,6 @@ The class supports many different use cases, and can be reused several
 times if the filter or the mesh size don't change.
 """
 
-# %%
-# Import dependencies
-
 from time import time
 
 import ase
@@ -35,10 +32,10 @@ dtype = torch.float64
 # Demonstrates the application of a k-space filter
 # ------------------------------------------------
 #
-# Defines a fairly rugged function, and applies a
+# We define a fairly rugged function on a mesh, and apply a
 # smoothening filter. We start creating a grid
 # (we use a :py:class:`MeshInterpolator` object for
-# simplicity to generate the grid) and computing a
+# simplicity to generate the grid with the right shape) and computing a
 # sharp Gaussian field in the :math:`xy` plane.
 
 cell = torch.eye(3, dtype=dtype, device=device) * 6.0
@@ -51,10 +48,11 @@ mesh_value = (
 ).reshape(1, *xyz_mesh.shape[:-1])
 
 # %%
-# We define and apply a Gaussian smearing filter.
-# We first define the convolution kernel that must be applied
+# To define and apply a Gaussian smearing filter,
+# we first define the convolution kernel that must be applied
 # in the Fourier domain, and then use it as a parameter of the
-# filter class.
+# filter class. The application of the filter requires simply
+# a call to :py:func:`KSpaceKernel.compute`.
 
 
 # This is the filter function. NB it is applied
@@ -131,7 +129,7 @@ fig.colorbar(cf_fine, label=r"density / e/Å$^3$")
 fig.show()
 
 # %%
-# We can also show the filter in action in 3D: create
+# We can also show the filter in action in 3D, by creating
 # a grid of dummy atoms corresponding to the mesh
 # points, and colored according to the function
 # value. Use the `chemiscope` option panel to
@@ -179,7 +177,7 @@ chemiscope.show(
 # instance, one can apply multiple filters to multiple
 # real-space mesh channels, and use a
 # :py:class:`torch.nn.Module`-derived class to define an
-# adjustable kernel
+# adjustable kernel.
 
 # %%
 # We initialize a three-channel mesh, with identical
@@ -238,7 +236,7 @@ multi_filtered_3 = multi_KF(cell, multi_mesh)
 # three channels contain the same function as in
 # the previous example, but with different orientations,
 # which explains the different appearence when sliced
-# along the :math:`xy` plane.
+# along the :math:`xy` plane).
 #
 # The second and third columns show the same three
 # channels with the Gaussian smearings defined above.

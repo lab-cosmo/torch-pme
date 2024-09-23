@@ -16,9 +16,6 @@ the use in a ML setting (including the definition of an appropriate
 loss, and its optimization) is left as an exercise to the reader.
 """
 
-# %%
-# Import dependencies
-
 from time import time
 
 import ase
@@ -26,8 +23,6 @@ import torch
 
 import torchpme
 
-
-# from matplotlib import pyplot as plt
 
 device = "cpu"
 dtype = torch.float64
@@ -105,7 +100,7 @@ value = mesh.sum()
 # end result.
 # Because of the sum rules that apply to the interpolation scheme,
 # the gradients with respect to positions and cell entries are zero,
-# and the gradients relative to the charges are all 1
+# and the gradients relative to the charges are all 1.
 
 # we keep the graph to compute another quantity
 value.backward(retain_graph=True)
@@ -152,10 +147,12 @@ Charges gradients:
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #
 # It is possible to have the atomic weights be a
-# function of other quantities, e.g. in a way pretend
-# there is an external electric field along :math:`x`
-# (NB defining an electric field in a periodic setting is
-# not so simple, this is just a toy example)
+# function of other quantities. For instance, pretend
+# there is an external electric field along :math:`x`,
+# and that the weights should be proportional to the
+# electrostatic energy at each atom position
+# (NB: defining an electric field in a periodic setting is
+# not so simple, this is just a toy example).
 
 positions.grad.zero_()
 charges.grad.zero_()
@@ -303,7 +300,7 @@ Param. sigma:
 # We start by defining a Yukawa-like potential, and
 # a (rather contrieved) model that combines a Fourier
 # filter, with a multi-layer perceptron to post-process
-# charges and "potential"
+# charges and "potential".
 
 
 # Define the kernel
@@ -470,8 +467,6 @@ jit_value.backward()
 # %%
 # Values match within machine precision
 
-# %%
-# Gradients are fine!
 print(
     f"""
 Delta-Value: {value-jit_value}
@@ -486,7 +481,6 @@ Delta-Charges gradients:
 {charges.grad.T-jit_charges.grad.T}
 """
 )
-
 
 # %%
 # We can also time the difference in execution
