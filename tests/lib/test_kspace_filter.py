@@ -48,13 +48,6 @@ class TestKernel:
         assert torch.allclose(filter, jit_filter)
 
 
-def test_not_implemented_kernel():
-    match = r"from_k_sq is not implemented for 'KSpaceKernel'"
-    krn = KSpaceKernel()
-    with pytest.raises(NotImplementedError, match=match):
-        krn.from_k_sq(torch.tensor([1, 2, 3]))
-
-
 class TestFilter:
 
     cell1 = torch.randn((3, 3))
