@@ -157,19 +157,19 @@ class EwaldPotential(CalculatorBaseTorch):
             )
 
         err_Fourier = (
-            lambda atomic_smearing, K: (torch.sum(charges**2) / torch.sqrt(n_atoms))
+            lambda alpha, K: (torch.sum(charges**2) / torch.sqrt(n_atoms))
             * 2
-            * atomic_smearing
+            * alpha
             / torch.sqrt(torch.pi * K * volume)
-            * torch.exp(-(K**2) / (4 * atomic_smearing**2))
+            * torch.exp(-(K**2) / (4 * alpha**2))
         )
         err_real = (
-            lambda atomic_smearing, cutoff: (
+            lambda alhpa, r_c: (
                 torch.sum(charges**2) / torch.sqrt(n_atoms)
             )
             * 2
-            / torch.sqrt(cutoff * volume)
-            * torch.exp(-(atomic_smearing**2) * cutoff**2)
+            / torch.sqrt(r_c * volume)
+            * torch.exp(-(alhpa**2) * r_c**2)
         )
 
         params = torch.tensor([
