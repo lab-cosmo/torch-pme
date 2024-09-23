@@ -1,4 +1,5 @@
-from typing import List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
+from warnings import warn
 
 import torch
 from torch.nn import ReLU
@@ -71,13 +72,14 @@ class EwaldPotential(CalculatorBaseTorch):
     @classmethod
     def from_accuracy(
         cls,
-        accuracy: float,
+        optimize: str,
+        accuracy: Optional[float],
         positions: Union[List[torch.Tensor], torch.Tensor],
         charges: Union[List[torch.Tensor], torch.Tensor],
         cell: Union[List[Optional[torch.Tensor]], Optional[torch.Tensor]],
         subtract_interior: bool = False,
-        max_steps: int = 10000,
-        lr: float = 1e-1,
+        max_steps: int = 30000,
+        lr: float = 5e-2,
         decide_by_system_size: bool = False,
         verbose: bool = False,
     ) -> Tuple["EwaldPotential", float]:
@@ -103,26 +105,47 @@ class EwaldPotential(CalculatorBaseTorch):
         #     neighbor_indices=neighbor_indices,
         #     neighbor_shifts=neighbor_shifts,
         # )
+
+        if accuracy is not None:
+            warn("`optimize` is ignored if `accuracy` is set")
+        elif optimize == "fast":
+            smearing = len(positions) ** (1 / 6) / 2**0.5
+            lr_wavelength = 2 * torch.pi * smearing
+            cutoff = smearing
+            ewald_potential = cls(
+                atomic_smearing=smearing,
+                lr_wavelength=lr_wavelength,
+                subtract_interior=subtract_interior,
+            )
+            return ewald_potential, cutoff
+        elif (optimize == "medium") and (accuracy is None):
+            accuracy = 1e-3
+        elif (optimize == "accurate") and (accuracy is None):
+            accuracy = 1e-6
+        elif optimize is None:
+            raise ValueError("Either `optimize` or `accuracy` must be set")
+        else:
+            raise ValueError("`optimize` must be one of 'fast', 'medium' or 'accurate'")
+
         # Compute optimal values for atomic_smearing, lr_wavelength, and cutoff
-        atomic_smearing, lr_wavelength, cutoff = cls._compute_optimal_parameters(
+        params = cls._compute_optimal_parameters(
             accuracy=accuracy,
             positions=positions,
             charges=charges,
             cell=cell,
             max_steps=max_steps,
             lr=lr,
-            decide_by_system_size=decide_by_system_size,
             verbose=verbose,
         )
 
         # Initialize the EwaldPotential object with the computed parameters
         ewald_potential = cls(
-            atomic_smearing=atomic_smearing,
-            lr_wavelength=lr_wavelength,
+            atomic_smearing=params["atomic_smearing"],
+            lr_wavelength=params["lr_wavelength"],
             subtract_interior=subtract_interior,
         )
 
-        return ewald_potential, cutoff
+        return ewald_potential, params["cutoff"]
 
     @staticmethod
     def _compute_optimal_parameters(
@@ -131,30 +154,15 @@ class EwaldPotential(CalculatorBaseTorch):
         charges: Union[List[torch.Tensor], torch.Tensor],
         cell: Union[List[Optional[torch.Tensor]], Optional[torch.Tensor]],
         max_steps: int,
-        lr: float = 1e-1,
-        decide_by_system_size: bool = False,
-        verbose: bool = False,
-    ) -> Tuple[float, float, float]:
+        lr: float,
+        verbose: bool,
+    ) -> Dict[str, float]:
 
         device = positions[0].device
         cell_dimensions = torch.linalg.norm(cell, dim=1)
-        max_range = torch.randn(1, device=device) / 1e6 + torch.min(cell_dimensions) / 2 - 1e-6
-        G = torch.tensor(
-            [
-                [cell[0] @ cell[0], cell[0] @ cell[1], cell[0] @ cell[2]],
-                [cell[1] @ cell[0], cell[1] @ cell[1], cell[1] @ cell[2]],
-                [cell[2] @ cell[0], cell[2] @ cell[1], cell[2] @ cell[2]],
-            ]
-        )
-        volume = torch.linalg.det(G) ** 0.5
+        max_range = torch.min(cell_dimensions) / 2 - 1e-6
+        volume = torch.abs(cell.det())
         n_atoms = torch.tensor(len(positions), device=device)
-
-        if decide_by_system_size:
-            return (
-                torch.tensor(len(positions)**(1/6) / 2**0.5),
-                2 * torch.pi * torch.tensor(len(positions)**(1/6) / 2**0.5),
-                torch.tensor(len(positions)**(1/6) / 2**0.5)
-            )
 
         err_Fourier = (
             lambda alpha, K: (torch.sum(charges**2) / torch.sqrt(n_atoms))
@@ -164,26 +172,26 @@ class EwaldPotential(CalculatorBaseTorch):
             * torch.exp(-(K**2) / (4 * alpha**2))
         )
         err_real = (
-            lambda alhpa, r_c: (
-                torch.sum(charges**2) / torch.sqrt(n_atoms)
-            )
+            lambda alhpa, r_c: (torch.sum(charges**2) / torch.sqrt(n_atoms))
             * 2
             / torch.sqrt(r_c * volume)
             * torch.exp(-(alhpa**2) * r_c**2)
         )
 
-        params = torch.tensor([
-            max_range / 5,
-            max_range,
-            max_range / 10,
-        ], device=device)
-        params += torch.normal(0., 1e-7, (3,), device=device)
+        params = torch.tensor(
+            [
+                max_range / 5,
+                max_range,
+                max_range / 10,
+            ],
+            device=device,
+        )
+        params += torch.normal(0.0, 1e-7, (3,), device=device)
         params.requires_grad = True
         optimizer = torch.optim.Adam([params], lr=lr)
         relu = ReLU()
 
-        steps = 0
-        while True:
+        for step in range(max_steps):
             result = (
                 err_Fourier(
                     1 / (2**0.5 * relu(params[0])),
@@ -192,20 +200,36 @@ class EwaldPotential(CalculatorBaseTorch):
                         * torch.pi
                         / (2 * torch.sigmoid(params[1]) + torch.tensor(5e-2)) ** 0.5
                     ),
-                ) ** 2
+                )
+                ** 2
                 + err_real(1 / (2**0.5 * relu(params[0])), relu(params[2])) ** 2
             )
-            loss = result
-            loss.backward()
+            if torch.isnan(result):
+                raise ValueError(
+                    "The value of the estimated error is now nan, consider"
+                    "using a smaller learning rate."
+                )
+            result.backward()
             optimizer.step()
             optimizer.zero_grad()
-            if verbose and (steps % 100 == 0):
-                print(f'{steps}: {result}')
-            steps += 1
-            if (steps > max_steps) or (result < accuracy**2):
+            if verbose and (step % 100 == 0):
+                print(f"{step}: {result}")
+            if result <= accuracy**2:
                 break
+        if result > accuracy**2:
+            warn(
+                "The searching for the parameters is ended, but the error is {:.3e}, "
+                "larger than the given accuracy {:.3e}. Consider increase max_step and"
+                " rerun.".format(result.detach().float() ** 0.5, accuracy)
+            )
 
-        return relu(params[0]), 2 * torch.sigmoid(params[1]) + torch.tensor(5e-2), relu(params[2])
+        return {
+            "atomic_smearing": relu(params[0]).detach().float(),
+            "lr_wavelength": (2 * torch.sigmoid(params[1]) + torch.tensor(5e-2))
+            .detach()
+            .float(),
+            "cutoff": relu(params[2]).detach().float(),
+        }
 
     def _compute_single_system(
         self,
@@ -339,3 +363,24 @@ class EwaldPotential(CalculatorBaseTorch):
 
         # Compensate for double counting of pairs (i,j) and (j,i)
         return energy / 2
+
+    @staticmethod
+    def _err_real(alpha, r_c, charges, volume):
+
+        return (
+            torch.sum(charges**2)
+            / torch.sqrt(len(charges))
+            * 2
+            / torch.sqrt(r_c * volume)
+            * torch.exp(-(alpha**2) * r_c**2)
+        )
+
+    @staticmethod
+    def _err_Fourier(alpha, K, charges, volume):
+        return (
+            (torch.sum(charges**2) / torch.sqrt(len(charges)))
+            * 2
+            * alpha
+            / torch.sqrt(torch.pi * K * volume)
+            * torch.exp(-(K**2) / (4 * alpha**2))
+        )
