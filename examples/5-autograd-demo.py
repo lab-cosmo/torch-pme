@@ -408,7 +408,7 @@ value.backward()
 
 
 # %%
-# Gradients are fine!
+# Gradients compute, and look reasonable!
 
 print(
     f"""
@@ -430,6 +430,23 @@ Charges gradients:
 
 for layer in my_module._layers:
     print(layer._parameters)
+
+# %%
+# It's always good to run some `gradcheck`...
+
+my_module.zero_grad()
+check = torch.autograd.gradcheck(
+    my_module,
+    (
+        torch.randn((16, 3), device=device, dtype=dtype, requires_grad=True),
+        torch.randn((3, 3), device=device, dtype=dtype, requires_grad=True),
+        torch.randn((16, 1), device=device, dtype=dtype, requires_grad=True),
+    ),
+)
+if check:
+    print("gradcheck passed for custom torch-pme module")
+else:
+    raise ValueError("gradcheck failed for custom torch-pme module")
 
 
 # %%
