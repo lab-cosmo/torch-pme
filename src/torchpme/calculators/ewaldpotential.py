@@ -78,9 +78,8 @@ class EwaldPotential(CalculatorBaseTorch):
         charges: Union[List[torch.Tensor], torch.Tensor],
         cell: Union[List[Optional[torch.Tensor]], Optional[torch.Tensor]],
         subtract_interior: bool = False,
-        max_steps: int = 30000,
-        lr: float = 5e-2,
-        decide_by_system_size: bool = False,
+        max_steps: int = 50000,
+        learning_rate: float = 5e-2,
         verbose: bool = False,
     ) -> Tuple["EwaldPotential", float]:
         """Initialize based on a desired accuracy.
@@ -89,24 +88,26 @@ class EwaldPotential(CalculatorBaseTorch):
             for the neighborlist computation.
         """
 
-        # TODO create valid dummy values to verify `positions`, `charges` and `cell`
-        neighbor_indices = torch.tensor(0)
-        neighbor_shifts = torch.tensor(0)
-        # (
-        #     positions,
-        #     charges,
-        #     cell,
-        #     _,
-        #     _,
-        # ) = cls._validate_compute_parameters(
-        #     positions=positions,
-        #     charges=charges,
-        #     cell=cell,
-        #     neighbor_indices=neighbor_indices,
-        #     neighbor_shifts=neighbor_shifts,
-        # )
+        # Create valid dummy values to verify `positions`, `charges` and `cell`
+        neighbor_indices = torch.tensor([[0, 1], [1, 2]])
+        neighbor_distances = torch.tensor([1, 2])
+        (
+            positions,
+            charges,
+            cell,
+            _,
+            _,
+        ) = cls._validate_compute_parameters(
+            positions=positions,
+            charges=charges,
+            cell=cell,
+            neighbor_indices=neighbor_indices,
+            neighbor_distances=neighbor_distances,
+        )
 
-        if accuracy is not None:
+        if accuracy is not None and optimize is None:
+            pass
+        elif accuracy is not None and optimize is not None:
             warn("`optimize` is ignored if `accuracy` is set")
         elif optimize == "fast":
             smearing = len(positions) ** (1 / 6) / 2**0.5
@@ -128,35 +129,31 @@ class EwaldPotential(CalculatorBaseTorch):
             raise ValueError("`optimize` must be one of 'fast', 'medium' or 'accurate'")
 
         # Compute optimal values for atomic_smearing, lr_wavelength, and cutoff
-        params = cls._compute_optimal_parameters(
+        params, cutoff = cls._compute_optimal_parameters(
             accuracy=accuracy,
-            positions=positions,
-            charges=charges,
-            cell=cell,
+            positions=positions[0],
+            charges=charges[0],
+            cell=cell[0],
             max_steps=max_steps,
-            lr=lr,
+            learning_rate=learning_rate,
             verbose=verbose,
         )
 
         # Initialize the EwaldPotential object with the computed parameters
-        ewald_potential = cls(
-            atomic_smearing=params["atomic_smearing"],
-            lr_wavelength=params["lr_wavelength"],
-            subtract_interior=subtract_interior,
-        )
+        ewald_potential = cls(**params, subtract_interior=subtract_interior)
 
-        return ewald_potential, params["cutoff"]
+        return ewald_potential, cutoff
 
     @staticmethod
     def _compute_optimal_parameters(
         accuracy: float,
-        positions: Union[List[torch.Tensor], torch.Tensor],
-        charges: Union[List[torch.Tensor], torch.Tensor],
-        cell: Union[List[Optional[torch.Tensor]], Optional[torch.Tensor]],
+        positions: torch.Tensor,
+        charges: torch.Tensor,
+        cell: torch.Tensor,
         max_steps: int,
-        lr: float,
+        learning_rate: float,
         verbose: bool,
-    ) -> Dict[str, float]:
+    ) -> Tuple[Dict[str, float], float]:
 
         device = positions[0].device
         cell_dimensions = torch.linalg.norm(cell, dim=1)
@@ -188,9 +185,8 @@ class EwaldPotential(CalculatorBaseTorch):
         )
         params += torch.normal(0.0, 1e-7, (3,), device=device)
         params.requires_grad = True
-        optimizer = torch.optim.Adam([params], lr=lr)
+        optimizer = torch.optim.Adam([params], lr=learning_rate)
         relu = ReLU()
-
         for step in range(max_steps):
             result = (
                 err_Fourier(
@@ -228,8 +224,7 @@ class EwaldPotential(CalculatorBaseTorch):
             "lr_wavelength": (2 * torch.sigmoid(params[1]) + torch.tensor(5e-2))
             .detach()
             .float(),
-            "cutoff": relu(params[2]).detach().float(),
-        }
+        }, relu(params[2]).detach().float()
 
     def _compute_single_system(
         self,
