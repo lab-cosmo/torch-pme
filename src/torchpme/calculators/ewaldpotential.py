@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, Optional, Tuple
 from warnings import warn
 
 import torch
@@ -72,11 +72,11 @@ class EwaldPotential(CalculatorBaseTorch):
     @classmethod
     def from_accuracy(
         cls,
-        optimize: str,
+        optimize: Optional[str],
         accuracy: Optional[float],
-        positions: Union[List[torch.Tensor], torch.Tensor],
-        charges: Union[List[torch.Tensor], torch.Tensor],
-        cell: Union[List[Optional[torch.Tensor]], Optional[torch.Tensor]],
+        positions: torch.Tensor,
+        charges: torch.Tensor,
+        cell: Optional[torch.Tensor],
         subtract_interior: bool = False,
         max_steps: int = 50000,
         learning_rate: float = 5e-2,
@@ -157,48 +157,47 @@ class EwaldPotential(CalculatorBaseTorch):
 
         device = positions[0].device
         cell_dimensions = torch.linalg.norm(cell, dim=1)
-        max_range = torch.min(cell_dimensions) / 2 - 1e-6
+        max_range = float(torch.min(cell_dimensions) / 2 - 1e-6)
         volume = torch.abs(cell.det())
         n_atoms = torch.tensor(len(positions), device=device)
 
+        # For the error formula, please refer https://www2.icp.uni-stuttgart.de/~icp/
+        # mediawiki/images/4/4d/Script_Longrange_Interactions.pdf
+        # Please be careful to the difference between the parameters in the paper and
+        # ours: alpha=1/(sqrt(2)*smearing), K=2*pi/sqrt(lr_wavelength), r_c=cutoff
+
         err_Fourier = (
-            lambda alpha, K: (torch.sum(charges**2) / torch.sqrt(n_atoms))
-            * 2
-            * alpha
-            / torch.sqrt(torch.pi * K * volume)
-            * torch.exp(-(K**2) / (4 * alpha**2))
+            lambda smearing, lr_wavelength: (
+                torch.sum(charges**2) / torch.sqrt(n_atoms)
+            )
+            * 2**0.5
+            / smearing
+            / torch.sqrt(2 * torch.pi**2 * volume / lr_wavelength**0.5)
+            * torch.exp(-2 * torch.pi**2 * smearing**2 / lr_wavelength)
         )
         err_real = (
-            lambda alhpa, r_c: (torch.sum(charges**2) / torch.sqrt(n_atoms))
+            lambda smearing, cutoff: (torch.sum(charges**2) / torch.sqrt(n_atoms))
             * 2
-            / torch.sqrt(r_c * volume)
-            * torch.exp(-(alhpa**2) * r_c**2)
+            / torch.sqrt(cutoff * volume)
+            * torch.exp(-(cutoff**2) / 2 / smearing**2)
         )
 
-        params = torch.tensor(
-            [
-                max_range / 5,
-                max_range,
-                max_range / 10,
-            ],
-            device=device,
+        smearing = torch.tensor(max_range / 5, device=device, requires_grad=True)
+        lr_wavelength = torch.tensor(max_range, device=device, requires_grad=True)
+        cutoff = torch.tensor(max_range / 10, device=device, requires_grad=True)
+
+        optimizer = torch.optim.Adam(
+            [smearing, lr_wavelength, cutoff], lr=learning_rate
         )
-        params += torch.normal(0.0, 1e-7, (3,), device=device)
-        params.requires_grad = True
-        optimizer = torch.optim.Adam([params], lr=learning_rate)
         relu = ReLU()
         for step in range(max_steps):
             result = (
                 err_Fourier(
-                    1 / (2**0.5 * relu(params[0])),
-                    (
-                        2
-                        * torch.pi
-                        / (2 * torch.sigmoid(params[1]) + torch.tensor(5e-2)) ** 0.5
-                    ),
+                    relu(smearing),
+                    (2 * torch.sigmoid(lr_wavelength) + torch.tensor(5e-2)),
                 )
                 ** 2
-                + err_real(1 / (2**0.5 * relu(params[0])), relu(params[2])) ** 2
+                + err_real(relu(smearing), relu(cutoff)) ** 2
             )
             if torch.isnan(result):
                 raise ValueError(
@@ -220,11 +219,11 @@ class EwaldPotential(CalculatorBaseTorch):
             )
 
         return {
-            "atomic_smearing": relu(params[0]).detach().float(),
-            "lr_wavelength": (2 * torch.sigmoid(params[1]) + torch.tensor(5e-2))
+            "atomic_smearing": relu(smearing).detach().float(),
+            "lr_wavelength": (2 * torch.sigmoid(lr_wavelength) + torch.tensor(5e-2))
             .detach()
             .float(),
-        }, relu(params[2]).detach().float()
+        }, relu(cutoff).detach().float()
 
     def _compute_single_system(
         self,
@@ -358,24 +357,3 @@ class EwaldPotential(CalculatorBaseTorch):
 
         # Compensate for double counting of pairs (i,j) and (j,i)
         return energy / 2
-
-    @staticmethod
-    def _err_real(alpha, r_c, charges, volume):
-
-        return (
-            torch.sum(charges**2)
-            / torch.sqrt(len(charges))
-            * 2
-            / torch.sqrt(r_c * volume)
-            * torch.exp(-(alpha**2) * r_c**2)
-        )
-
-    @staticmethod
-    def _err_Fourier(alpha, K, charges, volume):
-        return (
-            (torch.sum(charges**2) / torch.sqrt(len(charges)))
-            * 2
-            * alpha
-            / torch.sqrt(torch.pi * K * volume)
-            * torch.exp(-(K**2) / (4 * alpha**2))
-        )
