@@ -13,6 +13,8 @@ class DirectPotential(CalculatorBaseTorch):
     implementation used as a reference to test faster algorithms.
 
     :param exponent: the exponent :math:`p` in :math:`1/r^p` potentials
+    :param use_half_neighborlist: If set to :py:obj:`True`, a "half" neighbor list
+        is expected as input. This means that each atom pair is only counted once.
 
     Example
     -------
@@ -61,10 +63,12 @@ class DirectPotential(CalculatorBaseTorch):
     distance between the particles.
     """
 
-    def __init__(self, exponent: float = 1.0):
+    def __init__(self, exponent: float = 1.0, use_half_neighborlist: bool = True):
         # Use a dummy value for the smearing. We don't use the methods for smeared
         # potentials in a direct potential.
-        super().__init__(exponent=exponent, smearing=0.0)
+        super().__init__(
+            exponent=exponent, smearing=0.0, use_half_neighborlist=use_half_neighborlist
+        )
 
     def _compute_single_system(
         self,

@@ -12,7 +12,12 @@ class CalculatorBaseTorch(torch.nn.Module):
     :param smearing: smearing parameter of a range separated potential
     """
 
-    def __init__(self, exponent: float, smearing: Union[float, torch.Tensor] = None):
+    def __init__(
+        self,
+        exponent: float,
+        smearing: Union[float, torch.Tensor] = None,
+        use_half_neighborlist: bool = True,
+    ):
         super().__init__()
         # TorchScript requires to initialize all attributes in __init__
         self._device = torch.device("cpu")
@@ -25,6 +30,8 @@ class CalculatorBaseTorch(torch.nn.Module):
             self.potential = InversePowerLawPotential(
                 exponent=exponent, smearing=smearing
             )
+
+        self.use_half_neighborlist = use_half_neighborlist
 
     def _compute_sr(
         self,
@@ -56,7 +63,10 @@ class CalculatorBaseTorch(torch.nn.Module):
 
         potential = torch.zeros_like(charges)
         potential.index_add_(0, atom_is, contributions_is)
-        potential.index_add_(0, atom_js, contributions_js)
+        # If we are using a half neighbor list, we need to add the contributions
+        # from the "inverse" pairs (j, i) to the atoms i
+        if self.use_half_neighborlist:
+            potential.index_add_(0, atom_js, contributions_js)
 
         # Compensate for double counting of pairs (i,j) and (j,i)
         return potential / 2
@@ -292,9 +302,11 @@ class CalculatorBaseTorch(torch.nn.Module):
         :param neighbor_indices: Single or list of 2D tensors of shape ``(n, 2)``, where
             ``n`` is the number of neighbors. The two columns correspond to the indices
             of a **half neighbor list** for the two atoms which are considered neighbors
-            (e.g. within a cutoff distance).
+            (e.g. within a cutoff distance) if ``use_half_neighborlist=True``.
+            Otherwise, a full neighbor list is expected.
         :param neighbor_distances: single or list of 1D tensors containing the distance
-            between the ``n`` pairs corresponding to a **half neighbor list**.
+            between the ``n`` pairs corresponding to a **half (or full) neighbor list**
+            (see ``neighbor_indices``).
         :return: Single or list of torch tensors containing the potential(s) for all
             positions. Each tensor in the list is of shape ``(len(positions),
             len(charges))``, where If the inputs are only single tensors only a single

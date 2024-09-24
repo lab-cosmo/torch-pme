@@ -404,7 +404,10 @@ def test_wigner(crystal_name, scaling_factor):
 @pytest.mark.parametrize("scaling_factor", [0.4325, 1.3353610])
 @pytest.mark.parametrize("ortho", generate_orthogonal_transformations())
 @pytest.mark.parametrize("calc_name", ["ewald", "pme"])
-def test_random_structure(sr_cutoff, frame_index, scaling_factor, ortho, calc_name):
+@pytest.mark.parametrize("use_half_neighborlist", [True, False])
+def test_random_structure(
+    sr_cutoff, frame_index, scaling_factor, ortho, calc_name, use_half_neighborlist
+):
     """
     Check that the potentials obtained from the main code agree with the ones computed
     using an external library (GROMACS) for more complicated structures consisting of
@@ -442,16 +445,24 @@ def test_random_structure(sr_cutoff, frame_index, scaling_factor, ortho, calc_na
 
     # Compute neighbor list
     neighbor_indices, neighbor_distances = neighbor_list_torch(
-        positions=positions, periodic=True, box=cell, cutoff=sr_cutoff
+        positions=positions,
+        periodic=True,
+        box=cell,
+        cutoff=sr_cutoff,
+        half_neighbor_list=use_half_neighborlist,
     )
 
     # Compute potential using torch-pme and compare against reference values
     if calc_name == "ewald":
-        calc = EwaldPotential(atomic_smearing=atomic_smearing)
+        calc = EwaldPotential(
+            atomic_smearing=atomic_smearing, use_half_neighborlist=use_half_neighborlist
+        )
         rtol_e = 2e-5
         rtol_f = 3.5e-3
     elif calc_name == "pme":
-        calc = PMEPotential(atomic_smearing=atomic_smearing)
+        calc = PMEPotential(
+            atomic_smearing=atomic_smearing, use_half_neighborlist=use_half_neighborlist
+        )
         rtol_e = 4.5e-3
         rtol_f = 3.5e-3
 
