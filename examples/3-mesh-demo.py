@@ -20,14 +20,18 @@ from matplotlib import pyplot as plt
 import torchpme
 
 
-torch.manual_seed(12345)
+device = "cpu"
+dtype = torch.float64
+rng = torch.Generator()
+rng.manual_seed(32)
 
 # %%
 #
 # Compute the atom density projection on a mesh
 # ---------------------------------------------
 #
-# Create a rocksalt structure with a regular array of atoms
+# Create a rocksalt structure with a regular array of atoms, that we
+# will use as example
 
 structure = ase.Atoms(
     positions=[
@@ -49,9 +53,10 @@ structure = ase.Atoms(
 # We now slightly displace the atoms from their initial positions randomly based on a
 # Gaussian distribution.
 
-rng = np.random.default_rng(42)
-displacement = rng.normal(loc=0.0, scale=2.5e-1, size=(len(structure), 3))
-structure.positions += displacement
+displacement = torch.normal(
+    mean=0.0, std=2.5e-1, size=(len(structure), 3), generator=rng
+)
+structure.positions += displacement.numpy()
 
 chemiscope.show(
     frames=[structure],
@@ -62,25 +67,26 @@ chemiscope.show(
 # %%
 #
 # We also define the charges, with a bit of noise for good measure. (NB: the structure
-# won't be charge neutral but it does not matter for this example)
+# won't be charge neutral but it does not matter for this example).
+# Also load positions and cells into torch tensors
 
-charges = np.array([[1.0], [-1.0], [-1.0], [1.0], [-1.0], [1.0], [1.0], [-1.0]])
-charges += rng.normal(scale=0.1, size=(len(charges), 1))
+charges = torch.tensor(
+    [[1.0], [-1.0], [-1.0], [1.0], [-1.0], [1.0], [1.0], [-1.0]],
+    dtype=dtype,
+    device=device,
+)
+charges += torch.normal(mean=0.0, std=1e-1, size=(len(charges), 1), generator=rng)
+positions = torch.from_numpy(structure.positions).to(device=device, dtype=dtype)
+cell = torch.from_numpy(structure.cell.array).to(device=device, dtype=dtype)
 
 # %%
 #
 # We now use :py:class:`MeshInterpolator <torchpme.lib.MeshInterpolator>` to project
-# atomic positions on a grid. Note that ideally this represents a sharp density peaked
-# at atomic positions, so the degree of smoothening depends on the grid resolution (as
-# well as on the interpolation order)
+# atomic positions on a grid. Note that ideally the interpolation represents a sharp
+# density peaked at atomic positions, so the degree of smoothening depends on the grid
+# resolution (as well as on the interpolation order)
 #
 # We demonstrate this by computing a projection on two grids with 3 and 7 mesh points.
-
-
-positions = torch.from_numpy(structure.positions).to(torch.float32)
-charges = torch.from_numpy(charges).to(torch.float32)
-cell = torch.from_numpy(structure.cell.array).to(torch.float32)
-
 
 MI = torchpme.lib.MeshInterpolator(
     cell=cell,
@@ -102,7 +108,7 @@ rho_mesh_fine = MI_fine.points_to_mesh(charges)
 #
 # Note that the meshing can be also used for multiple "pseudo-charge" values per atom
 # simultaneously. In that case, :py:func:`points_to_mesh
-# <torchpme.lib.MeshInterpolator.points_to_mesh>` will return multiple mesh values
+# <torchpme.lib.MeshInterpolator.points_to_mesh>` will return multiple mesh values.
 
 pseudo_charges = torch.normal(mean=0, std=1, size=(len(structure), 4))
 pseudo_mesh = MI.points_to_mesh(pseudo_charges)
@@ -116,7 +122,9 @@ print(tuple(pseudo_mesh.shape))
 # --------------------
 #
 # One can extract the mesh to visualize the values of the atom density. The grid is
-# periodic, so we need some manipulations just for the purpose of visualization
+# periodic, so we need some manipulations just for the purpose of visualization.
+# It is clear that the finer mesh leads to sharper densities, centered around the
+# atom positions.
 
 fig, ax = plt.subplots(
     1, 2, figsize=(8, 4), sharey=True, sharex=True, constrained_layout=True
@@ -208,7 +216,8 @@ chemiscope.show(
 
 # %%
 #
-# and for the fine mesh
+# and for the fine mesh (that again shows clearly how the charge is distributed
+# over the neighboring points, and how the mesh size determines the smearing).
 
 xyz_mesh = MI_fine.get_mesh_xyz().detach().numpy()
 dummy = ase.Atoms(
@@ -254,7 +263,7 @@ chemiscope.show(
 # to!) yield the initial value of the atomic "pseudo-charges".
 #
 # This is also very clear from the mesh plots above, in which the charge assigned to the
-# grid points is much smaller than the atomic charges (that are around ±1)
+# grid points is much smaller than the atomic charges (that are around ±1).
 
 mesh_charges = MI_fine.mesh_to_points(rho_mesh_fine)
 fig, ax = plt.subplots(1, 1, figsize=(6, 4), constrained_layout=True)
@@ -266,8 +275,8 @@ fig.show()
 
 # %%
 #
-# However, we can use :py:func:`points_to_mesh
-# <torchpme.lib.MeshInterpolator.mesh_to_points>` to interpolate arbitrary functions
+# Even though it is not specifically designed for that, :py:func:`points_to_mesh
+# <torchpme.lib.MeshInterpolator.mesh_to_points>` can interpolate arbitrary functions
 # defined on the grid. For instance, here we define a product of sine functions along
 # the three Cartesian directions, :math:`\cos(2\pi x/L)\cos(2\pi y/L)\cos(2\pi z/L)`
 
@@ -279,7 +288,6 @@ f_mesh = (
     * torch.cos(mesh_2pil[..., 2])
 ).reshape(1, *mesh_2pil.shape[:-1])
 
-print(f_mesh.shape)
 f_points = MI_fine.mesh_to_points(f_mesh)
 
 dummy = ase.Atoms(
@@ -322,9 +330,9 @@ chemiscope.show(
 # on, it is easy to do by either creating a new one or simply calling again
 # :py:func:`compute_interpolation_weights
 # <torchpme.lib.MeshInterpolator.compute_interpolation_weights>` for the new set of
-# points
+# points.
 
-new_points = torch.normal(mean=3, std=1, size=(10, 3))
+new_points = torch.normal(mean=3, std=1, size=(10, 3), dtype=dtype, device=device)
 MI_fine.compute_interpolation_weights(new_points)
 new_f = MI_fine.mesh_to_points(f_mesh)
 new_ref = (
@@ -336,8 +344,8 @@ new_ref = (
 
 # %%
 # Even though the interpolated values are not accurate (this is a pretty
-# coarse grid for this function resolution) that the class can interpolate
-# on arbitrary point positions
+# coarse grid for this function resolution) it is clear that the class can
+# interpolate on arbitrary positions of the target points.
 
 fig, ax = plt.subplots(1, 1, figsize=(6, 4), constrained_layout=True)
 

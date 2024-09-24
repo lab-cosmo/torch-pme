@@ -9,9 +9,10 @@ class CalculatorBaseTorch(torch.nn.Module):
     """Base calculator for the torch interface.
 
     :param exponent: the exponent :math:`p` in :math:`1/r^p` potentials
+    :param smearing: smearing parameter of a range separated potential
     """
 
-    def __init__(self, exponent: float):
+    def __init__(self, exponent: float, smearing: Union[float, torch.Tensor] = None):
         super().__init__()
         # TorchScript requires to initialize all attributes in __init__
         self._device = torch.device("cpu")
@@ -21,12 +22,13 @@ class CalculatorBaseTorch(torch.nn.Module):
             raise ValueError(f"`exponent` p={exponent} has to satisfy 0 < p <= 3")
         else:
             self.exponent = exponent
-            self.potential = InversePowerLawPotential(exponent=exponent)
+            self.potential = InversePowerLawPotential(
+                exponent=exponent, smearing=smearing
+            )
 
     def _compute_sr(
         self,
         is_periodic: bool,
-        smearing: float,
         charges: torch.Tensor,
         neighbor_indices: torch.Tensor,
         neighbor_distances: torch.Tensor,
@@ -37,18 +39,14 @@ class CalculatorBaseTorch(torch.nn.Module):
             # If the contribution from all atoms within the cutoff is to be subtracted
             # this short-range part will simply use -V_LR as the potential
             if subtract_interior:
-                potentials_bare = -self.potential.potential_lr_from_dist(
-                    neighbor_distances, smearing
-                )
+                potentials_bare = -self.potential.lr_from_dist(neighbor_distances)
             # In the remaining cases, we simply use the usual V_SR to get the full
             # 1/r^p potential when combined with the long-range part implemented in
             # reciprocal space
             else:
-                potentials_bare = self.potential.potential_sr_from_dist(
-                    neighbor_distances, smearing
-                )
+                potentials_bare = self.potential.sr_from_dist(neighbor_distances)
         else:  # is_direct
-            potentials_bare = self.potential.potential_from_dist(neighbor_distances)
+            potentials_bare = self.potential.from_dist(neighbor_distances)
 
         atom_is = neighbor_indices[:, 0]
         atom_js = neighbor_indices[:, 1]

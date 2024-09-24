@@ -1,8 +1,9 @@
-from typing import Optional
+from typing import Optional, Union
 
 import torch
 
-from ..lib import generate_kvectors_for_mesh
+from ..lib.kspace_filter import KSpaceFilter
+from ..lib.kvectors import get_ns_mesh
 from ..lib.mesh_interpolator import MeshInterpolator
 from ..lib.potentials import gamma
 from .base import CalculatorBaseTorch
@@ -91,12 +92,12 @@ class PMEPotential(CalculatorBaseTorch):
     def __init__(
         self,
         exponent: float = 1.0,
-        atomic_smearing: Optional[float] = None,
+        atomic_smearing: Union[float, torch.Tensor, None] = None,
         mesh_spacing: Optional[float] = None,
         interpolation_order: int = 3,
         subtract_interior: bool = False,
     ):
-        super().__init__(exponent=exponent)
+        super().__init__(exponent=exponent, smearing=atomic_smearing)
 
         self.mesh_spacing = mesh_spacing
         self.subtract_interior = subtract_interior
@@ -115,10 +116,21 @@ class PMEPotential(CalculatorBaseTorch):
         self._cell_cache = -1 * torch.ones([3, 3])
         self._MI = MeshInterpolator(
             cell=torch.eye(3),
-            ns_mesh=torch.ones(3),
+            ns_mesh=torch.ones(3, dtype=int),
             interpolation_order=self.interpolation_order,
         )
-        self._G = torch.zeros(1)
+
+        # Initialize the filter module. Set dummy value for smearing to propper
+        # initilize the `KSpaceFilter` below
+        if self.atomic_smearing is None:
+            self.potential.smearing = 1.0
+        self._KF = KSpaceFilter(
+            cell=torch.eye(3),
+            ns_mesh=torch.ones(3, dtype=int),
+            kernel=self.potential,
+            fft_norm="backward",
+            ifft_norm="forward",
+        )
 
     def _compute_single_system(
         self,
@@ -148,7 +160,6 @@ class PMEPotential(CalculatorBaseTorch):
         # Compute short-range (SR) part using a real space sum
         potential_sr = self._compute_sr(
             is_periodic=True,
-            smearing=smearing,
             charges=charges,
             neighbor_indices=neighbor_indices,
             neighbor_distances=neighbor_distances,
@@ -189,44 +200,26 @@ class PMEPotential(CalculatorBaseTorch):
 
             # Init 0 (Preparation): Compute number of times each basis vector of the
             # reciprocal space can be scaled until the cutoff is reached
-            k_cutoff = 2 * torch.pi / lr_wavelength
-            basis_norms = torch.linalg.norm(cell, dim=1)
-            ns_approx = k_cutoff * basis_norms / 2 / torch.pi
-            ns_actual_approx = 2 * ns_approx + 1  # actual number of mesh points
-            # ns = [nx, ny, nz]
-            ns = torch.tensor(2).pow(torch.ceil(torch.log2(ns_actual_approx)).long())
+            ns = get_ns_mesh(cell, lr_wavelength)
 
             # Init 1: Initialize mesh interpolator
             self._MI = MeshInterpolator(
                 cell, ns, interpolation_order=self.interpolation_order
             )
 
-            # Init 2: Perform Fourier space convolution (FSC) to get kernel on mesh
-            # 2.1: Generate k-vectors and evaluate kernel function
-            kvectors = generate_kvectors_for_mesh(ns=ns, cell=cell)
-            knorm_sq = torch.sum(kvectors**2, dim=3)
-
-            # 2.2: Evaluate kernel function (careful, tensor shapes are different from
-            # the pure Ewald implementation since we are no longer flattening)
-            # pre-scale with volume to save some multiplications further down
-            self._G = (
-                self.potential.potential_fourier_from_k_sq(knorm_sq, smearing) * ivolume
-            )
-            fill_value = self.potential.potential_fourier_at_zero(smearing)
-            self._G[0, 0, 0] = torch.full([], fill_value, device=device)
+            # Update the mesh for the k-space filter
+            self.potential.smearing = smearing
+            self._KF.update_mesh(cell, ns)
 
         # Step 1. Compute density interpolation
         self._MI.compute_interpolation_weights(positions)
         rho_mesh = self._MI.points_to_mesh(particle_weights=charges)
 
         # Step 2: Perform actual convolution using FFT
-        dims = (1, 2, 3)  # dimensions along which to Fourier transform
-        # convolution with the kernel function `G`
-        rho_hat = self._G * torch.fft.rfftn(rho_mesh, norm="backward", dim=dims)
-        potential_mesh = torch.fft.irfftn(rho_hat, norm="forward", dim=dims)
+        potential_mesh = self._KF.compute(rho_mesh)
 
-        # Step 3: Back interpolation
-        interpolated_potential = self._MI.mesh_to_points(potential_mesh)
+        # Step 3: Back interpolation, and apply cell volume scaling
+        interpolated_potential = self._MI.mesh_to_points(potential_mesh) * ivolume
 
         # Step 4: Remove the self-contribution: Using the Coulomb potential as an
         # example, this is the potential generated at the origin by the fictituous

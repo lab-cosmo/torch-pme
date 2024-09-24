@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Union
 
 import torch
 
@@ -45,11 +45,11 @@ class EwaldPotential(CalculatorBaseTorch):
     def __init__(
         self,
         exponent: float = 1.0,
-        atomic_smearing: Optional[float] = None,
+        atomic_smearing: Union[float, torch.Tensor, None] = None,
         lr_wavelength: Optional[float] = None,
         subtract_interior: bool = False,
     ):
-        super().__init__(exponent=exponent)
+        super().__init__(exponent=exponent, smearing=atomic_smearing)
 
         self.lr_wavelength = lr_wavelength
         self.subtract_interior = subtract_interior
@@ -81,6 +81,7 @@ class EwaldPotential(CalculatorBaseTorch):
         else:
             smearing = self.atomic_smearing
 
+        # TODO streamline the flow of parameters
         if self.lr_wavelength is None:
             lr_wavelength = 0.5 * smearing
         else:
@@ -89,7 +90,6 @@ class EwaldPotential(CalculatorBaseTorch):
         # Compute short-range (SR) part using a real space sum
         potential_sr = self._compute_sr(
             is_periodic=True,
-            smearing=smearing,
             charges=charges,
             neighbor_indices=neighbor_indices,
             neighbor_distances=neighbor_distances,
@@ -135,8 +135,7 @@ class EwaldPotential(CalculatorBaseTorch):
         # value to be equal to zero. This mathematically corresponds
         # to the requirement that the net charge of the cell is zero.
         # G = 4 * torch.pi * torch.exp(-0.5 * smearing**2 * knorm_sq) / knorm_sq
-        G = self.potential.potential_fourier_from_k_sq(knorm_sq, smearing)
-        G[0] = self.potential.potential_fourier_at_zero(smearing)
+        G = self.potential.from_k_sq(knorm_sq)
 
         # Compute the energy using the explicit method that
         # follows directly from the Poisson summation formula.

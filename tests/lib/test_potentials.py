@@ -57,9 +57,9 @@ def test_potential_from_squared_argument(exponent):
     """
 
     # Compute diverse potentials for this inverse power law
-    ipl = InversePowerLawPotential(exponent=exponent)
-    potential_from_dist = ipl.potential_from_dist(dists)
-    potential_from_dist_sq = ipl.potential_from_dist_sq(dists_sq)
+    ipl = InversePowerLawPotential(exponent=exponent, smearing=0.0)
+    potential_from_dist = ipl.from_dist(dists)
+    potential_from_dist_sq = ipl.from_dist_sq(dists_sq)
 
     # Test agreement between implementations taking r vs r**2 as argument
     atol = 3e-16
@@ -77,10 +77,10 @@ def test_sr_lr_split(exponent, smearing):
     """
 
     # Compute diverse potentials for this inverse power law
-    ipl = InversePowerLawPotential(exponent=exponent)
-    potential_from_dist = ipl.potential_from_dist(dists)
-    potential_sr_from_dist = ipl.potential_sr_from_dist(dists, smearing=smearing)
-    potential_lr_from_dist = ipl.potential_lr_from_dist(dists, smearing=smearing)
+    ipl = InversePowerLawPotential(exponent=exponent, smearing=smearing)
+    potential_from_dist = ipl.from_dist(dists)
+    potential_sr_from_dist = ipl.sr_from_dist(dists)
+    potential_lr_from_dist = ipl.lr_from_dist(dists)
     potential_from_sum = potential_sr_from_dist + potential_lr_from_dist
 
     # Check that the sum of the SR and LR parts is equivalent to the original 1/r^p
@@ -106,8 +106,8 @@ def test_exact_sr(exponent, smearing):
 
     # Compute SR part of Coulomb potential using the potentials class working for any
     # exponent
-    ipl = InversePowerLawPotential(exponent=exponent)
-    potential_sr_from_dist = ipl.potential_sr_from_dist(dists, smearing=smearing)
+    ipl = InversePowerLawPotential(exponent=exponent, smearing=smearing)
+    potential_sr_from_dist = ipl.sr_from_dist(dists)
 
     # Compute exact analytical expression obtained for relevant exponents
     potential_1 = erfc(dists / SQRT2 / smearing) / dists
@@ -140,8 +140,8 @@ def test_exact_lr(exponent, smearing):
 
     # Compute LR part of Coulomb potential using the potentials class working for any
     # exponent
-    ipl = InversePowerLawPotential(exponent=exponent)
-    potential_lr_from_dist = ipl.potential_lr_from_dist(dists, smearing=smearing)
+    ipl = InversePowerLawPotential(exponent=exponent, smearing=smearing)
+    potential_lr_from_dist = ipl.lr_from_dist(dists)
 
     # Compute exact analytical expression obtained for relevant exponents
     potential_1 = erf(dists / SQRT2 / smearing) / dists
@@ -174,8 +174,8 @@ def test_exact_fourier(exponent, smearing):
 
     # Compute LR part of Coulomb potential using the potentials class working for any
     # exponent
-    ipl = InversePowerLawPotential(exponent=exponent)
-    fourier_from_class = ipl.potential_fourier_from_k_sq(ks_sq, smearing=smearing)
+    ipl = InversePowerLawPotential(exponent=exponent, smearing=smearing)
+    fourier_from_class = ipl.from_k_sq(ks_sq)
 
     # Compute exact analytical expression obtained for relevant exponents
     if exponent == 1.0:
@@ -211,8 +211,8 @@ def test_lr_value_at_zero(exponent, smearing):
     """
     # Get atomic density at tiny distance
     dist_small = torch.tensor(1e-8, dtype=dtype)
-    ipl = InversePowerLawPotential(exponent=exponent)
-    potential_close_to_zero = ipl.potential_lr_from_dist(dist_small, smearing=smearing)
+    ipl = InversePowerLawPotential(exponent=exponent, smearing=smearing)
+    potential_close_to_zero = ipl.lr_from_dist(dist_small)
 
     # Compare to
     exact_value = 1.0 / (2 * smearing**2) ** (exponent / 2) / gamma(exponent / 2 + 1.0)
