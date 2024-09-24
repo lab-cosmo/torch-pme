@@ -1,4 +1,4 @@
-from typing import Dict, Optional, Tuple
+from typing import Dict, Literal, Optional, Tuple
 from warnings import warn
 
 import torch
@@ -72,25 +72,116 @@ class EwaldPotential(CalculatorBaseTorch):
     @classmethod
     def from_accuracy(
         cls,
-        optimize: Optional[str],
+        optimize: Optional[Literal["fast", "medium", "accurate"]],
         accuracy: Optional[float],
         positions: torch.Tensor,
         charges: torch.Tensor,
-        cell: Optional[torch.Tensor],
+        cell: torch.Tensor,
         subtract_interior: bool = False,
         max_steps: int = 50000,
         learning_rate: float = 5e-2,
         verbose: bool = False,
-    ) -> Tuple["EwaldPotential", float]:
-        """Initialize based on a desired accuracy.
+    ) -> Tuple["EwaldPotential", torch.FloatTensor]:
+        r"""Initialize based on a desired accuracy.
+
+        :param optimize: the mode used to determine the optimal parameters. The
+            possible values are ``"fast"``, ``"medium"``, ``"accurate"``.
+            Under ``"fast"`` the parameters are set based on the number of
+            atoms in the system to achieve a scaling of :math:`\mathcal{O}(N^{3/2})`.
+            Under ``"medium"`` and ``"accurate"``, the parameters are optimized
+            by using gradient descent until the estimated error is less than `accuracy`.
+            The accuracy is set to 1e-3 and 1e-6 for``"medium"`` and
+            ``"accurate"`` respectively. If `accuracy` is set, `optimize` is ignored.
+        :param accuracy: the accuracy that should be achieved.
+        :param positions: single tensor of shape (``len(charges), 3``) containing
+            the Cartesian positions of all point charges in the system.
+        :param charges: single tensor of shape (``1, len(positions))``.
+        :param cell: single tensor of shape (3, 3), describing the bounding
+            box/unit cell of the system. Each row should be one of the bounding box
+            vector; and columns should contain the x, y, and z components of these
+            vectors (i.e. the cell should be given in row-major order).
+        :param subtract_interior: If set to :py:obj:`True`, subtract from the features
+            of an atom the contributions to the potential arising from all atoms
+            within the cutoff
+            Note that if set to true, the self contribution (see previous) is also
+            subtracted by default.
+        :param max_steps: maximum number of gradient descent steps
+        :param learning_rate: learning rate for gradient descent
+        :param verbose: whether to print the progress of gradient descent
 
         :return: Tuple containing the initialized object and the optimal cutoff value
             for the neighborlist computation.
+
+        Example
+        -------
+        Here we show how to use the ``from_accuracy`` method by using the example of a
+        CsCl (Cesium-Chloride) crystal. The reference value of the energy is
+        :math:`2 \cdot 1.7626 / \sqrt{3} \approx 2.0354`. For a detailed explanation,
+        please refer to :py:class:`PMEPotential`.
+
+        >>> import torch
+        >>> from vesin.torch import NeighborList
+
+        >>> positions = torch.tensor(
+        ...     [[0.0, 0.0, 0.0], [0.5, 0.5, 0.5]], dtype=torch.float64
+        ... )
+        >>> charges = torch.tensor([[1.0], [-1.0]], dtype=torch.float64)
+        >>> cell = torch.eye(3, dtype=torch.float64)
+
+        The ``from_accuracy`` method returns the initialized object and the optimal
+        cutoff for the neighborlist computation.
+
+        >>> calculator, cutoff = EwaldPotential.from_accuracy(
+        ...     "medium", None, positions, charges, cell
+        ... )
+
+        You can check the values of the parameters
+
+        >>> print(calculator.atomic_smearing)
+        tensor(0.1676)
+
+        >>> print(calculator.lr_wavelength)
+        tensor(0.0732)
+
+        >>> print(cutoff)
+        tensor(0.6907)
+
+        >>> nl = NeighborList(cutoff=cutoff, full_list=False)
+        >>> i, j, neighbor_distances = nl.compute(
+        ...     points=positions, box=cell, periodic=True, quantities="ijd"
+        ... )
+        >>> neighbor_indices = torch.stack([i, j], dim=1)
+        >>> potentials = calculator.forward(
+        ...     positions, charges, cell, neighbor_indices, neighbor_distances
+        ... )
+        >>> print(-torch.sum(potentials * charges))
+        tensor(2.0354, dtype=torch.float64)
+
+        Which is close to the reference value given above.
+
+        Also you can set your own `accuracy`
+
+        >>> calculator, cutoff = EwaldPotential.from_accuracy(
+        ...     None, 1e-3, positions, charges, cell
+        ... )
+
+        Since the corresponding ``accuracy`` of the ``"medium"`` mode is 1e-3,
+        this should return the same result.
+
+        >>> print(calculator.atomic_smearing)
+        tensor(0.1676)
+
+        >>> print(calculator.lr_wavelength)
+        tensor(0.0732)
+
+        >>> print(cutoff)
+        tensor(0.6907)
         """
 
+        device = positions.device
         # Create valid dummy values to verify `positions`, `charges` and `cell`
-        neighbor_indices = torch.tensor([[0, 1], [1, 2]])
-        neighbor_distances = torch.tensor([1, 2])
+        neighbor_indices = torch.tensor([[0, 1], [1, 2]], device=device)
+        neighbor_distances = torch.tensor([1, 2], device=device)
         (
             positions,
             charges,
@@ -110,7 +201,7 @@ class EwaldPotential(CalculatorBaseTorch):
         elif accuracy is not None and optimize is not None:
             warn("`optimize` is ignored if `accuracy` is set")
         elif optimize == "fast":
-            smearing = len(positions) ** (1 / 6) / 2**0.5
+            smearing = torch.tensor(len(positions) ** (1 / 6) / 2**0.5)
             lr_wavelength = 2 * torch.pi * smearing
             cutoff = smearing
             ewald_potential = cls(
@@ -157,14 +248,17 @@ class EwaldPotential(CalculatorBaseTorch):
 
         device = positions[0].device
         cell_dimensions = torch.linalg.norm(cell, dim=1)
-        max_range = float(torch.min(cell_dimensions) / 2 - 1e-6)
+        half_cell = float(torch.min(cell_dimensions) / 2)
         volume = torch.abs(cell.det())
         n_atoms = torch.tensor(len(positions), device=device)
 
         # For the error formula, please refer https://www2.icp.uni-stuttgart.de/~icp/
         # mediawiki/images/4/4d/Script_Longrange_Interactions.pdf
         # Please be careful to the difference between the parameters in the paper and
-        # ours: alpha=1/(sqrt(2)*smearing), K=2*pi/sqrt(lr_wavelength), r_c=cutoff
+        # ours:
+        # alpha=1/(sqrt(2)*smearing)
+        # K=2*pi/sqrt(lr_wavelength)
+        # r_c=cutoff
 
         err_Fourier = (
             lambda smearing, lr_wavelength: (
@@ -182,9 +276,9 @@ class EwaldPotential(CalculatorBaseTorch):
             * torch.exp(-(cutoff**2) / 2 / smearing**2)
         )
 
-        smearing = torch.tensor(max_range / 5, device=device, requires_grad=True)
-        lr_wavelength = torch.tensor(max_range, device=device, requires_grad=True)
-        cutoff = torch.tensor(max_range / 10, device=device, requires_grad=True)
+        smearing = torch.tensor(half_cell / 5, device=device, requires_grad=True)
+        lr_wavelength = torch.tensor(half_cell, device=device, requires_grad=True)
+        cutoff = torch.tensor(half_cell / 10, device=device, requires_grad=True)
 
         optimizer = torch.optim.Adam(
             [smearing, lr_wavelength, cutoff], lr=learning_rate
