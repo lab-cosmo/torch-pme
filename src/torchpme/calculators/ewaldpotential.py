@@ -24,6 +24,8 @@ class EwaldPotential(CalculatorBaseTorch):
     This ensures a accuracy of the short range part of ``1e-5``.
 
     :param exponent: the exponent :math:`p` in :math:`1/r^p` potentials
+    :param use_half_neighborlist: If set to :py:obj:`True`, a "half" neighbor list
+        is expected as input. This means that each atom pair is only counted once.
     :param atomic_smearing: Width of the atom-centered Gaussian used to split the
         Coulomb potential into the short- and long-range parts. A reasonable value for
         most systems is to set it to ``1/5`` times the neighbor list cutoff. If
@@ -48,8 +50,13 @@ class EwaldPotential(CalculatorBaseTorch):
         atomic_smearing: Union[float, torch.Tensor, None] = None,
         lr_wavelength: Optional[float] = None,
         subtract_interior: bool = False,
+        use_half_neighborlist: bool = True,
     ):
-        super().__init__(exponent=exponent, smearing=atomic_smearing)
+        super().__init__(
+            exponent=exponent,
+            smearing=atomic_smearing,
+            use_half_neighborlist=use_half_neighborlist,
+        )
 
         self.lr_wavelength = lr_wavelength
         self.subtract_interior = subtract_interior
