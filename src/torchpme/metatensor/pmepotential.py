@@ -105,6 +105,7 @@ class PMEPotential(CalculatorBaseMetatensor):
         mesh_spacing: Optional[float] = None,
         interpolation_order: int = 3,
         subtract_interior: bool = False,
+        full_neighbor_list: bool = False,
     ):
         super().__init__()
         self.calculator = PMEPotentialTorch(
@@ -113,4 +114,5 @@ class PMEPotential(CalculatorBaseMetatensor):
             mesh_spacing=mesh_spacing,
             interpolation_order=interpolation_order,
             subtract_interior=subtract_interior,
+            full_neighbor_list=full_neighbor_list,
         )

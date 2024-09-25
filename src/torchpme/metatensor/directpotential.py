@@ -92,6 +92,8 @@ class DirectPotential(CalculatorBaseMetatensor):
     distance between the particles.
     """
 
-    def __init__(self, exponent: float = 1.0):
+    def __init__(self, exponent: float = 1.0, full_neighbor_list: bool = False):
         super().__init__()
-        self.calculator = DirectPotentialTorch(exponent=exponent)
+        self.calculator = DirectPotentialTorch(
+            exponent=exponent, full_neighbor_list=full_neighbor_list
+        )
