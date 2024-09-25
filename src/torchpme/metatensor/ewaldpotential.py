@@ -19,6 +19,7 @@ class EwaldPotential(CalculatorBaseMetatensor):
         atomic_smearing: Optional[float] = None,
         lr_wavelength: Optional[float] = None,
         subtract_interior: bool = False,
+        full_neighbor_list: bool = False,
     ):
         super().__init__()
         self.calculator = EwaldPotentialTorch(
@@ -26,4 +27,5 @@ class EwaldPotential(CalculatorBaseMetatensor):
             atomic_smearing=atomic_smearing,
             lr_wavelength=lr_wavelength,
             subtract_interior=subtract_interior,
+            full_neighbor_list=full_neighbor_list,
         )
