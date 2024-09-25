@@ -7,7 +7,7 @@ from torchpme import EwaldPotential
 
 
 @pytest.mark.parametrize(
-    "optimize, accuracy, rtol, expected_smearing,"
+    "method, accuracy, rtol, expected_smearing,"
     "expected_lr_wavelength, expected_cutoff",
     [
         (
@@ -24,7 +24,7 @@ from torchpme import EwaldPotential
     ],
 )
 def test_parameter_choose(
-    optimize, accuracy, rtol, expected_smearing, expected_lr_wavelength, expected_cutoff
+    method, accuracy, rtol, expected_smearing, expected_lr_wavelength, expected_cutoff
 ):
     """
     Check that the Madelung constants obtained from the Ewald sum calculator matches
@@ -35,8 +35,8 @@ def test_parameter_choose(
     charges = charges.reshape((-1, 1))
 
     # Define calculator and tolerances
-    calc, sr_cutoff = EwaldPotential.from_accuracy(
-        optimize, accuracy, pos, charges, cell
+    calc, sr_cutoff = EwaldPotential.tune_ewald(
+        method, pos, charges, cell, accuracy=accuracy
     )
 
     # Check smearing, lr_wavelength sr_cutoff values
@@ -68,7 +68,7 @@ def test_parameter_choose(
 
 
 @pytest.mark.parametrize(
-    "optimize, accuracy, error",
+    "method, accuracy, error",
     [
         ("fine", None, "`optimize` must be one of 'fast', 'medium' or 'accurate'"),
         # `accuracy` is not given but `optimize` is not a valid value (ValueError case)
@@ -76,7 +76,7 @@ def test_parameter_choose(
         # neither optimize nor accuracy is provided (ValueError case)
     ],
 )
-def test_value_error(optimize, accuracy, error):
+def test_value_error(method, accuracy, error):
     """
     Test that ValueError is raised when neither optimize nor accuracy is provided.
     """
@@ -84,17 +84,17 @@ def test_value_error(optimize, accuracy, error):
     charges = charges.reshape((-1, 1))
 
     with pytest.raises(ValueError, match=error):
-        EwaldPotential.from_accuracy(optimize, accuracy, pos, charges, cell)
+        EwaldPotential.tune_ewald(method, pos, charges, cell, accuracy=accuracy)
 
 
 @pytest.mark.parametrize(
-    "optimize, accuracy",
+    "method, accuracy",
     [
         ("medium", 1e-3),  # Trigger warning
         ("accurate", 1e-6),  # Trigger warning
     ],
 )
-def test_warning_optimization_ignored(optimize, accuracy):
+def test_warning_optimization_ignored(method, accuracy):
     """
     Test that a warning is raised when both `optimize` and `accuracy` are provided.
     """
@@ -102,4 +102,4 @@ def test_warning_optimization_ignored(optimize, accuracy):
     charges = charges.reshape((-1, 1))
 
     with pytest.warns(UserWarning, match="`optimize` is ignored if `accuracy` is set"):
-        EwaldPotential.from_accuracy(optimize, accuracy, pos, charges, cell)
+        EwaldPotential.tune_ewald(method, pos, charges, cell, accuracy=accuracy)

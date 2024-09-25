@@ -1,4 +1,4 @@
-from typing import Dict, Literal, Optional, Tuple
+from typing import Dict, Literal, Optional, Tuple, Union
 from warnings import warn
 
 import torch
@@ -70,14 +70,15 @@ class EwaldPotential(CalculatorBaseTorch):
         self.atomic_smearing = atomic_smearing
 
     @classmethod
-    def from_accuracy(
+    def tune_ewald(
         cls,
-        optimize: Optional[Literal["fast", "medium", "accurate"]],
-        accuracy: Optional[float],
+        method: Union[Literal["fast", "medium", "accurate"], None],
         positions: torch.Tensor,
         charges: torch.Tensor,
         cell: torch.Tensor,
         subtract_interior: bool = False,
+        accuracy: Optional[float] = None,
+        exponent: float = 1.0,
         max_steps: int = 50000,
         learning_rate: float = 5e-2,
         verbose: bool = False,
@@ -131,8 +132,8 @@ class EwaldPotential(CalculatorBaseTorch):
         The ``from_accuracy`` method returns the initialized object and the optimal
         cutoff for the neighborlist computation.
 
-        >>> calculator, cutoff = EwaldPotential.from_accuracy(
-        ...     "medium", None, positions, charges, cell
+        >>> calculator, cutoff = EwaldPotential.tune_ewald(
+        ...     "medium", positions, charges, cell
         ... )
 
         You can check the values of the parameters
@@ -161,8 +162,8 @@ class EwaldPotential(CalculatorBaseTorch):
 
         Also you can set your own `accuracy`
 
-        >>> calculator, cutoff = EwaldPotential.from_accuracy(
-        ...     None, 1e-3, positions, charges, cell
+        >>> calculator, cutoff = EwaldPotential.tune_ewald(
+        ...     None, positions, charges, cell, accuracy=1e-3
         ... )
 
         Since the corresponding ``accuracy`` of the ``"medium"`` mode is 1e-3,
@@ -177,6 +178,9 @@ class EwaldPotential(CalculatorBaseTorch):
         >>> print(cutoff)
         tensor(0.6907)
         """
+
+        if exponent != 1:
+            raise NotImplementedError("Only exponent = 1 is supported")
 
         device = positions.device
         # Create valid dummy values to verify `positions`, `charges` and `cell`
@@ -196,11 +200,11 @@ class EwaldPotential(CalculatorBaseTorch):
             neighbor_distances=neighbor_distances,
         )
 
-        if accuracy is not None and optimize is None:
+        if accuracy is not None and method is None:
             pass
-        elif accuracy is not None and optimize is not None:
+        elif accuracy is not None and method is not None:
             warn("`optimize` is ignored if `accuracy` is set")
-        elif optimize == "fast":
+        elif method == "fast":
             smearing = torch.tensor(len(positions) ** (1 / 6) / 2**0.5)
             lr_wavelength = 2 * torch.pi * smearing
             cutoff = smearing
@@ -210,11 +214,11 @@ class EwaldPotential(CalculatorBaseTorch):
                 subtract_interior=subtract_interior,
             )
             return ewald_potential, cutoff
-        elif (optimize == "medium") and (accuracy is None):
+        elif (method == "medium") and (accuracy is None):
             accuracy = 1e-3
-        elif (optimize == "accurate") and (accuracy is None):
+        elif (method == "accurate") and (accuracy is None):
             accuracy = 1e-6
-        elif optimize is None:
+        elif method is None:
             raise ValueError("Either `optimize` or `accuracy` must be set")
         else:
             raise ValueError("`optimize` must be one of 'fast', 'medium' or 'accurate'")
@@ -225,6 +229,7 @@ class EwaldPotential(CalculatorBaseTorch):
             positions=positions[0],
             charges=charges[0],
             cell=cell[0],
+            exponent=exponent
             max_steps=max_steps,
             learning_rate=learning_rate,
             verbose=verbose,
@@ -241,6 +246,7 @@ class EwaldPotential(CalculatorBaseTorch):
         positions: torch.Tensor,
         charges: torch.Tensor,
         cell: torch.Tensor,
+        exponent: int,
         max_steps: int,
         learning_rate: float,
         verbose: bool,
