@@ -11,7 +11,7 @@ def neighbor_list_torch(
     periodic: bool = True,
     box: Optional[torch.tensor] = None,
     cutoff: Optional[float] = None,
-    half_neighbor_list: bool = True,
+    full_neighbor_list: bool = False,
 ) -> Tuple[torch.tensor, torch.tensor]:
 
     if box is None:
@@ -22,7 +22,7 @@ def neighbor_list_torch(
         cutoff_torch = torch.min(cell_dimensions) / 2 - 1e-6
         cutoff = cutoff_torch.item()
 
-    nl = NeighborList(cutoff=cutoff, full_list=(not half_neighbor_list))
+    nl = NeighborList(cutoff=cutoff, full_list=full_neighbor_list)
     i, j, d = nl.compute(points=positions, box=box, periodic=periodic, quantities="ijd")
 
     neighbor_indices = torch.stack([i, j], dim=1)

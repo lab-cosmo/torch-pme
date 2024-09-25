@@ -16,7 +16,7 @@ class CalculatorBaseTorch(torch.nn.Module):
         self,
         exponent: float,
         smearing: Union[float, torch.Tensor] = None,
-        use_half_neighborlist: bool = True,
+        full_neighbor_list: bool = False,
     ):
         super().__init__()
         # TorchScript requires to initialize all attributes in __init__
@@ -31,7 +31,7 @@ class CalculatorBaseTorch(torch.nn.Module):
                 exponent=exponent, smearing=smearing
             )
 
-        self.use_half_neighborlist = use_half_neighborlist
+        self.full_neighbor_list = full_neighbor_list
 
     def _compute_sr(
         self,
@@ -59,13 +59,13 @@ class CalculatorBaseTorch(torch.nn.Module):
         atom_js = neighbor_indices[:, 1]
 
         contributions_is = charges[atom_js] * potentials_bare.unsqueeze(-1)
-        contributions_js = charges[atom_is] * potentials_bare.unsqueeze(-1)
 
         potential = torch.zeros_like(charges)
         potential.index_add_(0, atom_is, contributions_is)
         # If we are using a half neighbor list, we need to add the contributions
         # from the "inverse" pairs (j, i) to the atoms i
-        if self.use_half_neighborlist:
+        if not self.full_neighbor_list:
+            contributions_js = charges[atom_is] * potentials_bare.unsqueeze(-1)
             potential.index_add_(0, atom_js, contributions_js)
 
         # Compensate for double counting of pairs (i,j) and (j,i)
@@ -302,7 +302,7 @@ class CalculatorBaseTorch(torch.nn.Module):
         :param neighbor_indices: Single or list of 2D tensors of shape ``(n, 2)``, where
             ``n`` is the number of neighbors. The two columns correspond to the indices
             of a **half neighbor list** for the two atoms which are considered neighbors
-            (e.g. within a cutoff distance) if ``use_half_neighborlist=True``.
+            (e.g. within a cutoff distance) if ``full_neighbor_list=False`` (default).
             Otherwise, a full neighbor list is expected.
         :param neighbor_distances: single or list of 1D tensors containing the distance
             between the ``n`` pairs corresponding to a **half (or full) neighbor list**

@@ -142,20 +142,20 @@ molecules = ["dimer", "triangle", "square", "tetrahedron"]
 molecule_charges = ["", "_positive", "_negative"]
 scaling_factors = [0.079, 1.0, 5.54]
 orthogonal_transformations = generate_orthogonal_transformations()
-use_half_neighborlist = [True, False]
+full_neighbor_list = [True, False]
 
 
 @pytest.mark.parametrize("molecule", molecules)
 @pytest.mark.parametrize("molecule_charge", molecule_charges)
 @pytest.mark.parametrize("scaling_factor", scaling_factors)
 @pytest.mark.parametrize("orthogonal_transformation", orthogonal_transformations)
-@pytest.mark.parametrize("use_half_neighborlist", use_half_neighborlist)
+@pytest.mark.parametrize("full_neighbor_list", full_neighbor_list)
 def test_coulomb_exact(
     molecule,
     molecule_charge,
     scaling_factor,
     orthogonal_transformation,
-    use_half_neighborlist,
+    full_neighbor_list,
 ):
     """
     Check that the Coulomb potentials obtained from the calculators match the correct
@@ -166,7 +166,7 @@ def test_coulomb_exact(
     """
     # Call Ewald potential class without specifying any of the convergence parameters
     # so that they are chosen by default (in a structure-dependent way)
-    direct = DirectPotential(use_half_neighborlist=use_half_neighborlist)
+    direct = DirectPotential(full_neighbor_list=full_neighbor_list)
 
     # Compute potential at the position of the atoms for the specified structure
     molecule_name = molecule + molecule_charge
@@ -178,7 +178,7 @@ def test_coulomb_exact(
         positions=positions,
         periodic=False,
         cutoff=scaling_factor * 10,
-        half_neighbor_list=use_half_neighborlist,
+        full_neighbor_list=full_neighbor_list,
     )
 
     potentials = direct.forward(
