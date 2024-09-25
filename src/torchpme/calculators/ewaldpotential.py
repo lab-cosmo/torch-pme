@@ -1,4 +1,4 @@
-from typing import Dict, Literal, Optional, Tuple, Union
+from typing import Literal, Mapping, Optional, Tuple, Union
 from warnings import warn
 
 import torch
@@ -77,8 +77,9 @@ class EwaldPotential(CalculatorBaseTorch):
         charges: torch.Tensor,
         cell: torch.Tensor,
         subtract_interior: bool = False,
+        full_neighbor_list: bool = False,
         accuracy: Optional[float] = None,
-        exponent: float = 1.0,
+        exponent: int = 1,
         max_steps: int = 50000,
         learning_rate: float = 5e-2,
         verbose: bool = False,
@@ -229,14 +230,18 @@ class EwaldPotential(CalculatorBaseTorch):
             positions=positions[0],
             charges=charges[0],
             cell=cell[0],
-            exponent=exponent
+            exponent=exponent,
             max_steps=max_steps,
             learning_rate=learning_rate,
             verbose=verbose,
         )
 
         # Initialize the EwaldPotential object with the computed parameters
-        ewald_potential = cls(**params, subtract_interior=subtract_interior)
+        ewald_potential = cls(
+            **params,
+            subtract_interior=subtract_interior,
+            full_neighbor_list=full_neighbor_list,
+        )
 
         return ewald_potential, cutoff
 
@@ -250,7 +255,7 @@ class EwaldPotential(CalculatorBaseTorch):
         max_steps: int,
         learning_rate: float,
         verbose: bool,
-    ) -> Tuple[Dict[str, float], float]:
+    ) -> Tuple[Mapping[str, float], float]:
 
         device = positions[0].device
         cell_dimensions = torch.linalg.norm(cell, dim=1)
