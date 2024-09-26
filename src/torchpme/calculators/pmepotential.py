@@ -120,14 +120,6 @@ class PMEPotential(CalculatorBaseTorch):
             raise ValueError("Only `interpolation_order` from 1 to 5 are allowed")
         self.interpolation_order = interpolation_order
 
-        # TorchScript requires to initialize all attributes in __init__
-        self._cell_cache = -1 * torch.ones([3, 3])
-        self._MI = MeshInterpolator(
-            cell=torch.eye(3),
-            ns_mesh=torch.ones(3, dtype=int),
-            interpolation_order=self.interpolation_order,
-        )
-
         # Initialize the filter module. Set dummy value for smearing to propper
         # initilize the `KSpaceFilter` below
         if self.atomic_smearing is None:
@@ -193,40 +185,31 @@ class PMEPotential(CalculatorBaseTorch):
         smearing: float,
         lr_wavelength: float,
     ) -> torch.Tensor:
-        dtype = positions.dtype
-        device = positions.device
-        self._cell_cache = self._cell_cache.to(dtype=dtype, device=device)
+        # TODO: Kernel function `G` and initialization of `MeshInterpolator` only depend on
+        # `cell`. Caching may save up to 15% but issues with AD should be taken
+        # resolved.
 
-        # Inverse of cell volume for later use
-        ivolume = torch.abs(cell.det()).pow(-1)
+        # Init 0 (Preparation): Compute number of times each basis vector of the
+        # reciprocal space can be scaled until the cutoff is reached
+        ns = get_ns_mesh(cell, lr_wavelength)
 
-        # Kernel function `G` and initialization of `MeshInterpolator` only depend on
-        # `cell`. Caching can save up to 15%.
-        if not torch.allclose(cell, self._cell_cache):
-            self._cell_cache = cell.detach().clone()
+        # Init 1: Initialize mesh interpolator
+        MI = MeshInterpolator(cell, ns, interpolation_order=self.interpolation_order)
 
-            # Init 0 (Preparation): Compute number of times each basis vector of the
-            # reciprocal space can be scaled until the cutoff is reached
-            ns = get_ns_mesh(cell, lr_wavelength)
-
-            # Init 1: Initialize mesh interpolator
-            self._MI = MeshInterpolator(
-                cell, ns, interpolation_order=self.interpolation_order
-            )
-
-            # Update the mesh for the k-space filter
-            self.potential.smearing = smearing
-            self._KF.update_mesh(cell, ns)
+        # Update the mesh for the k-space filter
+        self.potential.smearing = smearing
+        self._KF.update_mesh(cell, ns)
 
         # Step 1. Compute density interpolation
-        self._MI.compute_interpolation_weights(positions)
-        rho_mesh = self._MI.points_to_mesh(particle_weights=charges)
+        MI.compute_interpolation_weights(positions)
+        rho_mesh = MI.points_to_mesh(particle_weights=charges)
 
         # Step 2: Perform actual convolution using FFT
         potential_mesh = self._KF.compute(rho_mesh)
 
         # Step 3: Back interpolation, and apply cell volume scaling
-        interpolated_potential = self._MI.mesh_to_points(potential_mesh) * ivolume
+        ivolume = torch.abs(cell.det()).pow(-1)
+        interpolated_potential = MI.mesh_to_points(potential_mesh) * ivolume
 
         # Step 4: Remove the self-contribution: Using the Coulomb potential as an
         # example, this is the potential generated at the origin by the fictituous
@@ -235,7 +218,7 @@ class PMEPotential(CalculatorBaseTorch):
         # parameter, which is purely a convergence parameter.
         phalf = self.exponent / 2
         fill_value = 1 / gamma(torch.tensor(phalf + 1)) / (2 * smearing**2) ** phalf
-        self_contrib = torch.full([], fill_value, device=device)
+        self_contrib = torch.full([], fill_value, device=self._device)
         interpolated_potential -= charges * self_contrib
 
         # Step 5: The method requires that the unit cell is charge-neutral.
