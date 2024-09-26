@@ -247,10 +247,10 @@ def tune_ewald(
     You can check the values of the parameters
 
     >>> print(ewald_parameter)
-    {'atomic_smearing': 0.7937005259840997, 'lr_wavelength': 4.986967483164005}
+    {'atomic_smearing': 1.0318106837793297, 'lr_wavelength': 2.9468444218696392}
 
     >>> print(cutoff)
-    0.7937005259840997
+    2.2699835043145256
 
     Which can be used to initilize an :py:class:`EwaldPotential` instance optimal for
     the system.
@@ -289,12 +289,12 @@ def tune_ewald(
 
     if accuracy is None:
         if method == "fast":
-            smearing = len(positions) ** (1 / 6) / 2**0.5
+            smearing = len(positions) ** (1 / 6) / 2**0.5 * 1.3
 
             return {
                 "atomic_smearing": smearing,
-                "lr_wavelength": 2 * torch.pi * smearing,
-            }, smearing
+                "lr_wavelength": 2 * torch.pi * smearing / 2.2,
+            }, smearing * 2.2
         if method == "medium":
             accuracy = 1e-3
         elif method == "accurate":

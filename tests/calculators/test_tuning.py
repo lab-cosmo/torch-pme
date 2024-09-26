@@ -55,11 +55,11 @@ def test_paramaters_fast():
 
     ewald_params, sr_cutoff = tune_ewald(pos, charges, cell, method="fast")
 
-    smearing = len(pos) ** (1 / 6) / 2**0.5
+    smearing = len(pos) ** (1 / 6) / 2**0.5 * 1.3
 
     assert ewald_params["atomic_smearing"] == smearing
-    assert ewald_params["lr_wavelength"] == 2 * torch.pi * smearing
-    assert sr_cutoff == smearing
+    assert ewald_params["lr_wavelength"] == 2 * torch.pi * smearing / 2.2
+    assert sr_cutoff == smearing * 2.2
 
 
 def test_method_error():
