@@ -39,8 +39,8 @@ dtype = torch.float64
 
 cell = torch.eye(3, dtype=dtype, device=device) * 6.0
 ns_mesh = torch.tensor([9, 9, 9])
-MI = torchpme.lib.MeshInterpolator(cell, ns_mesh, interpolation_order=2)
-xyz_mesh = MI.get_mesh_xyz()
+interpolator = torchpme.lib.MeshInterpolator(cell, ns_mesh, order=2)
+xyz_mesh = interpolator.get_mesh_xyz()
 
 mesh_value = (
     np.exp(-4 * ((cell[0, 0] / 2 - xyz_mesh) ** 2)[..., :2].sum(axis=-1))

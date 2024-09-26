@@ -87,21 +87,17 @@ cell = torch.from_numpy(structure.cell.array).to(device=device, dtype=dtype)
 #
 # We demonstrate this by computing a projection on two grids with 3 and 7 mesh points.
 
-MI = torchpme.lib.MeshInterpolator(
-    cell=cell,
-    ns_mesh=torch.tensor([3, 3, 3]),
-    interpolation_order=3,
+interpolator = torchpme.lib.MeshInterpolator(
+    cell=cell, ns_mesh=torch.tensor([3, 3, 3]), order=3
 )
-MI_fine = torchpme.lib.MeshInterpolator(
-    cell=cell,
-    ns_mesh=torch.tensor([7, 7, 7]),
-    interpolation_order=3,
+interpolator_fine = torchpme.lib.MeshInterpolator(
+    cell=cell, ns_mesh=torch.tensor([7, 7, 7]), order=3
 )
-MI.compute_interpolation_weights(positions)
-MI_fine.compute_interpolation_weights(positions)
+interpolator.compute_weights(positions)
+interpolator_fine.compute_weights(positions)
 
-rho_mesh = MI.points_to_mesh(charges)
-rho_mesh_fine = MI_fine.points_to_mesh(charges)
+rho_mesh = interpolator.points_to_mesh(charges)
+rho_mesh_fine = interpolator_fine.points_to_mesh(charges)
 
 # %%
 #
@@ -110,7 +106,7 @@ rho_mesh_fine = MI_fine.points_to_mesh(charges)
 # <torchpme.lib.MeshInterpolator.points_to_mesh>` will return multiple mesh values.
 
 pseudo_charges = torch.normal(mean=0, std=1, size=(len(structure), 4))
-pseudo_mesh = MI.points_to_mesh(pseudo_charges)
+pseudo_mesh = interpolator.points_to_mesh(pseudo_charges)
 
 print(tuple(pseudo_mesh.shape))
 
@@ -130,9 +126,9 @@ fig, ax = plt.subplots(
 )
 mesh_extent = [
     0,
-    MI.cell[0, 0],
+    interpolator.cell[0, 0],
     0,
-    MI.cell[1, 1],
+    interpolator.cell[1, 1],
 ]
 
 z_plot = rho_mesh[0, :, :, 0].detach().numpy()
@@ -183,7 +179,7 @@ fig.show()
 # We can also plot the points explicitly together with the structure, adding some
 # dummy atoms with a "charge" property
 
-xyz_mesh = MI.get_mesh_xyz().detach().numpy()
+xyz_mesh = interpolator.get_mesh_xyz().detach().numpy()
 dummy = ase.Atoms(
     positions=xyz_mesh.reshape(-1, 3), symbols="H" * len(xyz_mesh.reshape(-1, 3))
 )
@@ -218,7 +214,7 @@ chemiscope.show(
 # and for the fine mesh (that again shows clearly how the charge is distributed
 # over the neighboring points, and how the mesh size determines the smearing).
 
-xyz_mesh = MI_fine.get_mesh_xyz().detach().numpy()
+xyz_mesh = interpolator_fine.get_mesh_xyz().detach().numpy()
 dummy = ase.Atoms(
     positions=xyz_mesh.reshape(-1, 3), symbols="H" * len(xyz_mesh.reshape(-1, 3))
 )
@@ -264,7 +260,7 @@ chemiscope.show(
 # This is also very clear from the mesh plots above, in which the charge assigned to the
 # grid points is much smaller than the atomic charges (that are around ±1).
 
-mesh_charges = MI_fine.mesh_to_points(rho_mesh_fine)
+mesh_charges = interpolator_fine.mesh_to_points(rho_mesh_fine)
 fig, ax = plt.subplots(1, 1, figsize=(6, 4), constrained_layout=True)
 
 ax.scatter(charges.flatten(), mesh_charges.flatten())
@@ -279,15 +275,15 @@ fig.show()
 # defined on the grid. For instance, here we define a product of sine functions along
 # the three Cartesian directions, :math:`\cos(2\pi x/L)\cos(2\pi y/L)\cos(2\pi z/L)`
 
-xyz_mesh = MI_fine.get_mesh_xyz()
-mesh_2pil = xyz_mesh * np.pi * 2 / MI_fine.cell[0, 0]
+xyz_mesh = interpolator_fine.get_mesh_xyz()
+mesh_2pil = xyz_mesh * np.pi * 2 / interpolator_fine.cell[0, 0]
 f_mesh = (
     torch.cos(mesh_2pil[..., 0])
     * torch.cos(mesh_2pil[..., 1])
     * torch.cos(mesh_2pil[..., 2])
 ).reshape(1, *mesh_2pil.shape[:-1])
 
-f_points = MI_fine.mesh_to_points(f_mesh)
+f_points = interpolator_fine.mesh_to_points(f_mesh)
 
 dummy = ase.Atoms(
     positions=xyz_mesh.reshape(-1, 3), symbols="H" * len(xyz_mesh.reshape(-1, 3))
@@ -327,13 +323,13 @@ chemiscope.show(
 # If you want to interpolate on a different set of points than the ones a
 # :py:class:`MeshInterpolator <torchpme.lib.MeshInterpolator>` object was initialized
 # on, it is easy to do by either creating a new one or simply calling again
-# :py:func:`compute_interpolation_weights
-# <torchpme.lib.MeshInterpolator.compute_interpolation_weights>` for the new set of
+# :py:func:`compute_weights
+# <torchpme.lib.MeshInterpolator.compute_weights>` for the new set of
 # points.
 
 new_points = torch.normal(mean=3, std=1, size=(10, 3), dtype=dtype, device=device)
-MI_fine.compute_interpolation_weights(new_points)
-new_f = MI_fine.mesh_to_points(f_mesh)
+interpolator_fine.compute_weights(new_points)
+new_f = interpolator_fine.mesh_to_points(f_mesh)
 new_ref = (
     torch.cos(new_points[..., 0])
     * torch.cos(new_points[..., 1])

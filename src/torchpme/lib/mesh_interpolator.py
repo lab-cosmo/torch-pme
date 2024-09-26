@@ -16,7 +16,7 @@ class MeshInterpolator:
 
     Since the computation of the interpolation weights for both of the above types
     of calculations is identical, this is performed in a separate function called
-    :func:`compute_interpolation_weights`.
+    :func:`compute_weights`.
 
     See also the :ref:`example-mesh-demo` for a demonstration of the
     functionalities of this class.
@@ -25,15 +25,13 @@ class MeshInterpolator:
         vector of the unit cell
     :param ns_mesh: toch.tensor of shape ``(3,)``
         Number of mesh points to use along each of the three axes
-    :param interpolation_order: int
+    :param order: int
         The degree of the polynomials used for interpolation. A higher order leads
         to smoother interpolation, at a computational cost that grows cubically with
         the interpolation order (once one moves to the 3D case).
     """
 
-    def __init__(
-        self, cell: torch.Tensor, ns_mesh: torch.Tensor, interpolation_order: int
-    ):
+    def __init__(self, cell: torch.Tensor, ns_mesh: torch.Tensor, order: int):
         # Check that the provided parameters match the specifications
         if cell.shape != (3, 3):
             raise ValueError(
@@ -41,8 +39,8 @@ class MeshInterpolator:
             )
         if ns_mesh.shape != (3,):
             raise ValueError(f"shape {list(ns_mesh.shape)} of `ns_mesh` has to be (3,)")
-        if interpolation_order not in [1, 2, 3, 4, 5]:
-            raise ValueError("Only `interpolation_order` from 1 to 5 are allowed")
+        if order not in [1, 2, 3, 4, 5]:
+            raise ValueError("Only `order` from 1 to 5 are allowed")
         if cell.device != ns_mesh.device:
             raise ValueError(
                 "`cell` and `ns_mesh` are on different devices, got "
@@ -58,7 +56,7 @@ class MeshInterpolator:
             self.inverse_cell = torch.linalg.inv(cell)
 
         self.ns_mesh = ns_mesh
-        self.interpolation_order = interpolation_order
+        self.order = order
 
         self._dtype = cell.dtype
         self._device = cell.device
@@ -107,18 +105,19 @@ class MeshInterpolator:
         :param x: torch.tensor of shape ``(n,)``
             Set of relative positions in the interval [-1/2, 1/2].
 
-        :return: torch.tensor of shape ``(interpolation_order, n)``
+        :return: torch.tensor of shape ``(order, n)``
             Interpolation weights
         """
         # Compute weights based on the given order
-        if self.interpolation_order == 1:
+        if self.order == 1:
             return torch.ones(
                 (1, x.shape[0], x.shape[1]), dtype=self._dtype, device=self._device
             )
-        if self.interpolation_order == 2:
+        if self.order == 2:
             return torch.stack([0.5 * (1 - 2 * x), 0.5 * (1 + 2 * x)])
-        if self.interpolation_order == 3:
-            x2 = x * x
+
+        x2 = x * x
+        if self.order == 3:
             return torch.stack(
                 [
                     1 / 8 * (1 - 4 * x + 4 * x2),
@@ -126,9 +125,9 @@ class MeshInterpolator:
                     1 / 8 * (1 + 4 * x + 4 * x2),
                 ]
             )
-        if self.interpolation_order == 4:
-            x2 = x * x
-            x3 = x * x2
+
+        x3 = x * x2
+        if self.order == 4:
             return torch.stack(
                 [
                     1 / 48 * (1 - 6 * x + 12 * x2 - 8 * x3),
@@ -137,10 +136,9 @@ class MeshInterpolator:
                     1 / 48 * (1 + 6 * x + 12 * x2 + 8 * x3),
                 ]
             )
-        if self.interpolation_order == 5:
-            x2 = x * x
-            x3 = x * x2
-            x4 = x * x3
+
+        x4 = x * x3
+        if self.order == 5:
             return torch.stack(
                 [
                     1 / 384 * (1 - 8 * x + 24 * x2 - 32 * x3 + 16 * x4),
@@ -150,9 +148,9 @@ class MeshInterpolator:
                     1 / 384 * (1 + 8 * x + 24 * x2 + 32 * x3 + 16 * x4),
                 ]
             )
-        raise ValueError("Only `interpolation_order` from 1 to 5 are allowed")
+        raise ValueError("Only `order` from 1 to 5 are allowed")
 
-    def compute_interpolation_weights(self, positions: torch.Tensor):
+    def compute_weights(self, positions: torch.Tensor):
         """
         Compute the interpolation weights of each atom for a given cell (specified
         during initialization of this class). The weights are not returned, but are used
@@ -178,7 +176,7 @@ class MeshInterpolator:
         positions_rel = self.ns_mesh * torch.matmul(positions, self.inverse_cell)
 
         # Calculate positions and distances based on interpolation order
-        if self.interpolation_order % 2 == 0:
+        if self.order % 2 == 0:
             positions_rel_idx = torch.floor(positions_rel).long()
             offsets = positions_rel - (positions_rel_idx + 1 / 2)
         else:
@@ -188,17 +186,15 @@ class MeshInterpolator:
         # Compute weights based on distances and interpolation order
         self.interpolation_weights = self._compute_1d_weights(offsets)
 
-        # Calculate indices of mesh points on which
-        # the particle weights are interpolated
-        # For each particle, its weight is "smeared" onto
-        # (interpolation_order)**3 mesh points,
-        # which can be achived using meshgrid below.
+        # Calculate indices of mesh points on which the particle weights are
+        # interpolated. For each particle, its weight is "smeared" onto `order**3` mesh
+        # points, which can be achived using meshgrid below.
         indices_to_interpolate = torch.stack(
             [
                 (positions_rel_idx + i) % self.ns_mesh
                 for i in range(
-                    1 - (self.interpolation_order + 1) // 2,
-                    1 + self.interpolation_order // 2,
+                    1 - (self.order + 1) // 2,
+                    1 + self.order // 2,
                 )
             ],
             dim=0,
@@ -206,9 +202,9 @@ class MeshInterpolator:
 
         # Generate shifts for x, y, z axes and flatten for indexing
         x_shifts, y_shifts, z_shifts = torch.meshgrid(
-            torch.arange(self.interpolation_order, device=self._device),
-            torch.arange(self.interpolation_order, device=self._device),
-            torch.arange(self.interpolation_order, device=self._device),
+            torch.arange(self.order, device=self._device),
+            torch.arange(self.order, device=self._device),
+            torch.arange(self.order, device=self._device),
             indexing="ij",
         )
         self.x_shifts = x_shifts.flatten()
@@ -225,8 +221,8 @@ class MeshInterpolator:
     def points_to_mesh(self, particle_weights: torch.Tensor) -> torch.Tensor:
         """
         Generate a discretized density from interpolation weights. It assumes that
-        :func:`compute_interpolation_weights` has been called before to compute all the
-        necessary weights and indices.
+        :func:`compute_weights` has been called before to compute all the necessary
+        weights and indices.
 
         :param particle_weights: torch.tensor of shape ``(n_points, n_channels)``
             ``particle_weights[i,a]`` is the weight (charge) that point (atom) i has to

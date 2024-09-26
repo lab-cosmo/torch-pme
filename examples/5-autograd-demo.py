@@ -84,13 +84,9 @@ charges.requires_grad_(True)
 cell.requires_grad_(True)
 
 ns = torch.tensor([5, 5, 5])
-MI = torchpme.lib.MeshInterpolator(
-    cell=cell,
-    ns_mesh=ns,
-    interpolation_order=3,
-)
-MI.compute_interpolation_weights(positions)
-mesh = MI.points_to_mesh(charges)
+interpolator = torchpme.lib.MeshInterpolator(cell=cell, ns_mesh=ns, order=3)
+interpolator.compute_weights(positions)
+mesh = interpolator.points_to_mesh(charges)
 
 value = mesh.sum()
 
@@ -158,7 +154,7 @@ charges.grad.zero_()
 cell.grad.zero_()
 
 weights = charges * positions[:, :1]
-mesh3 = MI.points_to_mesh(weights)
+mesh3 = interpolator.points_to_mesh(weights)
 
 value3 = mesh3.sum()
 value3.backward()
@@ -243,16 +239,16 @@ a0.requires_grad_(True)
 # PME-like operation by evaluating the transformed mesh
 # at the atom positions
 
-MI = torchpme.lib.MeshInterpolator(cell, ns, 3)
-MI.compute_interpolation_weights(positions)
-mesh = MI.points_to_mesh(weights)
+interpolator = torchpme.lib.MeshInterpolator(cell, ns, 3)
+interpolator.compute_weights(positions)
+mesh = interpolator.points_to_mesh(weights)
 
 kernel = ParametricKernel(sigma, a0)
 KF = torchpme.lib.KSpaceFilter(cell, ns, kernel=kernel)
 
 filtered = KF.compute(mesh)
 
-filtered_at_positions = MI.mesh_to_points(filtered)
+filtered_at_positions = interpolator.mesh_to_points(filtered)
 
 # %%
 # Computes a (rather arbitrary) function of the outputs,
@@ -333,9 +329,7 @@ class KSpaceModule(torch.nn.Module):
 
         dummy_cell = torch.eye(3, dtype=dtype)
         self._MI = torchpme.lib.MeshInterpolator(
-            cell=dummy_cell,
-            ns_mesh=torch.tensor([1, 1, 1]),
-            interpolation_order=3,
+            cell=dummy_cell, ns_mesh=torch.tensor([1, 1, 1]), order=3
         )
         self._KF = torchpme.lib.KSpaceFilter(
             cell=dummy_cell,
@@ -363,18 +357,16 @@ class KSpaceModule(torch.nn.Module):
         # use a helper function to get the mesh size given resolution
         ns_mesh = torchpme.lib.get_ns_mesh(cell, self._mesh_spacing)
         ns_mesh = torch.tensor([4, 4, 4])
-        self._MI = torchpme.lib.MeshInterpolator(
-            cell=cell,
-            ns_mesh=ns_mesh,
-            interpolation_order=3,
+        self._interpolator = torchpme.lib.MeshInterpolator(
+            cell=cell, ns_mesh=ns_mesh, order=3
         )
-        self._MI.compute_interpolation_weights(positions)
-        mesh = self._MI.points_to_mesh(charges)
+        self._interpolator.compute_weights(positions)
+        mesh = self._interpolator.points_to_mesh(charges)
 
         self._KF.update_mesh(cell, ns_mesh)
         self._KF.update_filter()
         mesh = self._KF.compute(mesh)
-        pot = self._MI.mesh_to_points(mesh)
+        pot = self._interpolator.mesh_to_points(mesh)
 
         x = torch.hstack([charges, pot])
         for layer in self._layers:
