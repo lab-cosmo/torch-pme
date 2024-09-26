@@ -10,17 +10,11 @@ from torchpme import EwaldPotential
     "method, accuracy, rtol, expected_smearing,"
     "expected_lr_wavelength, expected_cutoff",
     [
-        (
-            "fast",
-            None,
-            1,
-            0.7071,
-            4.4429,
-            0.7071,
-        ),  # fast branch, no requirement for the energy accuracy
-        ("medium", None, 1e-3, 0.1676, 0.0732, 0.6907),  # medium mode
-        ("accurate", None, 1e-6, 0.1948, 0.0525, 1.0731),  # accurate mode
-        (None, 1e-3, 1e-3, 0.1676, 0.0732, 0.6907),  # accuracy provided branch
+        # fast mode, no requirement for the energy accuracy
+        ("fast", None, 0.4457, 0.7071, 4.4429, 0.7071),
+        ("medium", None, 1e-3, 0.1543, 0.0617, 0.6375),  # medium mode
+        ("accurate", None, 1e-6, 0.1931, 0.0516, 1.0638),  # accurate mode
+        (None, 1e-3, 1e-3, 0.1543, 0.0617, 0.6375),  # accuracy provided branch
     ],
 )
 def test_parameter_choose(

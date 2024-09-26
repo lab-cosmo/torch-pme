@@ -140,13 +140,13 @@ class EwaldPotential(CalculatorBaseTorch):
         You can check the values of the parameters
 
         >>> print(calculator.atomic_smearing)
-        tensor(0.1676)
+        tensor(0.1543)
 
         >>> print(calculator.lr_wavelength)
-        tensor(0.0732)
+        tensor(0.0617)
 
         >>> print(cutoff)
-        tensor(0.6907)
+        tensor(0.6375)
 
         >>> nl = NeighborList(cutoff=cutoff, full_list=False)
         >>> i, j, neighbor_distances = nl.compute(
@@ -168,16 +168,16 @@ class EwaldPotential(CalculatorBaseTorch):
         ... )
 
         Since the corresponding ``accuracy`` of the ``"medium"`` mode is 1e-3,
-        this should return the same result.
+        this should return the same parameters.
 
         >>> print(calculator.atomic_smearing)
-        tensor(0.1676)
+        tensor(0.1543)
 
         >>> print(calculator.lr_wavelength)
-        tensor(0.0732)
+        tensor(0.0617)
 
         >>> print(cutoff)
-        tensor(0.6907)
+        tensor(0.6375)
         """
 
         if exponent != 1:
@@ -259,6 +259,7 @@ class EwaldPotential(CalculatorBaseTorch):
 
         device = positions[0].device
         cell_dimensions = torch.linalg.norm(cell, dim=1)
+        min_dimension = float(torch.min(cell_dimensions))
         half_cell = float(torch.min(cell_dimensions) / 2)
         volume = torch.abs(cell.det())
         n_atoms = torch.tensor(len(positions), device=device)
@@ -287,6 +288,12 @@ class EwaldPotential(CalculatorBaseTorch):
             * torch.exp(-(cutoff**2) / 2 / smearing**2)
         )
 
+        err_total = (
+            lambda smearing, lr_wavelength, cutoff: err_Fourier(smearing, lr_wavelength)
+            ** 2
+            + err_real(smearing, cutoff) ** 2
+        )
+
         smearing = torch.tensor(half_cell / 5, device=device, requires_grad=True)
         lr_wavelength = torch.tensor(half_cell, device=device, requires_grad=True)
         cutoff = torch.tensor(half_cell / 10, device=device, requires_grad=True)
@@ -296,13 +303,10 @@ class EwaldPotential(CalculatorBaseTorch):
         )
         relu = ReLU()
         for step in range(max_steps):
-            result = (
-                err_Fourier(
-                    relu(smearing),
-                    (2 * torch.sigmoid(lr_wavelength) + torch.tensor(5e-2)),
-                )
-                ** 2
-                + err_real(relu(smearing), relu(cutoff)) ** 2
+            result = err_total(
+                relu(smearing),
+                (min_dimension * torch.sigmoid(lr_wavelength) + torch.tensor(5e-2)),
+                relu(cutoff),
             )
             if torch.isnan(result):
                 raise ValueError(
@@ -325,7 +329,9 @@ class EwaldPotential(CalculatorBaseTorch):
 
         return {
             "atomic_smearing": relu(smearing).detach().float(),
-            "lr_wavelength": (2 * torch.sigmoid(lr_wavelength) + torch.tensor(5e-2))
+            "lr_wavelength": (
+                min_dimension * torch.sigmoid(lr_wavelength) + torch.tensor(5e-2)
+            )
             .detach()
             .float(),
         }, relu(cutoff).detach().float()
