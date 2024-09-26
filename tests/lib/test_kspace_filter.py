@@ -64,14 +64,14 @@ class TestFilter:
 
     def test_meshes_consistent_size(self):
         # make sure we get conistent mesh sizes
-        self.mymesh1.compute_interpolation_weights(self.points)
+        self.mymesh1.compute_weights(self.points)
         mesh = self.mymesh1.points_to_mesh(self.weights)
         # nb - the third value is different because of the real-valued FT
         assert mesh.shape[1:3] == self.myfilter1._kvectors.shape[:-2]
 
     def test_meshes_inconsistent_size(self):
         # make sure we get consistent mesh sizes
-        self.mymesh1.compute_interpolation_weights(self.points)
+        self.mymesh1.compute_weights(self.points)
         mesh = self.mymesh1.points_to_mesh(self.weights)
         match = "The real-space mesh is inconsistent with the k-space grid."
         with pytest.raises(ValueError, match=match):
@@ -79,7 +79,7 @@ class TestFilter:
 
     def test_kernel_noop(self):
         # make sure that a filter of ones recovers the initial mesh
-        self.mymesh1.compute_interpolation_weights(self.points)
+        self.mymesh1.compute_weights(self.points)
         mesh = self.mymesh1.points_to_mesh(self.weights)
         mesh_transformed = self.myfilter_noop.compute(mesh)
 
@@ -87,7 +87,7 @@ class TestFilter:
 
     def test_filter_linear(self):
         # checks that the filter (as well as the mesh interpolator) are linear
-        self.mymesh1.compute_interpolation_weights(self.points)
+        self.mymesh1.compute_weights(self.points)
         mesh1 = self.mymesh1.points_to_mesh(self.weights)
 
         mesh2 = torch.exp(mesh1)
