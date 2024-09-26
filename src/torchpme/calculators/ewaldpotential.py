@@ -2,7 +2,6 @@ import warnings
 from typing import Literal, Optional, Union
 
 import torch
-from torch.nn import ReLU
 
 from ..lib import generate_kvectors_for_ewald
 from ..lib.potentials import gamma
@@ -339,13 +338,12 @@ def tune_ewald(
     cutoff = torch.tensor(half_cell / 10, device=device, requires_grad=True)
 
     optimizer = torch.optim.Adam([smearing, lr_wavelength, cutoff], lr=learning_rate)
-    relu = ReLU()
 
     for step in range(max_steps):
         loss_value = loss(
-            relu(smearing),
+            smearing,
             (min_dimension * torch.sigmoid(lr_wavelength) + torch.tensor(5e-2)),
-            relu(cutoff),
+            cutoff,
         )
         if torch.isnan(loss_value):
             raise ValueError(
@@ -370,10 +368,10 @@ def tune_ewald(
         )
 
     return {
-        "atomic_smearing": relu(smearing).detach().float(),
+        "atomic_smearing": smearing.detach().float(),
         "lr_wavelength": (
             min_dimension * torch.sigmoid(lr_wavelength) + torch.tensor(5e-2)
         )
         .detach()
         .float(),
-    }, relu(cutoff).detach().float()
+    }, cutoff
