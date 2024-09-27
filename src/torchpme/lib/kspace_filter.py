@@ -4,7 +4,8 @@ from .kvectors import generate_kvectors_for_mesh
 
 
 class KSpaceKernel(torch.nn.Module):
-    r"""Base class defining the interface for a reciprocal-space kernel helper.
+    r"""
+    Base class defining the interface for a reciprocal-space kernel helper.
 
     Provides an interface to compute the reciprocal-space convolution kernel
     that is used e.g. to compute potentials using Fourier transforms. Parameters
@@ -20,30 +21,31 @@ class KSpaceKernel(torch.nn.Module):
         super().__init__()
 
     def from_k(self, k: torch.Tensor) -> torch.Tensor:
-        r"""Computes the reciprocal-space kernel on a grid of k points given a
+        r"""
+        Computes the reciprocal-space kernel on a grid of k points given a
         tensor containing :math:`|\mathbf{k}|`.
 
         :param k: torch.tensor containing the k vector moduli at which the kernel
             is to be evaluated.
         """
-
         return self.from_k_sq(k**2)
 
     def from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
-        r"""Computes the reciprocal-space kernel on a grid of k points given a
+        r"""
+        Computes the reciprocal-space kernel on a grid of k points given a
         tensor containing :math:`|\mathbf{k}|^2`.
 
         :param k_sq: torch.tensor containing the squared k vector moduli
             at which the kernel is to be evaluated.
         """
-
         raise NotImplementedError(
             f"from_k_sq is not implemented for '{self.__class__.__name__}'"
         )
 
 
 class KSpaceFilter(torch.nn.Module):
-    r"""Apply a reciprocal-space filter to a real-space mesh.
+    r"""
+    Apply a reciprocal-space filter to a real-space mesh.
 
     The class combines the costruction of a reciprocal-space grid
     :math:`\{mathbf{k}_n\}`
@@ -85,7 +87,6 @@ class KSpaceFilter(torch.nn.Module):
         fft_norm: str = "ortho",
         ifft_norm: str = "ortho",
     ):
-
         super().__init__()
 
         self._fft_norm = fft_norm
@@ -111,12 +112,12 @@ class KSpaceFilter(torch.nn.Module):
         :py:class:`KSpaceKernel`-derived object provided upon initialization
         to compute the kernel values over the grid points.
         """
-
         self._kfilter = self._kernel.from_k_sq(self._knorm_sq)
 
     @torch.jit.export
     def update_mesh(self, cell: torch.Tensor, ns_mesh: torch.Tensor):
-        """Update the k-space mesh vectors.
+        """
+        Update the k-space mesh vectors.
 
         Should have a size consistent with that of the mesh used to
         store the real-space functions that will be filtered.
@@ -126,7 +127,6 @@ class KSpaceFilter(torch.nn.Module):
         :param ns_mesh: toch.tensor of shape ``(3,)``
             Number of mesh points to use along each of the three axes
         """
-
         # Check that the provided parameters match the specifications
         if cell.shape != (3, 3):
             raise ValueError(
@@ -199,7 +199,7 @@ class KSpaceFilter(torch.nn.Module):
 
         filter_hat = mesh_hat * self._kfilter
 
-        mesh_kernel = torch.fft.irfftn(
+        return torch.fft.irfftn(
             filter_hat,
             norm=self._ifft_norm,
             dim=dims,
@@ -209,10 +209,9 @@ class KSpaceFilter(torch.nn.Module):
             s=mesh_values.shape[-3:],
         )
 
-        return mesh_kernel
-
     def forward(self, cell: torch.Tensor, mesh: torch.Tensor):
-        """Performs a full k-space convolution step.
+        """
+        Performs a full k-space convolution step.
 
         The default forward call for `KSpaceFilter` combines
         the construction or update of the mesh (including the
@@ -222,7 +221,6 @@ class KSpaceFilter(torch.nn.Module):
         The size of the mesh is inferred from the input mesh
         size.
         """
-
         self.update_mesh(cell, torch.tensor(mesh.shape[-3:]))
 
         return self.compute(mesh)

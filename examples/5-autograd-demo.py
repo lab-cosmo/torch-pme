@@ -23,7 +23,6 @@ import torch
 
 import torchpme
 
-
 device = "cpu"
 dtype = torch.float64
 rng = torch.Generator()
@@ -198,7 +197,6 @@ class ParametricKernel(torch.nn.Module):
         self._a0 = a0
 
     def from_k_sq(self, k2):
-
         filter = torch.stack([torch.exp(-k2 * s**2 / 2) for s in self._sigma])
         filter[0, :] *= self._a0[0] / (1 + k2)
         filter[1, :] *= self._a0[1] / (1 + k2**3)

@@ -5,7 +5,8 @@ from .base import CalculatorBaseMetatensor
 
 
 class PMEPotential(CalculatorBaseMetatensor):
-    r"""Potential using a particle mesh-based Ewald (PME).
+    r"""
+    Potential using a particle mesh-based Ewald (PME).
 
     Refer to :class:`torchpme.PMEPotential` for parameter documentation.
 
@@ -96,6 +97,7 @@ class PMEPotential(CalculatorBaseMetatensor):
             [ 1.0192]], dtype=torch.float64)
 
     Which is close to the reference value given above.
+
     """
 
     def __init__(

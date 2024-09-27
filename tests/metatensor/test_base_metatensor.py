@@ -5,7 +5,6 @@ from packaging import version
 import torchpme
 import torchpme.calculators
 
-
 mts_torch = pytest.importorskip("metatensor.torch")
 mts_atomistic = pytest.importorskip("metatensor.torch.atomistic")
 
@@ -47,14 +46,13 @@ def neighbors():
     )
 
     values = torch.zeros(n_neighbors, 3, 1)
-    neighbors = mts_torch.TensorBlock(
+
+    return mts_torch.TensorBlock(
         values=values,
         samples=samples,
         components=[mts_torch.Labels.range("xyz", 3)],
         properties=mts_torch.Labels.range("distance", 1),
     )
-
-    return neighbors
 
 
 class CalculatorTestTorch(torchpme.calculators.base.CalculatorBaseTorch):

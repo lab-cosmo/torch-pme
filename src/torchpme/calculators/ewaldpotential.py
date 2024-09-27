@@ -8,7 +8,8 @@ from .base import CalculatorBaseTorch
 
 
 class EwaldPotential(CalculatorBaseTorch):
-    r"""Potential computed using the Ewald sum.
+    r"""
+    Potential computed using the Ewald sum.
 
     Scaling as :math:`\mathcal{O}(N^2)` with respect to the number of particles
     :math:`N`.
@@ -64,8 +65,7 @@ class EwaldPotential(CalculatorBaseTorch):
 
         if atomic_smearing is not None and atomic_smearing <= 0:
             raise ValueError(f"`atomic_smearing` {atomic_smearing} has to be positive")
-        else:
-            self.atomic_smearing = atomic_smearing
+        self.atomic_smearing = atomic_smearing
 
     def _compute_single_system(
         self,

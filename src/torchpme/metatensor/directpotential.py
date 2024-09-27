@@ -3,7 +3,8 @@ from .base import CalculatorBaseMetatensor
 
 
 class DirectPotential(CalculatorBaseMetatensor):
-    r"""Potential using a direct summation.
+    r"""
+    Potential using a direct summation.
 
     Refer to :class:`torchpme.DirectPotential` for parameter documentation.
 
@@ -90,6 +91,7 @@ class DirectPotential(CalculatorBaseMetatensor):
 
     Which is the expected potential since :math:`V \propto 1/r` where :math:`r` is the
     distance between the particles.
+
     """
 
     def __init__(self, exponent: float = 1.0, full_neighbor_list: bool = False):

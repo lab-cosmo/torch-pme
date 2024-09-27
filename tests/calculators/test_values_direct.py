@@ -6,7 +6,6 @@ from utils import neighbor_list_torch
 
 from torchpme import DirectPotential
 
-
 DTYPE = torch.float64
 
 
@@ -107,7 +106,6 @@ def define_molecule(molecule_name="dimer"):
 
 
 def generate_orthogonal_transformations():
-
     # first rotation matrix: identity
     rot_1 = torch.eye(3, dtype=DTYPE)
 

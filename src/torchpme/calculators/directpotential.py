@@ -4,7 +4,8 @@ from .base import CalculatorBaseTorch
 
 
 class DirectPotential(CalculatorBaseTorch):
-    r"""Potential using a direct summation.
+    r"""
+    Potential using a direct summation.
 
     Scaling as :math:`\mathcal{O}(N^2)` with respect to the number of particles
     :math:`N`. As opposed to the Ewald sum, this calculator does NOT take into account
@@ -62,6 +63,7 @@ class DirectPotential(CalculatorBaseTorch):
 
     Which is the expected potential since :math:`V \propto 1/r` where :math:`r` is the
     distance between the particles.
+
     """
 
     def __init__(self, exponent: float = 1.0, full_neighbor_list: bool = False):
@@ -79,7 +81,6 @@ class DirectPotential(CalculatorBaseTorch):
         neighbor_indices: torch.Tensor,
         neighbor_distances: torch.Tensor,
     ) -> torch.Tensor:
-
         return self._compute_sr(
             is_periodic=False,
             charges=charges,

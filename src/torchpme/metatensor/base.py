@@ -1,7 +1,6 @@
-from typing import List, Tuple, Union
+from typing import Union
 
 import torch
-
 
 try:
     from metatensor.torch import Labels, TensorBlock, TensorMap
@@ -10,7 +9,7 @@ except ImportError:
     raise ImportError(
         "metatensor.torch is required for torchpme.metatensor but is not installed. "
         "Try installing it with:\npip install metatensor[torch]"
-    )
+    ) from None
 
 
 class CalculatorBaseMetatensor(torch.nn.Module):
@@ -26,9 +25,9 @@ class CalculatorBaseMetatensor(torch.nn.Module):
 
     @staticmethod
     def _validate_compute_parameters(
-        systems: Union[List[System], System],
-        neighbors: Union[List[TensorBlock], TensorBlock],
-    ) -> Tuple[List[System], List[TensorBlock]]:
+        systems: Union[list[System], System],
+        neighbors: Union[list[TensorBlock], TensorBlock],
+    ) -> tuple[list[System], list[TensorBlock]]:
         # check that all inputs are of the same type
 
         if isinstance(systems, list):
@@ -46,8 +45,7 @@ class CalculatorBaseMetatensor(torch.nn.Module):
                     "a list, while `neighbors` is a list. Both need "
                     "either be a list or System/TensorBlock!"
                 )
-            else:
-                neighbors = [neighbors]
+            neighbors = [neighbors]
 
         if len(systems) != len(neighbors):
             raise ValueError(
@@ -143,10 +141,11 @@ class CalculatorBaseMetatensor(torch.nn.Module):
 
     def forward(
         self,
-        systems: Union[List[System], System],
-        neighbors: Union[List[TensorBlock], TensorBlock],
+        systems: Union[list[System], System],
+        neighbors: Union[list[TensorBlock], TensorBlock],
     ) -> TensorMap:
-        """Compute potential for all provided ``systems``.
+        """
+        Compute potential for all provided ``systems``.
 
         All ``systems`` must have the same ``dtype`` and the same ``device``. If each
         system contains a custom data field ``charges`` the potential will be calculated
@@ -176,8 +175,8 @@ class CalculatorBaseMetatensor(torch.nn.Module):
         self._device = systems[0].positions.device
         self._n_charges_channels = systems[0].get_data("charges").values.shape[1]
 
-        potentials: List[torch.Tensor] = []
-        samples_list: List[torch.Tensor] = []
+        potentials: list[torch.Tensor] = []
+        samples_list: list[torch.Tensor] = []
 
         for i_system, (system, neighbors_single) in enumerate(zip(systems, neighbors)):
             n_atoms = len(system)

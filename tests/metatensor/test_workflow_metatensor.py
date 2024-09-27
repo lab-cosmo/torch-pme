@@ -10,7 +10,6 @@ from packaging import version
 
 import torchpme
 
-
 mts_torch = pytest.importorskip("metatensor.torch")
 mts_atomistic = pytest.importorskip("metatensor.torch.atomistic")
 

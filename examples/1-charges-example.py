@@ -33,7 +33,6 @@ from metatensor.torch.atomistic import System
 
 import torchpme
 
-
 # %%
 # Define a global constant for the cutoff of the neighbor list calculations.
 cutoff = 1.0
@@ -78,7 +77,7 @@ charges = torch.tensor([[1.0], [-1.0]], dtype=torch.float64)
 # number of atoms (here ``(2)``) and the *columns* the number of atomic charge channels
 # (here ``(1)``).
 
-charges.shape
+print(charges.shape)
 
 # %%
 # Calculate the potential using the PMEPotential calculator

@@ -17,8 +17,7 @@ def get_ns_mesh(cell: torch.Tensor, mesh_spacing: float):
     ns_approx = basis_norms / mesh_spacing
     ns_actual_approx = 2 * ns_approx + 1  # actual number of mesh points
     # ns = [nx, ny, nz], closest power of 2 (helps for FT efficiency)
-    ns = torch.tensor(2).pow(torch.ceil(torch.log2(ns_actual_approx)).long())
-    return ns
+    return torch.tensor(2).pow(torch.ceil(torch.log2(ns_actual_approx)).long())
 
 
 def _generate_kvectors(
@@ -67,7 +66,8 @@ def _generate_kvectors(
 
 
 def generate_kvectors_for_mesh(ns: torch.Tensor, cell: torch.Tensor) -> torch.Tensor:
-    """Compute all reciprocal space vectors for Fourier space sums.
+    """
+    Compute all reciprocal space vectors for Fourier space sums.
 
     This variant is used in combination with **mesh based calculators** using the fast
     fourier transform (FFT) algorithm.
@@ -94,7 +94,8 @@ def generate_kvectors_for_mesh(ns: torch.Tensor, cell: torch.Tensor) -> torch.Te
 
 
 def generate_kvectors_for_ewald(ns: torch.Tensor, cell: torch.Tensor) -> torch.Tensor:
-    """Compute all reciprocal space vectors for Fourier space sums.
+    """
+    Compute all reciprocal space vectors for Fourier space sums.
 
     This variant is used with the **Ewald calculator**, in which the sum over the
     reciprocal space vectors is performed explicitly rather than using the fast Fourier

@@ -10,7 +10,8 @@ from .base import CalculatorBaseTorch
 
 
 class PMEPotential(CalculatorBaseTorch):
-    r"""Potential using a particle mesh-based Ewald (PME).
+    r"""
+    Potential using a particle mesh-based Ewald (PME).
 
     Scaling as :math:`\mathcal{O}(NlogN)` with respect to the number of particles
     :math:`N` used as a reference to test faster implementations.
@@ -90,6 +91,7 @@ class PMEPotential(CalculatorBaseTorch):
             [ 1.0192]], dtype=torch.float64)
 
     Which is close to the reference value given above.
+
     """
 
     def __init__(
@@ -112,13 +114,11 @@ class PMEPotential(CalculatorBaseTorch):
 
         if atomic_smearing is not None and atomic_smearing <= 0:
             raise ValueError(f"`atomic_smearing` {atomic_smearing} has to be positive")
-        else:
-            self.atomic_smearing = atomic_smearing
+        self.atomic_smearing = atomic_smearing
 
         if interpolation_order not in [1, 2, 3, 4, 5]:
             raise ValueError("Only `interpolation_order` from 1 to 5 are allowed")
-        else:
-            self.interpolation_order = interpolation_order
+        self.interpolation_order = interpolation_order
 
         # TorchScript requires to initialize all attributes in __init__
         self._cell_cache = -1 * torch.ones([3, 3])
@@ -193,7 +193,6 @@ class PMEPotential(CalculatorBaseTorch):
         smearing: float,
         lr_wavelength: float,
     ) -> torch.Tensor:
-
         dtype = positions.dtype
         device = positions.device
         self._cell_cache = self._cell_cache.to(dtype=dtype, device=device)

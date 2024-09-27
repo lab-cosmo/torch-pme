@@ -11,7 +11,6 @@ from utils import neighbor_list_torch
 
 from torchpme import EwaldPotential, PMEPotential
 
-
 DTYPE = torch.float64
 
 
