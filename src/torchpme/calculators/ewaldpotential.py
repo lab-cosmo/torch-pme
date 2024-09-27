@@ -1,3 +1,4 @@
+import math
 import warnings
 from typing import Literal, Optional, Union
 
@@ -258,6 +259,7 @@ def tune_ewald(
     if exponent != 1:
         raise NotImplementedError("Only exponent = 1 is supported")
 
+    dtype = positions.dtype
     device = positions.device
 
     # Create valid dummy tensors to verify `positions`, `charges` and `cell`
@@ -281,6 +283,11 @@ def tune_ewald(
     charges = charges[0]
     cell = cell[0]
 
+    if charges.shape[1] > 1:
+        raise NotImplementedError(
+            f"Found {charges.shape[1]} charge channels, but only one iss supported"
+        )
+
     if method is not None and accuracy is not None:
         warnings.warn("`method` is ignored if `accuracy` is set", stacklevel=2)
     elif method is None and accuracy is None:
@@ -290,10 +297,13 @@ def tune_ewald(
         if method == "fast":
             smearing = len(positions) ** (1 / 6) / 2**0.5 * 1.3
 
+            # TODO: add comment on how this factor is chosen
+            factor = 2.2
+
             return {
                 "atomic_smearing": smearing,
-                "lr_wavelength": 2 * torch.pi * smearing / 2.2,
-            }, smearing * 2.2
+                "lr_wavelength": 2 * torch.pi * smearing / factor,
+            }, smearing * factor
         if method == "medium":
             accuracy = 1e-3
         elif method == "accurate":
@@ -307,13 +317,18 @@ def tune_ewald(
     cell_dimensions = torch.linalg.norm(cell, dim=1)
     min_dimension = float(torch.min(cell_dimensions))
     half_cell = float(torch.min(cell_dimensions) / 2)
+
+    smearing_init = CalculatorBaseTorch.estimate_smearing(cell)
+    prefac = 2 * torch.sum(charges**2) / math.sqrt(len(positions))
     volume = torch.abs(cell.det())
-    n_atoms = torch.tensor(len(positions), device=device)
+
+    def smooth_lr_wavelength(lr_wavelength):
+        """TODO: why do we neeed this 'smoothing'?"""
+        return min_dimension * torch.sigmoid(lr_wavelength)
 
     def err_Fourier(smearing, lr_wavelength):
         return (
-            (torch.sum(charges**2) / torch.sqrt(n_atoms))
-            * 2**0.5
+            prefac**0.5
             / smearing
             / torch.sqrt(2 * torch.pi**2 * volume / lr_wavelength**0.5)
             * torch.exp(-2 * torch.pi**2 * smearing**2 / lr_wavelength)
@@ -321,8 +336,7 @@ def tune_ewald(
 
     def err_real(smearing, cutoff):
         return (
-            (torch.sum(charges**2) / torch.sqrt(n_atoms))
-            * 2
+            prefac
             / torch.sqrt(cutoff * volume)
             * torch.exp(-(cutoff**2) / 2 / smearing**2)
         )
@@ -333,22 +347,24 @@ def tune_ewald(
         )
 
     # initial guess
-    smearing = torch.tensor(half_cell / 5, device=device, requires_grad=True)
-    lr_wavelength = torch.tensor(half_cell, device=device, requires_grad=True)
-    cutoff = torch.tensor(half_cell / 10, device=device, requires_grad=True)
+    smearing = torch.tensor(
+        smearing_init, device=device, dtype=dtype, requires_grad=True
+    )
+    lr_wavelength = torch.tensor(
+        half_cell, device=device, dtype=dtype, requires_grad=True
+    )
+    cutoff = torch.tensor(
+        half_cell / 10, device=device, dtype=dtype, requires_grad=True
+    )
 
     optimizer = torch.optim.Adam([smearing, lr_wavelength, cutoff], lr=learning_rate)
 
     for step in range(max_steps):
-        loss_value = loss(
-            smearing,
-            (min_dimension * torch.sigmoid(lr_wavelength) + torch.tensor(5e-2)),
-            cutoff,
-        )
+        loss_value = loss(smearing, smooth_lr_wavelength(lr_wavelength), cutoff)
         if torch.isnan(loss_value):
             raise ValueError(
-                "The value of the estimated error is now nan, consider"
-                "using a smaller learning rate."
+                "The value of the estimated error is now nan, consider using a "
+                "smaller learning rate."
             )
         loss_value.backward()
         optimizer.step()
@@ -368,10 +384,6 @@ def tune_ewald(
         )
 
     return {
-        "atomic_smearing": smearing.detach().float(),
-        "lr_wavelength": (
-            min_dimension * torch.sigmoid(lr_wavelength) + torch.tensor(5e-2)
-        )
-        .detach()
-        .float(),
-    }, cutoff
+        "atomic_smearing": float(smearing),
+        "lr_wavelength": float(smooth_lr_wavelength(lr_wavelength)),
+    }, float(cutoff)

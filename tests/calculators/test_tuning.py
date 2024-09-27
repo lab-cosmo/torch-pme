@@ -21,7 +21,6 @@ def test_parameter_choose(method, accuracy, rtol):
     """
     # Get input parameters and adjust to account for scaling
     pos, charges, cell, madelung_ref, num_units = define_crystal()
-    charges = charges.reshape((-1, 1))
 
     ewald_params, sr_cutoff = tune_ewald(
         pos, charges, cell, method=method, accuracy=accuracy
@@ -51,7 +50,6 @@ def test_parameter_choose(method, accuracy, rtol):
 
 def test_paramaters_fast():
     pos, charges, cell, _, _ = define_crystal()
-    charges = charges.reshape((-1, 1))
 
     ewald_params, sr_cutoff = tune_ewald(pos, charges, cell, method="fast")
 
@@ -64,7 +62,6 @@ def test_paramaters_fast():
 
 def test_method_error():
     pos, charges, cell, _, _ = define_crystal()
-    charges = charges.reshape((-1, 1))
 
     match = "'foo' is not a valid method: Choose from 'fast', 'medium' or 'accurate'"
     with pytest.raises(ValueError, match=match):
@@ -73,17 +70,24 @@ def test_method_error():
 
 def test_all_none_error():
     pos, charges, cell, _, _ = define_crystal()
-    charges = charges.reshape((-1, 1))
 
     match = "either `method` or `accuracy` must be set"
     with pytest.raises(ValueError, match=match):
         tune_ewald(pos, charges, cell, method=None, accuracy=None)
 
 
+def test_multi_charge_channel_error():
+    pos, charges, cell, _, _ = define_crystal()
+    charges = torch.hstack([charges, charges])
+
+    match = "Found 2 charge channels, but only one iss supported"
+    with pytest.raises(NotImplementedError, match=match):
+        tune_ewald(pos, charges, cell, method=None, accuracy=None)
+
+
 def test_warning_optimization_ignored():
     """Test that a warning is raised if both `method` and `accuracy` are provided."""
     pos, charges, cell, _, _ = define_crystal()
-    charges = charges.reshape((-1, 1))
 
     with pytest.warns(UserWarning, match="`method` is ignored if `accuracy` is set"):
         tune_ewald(pos, charges, cell, method="medium", accuracy=1e-1)
