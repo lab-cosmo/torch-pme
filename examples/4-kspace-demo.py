@@ -24,7 +24,6 @@ from matplotlib import pyplot as plt
 
 import torchpme
 
-
 device = "cpu"
 dtype = torch.float64
 
@@ -58,7 +57,6 @@ mesh_value = (
 # This is the filter function. NB it is applied
 # to the *squared k vector norm*
 class GaussianSmearingKernel(torchpme.lib.KSpaceKernel):
-
     def __init__(self, sigma2: float):
         self._sigma2 = sigma2
 
@@ -202,9 +200,7 @@ class MultiKernel(torchpme.lib.KSpaceKernel):
         self._sigma = sigma
 
     def from_k_sq(self, k2):
-
-        filter = torch.stack([torch.exp(-k2 * s**2 / 2) for s in self._sigma])
-        return filter
+        return torch.stack([torch.exp(-k2 * s**2 / 2) for s in self._sigma])
 
 
 # %%

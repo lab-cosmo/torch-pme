@@ -1,11 +1,11 @@
-from .calculators.ewaldpotential import EwaldPotential
+import contextlib
+
 from .calculators.directpotential import DirectPotential
+from .calculators.ewaldpotential import EwaldPotential
 from .calculators.pmepotential import PMEPotential
 
-try:
+with contextlib.suppress(ImportError):
     from . import metatensor  # noqa
-except ImportError:
-    pass
 
 
 __all__ = ["EwaldPotential", "DirectPotential", "PMEPotential"]

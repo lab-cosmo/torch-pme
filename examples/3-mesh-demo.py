@@ -19,7 +19,6 @@ from matplotlib import pyplot as plt
 
 import torchpme
 
-
 device = "cpu"
 dtype = torch.float64
 rng = torch.Generator()

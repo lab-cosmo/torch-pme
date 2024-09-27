@@ -45,7 +45,6 @@ import vesin.torch
 
 from torchpme import PMEPotential
 
-
 # %%
 #
 # The test system

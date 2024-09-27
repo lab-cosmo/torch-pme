@@ -16,8 +16,7 @@ class TestKernel:
 
         @torch.jit.export
         def from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
-            kernel = torch.exp(-k_sq / self.param)
-            return kernel
+            return torch.exp(-k_sq / self.param)
 
     class NoopKernel(KSpaceKernel):
         def __init__(self):
@@ -25,8 +24,7 @@ class TestKernel:
 
         @torch.jit.export
         def from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
-            kernel = torch.ones_like(k_sq)
-            return kernel
+            return torch.ones_like(k_sq)
 
     def test_kernel_subclassing(self):
         # check that one can define and use a kernel
@@ -35,7 +33,6 @@ class TestKernel:
         my_krn.from_k_sq(k_sq)
 
     def test_kernel_jitting(self):
-
         # pytorch
         my_krn = self.DemoKernel(1.0)
         k_sq = torch.arange(0, 10, 0.01)
@@ -49,7 +46,6 @@ class TestKernel:
 
 
 class TestFilter:
-
     cell1 = torch.randn((3, 3))
     cell2 = torch.randn((3, 3))
     ns1 = torch.tensor([3, 4, 5])

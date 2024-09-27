@@ -10,7 +10,6 @@ from torch.testing import assert_close
 
 from torchpme import DirectPotential, EwaldPotential, PMEPotential
 
-
 AVAILABLE_DEVICES = [torch.device("cpu")] + torch.cuda.is_available() * [
     torch.device("cuda")
 ]

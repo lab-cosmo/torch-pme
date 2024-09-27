@@ -4,7 +4,6 @@ from torch.testing import assert_close
 
 from torchpme.lib import generate_kvectors_for_ewald, generate_kvectors_for_mesh
 
-
 # Generate random cells and mesh parameters
 cells = []
 ns_list = []

@@ -3,7 +3,6 @@ import torch
 
 from torchpme.calculators.base import CalculatorBaseTorch
 
-
 # Define some example parameters
 DTYPE = torch.float32
 DEVICE = "cpu"
@@ -27,7 +26,7 @@ class CalculatorTest(CalculatorBaseTorch):
         return charges
 
 
-@pytest.mark.parametrize("n_elements", (0, 1, 2))
+@pytest.mark.parametrize("n_elements", [0, 1, 2])
 def test_compute_output_shapes(n_elements):
     """Test that output type matches the input type"""
     calculator = CalculatorTest()

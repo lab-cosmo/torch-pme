@@ -5,7 +5,8 @@ from .base import CalculatorBaseMetatensor
 
 
 class EwaldPotential(CalculatorBaseMetatensor):
-    r"""Potential computed using the Ewald sum.
+    r"""
+    Potential computed using the Ewald sum.
 
     Refer to :class:`torchpme.EwaldPotential` for parameter documentation.
 

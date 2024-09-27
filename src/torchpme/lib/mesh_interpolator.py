@@ -115,9 +115,9 @@ class MeshInterpolator:
             return torch.ones(
                 (1, x.shape[0], x.shape[1]), dtype=self._dtype, device=self._device
             )
-        elif self.interpolation_order == 2:
+        if self.interpolation_order == 2:
             return torch.stack([0.5 * (1 - 2 * x), 0.5 * (1 + 2 * x)])
-        elif self.interpolation_order == 3:
+        if self.interpolation_order == 3:
             x2 = x * x
             return torch.stack(
                 [
@@ -126,7 +126,7 @@ class MeshInterpolator:
                     1 / 8 * (1 + 4 * x + 4 * x2),
                 ]
             )
-        elif self.interpolation_order == 4:
+        if self.interpolation_order == 4:
             x2 = x * x
             x3 = x * x2
             return torch.stack(
@@ -137,7 +137,7 @@ class MeshInterpolator:
                     1 / 48 * (1 + 6 * x + 12 * x2 + 8 * x3),
                 ]
             )
-        elif self.interpolation_order == 5:
+        if self.interpolation_order == 5:
             x2 = x * x
             x3 = x * x2
             x4 = x * x3
@@ -150,8 +150,7 @@ class MeshInterpolator:
                     1 / 384 * (1 + 8 * x + 24 * x2 + 32 * x3 + 16 * x4),
                 ]
             )
-        else:
-            raise ValueError("Only `interpolation_order` from 1 to 5 are allowed")
+        raise ValueError("Only `interpolation_order` from 1 to 5 are allowed")
 
     def compute_interpolation_weights(self, positions: torch.Tensor):
         """
@@ -163,7 +162,6 @@ class MeshInterpolator:
         :param positions: torch.tensor of shape ``(N, 3)``
             Absolute positions of atoms in Cartesian coordinates
         """
-
         if positions.device != self._device:
             raise ValueError(
                 f"`positions` device {positions.device} is not the same as instance "
@@ -294,7 +292,7 @@ class MeshInterpolator:
                 "dimension 4"
             )
 
-        interpolated_values = (
+        return (
             (
                 mesh_vals[:, self.x_indices, self.y_indices, self.z_indices]
                 * self.interpolation_weights[self.x_shifts, :, 0]
@@ -304,5 +302,3 @@ class MeshInterpolator:
             .sum(dim=1)
             .T
         )
-
-        return interpolated_values

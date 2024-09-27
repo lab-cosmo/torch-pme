@@ -44,9 +44,7 @@ keywords = [
     "TorchScript",
     "Scientific Computing",
 ]
-dependencies = [
-    "torch >=2.3",
-]
+dependencies = ["torch >=2.3"]
 dynamic = ["version"]
 
 [project.optional-dependencies]
@@ -57,9 +55,7 @@ examples = [
     "vesin >= 0.2.0",
     "vesin-torch >= 0.2.0",
 ]
-metatensor = [
-    "metatensor-torch <0.6,>=0.5",
-]
+metatensor = ["metatensor-torch <0.6,>=0.5"]
 
 [project.urls]
 homepage = "http://torch-pme.readthedocs.io"
@@ -69,9 +65,7 @@ issues = "https://github.com/lab-cosmo/torch-pme/issues"
 
 [tool.coverage.report]
 show_missing = true
-include = [
-    "src/torchpme/*"
-]
+include = ["src/torchpme/*"]
 
 [tool.coverage.run]
 branch = true
@@ -80,22 +74,25 @@ data_file = 'tests/.coverage'
 [tool.coverage.xml]
 output = 'tests/coverage.xml'
 
-[tool.black]
-exclude = 'docs/src/examples'
+[tool.ruff]
+exclude = ["docs/src/examples/**"]
+line-length = 88
 
-[tool.isort]
-skip = "__init__.py"
-profile = "black"
-line_length = 88
-indent = 4
-include_trailing_comma = true
-lines_after_imports = 2
-known_first_party = "torchpme"
+[tool.ruff.lint]
+# See https://docs.astral.sh/ruff/rules for details
+extend-select = ["B", "E", "UP", "I", "SIM", "PT", "RET", "W", "Q"]
+
+# E501: don't worry about too long lines
+ignore = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["torchpme"]
+
+[tool.ruff.format]
+docstring-code-format = true
 
 [tool.mypy]
-exclude = [
-    "docs/src/examples"
-]
+exclude = ["docs/src/examples"]
 follow_imports = 'skip'
 ignore_missing_imports = true
 

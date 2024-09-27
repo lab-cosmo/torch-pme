@@ -1,6 +1,6 @@
 """Test utilities wrap common functions in the tests"""
 
-from typing import Optional, Tuple
+from typing import Optional
 
 import torch
 from vesin.torch import NeighborList
@@ -12,8 +12,7 @@ def neighbor_list_torch(
     box: Optional[torch.tensor] = None,
     cutoff: Optional[float] = None,
     full_neighbor_list: bool = False,
-) -> Tuple[torch.tensor, torch.tensor]:
-
+) -> tuple[torch.tensor, torch.tensor]:
     if box is None:
         box = torch.zeros(3, 3, dtype=positions.dtype, device=positions.device)
 

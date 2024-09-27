@@ -15,7 +15,8 @@ def gamma(x: torch.Tensor) -> torch.Tensor:
 
 
 class BasePotential(torch.nn.Module):
-    r"""Base class defining the interface for a pair potential energy function.
+    r"""
+    Base class defining the interface for a pair potential energy function.
 
     Internal state variables and parameters in derived classes should be defined
     in the ``__init__``  method. Supports computing the potential starting from a
@@ -26,28 +27,29 @@ class BasePotential(torch.nn.Module):
         super().__init__()
 
     def from_dist(self, dist: torch.Tensor) -> torch.Tensor:
-        """Computes a pair potential given a tensor of interatomic distances.
+        """
+        Computes a pair potential given a tensor of interatomic distances.
 
         :param dist: torch.tensor containing the distances at which the potential
             is to be evaluated.
         """
-
         raise NotImplementedError(
             f"from_dist is not implemented for {self.__class__.__name__}"
         )
 
     def from_dist_sq(self, dist_sq: torch.Tensor) -> torch.Tensor:
-        """Computes a pair potential given a tensor of squared distances.
+        """
+        Computes a pair potential given a tensor of squared distances.
 
         :param dist_sq: torch.tensor containing the squared distances at which
             the potential is to be evaluated.
         """
-
         return self.from_dist(torch.sqrt(dist_sq))
 
 
 class RangeSeparatedPotential(BasePotential, KSpaceKernel):
-    r"""Base class defining the interface for a range-separated potential.
+    r"""
+    Base class defining the interface for a range-separated potential.
 
     Internal state variables and parameters in derived classes should be defined
     in the ``__init__``  method. It provides a short-range and long-range
@@ -84,7 +86,8 @@ class RangeSeparatedPotential(BasePotential, KSpaceKernel):
 
 
 class InversePowerLawPotential(RangeSeparatedPotential):
-    """Inverse power-law potentials of the form :math:`1/r^p`.
+    """
+    Inverse power-law potentials of the form :math:`1/r^p`.
 
     Herem :math:`r` is a distance parameter and :math:`p` an exponent.
 
@@ -123,7 +126,8 @@ class InversePowerLawPotential(RangeSeparatedPotential):
         return torch.pow(dist, -self.exponent)
 
     def from_dist_sq(self, dist_sq: torch.Tensor) -> torch.Tensor:
-        """Full :math:`1/r^p` potential as a function of :math:`r^2`.
+        """
+        Full :math:`1/r^p` potential as a function of :math:`r^2`.
 
         :param dist_sq: torch.tensor containing the squared distances at which the
             potential is to be evaluated.
@@ -131,7 +135,8 @@ class InversePowerLawPotential(RangeSeparatedPotential):
         return torch.pow(dist_sq, -self.exponent / 2.0)
 
     def sr_from_dist(self, dist: torch.Tensor) -> torch.Tensor:
-        r"""Short-range (SR) part of the range-separated :math:`1/r^p` potential.
+        r"""
+        Short-range (SR) part of the range-separated :math:`1/r^p` potential.
 
         More explicitly: it corresponds to `:math:`V_\mathrm{SR}(r)` in :math:`1/r^p =
         V_\mathrm{SR}(r) + V_\mathrm{LR}(r)`, where the location of the split is
@@ -150,12 +155,12 @@ class InversePowerLawPotential(RangeSeparatedPotential):
         x = 0.5 * dist**2 / self.smearing**2
         peff = exponent / 2
         prefac = 1.0 / (2 * self.smearing**2) ** peff
-        potential = prefac * gammaincc(peff, x) / x**peff
 
-        return potential
+        return prefac * gammaincc(peff, x) / x**peff
 
     def lr_from_dist(self, dist: torch.Tensor) -> torch.Tensor:
-        """LR part of the range-separated :math:`1/r^p` potential.
+        """
+        LR part of the range-separated :math:`1/r^p` potential.
 
         Used to subtract out the interior contributions after computing the LR part in
         reciprocal (Fourier) space.
@@ -174,11 +179,11 @@ class InversePowerLawPotential(RangeSeparatedPotential):
         x = 0.5 * dist**2 / self.smearing**2
         peff = exponent / 2
         prefac = 1.0 / (2 * self.smearing**2) ** peff
-        potential = prefac * gammainc(peff, x) / x**peff
-        return potential
+        return prefac * gammainc(peff, x) / x**peff
 
     def from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
-        """Fourier transform of the LR part potential in terms of :math:`k^2`.
+        """
+        Fourier transform of the LR part potential in terms of :math:`k^2`.
 
         If only the Coulomb potential is needed, the last line can be
         replaced by
@@ -208,9 +213,8 @@ class InversePowerLawPotential(RangeSeparatedPotential):
         # Fourier-transformed LR potential does not diverge as k->0, and one
         # could instead assign the correct limit. This is not implemented for now
         # for consistency reasons.
-        fourier = torch.where(
+        return torch.where(
             k_sq == 0,
             0.0,
             prefac * gammaincc(peff, x) / x**peff * gamma(peff),
         )
-        return fourier

@@ -1,4 +1,4 @@
-from typing import List, Tuple, Union
+from typing import Union
 
 import torch
 
@@ -6,7 +6,8 @@ from ..lib import InversePowerLawPotential
 
 
 class CalculatorBaseTorch(torch.nn.Module):
-    """Base calculator for the torch interface.
+    """
+    Base calculator for the torch interface.
 
     :param exponent: the exponent :math:`p` in :math:`1/r^p` potentials
     :param smearing: smearing parameter of a range separated potential
@@ -25,11 +26,8 @@ class CalculatorBaseTorch(torch.nn.Module):
 
         if exponent < 0.0 or exponent > 3.0:
             raise ValueError(f"`exponent` p={exponent} has to satisfy 0 < p <= 3")
-        else:
-            self.exponent = exponent
-            self.potential = InversePowerLawPotential(
-                exponent=exponent, smearing=smearing
-            )
+        self.exponent = exponent
+        self.potential = InversePowerLawPotential(exponent=exponent, smearing=smearing)
 
         self.full_neighbor_list = full_neighbor_list
 
@@ -41,7 +39,6 @@ class CalculatorBaseTorch(torch.nn.Module):
         neighbor_distances: torch.Tensor,
         subtract_interior: bool,
     ) -> torch.Tensor:
-
         if is_periodic:
             # If the contribution from all atoms within the cutoff is to be subtracted
             # this short-range part will simply use -V_LR as the potential
@@ -75,7 +72,8 @@ class CalculatorBaseTorch(torch.nn.Module):
     def estimate_smearing(
         cell: torch.Tensor,
     ) -> float:
-        """Estimate the smearing for ewald calculators.
+        """
+        Estimate the smearing for ewald calculators.
 
         :param cell: A 3x3 tensor representing the periodic system
         :returns: estimated smearing
@@ -95,19 +93,18 @@ class CalculatorBaseTorch(torch.nn.Module):
 
     @staticmethod
     def _validate_compute_parameters(
-        positions: Union[List[torch.Tensor], torch.Tensor],
-        charges: Union[List[torch.Tensor], torch.Tensor],
-        cell: Union[List[torch.Tensor], torch.Tensor],
-        neighbor_indices: Union[List[torch.Tensor], torch.Tensor],
-        neighbor_distances: Union[List[torch.Tensor], torch.Tensor],
-    ) -> Tuple[
-        List[torch.Tensor],
-        List[torch.Tensor],
-        List[torch.Tensor],
-        List[torch.Tensor],
-        List[torch.Tensor],
+        positions: Union[list[torch.Tensor], torch.Tensor],
+        charges: Union[list[torch.Tensor], torch.Tensor],
+        cell: Union[list[torch.Tensor], torch.Tensor],
+        neighbor_indices: Union[list[torch.Tensor], torch.Tensor],
+        neighbor_distances: Union[list[torch.Tensor], torch.Tensor],
+    ) -> tuple[
+        list[torch.Tensor],
+        list[torch.Tensor],
+        list[torch.Tensor],
+        list[torch.Tensor],
+        list[torch.Tensor],
     ]:
-
         # check that all inputs are of the same type
         for item, item_name in (
             (charges, "charges"),
@@ -283,7 +280,8 @@ class CalculatorBaseTorch(torch.nn.Module):
         neighbor_indices: torch.Tensor,
         neighbor_distances: torch.Tensor,
     ) -> torch.Tensor:
-        """Core method for calculations for an individual atomic structure.
+        """
+        Core method for calculations for an individual atomic structure.
 
         The actual logic has to be implemented in each calculator. Each calculators'
         main (user-facing) :py:meth:`forward` method then simply loops over all
@@ -293,13 +291,14 @@ class CalculatorBaseTorch(torch.nn.Module):
 
     def forward(
         self,
-        positions: Union[List[torch.Tensor], torch.Tensor],
-        charges: Union[List[torch.Tensor], torch.Tensor],
-        cell: Union[List[torch.Tensor], torch.Tensor],
-        neighbor_indices: Union[List[torch.Tensor], torch.Tensor],
-        neighbor_distances: Union[List[torch.Tensor], torch.Tensor],
-    ) -> Union[torch.Tensor, List[torch.Tensor]]:
-        """Compute potential for all provided "systems" stacked inside list.
+        positions: Union[list[torch.Tensor], torch.Tensor],
+        charges: Union[list[torch.Tensor], torch.Tensor],
+        cell: Union[list[torch.Tensor], torch.Tensor],
+        neighbor_indices: Union[list[torch.Tensor], torch.Tensor],
+        neighbor_distances: Union[list[torch.Tensor], torch.Tensor],
+    ) -> Union[torch.Tensor, list[torch.Tensor]]:
+        """
+        Compute potential for all provided "systems" stacked inside list.
 
         The computation is performed on the same ``device`` as ``dtype`` is the input is
         stored on. The ``dtype`` of the output tensors will be the same as the input.
@@ -375,5 +374,4 @@ class CalculatorBaseTorch(torch.nn.Module):
 
         if input_is_list:
             return potentials
-        else:
-            return potentials[0]
+        return potentials[0]
