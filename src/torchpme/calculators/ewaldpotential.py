@@ -297,7 +297,11 @@ def tune_ewald(
         if method == "fast":
             smearing = len(positions) ** (1 / 6) / 2**0.5 * 1.3
 
-            # TODO: add comment on how this factor is chosen
+            # The factor here and above (1.3) is chosen to achieve a balance between
+            # accuracy and speed, while also allowing the scaling being remained at
+            # :math:`\mathcal{O}(N^{3/2})`. The result is from the tests on the CsCl
+            # system, whose unit cell is repeated 16 times in each direction, resulting
+            # in a system of 8192 atoms.
             factor = 2.2
 
             return {
@@ -323,7 +327,9 @@ def tune_ewald(
     volume = torch.abs(cell.det())
 
     def smooth_lr_wavelength(lr_wavelength):
-        """TODO: why do we neeed this 'smoothing'?"""
+        """Confine to (0, min_dimension), ensuring that the ``ns``
+        parameter is not smaller than 1
+        (see :py:func:`_compute_lr` of :py:class:`EwaldPotential`)."""
         return min_dimension * torch.sigmoid(lr_wavelength)
 
     def err_Fourier(smearing, lr_wavelength):
