@@ -295,19 +295,20 @@ def tune_ewald(
 
     if accuracy is None:
         if method == "fast":
-            smearing = len(positions) ** (1 / 6) / 2**0.5 * 1.3
+            # The factors below are chosen to achieve an additional improved balance
+            # between accuracy and speed, while maintaining a N^3/2 scaling. The values
+            # result from tests on a CsCl system, whose unit cell is repeated 16 times
+            # in each direction, resulting in a system of 8192 atoms.
+            smearing_factor = 1.3
+            lr_wavelength_factor = 2.2
 
-            # The factor here and above (1.3) is chosen to achieve a balance between
-            # accuracy and speed, while also allowing the scaling being remained at
-            # :math:`\mathcal{O}(N^{3/2})`. The result is from the tests on the CsCl
-            # system, whose unit cell is repeated 16 times in each direction, resulting
-            # in a system of 8192 atoms.
-            factor = 2.2
+            smearing = smearing_factor * len(positions) ** (1 / 6) / 2**0.5
 
             return {
                 "atomic_smearing": smearing,
-                "lr_wavelength": 2 * torch.pi * smearing / factor,
-            }, smearing * factor
+                "lr_wavelength": 2 * torch.pi * smearing / lr_wavelength_factor,
+            }, smearing * lr_wavelength_factor
+
         if method == "medium":
             accuracy = 1e-3
         elif method == "accurate":
