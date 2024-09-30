@@ -1,4 +1,6 @@
-from typing import Optional, Union
+import math
+import warnings
+from typing import Literal, Optional, Union
 
 import torch
 
@@ -14,8 +16,8 @@ class EwaldPotential(CalculatorBaseTorch):
     Scaling as :math:`\mathcal{O}(N^2)` with respect to the number of particles
     :math:`N`.
 
-    For computing a **neighborlist** a reasonable ``cutoff`` is half the length of
-    the shortest cell vector, which can be for example computed according as
+    For computing a **neighborlist** a reasonable ``cutoff`` is half the length of the
+    shortest cell vector, which can be for example computed according as
 
     .. code-block:: python
 
@@ -24,10 +26,6 @@ class EwaldPotential(CalculatorBaseTorch):
 
     This ensures a accuracy of the short range part of ``1e-5``.
 
-    :param exponent: the exponent :math:`p` in :math:`1/r^p` potentials
-    :param full_neighbor_list: If set to :py:obj:`True`, a "full" neighbor list
-        is expected as input. This means that each atom pair appears twice. If
-        set to :py:obj:`False`, a "half" neighbor list is expected.
     :param atomic_smearing: Width of the atom-centered Gaussian used to split the
         Coulomb potential into the short- and long-range parts. A reasonable value for
         most systems is to set it to ``1/5`` times the neighbor list cutoff. If
@@ -38,19 +36,25 @@ class EwaldPotential(CalculatorBaseTorch):
         wavelength >= this value will be kept. If not set to a global value, it will be
         set to half the atomic_smearing parameter to ensure convergence of the
         long-range part to a relative precision of 1e-5.
+    :param exponent: the exponent :math:`p` in :math:`1/r^p` potentials
     :param subtract_interior: If set to :py:obj:`True`, subtract from the features of an
         atom the contributions to the potential arising from all atoms within the cutoff
         Note that if set to true, the self contribution (see previous) is also
         subtracted by default.
+    :param full_neighbor_list: If set to :py:obj:`True`, a "full" neighbor list is
+        expected as input. This means that each atom pair appears twice. If set to
+        :py:obj:`False`, a "half" neighbor list is expected.
 
-    For an **example** on the usage refer to :py:class:`PMEPotential`.
+    To tune the ``atomic_smearing`` and  ``lr_wavelength`` for a system you can use the
+    :py:func:`tune_pme` function. For an **example** on the calculator usage refer to
+    :py:class:`PMEPotential`.
     """
 
     def __init__(
         self,
+        atomic_smearing: Union[float, torch.Tensor],
+        lr_wavelength: float,
         exponent: float = 1.0,
-        atomic_smearing: Union[float, torch.Tensor, None] = None,
-        lr_wavelength: Optional[float] = None,
         subtract_interior: bool = False,
         full_neighbor_list: bool = False,
     ):
@@ -60,12 +64,15 @@ class EwaldPotential(CalculatorBaseTorch):
             full_neighbor_list=full_neighbor_list,
         )
 
-        self.lr_wavelength = lr_wavelength
         self.subtract_interior = subtract_interior
 
-        if atomic_smearing is not None and atomic_smearing <= 0:
+        if atomic_smearing <= 0:
             raise ValueError(f"`atomic_smearing` {atomic_smearing} has to be positive")
         self.atomic_smearing = atomic_smearing
+
+        if lr_wavelength <= 0:
+            raise ValueError(f"`lr_wavelength` {lr_wavelength} has to be positive")
+        self.lr_wavelength = lr_wavelength
 
     def _compute_single_system(
         self,
@@ -75,26 +82,6 @@ class EwaldPotential(CalculatorBaseTorch):
         neighbor_indices: torch.Tensor,
         neighbor_distances: torch.Tensor,
     ) -> torch.Tensor:
-        # Set the defaut values of convergence parameters
-        # The total computational cost = cost of SR part + cost of LR part
-        # Bigger smearing increases the cost of the SR part while decreasing the cost
-        # of the LR part. Since the latter usually is more expensive, we maximize the
-        # value of the smearing by default to minimize the cost of the LR part.
-        # The auxilary parameter lr_wavelength then control the
-        # convergence of the SR and LR sums, respectively. The default values are
-        # chosen to reach a convergence on the order of 1e-4 to 1e-5 for the test
-        # structures.
-        if self.atomic_smearing is None:
-            smearing = self.estimate_smearing(cell)
-        else:
-            smearing = self.atomic_smearing
-
-        # TODO streamline the flow of parameters
-        if self.lr_wavelength is None:
-            lr_wavelength = 0.5 * smearing
-        else:
-            lr_wavelength = self.lr_wavelength
-
         # Compute short-range (SR) part using a real space sum
         potential_sr = self._compute_sr(
             is_periodic=True,
@@ -109,8 +96,6 @@ class EwaldPotential(CalculatorBaseTorch):
             positions=positions,
             charges=charges,
             cell=cell,
-            smearing=smearing,
-            lr_wavelength=lr_wavelength,
         )
 
         return potential_sr + potential_lr
@@ -120,11 +105,9 @@ class EwaldPotential(CalculatorBaseTorch):
         positions: torch.Tensor,
         charges: torch.Tensor,
         cell: torch.Tensor,
-        smearing: float,
-        lr_wavelength: float,
     ) -> torch.Tensor:
         # Define k-space cutoff from required real-space resolution
-        k_cutoff = 2 * torch.pi / lr_wavelength
+        k_cutoff = 2 * torch.pi / self.lr_wavelength
 
         # Compute number of times each basis vector of the reciprocal space can be
         # scaled until the cutoff is reached
@@ -181,7 +164,9 @@ class EwaldPotential(CalculatorBaseTorch):
         # This contribution always should be subtracted since it depends on the smearing
         # parameter, which is purely a convergence parameter.
         phalf = self.exponent / 2
-        fill_value = 1 / gamma(torch.tensor(phalf + 1)) / (2 * smearing**2) ** phalf
+        fill_value = (
+            1 / gamma(torch.tensor(phalf + 1)) / (2 * self.atomic_smearing**2) ** phalf
+        )
         self_contrib = torch.full([], fill_value)
         energy -= charges * self_contrib
 
@@ -193,9 +178,212 @@ class EwaldPotential(CalculatorBaseTorch):
         # An extra factor of 2 is added to compensate for the division by 2 later on
         ivolume = torch.abs(cell.det()).pow(-1)
         charge_tot = torch.sum(charges, dim=0)
-        prefac = torch.pi**1.5 * (2 * smearing**2) ** ((3 - self.exponent) / 2)
+        prefac = torch.pi**1.5 * (2 * self.atomic_smearing**2) ** (
+            (3 - self.exponent) / 2
+        )
         prefac /= (3 - self.exponent) * gamma(torch.tensor(self.exponent / 2))
         energy -= 2 * prefac * charge_tot * ivolume
 
         # Compensate for double counting of pairs (i,j) and (j,i)
         return energy / 2
+
+
+def tune_ewald(
+    positions: torch.Tensor,
+    charges: torch.Tensor,
+    cell: torch.Tensor,
+    exponent: int = 1,
+    accuracy: Optional[Literal["fast", "medium", "accurate"] | float] = "fast",
+    max_steps: int = 50000,
+    learning_rate: float = 5e-2,
+    verbose: bool = False,
+) -> tuple[dict[str, float], float]:
+    r"""Find the optimal parameters for a single system for the ewald method.
+
+    For the error formulas are given `elsewhere <https://www2.icp.uni-stuttgart.de/~icp/mediawiki/images/4/4d/Script_Longrange_Interactions.pdf>`_.
+    Note the difference notation between the parameters in the reference and ours:
+
+    .. math::
+
+        \alpha &= \left( \sqrt{2}\,\mathrm{smearing} \right)^{-1}
+
+        K &= \frac{2 \pi}{\mathrm{lr\_wavelength}}
+
+        r_c &= \mathrm{cutoff}
+
+    :param positions: single tensor of shape (``len(charges), 3``) containing the
+        Cartesian positions of all point charges in the system.
+    :param charges: single tensor of shape (``1, len(positions))``.
+    :param cell: single tensor of shape (3, 3), describing the bounding
+    :param exponent: exponent :math:`p` in :math:`1/r^p` potentials
+    :param accuracy: Mode used to determine the optimal parameters. Possible values are
+        ``"fast"``, ``"medium"`` or ``"accurate"``. For ``"fast"`` the parameters are
+        set based on the number of atoms in the system to achieve a scaling of
+        :math:`\mathcal{O}(N^{3/2})`. For ``"medium"`` or ``"accurate"``, the parameters
+        are optimized using gradient descent until an estimated error of :math:`10^{-3}`
+        or :math:`10^{-6}` is reached.
+        Instead of ``"fast"``, ``"medium"`` or ``"accurate"``, you can give a float
+        value for the accuracy.
+    :param max_steps: maximum number of gradient descent steps
+    :param learning_rate: learning rate for gradient descent
+    :param verbose: whether to print the progress of gradient descent
+
+    :return: Tuple containing a dictionary with the parameters for
+        :py:class:`EwaldPotential` and a float of the optimal cutoff value for the
+        neighborlist computation.
+
+    Example
+    -------
+    >>> import torch
+    >>> from vesin.torch import NeighborList
+    >>> positions = torch.tensor(
+    ...     [[0.0, 0.0, 0.0], [0.5, 0.5, 0.5]], dtype=torch.float64
+    ... )
+    >>> charges = torch.tensor([[1.0], [-1.0]], dtype=torch.float64)
+    >>> cell = torch.eye(3, dtype=torch.float64)
+    >>> ewald_parameter, cutoff = tune_ewald(positions, charges, cell, accuracy="fast")
+
+    You can check the values of the parameters
+
+    >>> print(ewald_parameter)
+    {'atomic_smearing': 1.0318106837793297, 'lr_wavelength': 2.9468444218696392}
+
+    >>> print(cutoff)
+    2.2699835043145256
+
+    Which can be used to initilize an :py:class:`EwaldPotential` instance optimal for
+    the system.
+    """
+
+    if exponent != 1:
+        raise NotImplementedError("Only exponent = 1 is supported")
+
+    dtype = positions.dtype
+    device = positions.device
+
+    # Create valid dummy tensors to verify `positions`, `charges` and `cell`
+    neighbor_indices = torch.zeros(0, 2, device=device)
+    neighbor_distances = torch.zeros(0, device=device)
+    (
+        positions,
+        charges,
+        cell,
+        _,
+        _,
+    ) = CalculatorBaseTorch._validate_compute_parameters(
+        positions=positions,
+        charges=charges,
+        cell=cell,
+        neighbor_indices=neighbor_indices,
+        neighbor_distances=neighbor_distances,
+    )
+
+    positions = positions[0]
+    charges = charges[0]
+    cell = cell[0]
+
+    if charges.shape[1] > 1:
+        raise NotImplementedError(
+            f"Found {charges.shape[1]} charge channels, but only one iss supported"
+        )
+
+    if accuracy == "fast":
+        # The factors below are chosen to achieve an additional improved balance
+        # between accuracy and speed, while maintaining a N^3/2 scaling. The values
+        # result from tests on a CsCl system, whose unit cell is repeated 16 times
+        # in each direction, resulting in a system of 8192 atoms.
+        smearing_factor = 1.3
+        lr_wavelength_factor = 2.2
+
+        smearing = smearing_factor * len(positions) ** (1 / 6) / 2**0.5
+
+        return {
+            "atomic_smearing": smearing,
+            "lr_wavelength": 2 * torch.pi * smearing / lr_wavelength_factor,
+        }, smearing * lr_wavelength_factor
+
+    if accuracy == "medium":
+        accuracy = 1e-3
+    elif accuracy == "accurate":
+        accuracy = 1e-6
+    elif not isinstance(accuracy, float):
+        raise ValueError(
+            f"'{accuracy}' is not a valid method or a float: Choose from 'fast',"
+            f"'medium' or 'accurate', or provide a float for the accuracy."
+        )
+
+    cell_dimensions = torch.linalg.norm(cell, dim=1)
+    min_dimension = float(torch.min(cell_dimensions))
+    half_cell = float(torch.min(cell_dimensions) / 2)
+
+    smearing_init = CalculatorBaseTorch.estimate_smearing(cell)
+    prefac = 2 * torch.sum(charges**2) / math.sqrt(len(positions))
+    volume = torch.abs(cell.det())
+
+    def smooth_lr_wavelength(lr_wavelength):
+        """Confine to (0, min_dimension), ensuring that the ``ns``
+        parameter is not smaller than 1
+        (see :py:func:`_compute_lr` of :py:class:`EwaldPotential`)."""
+        return min_dimension * torch.sigmoid(lr_wavelength)
+
+    def err_Fourier(smearing, lr_wavelength):
+        return (
+            prefac**0.5
+            / smearing
+            / torch.sqrt(2 * torch.pi**2 * volume / lr_wavelength**0.5)
+            * torch.exp(-2 * torch.pi**2 * smearing**2 / lr_wavelength)
+        )
+
+    def err_real(smearing, cutoff):
+        return (
+            prefac
+            / torch.sqrt(cutoff * volume)
+            * torch.exp(-(cutoff**2) / 2 / smearing**2)
+        )
+
+    def loss(smearing, lr_wavelength, cutoff):
+        return torch.sqrt(
+            err_Fourier(smearing, lr_wavelength) ** 2 + err_real(smearing, cutoff) ** 2
+        )
+
+    # initial guess
+    smearing = torch.tensor(
+        smearing_init, device=device, dtype=dtype, requires_grad=True
+    )
+    lr_wavelength = torch.tensor(
+        half_cell, device=device, dtype=dtype, requires_grad=True
+    )
+    cutoff = torch.tensor(
+        half_cell / 10, device=device, dtype=dtype, requires_grad=True
+    )
+
+    optimizer = torch.optim.Adam([smearing, lr_wavelength, cutoff], lr=learning_rate)
+
+    for step in range(max_steps):
+        loss_value = loss(smearing, smooth_lr_wavelength(lr_wavelength), cutoff)
+        if torch.isnan(loss_value):
+            raise ValueError(
+                "The value of the estimated error is now nan, consider using a "
+                "smaller learning rate."
+            )
+        loss_value.backward()
+        optimizer.step()
+        optimizer.zero_grad()
+
+        if verbose and (step % 100 == 0):
+            print(f"{step}: {loss_value:.2e}")
+        if loss_value <= accuracy:
+            break
+
+    if loss_value > accuracy:
+        warnings.warn(
+            "The searching for the parameters is ended, but the error is "
+            f"{float(loss_value):.3e}, larger than the given accuracy {accuracy}. "
+            "Consider increase max_step and",
+            stacklevel=2,
+        )
+
+    return {
+        "atomic_smearing": float(smearing),
+        "lr_wavelength": float(smooth_lr_wavelength(lr_wavelength)),
+    }, float(cutoff)

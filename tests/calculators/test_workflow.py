@@ -62,19 +62,35 @@ class TestWorkflow:
             neighbor_distances.to(device=device),
         )
 
+    def test_atomic_smearing_non_positive(self, CalculatorClass, params):
+        params = params.copy()
+        match = r"`atomic_smearing` .* has to be positive"
+        if type(CalculatorClass) in [EwaldPotential, PMEPotential]:
+            params["atomic_smearing"] = 0
+            with pytest.raises(ValueError, match=match):
+                CalculatorClass(**params)
+            params["atomic_smearing"] = -0.1
+            with pytest.raises(ValueError, match=match):
+                CalculatorClass(**params)
+
     def test_interpolation_order_error(self, CalculatorClass, params):
+        params = params.copy()
         if type(CalculatorClass) in [PMEPotential]:
             match = "Only `interpolation_order` from 1 to 5"
+            params["interpolation_order"] = 10
             with pytest.raises(ValueError, match=match):
-                CalculatorClass(atomic_smearing=1, interpolation_order=10)
+                CalculatorClass(**params)
 
-    def test_atomic_smearing_non_positive(self, CalculatorClass, params):
-        if type(CalculatorClass) in [EwaldPotential, PMEPotential]:
-            match = r"`atomic_smearing` .* has to be positive"
+    def test_lr_wavelength_non_positive(self, CalculatorClass, params):
+        params = params.copy()
+        match = r"`lr_wavelength` .* has to be positive"
+        if type(CalculatorClass) in [EwaldPotential]:
+            params["lr_wavelength"] = 0
             with pytest.raises(ValueError, match=match):
-                CalculatorClass(atomic_smearing=0)
+                CalculatorClass(**params)
+            params["lr_wavelength"] = -0.1
             with pytest.raises(ValueError, match=match):
-                CalculatorClass(atomic_smearing=-0.1)
+                CalculatorClass(**params)
 
     def test_multi_frame(self, CalculatorClass, params):
         calculator = CalculatorClass(**params)

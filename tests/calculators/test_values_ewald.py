@@ -308,7 +308,10 @@ def test_madelung(crystal_name, scaling_factor, calc_name):
     if calc_name == "ewald":
         sr_cutoff = scaling_factor
         atomic_smearing = sr_cutoff / 5.0
-        calc = EwaldPotential(atomic_smearing=atomic_smearing)
+        lr_wavelength = 0.5 * atomic_smearing
+        calc = EwaldPotential(
+            atomic_smearing=atomic_smearing, lr_wavelength=lr_wavelength
+        )
         rtol = 4e-6
     elif calc_name == "pme":
         sr_cutoff = 2 * scaling_factor
@@ -383,9 +386,10 @@ def test_wigner(crystal_name, scaling_factor):
         elif crystal_name == "wigner_sc":
             smeareff = smearing
         smeareff *= scaling_factor
+        lr_wavelength = 0.5 * smeareff
 
         # Compute potential and compare against reference
-        calc = EwaldPotential(atomic_smearing=smeareff)
+        calc = EwaldPotential(atomic_smearing=smeareff, lr_wavelength=lr_wavelength)
         potentials = calc.forward(
             positions=positions,
             charges=charges,
@@ -453,8 +457,11 @@ def test_random_structure(
 
     # Compute potential using torch-pme and compare against reference values
     if calc_name == "ewald":
+        lr_wavelength = 0.5 * atomic_smearing
         calc = EwaldPotential(
-            atomic_smearing=atomic_smearing, full_neighbor_list=full_neighbor_list
+            atomic_smearing=atomic_smearing,
+            lr_wavelength=lr_wavelength,
+            full_neighbor_list=full_neighbor_list,
         )
         rtol_e = 2e-5
         rtol_f = 3.5e-3
