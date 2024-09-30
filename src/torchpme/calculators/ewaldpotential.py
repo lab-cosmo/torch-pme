@@ -46,7 +46,7 @@ class EwaldPotential(CalculatorBaseTorch):
         :py:obj:`False`, a "half" neighbor list is expected.
 
     To tune the ``atomic_smearing`` and  ``lr_wavelength`` for a system you can use the
-    :py:func:`tune_pme` function. For an **example** on the calculator usage refer to
+    :py:func:`tune_ewald` function. For an **example** on the calculator usage refer to
     :py:class:`PMEPotential`.
     """
 

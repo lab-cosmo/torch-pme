@@ -71,7 +71,9 @@ class CalculatorTestTorch(torchpme.calculators.base.CalculatorBaseTorch):
 class CalculatorTest(torchpme.metatensor.base.CalculatorBaseMetatensor):
     def __init__(self):
         super().__init__()
-        self.calculator = CalculatorTestTorch(exponent=1.0)
+        self.calculator = CalculatorTestTorch(
+            potential=torchpme.lib.InversePowerLawPotential(exponent=1.0, smearing=0.0)
+        )
 
 
 def test_compute_output_shapes_single(system, neighbors):
