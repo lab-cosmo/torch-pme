@@ -46,8 +46,7 @@ class EwaldPotential(CalculatorBaseMetatensor):
 def tune_ewald(
     system: System,
     exponent: int = 1,
-    method: Optional[Literal["fast", "medium", "accurate"]] = "fast",
-    accuracy: Optional[float] = None,
+    accuracy: Optional[Literal["fast", "medium", "accurate"] | float] = "fast",
     max_steps: int = 50000,
     learning_rate: float = 5e-2,
     verbose: bool = False,
@@ -62,7 +61,6 @@ def tune_ewald(
         charges=system.get_data("charges").values,
         cell=system.cell,
         exponent=exponent,
-        method=method,
         accuracy=accuracy,
         max_steps=max_steps,
         learning_rate=learning_rate,

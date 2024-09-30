@@ -193,8 +193,7 @@ def tune_ewald(
     charges: torch.Tensor,
     cell: torch.Tensor,
     exponent: int = 1,
-    method: Optional[Literal["fast", "medium", "accurate"]] = "fast",
-    accuracy: Optional[float] = None,
+    accuracy: Optional[Literal["fast", "medium", "accurate"] | float] = "fast",
     max_steps: int = 50000,
     learning_rate: float = 5e-2,
     verbose: bool = False,
@@ -217,14 +216,14 @@ def tune_ewald(
     :param charges: single tensor of shape (``1, len(positions))``.
     :param cell: single tensor of shape (3, 3), describing the bounding
     :param exponent: exponent :math:`p` in :math:`1/r^p` potentials
-    :param method: Mode used to determine the optimal parameters. Possible values are
+    :param accuracy: Mode used to determine the optimal parameters. Possible values are
         ``"fast"``, ``"medium"`` or ``"accurate"``. For ``"fast"`` the parameters are
         set based on the number of atoms in the system to achieve a scaling of
         :math:`\mathcal{O}(N^{3/2})`. For ``"medium"`` or ``"accurate"``, the parameters
         are optimized using gradient descent until an estimated error of :math:`10^{-3}`
         or :math:`10^{-6}` is reached.
-    :param accuracy: accuracy that should be achieved. If ``accuracy`` is set,
-        ``method`` will be ignored.
+        Instead of ``"fast"``, ``"medium"`` or ``"accurate"``, you can give a float
+        value for the accuracy.
     :param max_steps: maximum number of gradient descent steps
     :param learning_rate: learning rate for gradient descent
     :param verbose: whether to print the progress of gradient descent
@@ -242,7 +241,7 @@ def tune_ewald(
     ... )
     >>> charges = torch.tensor([[1.0], [-1.0]], dtype=torch.float64)
     >>> cell = torch.eye(3, dtype=torch.float64)
-    >>> ewald_parameter, cutoff = tune_ewald(positions, charges, cell, method="fast")
+    >>> ewald_parameter, cutoff = tune_ewald(positions, charges, cell, accuracy="fast")
 
     You can check the values of the parameters
 
@@ -288,36 +287,30 @@ def tune_ewald(
             f"Found {charges.shape[1]} charge channels, but only one iss supported"
         )
 
-    if method is not None and accuracy is not None:
-        warnings.warn("`method` is ignored if `accuracy` is set", stacklevel=2)
-    elif method is None and accuracy is None:
-        raise ValueError("either `method` or `accuracy` must be set")
+    if accuracy == "fast":
+        # The factors below are chosen to achieve an additional improved balance
+        # between accuracy and speed, while maintaining a N^3/2 scaling. The values
+        # result from tests on a CsCl system, whose unit cell is repeated 16 times
+        # in each direction, resulting in a system of 8192 atoms.
+        smearing_factor = 1.3
+        lr_wavelength_factor = 2.2
 
-    if accuracy is None:
-        if method == "fast":
-            # The factors below are chosen to achieve an additional improved balance
-            # between accuracy and speed, while maintaining a N^3/2 scaling. The values
-            # result from tests on a CsCl system, whose unit cell is repeated 16 times
-            # in each direction, resulting in a system of 8192 atoms.
-            smearing_factor = 1.3
-            lr_wavelength_factor = 2.2
+        smearing = smearing_factor * len(positions) ** (1 / 6) / 2**0.5
 
-            smearing = smearing_factor * len(positions) ** (1 / 6) / 2**0.5
+        return {
+            "atomic_smearing": smearing,
+            "lr_wavelength": 2 * torch.pi * smearing / lr_wavelength_factor,
+        }, smearing * lr_wavelength_factor
 
-            return {
-                "atomic_smearing": smearing,
-                "lr_wavelength": 2 * torch.pi * smearing / lr_wavelength_factor,
-            }, smearing * lr_wavelength_factor
-
-        if method == "medium":
-            accuracy = 1e-3
-        elif method == "accurate":
-            accuracy = 1e-6
-        else:
-            raise ValueError(
-                f"'{method}' is not a valid method: Choose from 'fast', 'medium' or "
-                "'accurate'"
-            )
+    if accuracy == "medium":
+        accuracy = 1e-3
+    elif accuracy == "accurate":
+        accuracy = 1e-6
+    elif not isinstance(accuracy, float):
+        raise ValueError(
+            f"'{accuracy}' is not a valid method or a float: Choose from 'fast',"
+            f"'medium' or 'accurate', or provide a float for the accuracy."
+        )
 
     cell_dimensions = torch.linalg.norm(cell, dim=1)
     min_dimension = float(torch.min(cell_dimensions))
