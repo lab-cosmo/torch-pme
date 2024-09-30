@@ -218,3 +218,102 @@ class InversePowerLawPotential(RangeSeparatedPotential):
             0.0,
             prefac * gammaincc(peff, x) / x**peff * gamma(peff),
         )
+
+class CoulombPotential(RangeSeparatedPotential):
+    """
+    Smoothed electrostatic Coulomb potential :math:`1/r`.
+
+    Herem :math:`r` is the inter-particle distance
+
+    It can be used to compute:
+
+    1. the full :math:`1/r` potential
+    2. its short-range (SR) and long-range (LR) parts, the split being determined by a
+       length-scale parameter (called "smearing" in the code)
+    3. the Fourier transform of the LR part
+
+    :param smearing: float or torch.Tensor containing the parameter often called "sigma"
+        in publications, which determines the length-scale at which the short-range and
+        long-range parts of the naive :math:`1/r` potential are separated. The
+        smearing parameter corresponds to the "width" of a Gaussian smearing of
+        the particle density.
+    """
+
+    def __init__(
+        self,
+        smearing: Union[float, torch.Tensor],
+    ):
+        super().__init__()
+        self.smearing = smearing
+
+    def from_dist(self, dist: torch.Tensor) -> torch.Tensor:
+        """
+        Full :math:`1/r` potential as a function of :math:`r`.
+
+        :param dist: torch.tensor containing the distances at which the potential is to
+            be evaluated.
+        """
+        return 1.0/dist
+
+    def from_dist_sq(self, dist_sq: torch.Tensor) -> torch.Tensor:
+        """
+        Full :math:`1/r^p` potential as a function of :math:`r^2`.
+
+        :param dist_sq: torch.tensor containing the squared distances at which the
+            potential is to be evaluated.
+        """
+        return torch.rsqrt(dist_sq)
+
+    def sr_from_dist(self, dist: torch.Tensor) -> torch.Tensor:
+        r"""
+        Short-range (SR) part of the range-separated :math:`1/r` potential.
+
+        More explicitly: it corresponds to `:math:`V_\mathrm{SR}(r)` in :math:`1/r^p =
+        V_\mathrm{SR}(r) + V_\mathrm{LR}(r)`, where the location of the split is
+        determined by the smearing parameter.
+
+        For the Coulomb potential, this would return
+
+        .. code-block:: python
+
+            potential = torch.erfc(dist / torch.sqrt(2.0) / smearing) / dist
+
+        :param dist: torch.tensor containing the distances at which the potential is to
+            be evaluated.
+        """
+
+        return torch.erfc(dist / torch.sqrt(2.0) / self.smearing) / dist
+
+    def lr_from_dist(self, dist: torch.Tensor) -> torch.Tensor:
+        """
+        LR part of the range-separated :math:`1/r` potential.
+
+        Used to subtract out the interior contributions after computing the LR part in
+        reciprocal (Fourier) space.
+
+        :param dist: torch.tensor containing the distances at which the potential is to
+            be evaluated.
+        """
+
+        return torch.erf(dist / torch.sqrt(2.0) / self.smearing) / dist
+
+    def from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
+        """
+        Fourier transform of the LR part potential in terms of :math:`k^2`.
+
+        :param k_sq: torch.tensor containing the squared lengths (2-norms) of the wave
+            vectors k at which the Fourier-transformed potential is to be evaluated
+        """
+
+        # The k=0 term often needs to be set separately since for exponents p<=3
+        # dimension, there is a divergence to +infinity. Setting this value manually
+        # to zero physically corresponds to the addition of a uniform background charge
+        # to make the system charge-neutral. For p>3, on the other hand, the
+        # Fourier-transformed LR potential does not diverge as k->0, and one
+        # could instead assign the correct limit. This is not implemented for now
+        # for consistency reasons.
+        return torch.where(
+            k_sq == 0,
+            0.0,
+            4 * torch.pi * torch.exp(-0.5 * self.smearing**2 * k_sq) / k_sq,
+        )
