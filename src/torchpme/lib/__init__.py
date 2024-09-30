@@ -5,7 +5,11 @@ from .kvectors import (
     get_ns_mesh,
 )
 from .mesh_interpolator import MeshInterpolator
-from .potentials import InversePowerLawPotential
+from .potentials import (
+    CoulombPotential,
+    InversePowerLawPotential,
+    RangeSeparatedPotential,
+)
 
 __all__ = [
     "all_neighbor_indices",
@@ -13,7 +17,9 @@ __all__ = [
     "KSpaceFilter",
     "KSpaceKernel",
     "MeshInterpolator",
+    "RangeSeparatedPotential",
     "InversePowerLawPotential",
+    "CoulombPotential",
     "get_ns_mesh",
     "generate_kvectors_for_mesh",
     "generate_kvectors_for_ewald",

@@ -113,6 +113,8 @@ class InversePowerLawPotential(RangeSeparatedPotential):
         smearing: Union[float, torch.Tensor],
     ):
         super().__init__()
+        if exponent <= 0 or exponent > 3:
+            raise ValueError(f"`exponent` p={exponent} has to satisfy 0 < p <= 3")
         self.exponent = exponent
         self.smearing = smearing
 
@@ -219,6 +221,7 @@ class InversePowerLawPotential(RangeSeparatedPotential):
             prefac * gammaincc(peff, x) / x**peff * gamma(peff),
         )
 
+
 class CoulombPotential(RangeSeparatedPotential):
     """
     Smoothed electrostatic Coulomb potential :math:`1/r`.
@@ -245,6 +248,7 @@ class CoulombPotential(RangeSeparatedPotential):
     ):
         super().__init__()
         self.smearing = smearing
+        self._rsqrt2 = torch.rsqrt(torch.tensor([2.0]))
 
     def from_dist(self, dist: torch.Tensor) -> torch.Tensor:
         """
@@ -253,7 +257,7 @@ class CoulombPotential(RangeSeparatedPotential):
         :param dist: torch.tensor containing the distances at which the potential is to
             be evaluated.
         """
-        return 1.0/dist
+        return 1.0 / dist
 
     def from_dist_sq(self, dist_sq: torch.Tensor) -> torch.Tensor:
         """
@@ -282,7 +286,7 @@ class CoulombPotential(RangeSeparatedPotential):
             be evaluated.
         """
 
-        return torch.erfc(dist / torch.sqrt(2.0) / self.smearing) / dist
+        return torch.erfc(dist * (self._rsqrt2 / self.smearing)) / dist
 
     def lr_from_dist(self, dist: torch.Tensor) -> torch.Tensor:
         """
@@ -295,7 +299,7 @@ class CoulombPotential(RangeSeparatedPotential):
             be evaluated.
         """
 
-        return torch.erf(dist / torch.sqrt(2.0) / self.smearing) / dist
+        return torch.erf(dist * (self._rsqrt2 / self.smearing)) / dist
 
     def from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
         """

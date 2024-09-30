@@ -1,5 +1,6 @@
 import torch
 
+from ..lib import InversePowerLawPotential
 from .base import CalculatorBaseTorch
 
 
@@ -70,7 +71,8 @@ class DirectPotential(CalculatorBaseTorch):
         # Use a dummy value for the smearing. We don't use the methods for smeared
         # potentials in a direct potential.
         super().__init__(
-            exponent=exponent, smearing=0.0, full_neighbor_list=full_neighbor_list
+            potential=InversePowerLawPotential(exponent=exponent, smearing=0.0),
+            full_neighbor_list=full_neighbor_list,
         )
 
     def _compute_single_system(

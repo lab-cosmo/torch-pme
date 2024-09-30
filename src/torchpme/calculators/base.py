@@ -2,7 +2,7 @@ from typing import Union
 
 import torch
 
-from ..lib import InversePowerLawPotential
+from ..lib import RangeSeparatedPotential
 
 
 class CalculatorBaseTorch(torch.nn.Module):
@@ -15,8 +15,7 @@ class CalculatorBaseTorch(torch.nn.Module):
 
     def __init__(
         self,
-        exponent: float,
-        smearing: Union[float, torch.Tensor] = None,
+        potential: RangeSeparatedPotential,
         full_neighbor_list: bool = False,
     ):
         super().__init__()
@@ -24,10 +23,7 @@ class CalculatorBaseTorch(torch.nn.Module):
         self._device = torch.device("cpu")
         self._dtype = torch.float32
 
-        if exponent < 0.0 or exponent > 3.0:
-            raise ValueError(f"`exponent` p={exponent} has to satisfy 0 < p <= 3")
-        self.exponent = exponent
-        self.potential = InversePowerLawPotential(exponent=exponent, smearing=smearing)
+        self.potential = potential
 
         self.full_neighbor_list = full_neighbor_list
 

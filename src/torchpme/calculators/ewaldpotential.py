@@ -5,7 +5,7 @@ from typing import Literal, Optional, Union
 import torch
 
 from ..lib import generate_kvectors_for_ewald
-from ..lib.potentials import gamma
+from ..lib.potentials import InversePowerLawPotential, gamma
 from .base import CalculatorBaseTorch
 
 
@@ -59,8 +59,7 @@ class EwaldPotential(CalculatorBaseTorch):
         full_neighbor_list: bool = False,
     ):
         super().__init__(
-            exponent=exponent,
-            smearing=atomic_smearing,
+            potential=InversePowerLawPotential(exponent, atomic_smearing),
             full_neighbor_list=full_neighbor_list,
         )
 
@@ -126,6 +125,7 @@ class EwaldPotential(CalculatorBaseTorch):
         # value to be equal to zero. This mathematically corresponds
         # to the requirement that the net charge of the cell is zero.
         # G = 4 * torch.pi * torch.exp(-0.5 * smearing**2 * knorm_sq) / knorm_sq
+        self.potential.smearing = smearing
         G = self.potential.from_k_sq(knorm_sq)
 
         # Compute the energy using the explicit method that
@@ -163,10 +163,10 @@ class EwaldPotential(CalculatorBaseTorch):
         # Gaussian charge density in order to split the potential into a SR and LR part.
         # This contribution always should be subtracted since it depends on the smearing
         # parameter, which is purely a convergence parameter.
-        phalf = self.exponent / 2
-        fill_value = (
-            1 / gamma(torch.tensor(phalf + 1)) / (2 * self.atomic_smearing**2) ** phalf
-        )
+        exponent = self.potential.exponent
+        smearing = self.atomic_smearing
+        phalf = exponent / 2
+        fill_value = 1 / gamma(torch.tensor(phalf + 1)) / (2 * smearing**2) ** phalf
         self_contrib = torch.full([], fill_value)
         energy -= charges * self_contrib
 
@@ -178,10 +178,8 @@ class EwaldPotential(CalculatorBaseTorch):
         # An extra factor of 2 is added to compensate for the division by 2 later on
         ivolume = torch.abs(cell.det()).pow(-1)
         charge_tot = torch.sum(charges, dim=0)
-        prefac = torch.pi**1.5 * (2 * self.atomic_smearing**2) ** (
-            (3 - self.exponent) / 2
-        )
-        prefac /= (3 - self.exponent) * gamma(torch.tensor(self.exponent / 2))
+        prefac = torch.pi**1.5 * (2 * smearing**2) ** ((3 - exponent) / 2)
+        prefac /= (3 - exponent) * gamma(torch.tensor(exponent / 2))
         energy -= 2 * prefac * charge_tot * ivolume
 
         # Compensate for double counting of pairs (i,j) and (j,i)

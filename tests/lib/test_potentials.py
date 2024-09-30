@@ -4,7 +4,7 @@ from scipy.special import expi
 from torch.special import erf, erfc
 from torch.testing import assert_close
 
-from torchpme.lib import InversePowerLawPotential
+from torchpme.lib import CoulombPotential, InversePowerLawPotential
 
 
 def gamma(x):
@@ -218,3 +218,38 @@ def test_lr_value_at_zero(exponent, smearing):
     exact_value = 1.0 / (2 * smearing**2) ** (exponent / 2) / gamma(exponent / 2 + 1.0)
     relerr = torch.abs(potential_close_to_zero - exact_value) / exact_value
     assert relerr.item() < 3e-14
+
+
+@pytest.mark.parametrize("smearing", smearings)
+def test_inverserp_coulomb(smearing):
+    """Check that an explicit Coulomb potential
+    matches the 1/r^p implementation with p=1."""
+
+    # Compute LR part of Coulomb potential using the potentials class working for any
+    # exponent
+    ipl = InversePowerLawPotential(exponent=1.0, smearing=smearing)
+    coul = CoulombPotential(smearing=smearing)
+
+    ipl_from_dist = ipl.from_dist(dists)
+    ipl_from_dist_sq = ipl.from_dist_sq(dists_sq)
+    ipl_sr_from_dist = ipl.sr_from_dist(dists)
+    ipl_lr_from_dist = ipl.lr_from_dist(dists_sq)
+    ipl_fourier = ipl.from_k_sq(ks_sq)
+
+    coul_from_dist = coul.from_dist(dists)
+    coul_from_dist_sq = coul.from_dist_sq(dists_sq)
+    coul_sr_from_dist = coul.sr_from_dist(dists)
+    coul_lr_from_dist = coul.lr_from_dist(dists_sq)
+    coul_fourier = coul.from_k_sq(ks_sq)
+
+    # Test agreement between generic and specialized implementations
+    atol = 3e-16
+    rtol = 2 * machine_epsilon
+    assert_close(ipl_from_dist, coul_from_dist, rtol=rtol, atol=atol)
+    assert_close(ipl_from_dist_sq, coul_from_dist_sq, rtol=rtol, atol=atol)
+
+    atol = 3e-8
+    rtol = 2 * machine_epsilon
+    assert_close(ipl_sr_from_dist, coul_sr_from_dist, rtol=rtol, atol=atol)
+    assert_close(ipl_lr_from_dist, coul_lr_from_dist, rtol=rtol, atol=atol)
+    assert_close(ipl_fourier, coul_fourier, rtol=rtol, atol=atol)

@@ -5,7 +5,7 @@ import torch
 from ..lib.kspace_filter import KSpaceFilter
 from ..lib.kvectors import get_ns_mesh
 from ..lib.mesh_interpolator import MeshInterpolator
-from ..lib.potentials import gamma
+from ..lib.potentials import InversePowerLawPotential, gamma
 from .base import CalculatorBaseTorch
 
 
@@ -104,8 +104,10 @@ class PMEPotential(CalculatorBaseTorch):
         full_neighbor_list: bool = False,
     ):
         super().__init__(
-            exponent=exponent,
-            smearing=atomic_smearing,
+            potential=InversePowerLawPotential(
+                exponent=exponent,
+                smearing=atomic_smearing,
+            ),
             full_neighbor_list=full_neighbor_list,
         )
 
@@ -216,7 +218,8 @@ class PMEPotential(CalculatorBaseTorch):
         # Gaussian charge density in order to split the potential into a SR and LR part.
         # This contribution always should be subtracted since it depends on the smearing
         # parameter, which is purely a convergence parameter.
-        phalf = self.exponent / 2
+        exponent = self.potential.exponent
+        phalf = exponent / 2
         fill_value = 1 / gamma(torch.tensor(phalf + 1)) / (2 * smearing**2) ** phalf
         self_contrib = torch.full([], fill_value, device=self._device)
         interpolated_potential -= charges * self_contrib
@@ -228,8 +231,8 @@ class PMEPotential(CalculatorBaseTorch):
         # adjusted to compensate for this.
         # An extra factor of 2 is added to compensate for the division by 2 later on
         charge_tot = torch.sum(charges, dim=0)
-        prefac = torch.pi**1.5 * (2 * smearing**2) ** ((3 - self.exponent) / 2)
-        prefac /= (3 - self.exponent) * gamma(torch.tensor(self.exponent / 2))
+        prefac = torch.pi**1.5 * (2 * smearing**2) ** ((3 - exponent) / 2)
+        prefac /= (3 - exponent) * gamma(torch.tensor(exponent / 2))
         interpolated_potential -= 2 * prefac * charge_tot * ivolume
 
         # Compensate for double counting of pairs (i,j) and (j,i)
