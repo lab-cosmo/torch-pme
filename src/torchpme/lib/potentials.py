@@ -113,8 +113,8 @@ class InversePowerLawPotential(RangeSeparatedPotential):
         smearing: Union[float, torch.Tensor],
     ):
         super().__init__()
-        if exponent <= 0 or exponent > 3:
-            raise ValueError(f"`exponent` p={exponent} has to satisfy 0 < p <= 3")
+        # if exponent <= 0 or exponent > 3:
+        #    raise ValueError(f"`exponent` p={exponent} has to satisfy 0 < p <= 3")
         self.exponent = exponent
         self.smearing = smearing
 

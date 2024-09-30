@@ -125,7 +125,6 @@ class EwaldPotential(CalculatorBaseTorch):
         # value to be equal to zero. This mathematically corresponds
         # to the requirement that the net charge of the cell is zero.
         # G = 4 * torch.pi * torch.exp(-0.5 * smearing**2 * knorm_sq) / knorm_sq
-        self.potential.smearing = smearing
         G = self.potential.from_k_sq(knorm_sq)
 
         # Compute the energy using the explicit method that
