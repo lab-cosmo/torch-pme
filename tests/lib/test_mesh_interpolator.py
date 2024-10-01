@@ -38,7 +38,8 @@ class TestMeshInterpolatorForward:
         ns_mesh = torch.tensor([n_mesh, n_mesh, n_mesh])
 
         # Run interpolation
-        interpolator = MeshInterpolator(cell=cell, ns_mesh=ns_mesh, order=order)
+        interpolator = MeshInterpolator(order=order).to(cell.device, cell.dtype)
+        interpolator.update_mesh(cell=cell, ns_mesh=ns_mesh)
         interpolator.compute_weights(positions)
         mesh_values = interpolator.points_to_mesh(particle_weights)
 
@@ -70,9 +71,10 @@ class TestMeshInterpolatorForward:
         ns_mesh = torch.randint(11, 18, size=(3,))
 
         # Run interpolation
-        inetrpolator = MeshInterpolator(cell=cell, ns_mesh=ns_mesh, order=order)
-        inetrpolator.compute_weights(positions)
-        mesh_values = inetrpolator.points_to_mesh(particle_weights)
+        interpolator = MeshInterpolator(order=order).to(cell.device, cell.dtype)
+        interpolator.update_mesh(cell=cell, ns_mesh=ns_mesh)
+        interpolator.compute_weights(positions)
+        mesh_values = interpolator.points_to_mesh(particle_weights)
 
         # Compare total "weight (charge)" on the mesh with the sum of the particle
         # contributions
@@ -108,9 +110,10 @@ class TestMeshInterpolatorForward:
         ns_mesh = torch.tensor([n_mesh, n_mesh, n_mesh])
 
         # Perform interpolation
-        inetrpolator = MeshInterpolator(cell=cell, ns_mesh=ns_mesh, order=order)
-        inetrpolator.compute_weights(positions)
-        mesh_values = inetrpolator.points_to_mesh(particle_weights)
+        interpolator = MeshInterpolator(order=order).to(cell.device, cell.dtype)
+        interpolator.update_mesh(cell=cell, ns_mesh=ns_mesh)
+        interpolator.compute_weights(positions)
+        mesh_values = interpolator.points_to_mesh(particle_weights)
 
         # Recover the interpolated values at the atomic positions
         indices_x = indices[0]
@@ -161,7 +164,8 @@ class TestMeshInterpolatorBackward:
 
         # Smear particles onto mesh and interpolate back onto
         # their own positions.
-        interpolator = MeshInterpolator(cell=cell, ns_mesh=ns_mesh, order=1)
+        interpolator = MeshInterpolator(order=1).to(cell.device, cell.dtype)
+        interpolator.update_mesh(cell=cell, ns_mesh=ns_mesh)
         interpolator.compute_weights(positions)
         mesh_values = interpolator.points_to_mesh(particle_weights)
         interpolated_values = interpolator.mesh_to_points(mesh_values)
@@ -198,7 +202,8 @@ class TestMeshInterpolatorBackward:
 
         # Smear particles onto mesh and interpolate back onto
         # their own positions.
-        interpolator = MeshInterpolator(cell=cell, ns_mesh=ns_mesh, order=2)
+        interpolator = MeshInterpolator(order=2).to(cell.device, cell.dtype)
+        interpolator.update_mesh(cell=cell, ns_mesh=ns_mesh)
         interpolator.compute_weights(positions)
         mesh_values = interpolator.points_to_mesh(particle_weights)
         interpolated_values = interpolator.mesh_to_points(mesh_values)
@@ -244,7 +249,8 @@ class TestMeshInterpolatorBackward:
         positions = (ax * nxs + ay * nys + az * nzs).T
 
         # Generate mesh with random values and interpolate
-        interpolator = MeshInterpolator(cell=cell, ns_mesh=ns_mesh, order=order)
+        interpolator = MeshInterpolator(order=order).to(cell.device, cell.dtype)
+        interpolator.update_mesh(cell=cell, ns_mesh=ns_mesh)
         interpolator.compute_weights(positions)
         mesh_values = torch.randn(size=(n_channels, nx, ny, nz)) * 3.0 + 9.3
         interpolated_values = interpolator.mesh_to_points(mesh_values)
@@ -280,7 +286,8 @@ class TestMeshInterpolatorBackward:
         weights.requires_grad_(True)
         positions.requires_grad_(True)
 
-        interpolator = MeshInterpolator(cell=cell, ns_mesh=ns_mesh, order=order)
+        interpolator = MeshInterpolator(order=order).to(cell.device, cell.dtype)
+        interpolator.update_mesh(cell=cell, ns_mesh=ns_mesh)
 
         interpolator.compute_weights(positions)
         mesh_values = interpolator.points_to_mesh(weights)
@@ -307,7 +314,8 @@ def test_cell_wrong_shape():
     match = "cell of shape \\[2, 3\\] should be of shape \\(3, 3\\)"
 
     with pytest.raises(ValueError, match=match):
-        MeshInterpolator(cell, ns_mesh, order)
+        interpolator = MeshInterpolator(order=order).to(cell.device, cell.dtype)
+        interpolator.update_mesh(cell=cell, ns_mesh=ns_mesh)
 
 
 def test_ns_mesh_wrong_shape():
@@ -317,7 +325,8 @@ def test_ns_mesh_wrong_shape():
     match = "shape \\[2\\] of `ns_mesh` has to be \\(3,\\)"
 
     with pytest.raises(ValueError, match=match):
-        MeshInterpolator(cell, ns_mesh, order)
+        interpolator = MeshInterpolator(order=order).to(cell.device, cell.dtype)
+        interpolator.update_mesh(cell=cell, ns_mesh=ns_mesh)
 
 
 def test_order_not_allowed():
@@ -327,14 +336,16 @@ def test_order_not_allowed():
     match = "Only `order` from 1 to 5 are allowed"
 
     with pytest.raises(ValueError, match=match):
-        MeshInterpolator(cell, ns_mesh, order)
+        interpolator = MeshInterpolator(order=order).to(cell.device, cell.dtype)
+        interpolator.update_mesh(cell=cell, ns_mesh=ns_mesh)
 
 
 def test_order_not_allowed_private():
     cell = torch.eye(3)
     ns_mesh = torch.tensor([2, 2, 2])
 
-    interpolator = MeshInterpolator(cell, ns_mesh, order=5)
+    interpolator = MeshInterpolator(order=5).to(cell.device, cell.dtype)
+    interpolator.update_mesh(cell=cell, ns_mesh=ns_mesh)
     interpolator.order = 6  # not allowed
     match = "Only `order` from 1 to 5 are allowed"
 
@@ -349,7 +360,8 @@ def test_different_devices_cell_ns_mesh():
     match = "`cell` and `ns_mesh` are on different devices, got cpu and meta"
 
     with pytest.raises(ValueError, match=match):
-        MeshInterpolator(cell, ns_mesh, order)
+        interpolator = MeshInterpolator(order=order).to(cell.device, cell.dtype)
+        interpolator.update_mesh(cell=cell, ns_mesh=ns_mesh)
 
 
 @pytest.fixture
@@ -357,13 +369,15 @@ def mesh_interpolator():
     cell = torch.eye(3)
     ns_mesh = torch.tensor([2, 2, 2])
     order = 3
-    return MeshInterpolator(cell, ns_mesh, order)
-
+    interpolator = MeshInterpolator(order=order).to(cell.device, cell.dtype)
+    interpolator.update_mesh(cell=cell, ns_mesh=ns_mesh)
+    return interpolator
 
 def test_mexh_xyz_edge():
     cell = torch.normal(mean=1, std=1, size=(3, 3))
-    mesh_interpolator = MeshInterpolator(cell, torch.tensor([2, 2, 2]), 3)
-    xyz = mesh_interpolator.get_mesh_xyz()
+    interpolator = MeshInterpolator(order=3).to(cell.device, cell.dtype)
+    interpolator.update_mesh(cell=cell, ns_mesh=torch.tensor([2, 2, 2]))
+    xyz = interpolator.get_mesh_xyz()
 
     torch.testing.assert_close(xyz[1, 1, 1], cell.sum(axis=0) / 2, rtol=1e-5, atol=1e-6)
 

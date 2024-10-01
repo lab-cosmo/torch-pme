@@ -54,8 +54,10 @@ class TestFilter:
     mykernel = TestKernel.DemoKernel(1.0)
     myfilter1 = KSpaceFilter(cell1, ns1, mykernel)
     myfilter2 = KSpaceFilter(cell2, ns2, mykernel)
-    mymesh1 = MeshInterpolator(cell1, ns1, 3)
-    mymesh2 = MeshInterpolator(cell2, ns2, 3)
+    mymesh1 = MeshInterpolator(order=3).to(cell1.device, cell1.dtype)
+    mymesh1.update_mesh(cell=cell1, ns_mesh=ns1)
+    mymesh2 = MeshInterpolator(order=3).to(cell2.device, cell2.dtype)
+    mymesh2.update_mesh(cell=cell2, ns_mesh=ns2)
     points = torch.tensor([[1.0, 2, 3], [0, 1, 1]])
     weights = torch.tensor([[-0.1], [0.4]])
 

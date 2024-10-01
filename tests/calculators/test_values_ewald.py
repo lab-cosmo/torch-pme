@@ -10,6 +10,7 @@ from ase.io import read
 from utils import neighbor_list_torch
 
 from torchpme import EwaldPotential, PMEPotential
+from torchpme.lib.mesh_interpolator import MeshInterpolator
 
 DTYPE = torch.float64
 
@@ -316,7 +317,8 @@ def test_madelung(crystal_name, scaling_factor, calc_name):
     elif calc_name == "pme":
         sr_cutoff = 2 * scaling_factor
         atomic_smearing = sr_cutoff / 5.0
-        calc = PMEPotential(atomic_smearing=atomic_smearing)
+        interpolator = interpolator = MeshInterpolator().to(cell.device, cell.dtype)
+        calc = PMEPotential(interpolator, atomic_smearing=atomic_smearing)
         rtol = 9e-4
 
     # Compute neighbor list
@@ -466,8 +468,9 @@ def test_random_structure(
         rtol_e = 2e-5
         rtol_f = 3.5e-3
     elif calc_name == "pme":
+        interpolator = MeshInterpolator().to(cell.device, cell.dtype)
         calc = PMEPotential(
-            atomic_smearing=atomic_smearing, full_neighbor_list=full_neighbor_list
+            interpolator, atomic_smearing=atomic_smearing, full_neighbor_list=full_neighbor_list
         )
         rtol_e = 4.5e-3
         rtol_f = 3.5e-3
