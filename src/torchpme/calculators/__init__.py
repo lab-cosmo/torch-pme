@@ -1,5 +1,12 @@
+from .base import estimate_smearing
 from .directpotential import DirectPotential
 from .ewaldpotential import EwaldPotential, tune_ewald
 from .pmepotential import PMEPotential
 
-__all__ = ["EwaldPotential", "DirectPotential", "PMEPotential", "tune_ewald"]
+__all__ = [
+    "EwaldPotential",
+    "DirectPotential",
+    "PMEPotential",
+    "tune_ewald",
+    "estimate_smearing",
+]

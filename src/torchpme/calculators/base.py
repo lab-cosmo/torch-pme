@@ -65,29 +65,6 @@ class CalculatorBaseTorch(torch.nn.Module):
         return potential / 2
 
     @staticmethod
-    def estimate_smearing(
-        cell: torch.Tensor,
-    ) -> float:
-        """
-        Estimate the smearing for ewald calculators.
-
-        :param cell: A 3x3 tensor representing the periodic system
-        :returns: estimated smearing
-        """
-        if torch.equal(
-            cell.det(), torch.full([], 0, dtype=cell.dtype, device=cell.device)
-        ):
-            raise ValueError(
-                "provided `cell` has a determinant of 0 and therefore is not valid "
-                "for periodic calculation"
-            )
-
-        cell_dimensions = torch.linalg.norm(cell, dim=1)
-        max_cutoff = torch.min(cell_dimensions) / 2 - 1e-6
-
-        return max_cutoff.item() / 5.0
-
-    @staticmethod
     def _validate_compute_parameters(
         positions: Union[list[torch.Tensor], torch.Tensor],
         charges: Union[list[torch.Tensor], torch.Tensor],
@@ -371,3 +348,24 @@ class CalculatorBaseTorch(torch.nn.Module):
         if input_is_list:
             return potentials
         return potentials[0]
+
+
+def estimate_smearing(
+    cell: torch.Tensor,
+) -> float:
+    """
+    Estimate the smearing for ewald calculators.
+
+    :param cell: A 3x3 tensor representing the periodic system
+    :returns: estimated smearing
+    """
+    if torch.equal(cell.det(), torch.full([], 0, dtype=cell.dtype, device=cell.device)):
+        raise ValueError(
+            "provided `cell` has a determinant of 0 and therefore is not valid "
+            "for periodic calculation"
+        )
+
+    cell_dimensions = torch.linalg.norm(cell, dim=1)
+    max_cutoff = torch.min(cell_dimensions) / 2 - 1e-6
+
+    return max_cutoff.item() / 5.0

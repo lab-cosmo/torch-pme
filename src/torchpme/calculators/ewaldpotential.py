@@ -6,7 +6,7 @@ import torch
 
 from ..lib import generate_kvectors_for_ewald
 from ..lib.potentials import InversePowerLawPotential, gamma
-from .base import CalculatorBaseTorch
+from .base import CalculatorBaseTorch, estimate_smearing
 
 
 class EwaldPotential(CalculatorBaseTorch):
@@ -313,7 +313,7 @@ def tune_ewald(
     min_dimension = float(torch.min(cell_dimensions))
     half_cell = float(torch.min(cell_dimensions) / 2)
 
-    smearing_init = CalculatorBaseTorch.estimate_smearing(cell)
+    smearing_init = estimate_smearing(cell)
     prefac = 2 * torch.sum(charges**2) / math.sqrt(len(positions))
     volume = torch.abs(cell.det())
 

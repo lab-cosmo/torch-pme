@@ -6,7 +6,7 @@ from ..lib.kspace_filter import KSpaceFilter
 from ..lib.kvectors import get_ns_mesh
 from ..lib.mesh_interpolator import MeshInterpolator
 from ..lib.potentials import InversePowerLawPotential, gamma
-from .base import CalculatorBaseTorch
+from .base import CalculatorBaseTorch, estimate_smearing
 
 
 class PMEPotential(CalculatorBaseTorch):
@@ -154,7 +154,7 @@ class PMEPotential(CalculatorBaseTorch):
         # convergence of the SR and LR sums, respectively. The default values are chosen
         # to reach a convergence on the order of 1e-4 to 1e-5 for the test structures.
         if self.atomic_smearing is None:
-            smearing = self.estimate_smearing(cell)
+            smearing = estimate_smearing(cell)
         else:
             smearing = self.atomic_smearing
 

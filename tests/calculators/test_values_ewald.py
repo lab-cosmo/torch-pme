@@ -10,6 +10,7 @@ from ase.io import read
 from utils import neighbor_list_torch
 
 from torchpme import EwaldPotential, PMEPotential
+from torchpme.calculators.ewaldpotential import estimate_smearing
 
 DTYPE = torch.float64
 
@@ -488,3 +489,12 @@ def test_random_structure(
     energy.backward()
     forces = -positions.grad
     torch.testing.assert_close(forces, forces_target @ ortho, atol=0.0, rtol=rtol_f)
+
+
+def test_no_cell_estimate_smearing():
+    match = (
+        "provided `cell` has a determinant of 0 and therefore is not valid for "
+        "periodic calculation"
+    )
+    with pytest.raises(ValueError, match=match):
+        estimate_smearing(cell=torch.zeros(3, 3))

@@ -8,9 +8,9 @@ from .mesh_interpolator import MeshInterpolator
 from .potentials import (
     CoulombPotential,
     InversePowerLawPotential,
+    NoInteriorMixIn,
     RangeSeparatedPotential,
     RemoveInterior,
-    PotentialNoInterior,
 )
 
 __all__ = [
@@ -23,7 +23,7 @@ __all__ = [
     "InversePowerLawPotential",
     "CoulombPotential",
     "RemoveInterior",
-    "PotentialNoInterior",
+    "NoInteriorMixIn",
     "get_ns_mesh",
     "generate_kvectors_for_mesh",
     "generate_kvectors_for_ewald",

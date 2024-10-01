@@ -386,12 +386,3 @@ def test_invalid_device_neighbor_distances():
             neighbor_indices=torch.ones((10, 2), dtype=DTYPE, device=DEVICE),
             neighbor_distances=torch.ones((10), dtype=DTYPE, device="meta"),
         )
-
-
-def test_no_cell():
-    match = (
-        "provided `cell` has a determinant of 0 and therefore is not valid for "
-        "periodic calculation"
-    )
-    with pytest.raises(ValueError, match=match):
-        CalculatorBaseTorch.estimate_smearing(cell=torch.zeros(3, 3))

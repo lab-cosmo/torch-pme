@@ -356,18 +356,18 @@ class RemoveInterior(RangeSeparatedPotential):
     def f_cutoff(self, dist: torch.Tensor) -> torch.Tensor:
         return 0.5 * (torch.cos(torch.pi * dist / self.cutoff) + 1)
 
-class PotentialNoInterior(RangeSeparatedPotential):
-    """A Potential class to remove the contribution from the atoms within the
+
+class NoInteriorMixIn(RangeSeparatedPotential):
+    """A MixIn class to remove the contribution from the atoms within the
     cutoff of each atom.
     """
 
-    def __init__(self, cutoff: Union[float, torch.Tensor], **args):
-        print(args)
-        super().__init__(**args)        
+    def __init__(self, cutoff: Union[float, torch.Tensor], **kwargs):
+        cutoff
+        super().__init__(**kwargs)
         self.cutoff = cutoff
 
     def from_dist(self, dist: torch.Tensor) -> torch.Tensor:
-
         return torch.where(
             dist < self.cutoff,
             super().from_dist(dist)
