@@ -143,7 +143,7 @@ class KSpaceFilter(torch.nn.Module):
         self._cell = cell
         self._ns_mesh = ns_mesh
         self._kvectors = generate_kvectors_for_mesh(ns=ns_mesh, cell=cell)
-        self._knorm_sq = torch.sum(self._kvectors**2, dim=3)
+        self._knorm_sq = torch.linalg.norm(self._kvectors, dim=3) ** 2
         # also updates filter to reduce the risk it'd go out of sync
         self.update_filter()
 
