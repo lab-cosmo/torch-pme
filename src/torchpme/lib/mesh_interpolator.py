@@ -31,21 +31,16 @@ class MeshInterpolator:
         the interpolation order (once one moves to the 3D case).
     """
 
-    def __init__(self, cell: torch.Tensor, ns_mesh: torch.Tensor, order: int):
+    def __init__(self, cell: torch.Tensor, order: int = 3):
         # Check that the provided parameters match the specifications
         if cell.shape != (3, 3):
             raise ValueError(
                 f"cell of shape {list(cell.shape)} should be of shape (3, 3)"
             )
-        if ns_mesh.shape != (3,):
-            raise ValueError(f"shape {list(ns_mesh.shape)} of `ns_mesh` has to be (3,)")
+
         if order not in [1, 2, 3, 4, 5]:
             raise ValueError("Only `order` from 1 to 5 are allowed")
-        if cell.device != ns_mesh.device:
-            raise ValueError(
-                "`cell` and `ns_mesh` are on different devices, got "
-                f"{cell.device} and {ns_mesh.device}"
-            )
+
 
         self.cell = cell
         self.inverse_cell = cell.clone()
@@ -55,7 +50,7 @@ class MeshInterpolator:
         else:
             self.inverse_cell = torch.linalg.inv(cell)
 
-        self.ns_mesh = ns_mesh
+
         self.order = order
 
         self._dtype = cell.dtype
@@ -71,6 +66,16 @@ class MeshInterpolator:
         self.x_indices: torch.Tensor = torch.zeros(1, device=self._device)
         self.y_indices: torch.Tensor = torch.zeros(1, device=self._device)
         self.z_indices: torch.Tensor = torch.zeros(1, device=self._device)
+
+    def update_mesh(self, ns_mesh: torch.Tensor):
+        if ns_mesh.shape != (3,):
+            raise ValueError(f"shape {list(ns_mesh.shape)} of `ns_mesh` has to be (3,)")
+        if self._device != ns_mesh.device:
+            raise ValueError(
+                "`cell` and `ns_mesh` are on different devices, got "
+                f"{self._device} and {ns_mesh.device}"
+            )
+        self.ns_mesh = ns_mesh
 
     def get_mesh_xyz(self) -> torch.Tensor:
         """

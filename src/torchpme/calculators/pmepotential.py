@@ -52,6 +52,7 @@ class PMEPotential(CalculatorBaseTorch):
     reference value is :math:`2 \cdot 1.7626 / \sqrt{3} \approx 2.0354`.
 
     >>> import torch
+    >>> from torchpme.lib.mesh_interpolator import MeshInterpolator
     >>> from vesin.torch import NeighborList
 
     Define crystal structure
@@ -79,7 +80,8 @@ class PMEPotential(CalculatorBaseTorch):
     range part of the potential. Finally, we initlize the potential class and
     ``compute`` the potential for the crystal.
 
-    >>> pme = PMEPotential()
+    >>> interpolator = MeshInterpolator(cell)
+    >>> pme = PMEPotential(interpolator)
     >>> pme.forward(
     ...     positions=positions,
     ...     charges=charges,
@@ -96,6 +98,7 @@ class PMEPotential(CalculatorBaseTorch):
 
     def __init__(
         self,
+        interpolator: MeshInterpolator,
         exponent: float = 1.0,
         atomic_smearing: Union[float, torch.Tensor, None] = None,
         mesh_spacing: Optional[float] = None,
@@ -109,6 +112,7 @@ class PMEPotential(CalculatorBaseTorch):
             full_neighbor_list=full_neighbor_list,
         )
 
+        self.interpolator = interpolator
         self.mesh_spacing = mesh_spacing
         self.subtract_interior = subtract_interior
 
@@ -193,23 +197,21 @@ class PMEPotential(CalculatorBaseTorch):
         # reciprocal space can be scaled until the cutoff is reached
         ns = get_ns_mesh(cell, lr_wavelength)
 
-        # Init 1: Initialize mesh interpolator
-        interpolator = MeshInterpolator(cell, ns, order=self.interpolation_order)
-
-        # Update the mesh for the k-space filter
+        # Update the mesh for the k-space filter and the interpolator
         self.potential.smearing = smearing
         self._KF.update_mesh(cell, ns)
+        self.interpolator.update_mesh(ns)
 
         # Step 1. Compute density interpolation
-        interpolator.compute_weights(positions)
-        rho_mesh = interpolator.points_to_mesh(particle_weights=charges)
+        self.interpolator.compute_weights(positions)
+        rho_mesh = self.interpolator.points_to_mesh(particle_weights=charges)
 
         # Step 2: Perform actual convolution using FFT
         potential_mesh = self._KF.compute(rho_mesh)
 
         # Step 3: Back interpolation, and apply cell volume scaling
         ivolume = torch.abs(cell.det()).pow(-1)
-        interpolated_potential = interpolator.mesh_to_points(potential_mesh) * ivolume
+        interpolated_potential = self.interpolator.mesh_to_points(potential_mesh) * ivolume
 
         # Step 4: Remove the self-contribution: Using the Coulomb potential as an
         # example, this is the potential generated at the origin by the fictituous
