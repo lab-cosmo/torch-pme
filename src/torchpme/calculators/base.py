@@ -1,6 +1,7 @@
 from typing import Union
 
 import torch
+from torch import profiler
 
 from ..lib import InversePowerLawPotential
 
@@ -39,31 +40,34 @@ class CalculatorBaseTorch(torch.nn.Module):
         neighbor_distances: torch.Tensor,
         subtract_interior: bool,
     ) -> torch.Tensor:
-        if is_periodic:
-            # If the contribution from all atoms within the cutoff is to be subtracted
-            # this short-range part will simply use -V_LR as the potential
-            if subtract_interior:
-                potentials_bare = -self.potential.lr_from_dist(neighbor_distances)
-            # In the remaining cases, we simply use the usual V_SR to get the full
-            # 1/r^p potential when combined with the long-range part implemented in
-            # reciprocal space
-            else:
-                potentials_bare = self.potential.sr_from_dist(neighbor_distances)
-        else:  # is_direct
-            potentials_bare = self.potential.from_dist(neighbor_distances)
+        with profiler.record_function("compute bare potential"):
+            if is_periodic:
+                # If the contribution from all atoms within the cutoff is to be subtracted
+                # this short-range part will simply use -V_LR as the potential
+                if subtract_interior:
+                    potentials_bare = -self.potential.lr_from_dist(neighbor_distances)
+                # In the remaining cases, we simply use the usual V_SR to get the full
+                # 1/r^p potential when combined with the long-range part implemented in
+                # reciprocal space
+                else:
+                    potentials_bare = self.potential.sr_from_dist(neighbor_distances)
+            else:  # is_direct
+                potentials_bare = self.potential.from_dist(neighbor_distances)
 
         atom_is = neighbor_indices[:, 0]
         atom_js = neighbor_indices[:, 1]
 
-        contributions_is = charges[atom_js] * potentials_bare.unsqueeze(-1)
+        with profiler.record_function("compute real potential"):
+            contributions_is = charges[atom_js] * potentials_bare.unsqueeze(-1)
 
-        potential = torch.zeros_like(charges)
-        potential.index_add_(0, atom_is, contributions_is)
-        # If we are using a half neighbor list, we need to add the contributions
-        # from the "inverse" pairs (j, i) to the atoms i
-        if not self.full_neighbor_list:
-            contributions_js = charges[atom_is] * potentials_bare.unsqueeze(-1)
-            potential.index_add_(0, atom_js, contributions_js)
+        with profiler.record_function("assign potential"):
+            potential = torch.zeros_like(charges)
+            potential.index_add_(0, atom_is, contributions_is)
+            # If we are using a half neighbor list, we need to add the contributions
+            # from the "inverse" pairs (j, i) to the atoms i
+            if not self.full_neighbor_list:
+                contributions_js = charges[atom_is] * potentials_bare.unsqueeze(-1)
+                potential.index_add_(0, atom_js, contributions_js)
 
         # Compensate for double counting of pairs (i,j) and (j,i)
         return potential / 2

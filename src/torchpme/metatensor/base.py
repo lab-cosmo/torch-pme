@@ -1,6 +1,7 @@
 from typing import Union
 
 import torch
+from torch import profiler
 
 try:
     from metatensor.torch import Labels, TensorBlock, TensorMap
@@ -213,16 +214,19 @@ class CalculatorBaseMetatensor(torch.nn.Module):
                 )
             )
 
-        properties_values = torch.arange(
-            self._n_charges_channels, device=self._device, dtype=torch.int32
-        )
+        with profiler.record_function("wrap metatensor"):
+            properties_values = torch.arange(
+                self._n_charges_channels, device=self._device, dtype=torch.int32
+            )
 
-        block = TensorBlock(
-            values=torch.vstack(potentials),
-            samples=Labels(["system", "atom"], torch.vstack(samples_list)),
-            components=[],
-            properties=Labels("charges_channel", properties_values.unsqueeze(1)),
-        )
+            block = TensorBlock(
+                values=torch.vstack(potentials),
+                samples=Labels(["system", "atom"], torch.vstack(samples_list)),
+                components=[],
+                properties=Labels("charges_channel", properties_values.unsqueeze(1)),
+            )
 
-        keys = Labels("_", torch.zeros(1, 1, dtype=torch.int32, device=self._device))
-        return TensorMap(keys=keys, blocks=[block])
+            keys = Labels(
+                "_", torch.zeros(1, 1, dtype=torch.int32, device=self._device)
+            )
+            return TensorMap(keys=keys, blocks=[block])
