@@ -225,10 +225,10 @@ def test_lr_value_at_zero(exponent, smearing):
 def test_exponent_out_of_range():
     match = r"`exponent` p=.* has to satisfy 0 < p <= 3"
     with pytest.raises(ValueError, match=match):
-        InversePowerLawPotential(exponent=-1.0)
+        InversePowerLawPotential(exponent=-1.0, smearing=0.0)
 
     with pytest.raises(ValueError, match=match):
-        InversePowerLawPotential(exponent=4)
+        InversePowerLawPotential(exponent=4, smearing=0.0)
 
 
 @pytest.mark.parametrize("smearing", smearings)
