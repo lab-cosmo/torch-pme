@@ -321,3 +321,37 @@ class CoulombPotential(RangeSeparatedPotential):
             0.0,
             4 * torch.pi * torch.exp(-0.5 * self.smearing**2 * k_sq) / k_sq,
         )
+
+
+class RemoveInterior(RangeSeparatedPotential):
+    """A Potential class to remove the contribution from the atoms within the
+    cutoff of each atom.
+    """
+
+    def __init__(
+        self, potential: RangeSeparatedPotential, cutoff: Union[float, torch.Tensor]
+    ):
+        super().__init__()
+        self._potential = potential
+        self.cutoff = cutoff
+        # TODO these are just temporary until we find a better interface
+        self.exponent = self._potential.exponent
+        self.smearing = self._potential.smearing
+
+    def from_dist(self, dist: torch.Tensor) -> torch.Tensor:
+        return torch.where(
+            dist < self.cutoff,
+            self._potential.from_dist(dist)
+            - self._potential.sr_from_dist(dist)
+            + self.sr_from_dist(dist),
+            self._potential.from_dist(dist),
+        )
+
+    def sr_from_dist(self, dist: torch.Tensor) -> torch.Tensor:
+        return -self._potential.lr_from_dist(dist) * self.f_cutoff(dist)
+
+    def from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
+        return self._potential.from_k_sq(k_sq)
+
+    def f_cutoff(self, dist: torch.Tensor) -> torch.Tensor:
+        return 0.5 * (torch.cos(torch.pi * dist / self.cutoff) + 1)

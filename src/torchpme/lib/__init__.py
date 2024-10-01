@@ -9,6 +9,7 @@ from .potentials import (
     CoulombPotential,
     InversePowerLawPotential,
     RangeSeparatedPotential,
+    RemoveInterior,
 )
 
 __all__ = [
@@ -20,6 +21,7 @@ __all__ = [
     "RangeSeparatedPotential",
     "InversePowerLawPotential",
     "CoulombPotential",
+    "RemoveInterior",
     "get_ns_mesh",
     "generate_kvectors_for_mesh",
     "generate_kvectors_for_ewald",

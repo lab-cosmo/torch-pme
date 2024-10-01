@@ -102,12 +102,16 @@ class PMEPotential(CalculatorBaseTorch):
         interpolation_order: int = 3,
         subtract_interior: bool = False,
         full_neighbor_list: bool = False,
+        potential=None,
     ):
-        super().__init__(
-            potential=InversePowerLawPotential(
+        if potential is None:
+            potential = InversePowerLawPotential(
                 exponent=exponent,
                 smearing=atomic_smearing,
-            ),
+            )
+
+        super().__init__(
+            potential=potential,
             full_neighbor_list=full_neighbor_list,
         )
 
