@@ -1,7 +1,7 @@
 import torch
 
 
-class MeshInterpolator:
+class MeshInterpolator(torch.nn.Module):
     """
     Class for handling all steps related to interpolations in the context of a mesh
     based Ewald summation.
@@ -31,17 +31,30 @@ class MeshInterpolator:
         the interpolation order (once one moves to the 3D case).
     """
 
-    def __init__(self, cell: torch.Tensor, order: int = 3):
+    def __init__(self, order: int = 3):
+
+        super().__init__()
+
+        if order not in [1, 2, 3, 4, 5]:
+            raise ValueError("Only `order` from 1 to 5 are allowed")
+
+        self.order = order
+
+        # TorchScript requires to initialize all attributes in __init__
+        self.register_buffer("interpolation_weights", torch.zeros(1))
+        self.register_buffer("x_shifts", torch.zeros(1))
+        self.register_buffer("y_shifts", torch.zeros(1))
+        self.register_buffer("z_shifts", torch.zeros(1))
+        self.register_buffer("x_indices", torch.zeros(1))
+        self.register_buffer("y_indices", torch.zeros(1))
+        self.register_buffer("z_indices", torch.zeros(1))
+
+    def update_mesh(self, cell: torch.Tensor, ns_mesh: torch.Tensor):
         # Check that the provided parameters match the specifications
         if cell.shape != (3, 3):
             raise ValueError(
                 f"cell of shape {list(cell.shape)} should be of shape (3, 3)"
             )
-
-        if order not in [1, 2, 3, 4, 5]:
-            raise ValueError("Only `order` from 1 to 5 are allowed")
-
-
         self.cell = cell
         self.inverse_cell = cell.clone()
         if self.cell.is_cuda:
@@ -49,33 +62,16 @@ class MeshInterpolator:
             self.inverse_cell = torch.linalg.inv_ex(cell)[0]
         else:
             self.inverse_cell = torch.linalg.inv(cell)
-
-
-        self.order = order
-
-        self._dtype = cell.dtype
-        self._device = cell.device
-
-        # TorchScript requires to initialize all attributes in __init__
-        self.interpolation_weights: torch.Tensor = torch.zeros(
-            1, device=self._device, dtype=self._dtype
-        )
-        self.x_shifts: torch.Tensor = torch.zeros(1, device=self._device)
-        self.y_shifts: torch.Tensor = torch.zeros(1, device=self._device)
-        self.z_shifts: torch.Tensor = torch.zeros(1, device=self._device)
-        self.x_indices: torch.Tensor = torch.zeros(1, device=self._device)
-        self.y_indices: torch.Tensor = torch.zeros(1, device=self._device)
-        self.z_indices: torch.Tensor = torch.zeros(1, device=self._device)
-
-    def update_mesh(self, ns_mesh: torch.Tensor):
         if ns_mesh.shape != (3,):
             raise ValueError(f"shape {list(ns_mesh.shape)} of `ns_mesh` has to be (3,)")
-        if self._device != ns_mesh.device:
+        if cell.device != ns_mesh.device:
             raise ValueError(
                 "`cell` and `ns_mesh` are on different devices, got "
-                f"{self._device} and {ns_mesh.device}"
+                f"{cell.device} and {ns_mesh.device}"
             )
         self.ns_mesh = ns_mesh
+        self._device = cell.device
+        self._dtype = cell.dtype
 
     def get_mesh_xyz(self) -> torch.Tensor:
         """

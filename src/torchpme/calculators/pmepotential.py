@@ -80,7 +80,7 @@ class PMEPotential(CalculatorBaseTorch):
     range part of the potential. Finally, we initlize the potential class and
     ``compute`` the potential for the crystal.
 
-    >>> interpolator = MeshInterpolator(cell)
+    >>> interpolator = MeshInterpolator().to(cell.device, cell.dtype)
     >>> pme = PMEPotential(interpolator)
     >>> pme.forward(
     ...     positions=positions,
@@ -200,7 +200,7 @@ class PMEPotential(CalculatorBaseTorch):
         # Update the mesh for the k-space filter and the interpolator
         self.potential.smearing = smearing
         self._KF.update_mesh(cell, ns)
-        self.interpolator.update_mesh(ns)
+        self.interpolator.update_mesh(cell, ns)
 
         # Step 1. Compute density interpolation
         self.interpolator.compute_weights(positions)
