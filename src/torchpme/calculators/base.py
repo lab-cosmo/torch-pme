@@ -7,10 +7,10 @@ from ..lib import RangeSeparatedPotential
 
 class CalculatorBaseTorch(torch.nn.Module):
     """
-    Base calculator for the torch interface.
+    Base calculator evaluating a range-separated potential
+    for the torch interface.
 
-    :param exponent: the exponent :math:`p` in :math:`1/r^p` potentials
-    :param smearing: smearing parameter of a range separated potential
+    :param potential: the range-separated potential to be computed
     """
 
     def __init__(

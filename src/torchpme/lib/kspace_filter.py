@@ -7,14 +7,16 @@ class KSpaceKernel(torch.nn.Module):
     r"""
     Base class defining the interface for a reciprocal-space kernel helper.
 
-    Provides an interface to compute the reciprocal-space convolution kernel
-    that is used e.g. to compute potentials using Fourier transforms. Parameters
-    of the kernel in derived classes should be defined and stored in the
+    Provides an interface to compute the reciprocal-space convolution kernel.
+    Parameters of the kernel in derived classes should be defined and stored in the
     ``__init__`` method.
+    The :py:class:`RangeSeparatedPotential` classes inherits from this class,
+    as the Fourier-space kernel functionality is used to compute potentials
+    using Fourier transforms.
 
     NB: we need this slightly convoluted way of implementing what often amounts
     to a simple, pure function of :math:`|\mathbf{k}|^2` in order to be able to
-    provide a customizable filter class that can be jitted.
+    provide a customizable filter class that can be jitted/compiled.
     """
 
     def __init__(self):
@@ -68,9 +70,13 @@ class KSpaceFilter(torch.nn.Module):
     :param ns_mesh: toch.tensor of shape ``(3,)``
         Number of mesh points to use along each of the three axes
     :param kernel: KSpaceKernel
-        A KSpaceKernel-derived class providing a ``from_k_sq`` method that
+        A :py:class:`KSpaceKernel`-derived class providing a
+        ``from_k_sq`` method that
         evaluates :math:`\psi` given the square modulus of
-        the k-space mesh points
+        the k-space mesh points. Note that
+        :py:class:`RangeSeparatedPotential` classes inherit from
+        :py:class:`KSpaceKernel` and so can also be used as a kernel.
+
     :param fft_norm: str
         The normalization applied to the forward FT. Can be
         "forward", "backward", "ortho". See :py:func:`torch:fft:rfftn`
