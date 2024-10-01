@@ -1,6 +1,7 @@
 from typing import Optional, Union
 
 import torch
+from torch import profiler
 
 from ..lib.kspace_filter import KSpaceFilter
 from ..lib.kvectors import get_ns_mesh
@@ -157,23 +158,25 @@ class PMEPotential(CalculatorBaseTorch):
         else:
             mesh_spacing = self.mesh_spacing
 
-        # Compute short-range (SR) part using a real space sum
-        potential_sr = self._compute_sr(
-            is_periodic=True,
-            charges=charges,
-            neighbor_indices=neighbor_indices,
-            neighbor_distances=neighbor_distances,
-            subtract_interior=self.subtract_interior,
-        )
+        with profiler.record_function("compute SR"):
+            # use real space sum
+            potential_sr = self._compute_sr(
+                is_periodic=True,
+                charges=charges,
+                neighbor_indices=neighbor_indices,
+                neighbor_distances=neighbor_distances,
+                subtract_interior=self.subtract_interior,
+            )
 
-        # Compute long-range (LR) part using a Fourier / reciprocal space sum
-        potential_lr = self._compute_lr(
-            positions=positions,
-            charges=charges,
-            cell=cell,
-            smearing=smearing,
-            lr_wavelength=mesh_spacing,
-        )
+        with profiler.record_function("compute LR"):
+            # use Fourier / reciprocal space sum
+            potential_lr = self._compute_lr(
+                positions=positions,
+                charges=charges,
+                cell=cell,
+                smearing=smearing,
+                lr_wavelength=mesh_spacing,
+            )
 
         return potential_sr + potential_lr
 
@@ -185,52 +188,56 @@ class PMEPotential(CalculatorBaseTorch):
         smearing: float,
         lr_wavelength: float,
     ) -> torch.Tensor:
-        # TODO: Kernel function `G` and initialization of `MeshInterpolator` only depend on
-        # `cell`. Caching may save up to 15% but issues with AD should be taken
+        # TODO: Kernel function `G` and initialization of `MeshInterpolator` only depend
+        # on `cell`. Caching may save up to 15% but issues with AD should be taken
         # resolved.
 
-        # Init 0 (Preparation): Compute number of times each basis vector of the
-        # reciprocal space can be scaled until the cutoff is reached
-        ns = get_ns_mesh(cell, lr_wavelength)
+        with profiler.record_function("init 0: preparation"):
+            # Compute number of times each basis vector of the reciprocal space can be
+            # scaled until the cutoff is reached
+            ns = get_ns_mesh(cell, lr_wavelength)
 
-        # Init 1: Initialize mesh interpolator
-        interpolator = MeshInterpolator(cell, ns, order=self.interpolation_order)
+        with profiler.record_function("init 1: initialize mesh interpolator"):
+            interpolator = MeshInterpolator(cell, ns, order=self.interpolation_order)
 
-        # Update the mesh for the k-space filter
-        self.potential.smearing = smearing
-        self._KF.update_mesh(cell, ns)
+        with profiler.record_function("update the mesh for the k-space filter"):
+            self.potential.smearing = smearing
+            self._KF.update_mesh(cell, ns)
 
-        # Step 1. Compute density interpolation
-        interpolator.compute_weights(positions)
-        rho_mesh = interpolator.points_to_mesh(particle_weights=charges)
+        with profiler.record_function("step 1: compute density interpolation"):
+            interpolator.compute_weights(positions)
+            rho_mesh = interpolator.points_to_mesh(particle_weights=charges)
 
-        # Step 2: Perform actual convolution using FFT
-        potential_mesh = self._KF.compute(rho_mesh)
+        with profiler.record_function("step 2: perform actual convolution using FFT"):
+            potential_mesh = self._KF.compute(rho_mesh)
 
-        # Step 3: Back interpolation, and apply cell volume scaling
-        ivolume = torch.abs(cell.det()).pow(-1)
-        interpolated_potential = interpolator.mesh_to_points(potential_mesh) * ivolume
+        with profiler.record_function("step 3: back interpolation + volume scaling"):
+            ivolume = torch.abs(cell.det()).pow(-1)
+            interpolated_potential = (
+                interpolator.mesh_to_points(potential_mesh) * ivolume
+            )
 
-        # Step 4: Remove the self-contribution: Using the Coulomb potential as an
-        # example, this is the potential generated at the origin by the fictituous
-        # Gaussian charge density in order to split the potential into a SR and LR part.
-        # This contribution always should be subtracted since it depends on the smearing
-        # parameter, which is purely a convergence parameter.
-        phalf = self.exponent / 2
-        fill_value = 1 / gamma(torch.tensor(phalf + 1)) / (2 * smearing**2) ** phalf
-        self_contrib = torch.full([], fill_value, device=self._device)
-        interpolated_potential -= charges * self_contrib
+        with profiler.record_function("step 4: remove the self-contribution"):
+            # Using the Coulomb potential as an example, this is the potential generated
+            # at the origin by the fictituous Gaussian charge density in order to split
+            # the potential into a SR and LR part. This contribution always should be
+            # subtracted since it depends on the smearing parameter, which is purely a
+            # convergence parameter.
+            phalf = self.exponent / 2
+            fill_value = 1 / gamma(torch.tensor(phalf + 1)) / (2 * smearing**2) ** phalf
+            self_contrib = torch.full([], fill_value, device=self._device)
+            interpolated_potential -= charges * self_contrib
 
-        # Step 5: The method requires that the unit cell is charge-neutral.
-        # If the cell has a net charge (i.e. if sum(charges) != 0), the method
-        # implicitly assumes that a homogeneous background charge of the opposite sign
-        # is present to make the cell neutral. In this case, the potential has to be
-        # adjusted to compensate for this.
-        # An extra factor of 2 is added to compensate for the division by 2 later on
-        charge_tot = torch.sum(charges, dim=0)
-        prefac = torch.pi**1.5 * (2 * smearing**2) ** ((3 - self.exponent) / 2)
-        prefac /= (3 - self.exponent) * gamma(torch.tensor(self.exponent / 2))
-        interpolated_potential -= 2 * prefac * charge_tot * ivolume
+        with profiler.record_function("step 5: charge neutralization"):
+            # If the cell has a net charge (i.e. if sum(charges) != 0), the method
+            # implicitly assumes that a homogeneous background charge of the opposite
+            # sign is present to make the cell neutral. In this case, the potential has
+            # to be adjusted to compensate for this. An extra factor of 2 is added to
+            # compensate for the division by 2 later on
+            charge_tot = torch.sum(charges, dim=0)
+            prefac = torch.pi**1.5 * (2 * smearing**2) ** ((3 - self.exponent) / 2)
+            prefac /= (3 - self.exponent) * gamma(torch.tensor(self.exponent / 2))
+            interpolated_potential -= 2 * prefac * charge_tot * ivolume
 
         # Compensate for double counting of pairs (i,j) and (j,i)
         return interpolated_potential / 2
