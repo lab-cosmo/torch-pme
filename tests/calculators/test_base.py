@@ -95,15 +95,6 @@ def test_type_check_error():
                 calculator._validate_compute_parameters(**kwargs)
 
 
-# def test_exponent_out_of_range():
-#    match = r"`exponent` p=.* has to satisfy 0 < p <= 3"
-#    with pytest.raises(ValueError, match=match):
-#        CalculatorTest(exponent=-1)
-#
-#    with pytest.raises(ValueError, match=match):
-#        CalculatorTest(exponent=4)
-
-
 # Tests for a mismatch in the number of provided inputs for different variables
 def test_mismatched_numbers_cell():
     calculator = CalculatorTest()

@@ -21,7 +21,9 @@ dtype = torch.float64
 # Josephson constant K_J = 4.8359... * 1e9 Hz/V
 # Gravitational constant G = 6.6743... * 1e-11 m3/kgs2
 # Electron mass m_e = 9.1094 * 1e-31 kg
-ps = [1.0, 2.0, 3.0, 6.0] + [0.12345, 0.54321, 2.581304, 4.835909, 6.674311, 9.109431]
+# TODO: for the moment, InversePowerLawPotential only works for exponent 0<p<3
+# ps = [1.0, 2.0, 3.0, 6.0] + [0.12345, 0.54321, 2.581304, 4.835909, 6.674311, 9.109431]
+ps = [1.0, 2.0, 3.0] + [0.12345, 0.54321, 2.581304]
 
 # Define range of smearing parameters covering relevant values
 smearings = [0.1, 0.5, 1.0, 1.56]
@@ -218,6 +220,15 @@ def test_lr_value_at_zero(exponent, smearing):
     exact_value = 1.0 / (2 * smearing**2) ** (exponent / 2) / gamma(exponent / 2 + 1.0)
     relerr = torch.abs(potential_close_to_zero - exact_value) / exact_value
     assert relerr.item() < 3e-14
+
+
+def test_exponent_out_of_range():
+    match = r"`exponent` p=.* has to satisfy 0 < p <= 3"
+    with pytest.raises(ValueError, match=match):
+        InversePowerLawPotential(exponent=-1.0)
+
+    with pytest.raises(ValueError, match=match):
+        InversePowerLawPotential(exponent=4)
 
 
 @pytest.mark.parametrize("smearing", smearings)
