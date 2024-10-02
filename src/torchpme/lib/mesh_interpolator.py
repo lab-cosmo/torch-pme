@@ -289,22 +289,21 @@ class MeshInterpolator:
         positions_rel = self.ns_mesh * torch.matmul(positions, self.inverse_cell)
 
         # Calculate positions and distances based on interpolation order
-        if self.method == "Lagrange":
-            if self.order % 2 != 0:
-                positions_rel_idx = torch.floor(positions_rel).long()
-                offsets = positions_rel - (positions_rel_idx + 1 / 2)
-            else:
-                positions_rel_idx = torch.round(positions_rel).long()
-                offsets = positions_rel - positions_rel_idx
-        elif self.method == "P3M":
-            if self.order % 2 == 0:
-                positions_rel_idx = torch.floor(positions_rel).long()
-                offsets = positions_rel - (positions_rel_idx + 1 / 2)
-            else:
-                positions_rel_idx = torch.round(positions_rel).long()
-                offsets = positions_rel - positions_rel_idx
+        even_order = self.order % 2 == 0
+        if (self.method == "Lagrange" and not even_order) or (
+            self.method == "P3M" and even_order
+        ):
+            # For Lagrange interpolation, when the order is odd, the relative position
+            # of a charge is the midpoint of the two nearest gridpoints. For P3M, the
+            # same is true for even orders.
+            positions_rel_idx = torch.floor(positions_rel).long()
+            offsets = positions_rel - (positions_rel_idx + 1 / 2)
         else:
-            raise ValueError("Only `method` `Lagrange` and `P3M` are allowed")
+            # For Lagrange interpolation, when the order is even, the relative position
+            # of a charge is the nearest gridpoint. For P3M, the same is true for
+            # odd orders.
+            positions_rel_idx = torch.round(positions_rel).long()
+            offsets = positions_rel - positions_rel_idx
 
         # Compute weights based on distances and interpolation order
         self.interpolation_weights = self._compute_1d_weights(offsets)
