@@ -187,8 +187,8 @@ class MeshInterpolator:
             Interpolation weights
         """
         # Compute weights based on the given order
+        x2 = x * x
         if self.order == 2:
-            x2 = x * x
             return torch.stack(
                 [
                     1 / 2 * (-x + x2),
@@ -196,9 +196,9 @@ class MeshInterpolator:
                     1 / 2 * (x + x2),
                 ]
             )
+
+        x3 = x * x2
         if self.order == 3:
-            x2 = x * x
-            x3 = x * x2
             return torch.stack(
                 [
                     1 / 48 * (-3 + 2 * x + 12 * x2 - 8 * x3),
@@ -207,10 +207,9 @@ class MeshInterpolator:
                     1 / 48 * (-3 - 2 * x + 12 * x2 + 8 * x3),
                 ]
             )
+
+        x4 = x * x3
         if self.order == 4:
-            x2 = x * x
-            x3 = x * x2
-            x4 = x * x3
             return torch.stack(
                 [
                     1 / 24 * (2 * x - x2 - 2 * x3 + x4),
@@ -220,11 +219,9 @@ class MeshInterpolator:
                     1 / 24 * (-2 * x - x2 + 2 * x3 + x4),
                 ]
             )
+
+        x5 = x * x4
         if self.order == 5:
-            x2 = x * x
-            x3 = x * x2
-            x4 = x * x3
-            x5 = x * x4
             return torch.stack(
                 [
                     1 / 3840 * (45 - 18 * x - 200 * x2 + 80 * x3 + 80 * x4 - 32 * x5),
@@ -243,12 +240,8 @@ class MeshInterpolator:
                     1 / 3840 * (45 + 18 * x - 200 * x2 - 80 * x3 + 80 * x4 + 32 * x5),
                 ]
             )
+        x6 = x * x5
         if self.order == 6:
-            x2 = x * x
-            x3 = x * x2
-            x4 = x * x3
-            x5 = x * x4
-            x6 = x * x5
             return torch.stack(
                 [
                     1 / 720 * (-12 * x + 4 * x2 + 15 * x3 - 5 * x4 - 3 * x5 + x6),

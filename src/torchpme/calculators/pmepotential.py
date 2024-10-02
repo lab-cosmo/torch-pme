@@ -104,7 +104,6 @@ class PMEPotential(CalculatorBaseTorch):
         interpolation_order: int = 3,
         subtract_interior: bool = False,
         full_neighbor_list: bool = False,
-        interpolation_method: Literal["P3M", "Lagrange"] = "P3M",
     ):
         super().__init__(
             exponent=exponent,
@@ -122,12 +121,6 @@ class PMEPotential(CalculatorBaseTorch):
         if interpolation_order not in [1, 2, 3, 4, 5]:
             raise ValueError("Only `interpolation_order` from 1 to 5 are allowed")
         self.interpolation_order = interpolation_order
-
-        if interpolation_method not in ["P3M", "Lagrange"]:
-            raise ValueError(
-                "Only `interpolation_method` 'P3M' and 'Lagrange' are allowed"
-            )
-        self.interpolation_method = interpolation_method
 
         # Initialize the filter module. Set dummy value for smearing to propper
         # initilize the `KSpaceFilter` below
@@ -210,7 +203,7 @@ class PMEPotential(CalculatorBaseTorch):
                 cell,
                 ns,
                 order=self.interpolation_order,
-                method=self.interpolation_method,
+                method="Lagrange", # For classic PME
             )
 
         with profiler.record_function("update the mesh for the k-space filter"):
