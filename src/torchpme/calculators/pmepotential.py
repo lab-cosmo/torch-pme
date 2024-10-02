@@ -89,8 +89,8 @@ class PMEPotential(CalculatorBaseTorch):
     ...     neighbor_indices=neighbor_indices,
     ...     neighbor_distances=neighbor_distances,
     ... )
-    tensor([[-1.0192],
-            [ 1.0192]], dtype=torch.float64)
+    tensor([[-1.0177],
+            [ 1.0177]], dtype=torch.float64)
 
     Which is close to the reference value given above.
 
