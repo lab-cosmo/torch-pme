@@ -294,7 +294,6 @@ class MeshInterpolator:
 
         # Compute positions relative to the mesh basis vectors
         positions_rel = self.ns_mesh * torch.matmul(positions, self.inverse_cell)
-        print(positions_rel)
 
         # Calculate positions and distances based on interpolation order
         if self.method == "Lagrange":
@@ -313,7 +312,6 @@ class MeshInterpolator:
                 offsets = positions_rel - positions_rel_idx
         else:
             raise ValueError("Only `method` `Lagrange` and `P3M` are allowed")
-        print(positions_rel_idx)
 
         # Compute weights based on distances and interpolation order
         self.interpolation_weights = self._compute_1d_weights(offsets)
