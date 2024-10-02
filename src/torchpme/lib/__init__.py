@@ -6,6 +6,7 @@ from .kvectors import (
 )
 from .mesh_interpolator import MeshInterpolator
 from .potentials import (
+    BasePotential,
     CoulombPotential,
     InversePowerLawPotential,
     NoInteriorMixIn,
@@ -21,6 +22,7 @@ __all__ = [
     "MeshInterpolator",
     "RangeSeparatedPotential",
     "InversePowerLawPotential",
+    "BasePotential",
     "CoulombPotential",
     "RemoveInterior",
     "NoInteriorMixIn",

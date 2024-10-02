@@ -5,11 +5,11 @@ import torch
 from ..lib.kspace_filter import KSpaceFilter
 from ..lib.kvectors import get_ns_mesh
 from ..lib.mesh_interpolator import MeshInterpolator
-from ..lib.potentials import InversePowerLawPotential, gamma
-from .base import CalculatorBaseTorch, estimate_smearing
+from ..lib.potentials import InversePowerLawPotential, RangeSeparatedPotential, gamma
+from .base import BaseCalculator, estimate_smearing
 
 
-class PMEPotential(CalculatorBaseTorch):
+class PMEPotential(BaseCalculator):
     r"""
     Potential using a particle mesh-based Ewald (PME).
 
@@ -96,27 +96,19 @@ class PMEPotential(CalculatorBaseTorch):
 
     def __init__(
         self,
-        exponent: float = 1.0,
+        potential : RangeSeparatedPotential,
         atomic_smearing: Union[float, torch.Tensor, None] = None,
         mesh_spacing: Optional[float] = None,
         interpolation_order: int = 3,
-        subtract_interior: bool = False,
         full_neighbor_list: bool = False,
-        potential=None,
     ):
-        if potential is None:
-            potential = InversePowerLawPotential(
-                exponent=exponent,
-                smearing=atomic_smearing,
-            )
-
         super().__init__(
             potential=potential,
             full_neighbor_list=full_neighbor_list,
         )
 
         self.mesh_spacing = mesh_spacing
-        self.subtract_interior = subtract_interior
+        self.subtract_interior = False
 
         if atomic_smearing is not None and atomic_smearing <= 0:
             raise ValueError(f"`atomic_smearing` {atomic_smearing} has to be positive")
@@ -129,7 +121,7 @@ class PMEPotential(CalculatorBaseTorch):
         # Initialize the filter module. Set dummy value for smearing to propper
         # initilize the `KSpaceFilter` below
         if self.atomic_smearing is None:
-            self.potential.smearing = 1.0
+            self.potential.smearing = 1.0            
         self._KF = KSpaceFilter(
             cell=torch.eye(3),
             ns_mesh=torch.ones(3, dtype=int),

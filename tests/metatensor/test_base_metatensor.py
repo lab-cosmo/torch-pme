@@ -55,7 +55,7 @@ def neighbors():
     )
 
 
-class CalculatorTestTorch(torchpme.calculators.base.CalculatorBaseTorch):
+class CalculatorTestTorch(torchpme.calculators.base.BaseCalculator):
     def _compute_single_system(
         self, positions, charges, cell, neighbor_indices, neighbor_distances
     ):

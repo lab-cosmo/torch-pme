@@ -1,10 +1,10 @@
 import torch
 
 from ..lib import InversePowerLawPotential
-from .base import CalculatorBaseTorch
+from .base import BaseCalculator
 
 
-class DirectPotential(CalculatorBaseTorch):
+class DirectPotential(BaseCalculator):
     r"""
     Potential using a direct summation.
 

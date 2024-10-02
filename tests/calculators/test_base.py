@@ -1,7 +1,7 @@
 import pytest
 import torch
 
-from torchpme.calculators.base import CalculatorBaseTorch
+from torchpme.calculators.base import BaseCalculator
 from torchpme.lib import InversePowerLawPotential
 
 # Define some example parameters
@@ -17,7 +17,7 @@ NEIGHBOR_INDICES = torch.ones(3, 2)
 NEIGHBOR_DISTANCES = torch.ones(3)
 
 
-class CalculatorTest(CalculatorBaseTorch):
+class CalculatorTest(BaseCalculator):
     def __init__(self, exponent: float = 1.0):
         super().__init__(
             potential=InversePowerLawPotential(exponent=exponent, smearing=None)

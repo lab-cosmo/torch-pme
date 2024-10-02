@@ -2,10 +2,10 @@ from typing import Union
 
 import torch
 
-from ..lib import RangeSeparatedPotential
+from ..lib import BasePotential, RangeSeparatedPotential
 
 
-class CalculatorBaseTorch(torch.nn.Module):
+class BaseCalculator(torch.nn.Module):
     """
     Base calculator evaluating a range-separated potential
     for the torch interface.
@@ -15,7 +15,7 @@ class CalculatorBaseTorch(torch.nn.Module):
 
     def __init__(
         self,
-        potential: RangeSeparatedPotential,
+        potential: BasePotential,
         full_neighbor_list: bool = False,
     ):
         super().__init__()
@@ -348,6 +348,7 @@ class CalculatorBaseTorch(torch.nn.Module):
         if input_is_list:
             return potentials
         return potentials[0]
+
 
 
 def estimate_smearing(

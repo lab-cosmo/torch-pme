@@ -6,10 +6,10 @@ import torch
 
 from ..lib import generate_kvectors_for_ewald
 from ..lib.potentials import InversePowerLawPotential, gamma
-from .base import CalculatorBaseTorch, estimate_smearing
+from .base import BaseCalculator, estimate_smearing
 
 
-class EwaldPotential(CalculatorBaseTorch):
+class EwaldPotential(BaseCalculator):
     r"""
     Potential computed using the Ewald sum.
 
@@ -267,7 +267,7 @@ def tune_ewald(
         cell,
         _,
         _,
-    ) = CalculatorBaseTorch._validate_compute_parameters(
+    ) = BaseCalculator._validate_compute_parameters(
         positions=positions,
         charges=charges,
         cell=cell,
