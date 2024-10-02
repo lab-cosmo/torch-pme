@@ -30,7 +30,7 @@ class MeshInterpolator:
         to smoother interpolation, at a computational cost that grows cubically with
         the interpolation order (once one moves to the 3D case).
     :param method: str
-        Either "Lagrange" or "P3M"
+        The interpolation method to use. Either "Lagrange" or "P3M".
     """
 
     def __init__(
@@ -298,6 +298,7 @@ class MeshInterpolator:
 
         # Compute positions relative to the mesh basis vectors
         positions_rel = self.ns_mesh * torch.matmul(positions, self.inverse_cell)
+        print(positions_rel)
 
         # Calculate positions and distances based on interpolation order
         if self.method == "Lagrange":
@@ -316,6 +317,7 @@ class MeshInterpolator:
                 offsets = positions_rel - positions_rel_idx
         else:
             raise ValueError("Only `method` `Lagrange` and `P3M` are allowed")
+        print(positions_rel_idx)
 
         # Compute weights based on distances and interpolation order
         self.interpolation_weights = self._compute_1d_weights(offsets)
@@ -323,24 +325,48 @@ class MeshInterpolator:
         # Calculate indices of mesh points on which the particle weights are
         # interpolated. For each particle, its weight is "smeared" onto `order**3` mesh
         # points, which can be achived using meshgrid below.
-        indices_to_interpolate = torch.stack(
-            [
-                (positions_rel_idx + i) % self.ns_mesh
-                for i in range(
-                    1 - (self.order + 1) // 2,
-                    1 + self.order // 2,
-                )
-            ],
-            dim=0,
-        )
+        if self.method == "P3M":
+            indices_to_interpolate = torch.stack(
+                [
+                    (positions_rel_idx + i) % self.ns_mesh
+                    for i in range(
+                        1 - (self.order + 1) // 2,
+                        1 + self.order // 2,
+                    )
+                ],
+                dim=0,
+            )
+        elif self.method == "Lagrange":
+            indices_to_interpolate = torch.stack(
+                [
+                    (positions_rel_idx + i) % self.ns_mesh
+                    for i in range(
+                        1 - (self.order + 2) // 2,
+                        1 + (self.order + 1) // 2,
+                    )
+                ],
+                dim=0,
+            )
+        else:
+            raise ValueError("Only `method` `Lagrange` and `P3M` are allowed")
 
         # Generate shifts for x, y, z axes and flatten for indexing
-        x_shifts, y_shifts, z_shifts = torch.meshgrid(
-            torch.arange(self.order, device=self._device),
-            torch.arange(self.order, device=self._device),
-            torch.arange(self.order, device=self._device),
-            indexing="ij",
-        )
+        if self.method == "P3M":
+            x_shifts, y_shifts, z_shifts = torch.meshgrid(
+                torch.arange(self.order, device=self._device),
+                torch.arange(self.order, device=self._device),
+                torch.arange(self.order, device=self._device),
+                indexing="ij",
+            )
+        elif self.method == "Lagrange":
+            x_shifts, y_shifts, z_shifts = torch.meshgrid(
+                torch.arange(self.order + 1, device=self._device),
+                torch.arange(self.order + 1, device=self._device),
+                torch.arange(self.order + 1, device=self._device),
+                indexing="ij",
+            )
+        else:
+            raise ValueError("Only `method` `Lagrange` and `P3M` are allowed")
         self.x_shifts = x_shifts.flatten()
         self.y_shifts = y_shifts.flatten()
         self.z_shifts = z_shifts.flatten()
