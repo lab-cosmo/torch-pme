@@ -93,8 +93,8 @@ class PMEPotential(CalculatorBaseMetatensor):
     :py:class:`TensorBlock <metatensor.torch.TensorBlock>` of the ``potential``.
 
     >>> potential[0].values
-    tensor([[-1.0192],
-            [ 1.0192]], dtype=torch.float64)
+    tensor([[-1.0177],
+            [ 1.0177]], dtype=torch.float64)
 
     Which is close to the reference value given above.
 
