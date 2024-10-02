@@ -273,9 +273,7 @@ def define_crystal(crystal_name="CsCl"):
     return positions, charges, cell, madelung_ref, num_formula_units
 
 
-@pytest.mark.parametrize(
-    "calc_name", ["ewald", "pme"]
-)
+@pytest.mark.parametrize("calc_name", ["ewald", "pme"])
 @pytest.mark.parametrize(
     "crystal_name",
     [
@@ -289,7 +287,7 @@ def define_crystal(crystal_name="CsCl"):
     ],
 )
 @pytest.mark.parametrize("scaling_factor", [1 / 2.0353610, 1.0, 3.4951291])
-def test_madelung(crystal_name, scaling_factor, calc_name, method):
+def test_madelung(crystal_name, scaling_factor, calc_name):
     """
     Check that the Madelung constants obtained from the Ewald sum calculator matches
     the reference values.
@@ -319,7 +317,7 @@ def test_madelung(crystal_name, scaling_factor, calc_name, method):
         sr_cutoff = 2 * scaling_factor
         atomic_smearing = sr_cutoff / 5.0
         calc = PMEPotential(
-            atomic_smearing=atomic_smearing, interpolation_method=method
+            atomic_smearing=atomic_smearing,
         )
         rtol = 9e-4
 

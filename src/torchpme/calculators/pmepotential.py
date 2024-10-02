@@ -1,4 +1,4 @@
-from typing import Literal, Optional, Union
+from typing import Optional, Union
 
 import torch
 from torch import profiler
@@ -203,7 +203,7 @@ class PMEPotential(CalculatorBaseTorch):
                 cell,
                 ns,
                 order=self.interpolation_order,
-                method="Lagrange", # For classic PME
+                method="Lagrange",  # For classic PME
             )
 
         with profiler.record_function("update the mesh for the k-space filter"):
