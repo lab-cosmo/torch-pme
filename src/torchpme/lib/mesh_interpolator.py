@@ -30,7 +30,7 @@ class MeshInterpolator:
         to smoother interpolation, at a computational cost that grows cubically with
         the interpolation order (once one moves to the 3D case).
     :param method: str
-        Either "Langrange" or "P3M"
+        Either "Lagrange" or "P3M"
     """
 
     def __init__(
@@ -40,8 +40,8 @@ class MeshInterpolator:
         order: int,
         method: str = "P3M",  # Cannot use `Literal` here because of TorchScript
     ):
-        if method not in ["Langrange", "P3M"]:
-            raise ValueError("Only `method` `Langrange` and `P3M` are allowed")
+        if method not in ["Lagrange", "P3M"]:
+            raise ValueError("Only `method` `Lagrange` and `P3M` are allowed")
         self.method = method
         # Check that the provided parameters match the specifications
         if cell.shape != (3, 3):
@@ -51,7 +51,7 @@ class MeshInterpolator:
         if ns_mesh.shape != (3,):
             raise ValueError(f"shape {list(ns_mesh.shape)} of `ns_mesh` has to be (3,)")
         
-        if self.method == "Langrange":
+        if self.method == "Lagrange":
             if order not in [2, 3, 4, 5, 6]:
                 raise ValueError("Only `order` from 2 to 6 are allowed")
         elif self.method == "P3M":
@@ -112,12 +112,12 @@ class MeshInterpolator:
         return torch.matmul(grid_scaled, self.cell)
     
     def _compute_1d_weights(self, x: torch.Tensor) -> torch.Tensor:
-        if self.method == "Langrange":
+        if self.method == "Lagrange":
             return self._compute_1d_weights_Lagrange(x)
         elif self.method == "P3M":
             return self._compute_1d_weights_P3M(x)
         else:
-            raise ValueError("Only `method` `Langrange` and `P3M` are allowed")
+            raise ValueError("Only `method` `Lagrange` and `P3M` are allowed")
 
     def _compute_1d_weights_P3M(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -300,7 +300,7 @@ class MeshInterpolator:
         positions_rel = self.ns_mesh * torch.matmul(positions, self.inverse_cell)
 
         # Calculate positions and distances based on interpolation order
-        if self.method == "Langrange":
+        if self.method == "Lagrange":
             if self.order % 2 != 0:
                 positions_rel_idx = torch.floor(positions_rel).long()
                 offsets = positions_rel - (positions_rel_idx + 1 / 2)
@@ -315,7 +315,7 @@ class MeshInterpolator:
                 positions_rel_idx = torch.round(positions_rel).long()
                 offsets = positions_rel - positions_rel_idx
         else:
-            raise ValueError("Only `method` `Langrange` and `P3M` are allowed")
+            raise ValueError("Only `method` `Lagrange` and `P3M` are allowed")
 
         # Compute weights based on distances and interpolation order
         self.interpolation_weights = self._compute_1d_weights(offsets)
