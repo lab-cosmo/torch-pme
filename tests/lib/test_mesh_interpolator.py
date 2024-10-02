@@ -19,7 +19,7 @@ class TestMeshInterpolatorForward:
     order_Lagrange = [2, 3, 4, 5, 6]
 
     @pytest.mark.parametrize(
-        "order, method",
+        ("order", "method"),
         [(order, "P3M") for order in order_P3M]
         + [(order, "Lagrange") for order in order_Lagrange],
     )
@@ -56,7 +56,7 @@ class TestMeshInterpolatorForward:
         assert_close(total_weight, total_weight_target, rtol=3e-6, atol=3e-6)
 
     @pytest.mark.parametrize(
-        "order, method",
+        ("order", "method"),
         [(order, "P3M") for order in order_P3M]
         + [(order, "Lagrange") for order in order_Lagrange],
     )
@@ -81,7 +81,9 @@ class TestMeshInterpolatorForward:
         ns_mesh = torch.randint(11, 18, size=(3,))
 
         # Run interpolation
-        inetrpolator = MeshInterpolator(cell=cell, ns_mesh=ns_mesh, order=order, method=method)
+        inetrpolator = MeshInterpolator(
+            cell=cell, ns_mesh=ns_mesh, order=order, method=method
+        )
         inetrpolator.compute_weights(positions)
         mesh_values = inetrpolator.points_to_mesh(particle_weights)
 
@@ -385,7 +387,9 @@ def Lagrange_mesh_interpolator():
 @pytest.mark.parametrize("method", ["P3M", "Lagrange"])
 def test_mexh_xyz_edge(method):
     cell = torch.normal(mean=1, std=1, size=(3, 3))
-    mesh_interpolator = MeshInterpolator(cell, torch.tensor([2, 2, 2]), 3, method=method)
+    mesh_interpolator = MeshInterpolator(
+        cell, torch.tensor([2, 2, 2]), 3, method=method
+    )
     xyz = mesh_interpolator.get_mesh_xyz()
 
     torch.testing.assert_close(xyz[1, 1, 1], cell.sum(axis=0) / 2, rtol=1e-5, atol=1e-6)

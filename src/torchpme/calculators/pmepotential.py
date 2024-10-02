@@ -124,7 +124,9 @@ class PMEPotential(CalculatorBaseTorch):
         self.interpolation_order = interpolation_order
 
         if interpolation_method not in ["P3M", "Lagrange"]:
-            raise ValueError("Only `interpolation_method` 'P3M' and 'Lagrange' are allowed")
+            raise ValueError(
+                "Only `interpolation_method` 'P3M' and 'Lagrange' are allowed"
+            )
         self.interpolation_method = interpolation_method
 
         # Initialize the filter module. Set dummy value for smearing to propper
@@ -204,7 +206,12 @@ class PMEPotential(CalculatorBaseTorch):
             ns = get_ns_mesh(cell, lr_wavelength)
 
         with profiler.record_function("init 1: initialize mesh interpolator"):
-            interpolator = MeshInterpolator(cell, ns, order=self.interpolation_order, method=self.interpolation_method)
+            interpolator = MeshInterpolator(
+                cell,
+                ns,
+                order=self.interpolation_order,
+                method=self.interpolation_method,
+            )
 
         with profiler.record_function("update the mesh for the k-space filter"):
             self.potential.smearing = smearing

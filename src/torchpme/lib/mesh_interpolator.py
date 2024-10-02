@@ -50,13 +50,11 @@ class MeshInterpolator:
             )
         if ns_mesh.shape != (3,):
             raise ValueError(f"shape {list(ns_mesh.shape)} of `ns_mesh` has to be (3,)")
-        
-        if self.method == "Lagrange":
-            if order not in [2, 3, 4, 5, 6]:
-                raise ValueError("Only `order` from 2 to 6 are allowed")
-        elif self.method == "P3M":
-            if order not in [1, 2, 3, 4, 5]:
-                raise ValueError("Only `order` from 1 to 5 are allowed")
+
+        if (self.method == "Lagrange") and (order not in [2, 3, 4, 5, 6]):
+            raise ValueError("Only `order` from 2 to 6 are allowed")
+        if (self.method == "P3M") and (order not in [1, 2, 3, 4, 5]):
+            raise ValueError("Only `order` from 1 to 5 are allowed")
 
         if cell.device != ns_mesh.device:
             raise ValueError(
@@ -110,14 +108,13 @@ class MeshInterpolator:
             dim=-1,
         )
         return torch.matmul(grid_scaled, self.cell)
-    
+
     def _compute_1d_weights(self, x: torch.Tensor) -> torch.Tensor:
         if self.method == "Lagrange":
             return self._compute_1d_weights_Lagrange(x)
-        elif self.method == "P3M":
+        if self.method == "P3M":
             return self._compute_1d_weights_P3M(x)
-        else:
-            raise ValueError("Only `method` `Lagrange` and `P3M` are allowed")
+        raise ValueError("Only `method` `Lagrange` and `P3M` are allowed")
 
     def _compute_1d_weights_P3M(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -199,7 +196,7 @@ class MeshInterpolator:
                     1 / 2 * (x + x2),
                 ]
             )
-        elif self.order == 3:
+        if self.order == 3:
             x2 = x * x
             x3 = x * x2
             return torch.stack(
@@ -210,7 +207,7 @@ class MeshInterpolator:
                     1 / 48 * (-3 - 2 * x + 12 * x2 + 8 * x3),
                 ]
             )
-        elif self.order == 4:
+        if self.order == 4:
             x2 = x * x
             x3 = x * x2
             x4 = x * x3
@@ -223,7 +220,7 @@ class MeshInterpolator:
                     1 / 24 * (-2 * x - x2 + 2 * x3 + x4),
                 ]
             )
-        elif self.order == 5:
+        if self.order == 5:
             x2 = x * x
             x3 = x * x2
             x4 = x * x3
@@ -246,7 +243,7 @@ class MeshInterpolator:
                     1 / 3840 * (45 + 18 * x - 200 * x2 - 80 * x3 + 80 * x4 + 32 * x5),
                 ]
             )
-        elif self.order == 6:
+        if self.order == 6:
             x2 = x * x
             x3 = x * x2
             x4 = x * x3
@@ -271,8 +268,7 @@ class MeshInterpolator:
                     1 / 720 * (12 * x + 4 * x2 - 15 * x3 - 5 * x4 + 3 * x5 + x6),
                 ]
             )
-        else:
-            raise ValueError("Only `order` from 2 to 6 are allowed")
+        raise ValueError("Only `order` from 2 to 6 are allowed")
 
     def compute_weights(self, positions: torch.Tensor):
         """
