@@ -29,9 +29,20 @@ class MeshInterpolator:
         The degree of the polynomials used for interpolation. A higher order leads
         to smoother interpolation, at a computational cost that grows cubically with
         the interpolation order (once one moves to the 3D case).
+    :param method: str
+        Either "Langrange" or "P3M"
     """
 
-    def __init__(self, cell: torch.Tensor, ns_mesh: torch.Tensor, order: int):
+    def __init__(
+        self,
+        cell: torch.Tensor,
+        ns_mesh: torch.Tensor,
+        order: int,
+        method: str = "P3M",  # Cannot use `Literal` here because of TorchScript
+    ):
+        if method not in ["Langrange", "P3M"]:
+            raise ValueError("Only `method` `Langrange` and `P3M` are allowed")
+        self.method = method
         # Check that the provided parameters match the specifications
         if cell.shape != (3, 3):
             raise ValueError(
@@ -39,8 +50,14 @@ class MeshInterpolator:
             )
         if ns_mesh.shape != (3,):
             raise ValueError(f"shape {list(ns_mesh.shape)} of `ns_mesh` has to be (3,)")
-        if order not in [1, 2, 3, 4, 5]:
-            raise ValueError("Only `order` from 1 to 5 are allowed")
+        
+        if self.method == "Langrange":
+            if order not in [2, 3, 4, 5, 6]:
+                raise ValueError("Only `order` from 2 to 6 are allowed")
+        elif self.method == "P3M":
+            if order not in [1, 2, 3, 4, 5]:
+                raise ValueError("Only `order` from 1 to 5 are allowed")
+
         if cell.device != ns_mesh.device:
             raise ValueError(
                 "`cell` and `ns_mesh` are on different devices, got "
@@ -93,8 +110,16 @@ class MeshInterpolator:
             dim=-1,
         )
         return torch.matmul(grid_scaled, self.cell)
-
+    
     def _compute_1d_weights(self, x: torch.Tensor) -> torch.Tensor:
+        if self.method == "Langrange":
+            return self._compute_1d_weights_Lagrange(x)
+        elif self.method == "P3M":
+            return self._compute_1d_weights_P3M(x)
+        else:
+            raise ValueError("Only `method` `Langrange` and `P3M` are allowed")
+
+    def _compute_1d_weights_P3M(self, x: torch.Tensor) -> torch.Tensor:
         """
         Generate the smooth interpolation weights used to smear the particles onto a
         mesh.
@@ -150,6 +175,105 @@ class MeshInterpolator:
             )
         raise ValueError("Only `order` from 1 to 5 are allowed")
 
+    def _compute_1d_weights_Lagrange(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Generate the smooth interpolation weights used to smear the particles onto a
+        mesh.
+
+        The details of the method are described in
+        `J. Chem. Phys. 103, 3668-3679 (1995) <https://doi.org/10.1063/1.470043>`_
+
+        :param x: torch.tensor of shape ``(n,)``
+            Set of relative positions in the interval [-1/2, 1/2].
+
+        :return: torch.tensor of shape ``(order, n)``
+            Interpolation weights
+        """
+        # Compute weights based on the given order
+        if self.order == 2:
+            x2 = x * x
+            return torch.stack(
+                [
+                    1 / 2 * (-x + x2),
+                    1 / 2 * (2 - 2 * x2),
+                    1 / 2 * (x + x2),
+                ]
+            )
+        elif self.order == 3:
+            x2 = x * x
+            x3 = x * x2
+            return torch.stack(
+                [
+                    1 / 48 * (-3 + 2 * x + 12 * x2 - 8 * x3),
+                    1 / 48 * (27 - 54 * x - 12 * x2 + 24 * x3),
+                    1 / 48 * (27 + 54 * x - 12 * x2 - 24 * x3),
+                    1 / 48 * (-3 - 2 * x + 12 * x2 + 8 * x3),
+                ]
+            )
+        elif self.order == 4:
+            x2 = x * x
+            x3 = x * x2
+            x4 = x * x3
+            return torch.stack(
+                [
+                    1 / 24 * (2 * x - x2 - 2 * x3 + x4),
+                    1 / 24 * (-16 * x + 16 * x2 + 4 * x3 - 4 * x4),
+                    1 / 24 * (24 - 30 * x2 + 6 * x4),
+                    1 / 24 * (16 * x + 16 * x2 - 4 * x3 - 4 * x4),
+                    1 / 24 * (-2 * x - x2 + 2 * x3 + x4),
+                ]
+            )
+        elif self.order == 5:
+            x2 = x * x
+            x3 = x * x2
+            x4 = x * x3
+            x5 = x * x4
+            return torch.stack(
+                [
+                    1 / 3840 * (45 - 18 * x - 200 * x2 + 80 * x3 + 80 * x4 - 32 * x5),
+                    1
+                    / 3840
+                    * (-375 + 250 * x + 1560 * x2 - 1040 * x3 - 240 * x4 + 160 * x5),
+                    1
+                    / 3840
+                    * (2250 - 4500 * x - 1360 * x2 + 2720 * x3 + 160 * x4 - 320 * x5),
+                    1
+                    / 3840
+                    * (2250 + 4500 * x - 1360 * x2 - 2720 * x3 + 160 * x4 + 320 * x5),
+                    1
+                    / 3840
+                    * (-375 - 250 * x + 1560 * x2 + 1040 * x3 - 240 * x4 - 160 * x5),
+                    1 / 3840 * (45 + 18 * x - 200 * x2 - 80 * x3 + 80 * x4 + 32 * x5),
+                ]
+            )
+        elif self.order == 6:
+            x2 = x * x
+            x3 = x * x2
+            x4 = x * x3
+            x5 = x * x4
+            x6 = x * x5
+            return torch.stack(
+                [
+                    1 / 720 * (-12 * x + 4 * x2 + 15 * x3 - 5 * x4 - 3 * x5 + x6),
+                    1
+                    / 720
+                    * (108 * x - 54 * x2 - 120 * x3 + 60 * x4 + 12 * x5 - 6 * x6),
+                    1
+                    / 720
+                    * (-540 * x + 540 * x2 + 195 * x3 - 195 * x4 - 15 * x5 + 15 * x6),
+                    1 / 720 * (720 - 980 * x2 + 280 * x4 - 20 * x6),
+                    1
+                    / 720
+                    * (540 * x + 540 * x2 - 195 * x3 - 195 * x4 + 15 * x5 + 15 * x6),
+                    1
+                    / 720
+                    * (-108 * x - 54 * x2 + 120 * x3 + 60 * x4 - 12 * x5 - 6 * x6),
+                    1 / 720 * (12 * x + 4 * x2 - 15 * x3 - 5 * x4 + 3 * x5 + x6),
+                ]
+            )
+        else:
+            raise ValueError("Only `order` from 2 to 6 are allowed")
+
     def compute_weights(self, positions: torch.Tensor):
         """
         Compute the interpolation weights of each atom for a given cell (specified
@@ -176,12 +300,22 @@ class MeshInterpolator:
         positions_rel = self.ns_mesh * torch.matmul(positions, self.inverse_cell)
 
         # Calculate positions and distances based on interpolation order
-        if self.order % 2 == 0:
-            positions_rel_idx = torch.floor(positions_rel).long()
-            offsets = positions_rel - (positions_rel_idx + 1 / 2)
+        if self.method == "Langrange":
+            if self.order % 2 != 0:
+                positions_rel_idx = torch.floor(positions_rel).long()
+                offsets = positions_rel - (positions_rel_idx + 1 / 2)
+            else:
+                positions_rel_idx = torch.round(positions_rel).long()
+                offsets = positions_rel - positions_rel_idx
+        elif self.method == "P3M":
+            if self.order % 2 == 0:
+                positions_rel_idx = torch.floor(positions_rel).long()
+                offsets = positions_rel - (positions_rel_idx + 1 / 2)
+            else:
+                positions_rel_idx = torch.round(positions_rel).long()
+                offsets = positions_rel - positions_rel_idx
         else:
-            positions_rel_idx = torch.round(positions_rel).long()
-            offsets = positions_rel - positions_rel_idx
+            raise ValueError("Only `method` `Langrange` and `P3M` are allowed")
 
         # Compute weights based on distances and interpolation order
         self.interpolation_weights = self._compute_1d_weights(offsets)
