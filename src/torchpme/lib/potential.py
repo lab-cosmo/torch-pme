@@ -90,18 +90,55 @@ class Potential(torch.nn.Module):
 
     @torch.jit.export
     def sr_from_dist(self, dist: torch.Tensor) -> torch.Tensor:
+        r"""
+        Computes the short-range part of the pair potential 
+        in real space, given a tensor of interatomic distances.
+        Even though one can provide a custom version, this is usually
+        evaluated as 
+        :math:`V_{\mathrm{SR}}(r)=V(r)-V_{\mathrm{LR}}(r)`, 
+        based on the full and long-range parts of the potential.
+        If the parameter ``cutoff_radius`` is defined, it computes 
+        this part as 
+        :math:`V_{\mathrm{SR}}(r)=-V_{\mathrm{LR}}(r)*f_\mathrm{cut}(r)`
+        so that, when added to the part of the potential computed
+        in the Fourier domain, the potential within the local region
+        goes smoothly to zero.
+
+        :param dist: torch.tensor containing the distances at which the potential
+            is to be evaluated.
+        """
+
         if self.cutoff_radius is None:
             return self.from_dist(dist) - self.lr_from_dist(dist)
         return -self.lr_from_dist(dist) * self.f_cutoff(dist)
 
     @torch.jit.export
     def lr_from_dist(self, dist: torch.Tensor) -> torch.Tensor:
+        r"""
+        Computes the long-range part of the pair potential 
+        :math:`V_\mathrm{LR}(r)`.
+        in real space, given a tensor of interatomic distances.
+        
+        :param dist: torch.tensor containing the distances at which the potential
+            is to be evaluated.
+        """
+
         raise NotImplementedError(
             f"lr_from_dist is not implemented for {self.__class__.__name__}"
         )
 
     @torch.jit.export
     def lr_from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
+        """
+        Computes the Fourier-domain version of the long-range part of the pair potential 
+        :math:`\hat{V}_\mathrm{LR}(k)`. The function is expressed in terms of 
+        :math:`k^2`, as that avoids, in several important cases, an 
+        unnecessary square root operation. 
+
+        :param k_sq: torch.tensor containing the squared norm of the 
+            Fourier domain vectors at which :math:`\hat{V}_\mathrm{LR}`
+            must be evaluated.
+        """
         raise NotImplementedError(
             f"lr_from_k_sq is not implemented for {self.__class__.__name__}"
         )
