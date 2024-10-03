@@ -174,7 +174,7 @@ class CalculatorEwald(CalculatorBaseTorch):
         #    (3 - self.exponent) / 2
         #)
         #prefac /= (3 - self.exponent) * gamma(torch.tensor(self.exponent / 2))
-        prefac = self.potential.charge_correction_prefac # TODO: implement this
+        prefac = self.potential.charge_correction # TODO: implement this
         energy -= 2 * prefac * charge_tot * ivolume
 
         # Compensate for double counting of pairs (i,j) and (j,i)

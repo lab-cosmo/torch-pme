@@ -52,6 +52,10 @@ class Potential(torch.nn.Module):
         self.range_radius = range_radius
         self.cutoff_radius = cutoff_radius
 
+        # TorchScript requires to initialize all attributes in __init__
+        self._device = torch.device("cpu")
+        self._dtype = torch.float32
+
     @torch.jit.export
     def f_cutoff(self, dist: torch.Tensor) -> torch.Tensor:
         """
@@ -152,6 +156,35 @@ class Potential(torch.nn.Module):
         """
 
         return self.lr_from_k_sq(k_sq)
+    
+    @torch.jit.export
+    def self_contribution(self) -> torch.Tensor:
+        """
+        Using the Coulomb potential as an
+        example, this is the potential generated at the origin by the fictituous
+        Gaussian charge density in order to split the potential into a SR and LR part.
+        This contribution always should be subtracted since it depends on the smearing
+        parameter, which is purely a convergence parameter.
+        """
+        raise NotImplementedError(
+            f"self_contribution is not implemented for {self.__class__.__name__}"
+        )
+
+    @torch.jit.export
+    def charge_correction(self) -> torch.Tensor:
+        """
+        The method requires that the unit cell is charge-neutral.
+        # If the cell has a net charge (i.e. if sum(charges) != 0), the method
+        # implicitly assumes that a homogeneous background charge of the opposite sign
+        # is present to make the cell neutral. In this case, the potential has to be
+        # adjusted to compensate for this.
+        # An extra factor of 2 is required to compensate for the division by 2 later on
+        """
+        raise NotImplementedError(
+            f"charge_correction is not implemented for {self.__class__.__name__}"
+        )
+
+
 
 
 class InversePowerLawPotential(Potential):
