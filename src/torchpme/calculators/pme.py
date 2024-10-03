@@ -1,4 +1,6 @@
-from typing import Optional
+import math
+import warnings
+from typing import Literal, Optional
 
 import torch
 from torch import profiler
@@ -7,7 +9,7 @@ from ..lib import Potential
 from ..lib.kspace_filter import KSpaceFilter
 from ..lib.kvectors import get_ns_mesh
 from ..lib.mesh_interpolator import MeshInterpolator
-from .base import Calculator
+from .base import Calculator, estimate_smearing
 
 
 class PMECalculator(Calculator):
@@ -146,3 +148,118 @@ class PMECalculator(Calculator):
 
         # Compensate for double counting of pairs (i,j) and (j,i)
         return interpolated_potential / 2
+
+
+def tune_pme(
+        positions: torch.Tensor,
+        charges: torch.Tensor,
+        cell: torch.Tensor,
+        interpolation_nodes: int,
+        exponent: int = 1,
+        accuracy: Optional[Literal["medium", "accurate"] | float] = "medium",
+        max_steps: int = 50000,
+        learning_rate: float = 5e-2,
+        verbose: bool = False,
+):
+    r"""Find the optimal parameters for a single system for the ewald method.
+    """
+
+    if exponent != 1:
+        raise NotImplementedError("Only exponent = 1 is supported")
+    dtype = positions.dtype
+    device = positions.device
+
+    # Create valid dummy tensors to verify `positions`, `charges` and `cell`
+    neighbor_indices = torch.zeros(0, 2, device=device)
+    neighbor_distances = torch.zeros(0, device=device)
+    Calculator._validate_compute_parameters(
+        positions=positions,
+        charges=charges,
+        cell=cell,
+        neighbor_indices=neighbor_indices,
+        neighbor_distances=neighbor_distances,
+    )
+
+    positions = positions[0]
+    charges = charges[0]
+    cell = cell[0]
+
+    if charges.shape[1] > 1:
+        raise NotImplementedError(
+            f"Found {charges.shape[1]} charge channels, but only one iss supported"
+        )
+
+    if accuracy == "medium":
+        accuracy = 1e-3
+    elif accuracy == "accurate":
+        accuracy = 1e-6
+    elif not isinstance(accuracy, float):
+        raise ValueError(
+            f"'{accuracy}' is not a valid method or a float: Choose from 'fast',"
+            f"'medium' or 'accurate', or provide a float for the accuracy."
+        )
+
+    cell_dimensions = torch.linalg.norm(cell, dim=1)
+    half_cell = float(torch.min(cell_dimensions) / 2)
+    
+    smearing_init = estimate_smearing(cell)
+    prefac = 2 * torch.sum(charges**2) / math.sqrt(len(positions))
+    volume = torch.abs(cell.det())
+
+    def err_Fourier(smearing, mesh_spacing, order):
+        raise NotImplementedError
+
+    def err_real(smearing, cutoff):
+        return (
+            prefac
+            / torch.sqrt(cutoff * volume)
+            * torch.exp(-(cutoff**2) / 2 / smearing**2)
+        )
+
+    def loss(smearing, mesh_spacing, order, cutoff):
+        return torch.sqrt(
+            err_Fourier(smearing, mesh_spacing, order) ** 2 + err_real(smearing, cutoff) ** 2
+        )
+    
+    # initial guess
+    smearing = torch.tensor(
+        smearing_init, device=device, dtype=dtype, requires_grad=True
+    )
+    mesh_spacing = torch.tensor(
+        smearing / 8, device=device, dtype=dtype, requires_grad=True
+    )
+    cutoff = torch.tensor(
+        half_cell / 5, device=device, dtype=dtype, requires_grad=True
+    )
+
+    optimizer = torch.optim.Adam([smearing, mesh_spacing, cutoff], lr=learning_rate)
+
+    for step in range(max_steps):
+        loss_value = loss(smearing, mesh_spacing, interpolation_nodes, cutoff)
+        if torch.isnan(loss_value):
+            raise ValueError(
+                "The value of the estimated error is now nan, consider using a "
+                "smaller learning rate."
+            )
+        loss_value.backward()
+        optimizer.step()
+        optimizer.zero_grad()
+
+        if verbose and (step % 100 == 0):
+            print(f"{step}: {loss_value:.2e}")
+        if loss_value <= accuracy:
+            break
+
+    if loss_value > accuracy:
+        warnings.warn(
+            "The searching for the parameters is ended, but the error is "
+            f"{float(loss_value):.3e}, larger than the given accuracy {accuracy}. "
+            "Consider increase max_step and",
+            stacklevel=2,
+        )
+
+    return {
+        "atomic_smearing": float(smearing),
+        "mesh_spacing": float(mesh_spacing),
+        "interpolation_nodes": int(interpolation_nodes),
+    }, float(cutoff)
