@@ -6,6 +6,7 @@ from .kvectors import (
 )
 from .mesh_interpolator import MeshInterpolator
 from .potentials import InversePowerLawPotential
+from .potential import Potential
 
 __all__ = [
     "all_neighbor_indices",

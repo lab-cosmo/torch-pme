@@ -3,21 +3,20 @@ from typing import Union
 import torch
 from torch import profiler
 
-from ..lib import InversePowerLawPotential
+from ..lib import Potential
 
 
 class CalculatorBaseTorch(torch.nn.Module):
     """
     Base calculator for the torch interface.
 
-    :param exponent: the exponent :math:`p` in :math:`1/r^p` potentials
+    :param potential: a Potential class object containing the necessary functions
     :param smearing: smearing parameter of a range separated potential
     """
 
     def __init__(
         self,
-        exponent: float,
-        smearing: Union[float, torch.Tensor] = None,
+        potential: Potential,
         full_neighbor_list: bool = False,
     ):
         super().__init__()
@@ -25,10 +24,7 @@ class CalculatorBaseTorch(torch.nn.Module):
         self._device = torch.device("cpu")
         self._dtype = torch.float32
 
-        if exponent < 0.0 or exponent > 3.0:
-            raise ValueError(f"`exponent` p={exponent} has to satisfy 0 < p <= 3")
-        self.exponent = exponent
-        self.potential = InversePowerLawPotential(exponent=exponent, smearing=smearing)
+        self.potential = potential
 
         self.full_neighbor_list = full_neighbor_list
 
@@ -40,26 +36,22 @@ class CalculatorBaseTorch(torch.nn.Module):
         neighbor_distances: torch.Tensor,
         subtract_interior: bool,
     ) -> torch.Tensor:
+        
+        # Compute the pair potential terms V(r_ij) for each pair of atoms (i,j)
+        # contained in the neighbor list
         with profiler.record_function("compute bare potential"):
-            if is_periodic:
-                # If the contribution from all atoms within the cutoff is to be subtracted
-                # this short-range part will simply use -V_LR as the potential
-                if subtract_interior:
-                    potentials_bare = -self.potential.lr_from_dist(neighbor_distances)
-                # In the remaining cases, we simply use the usual V_SR to get the full
-                # 1/r^p potential when combined with the long-range part implemented in
-                # reciprocal space
-                else:
-                    potentials_bare = self.potential.sr_from_dist(neighbor_distances)
-            else:  # is_direct
-                potentials_bare = self.potential.from_dist(neighbor_distances)
+            potentials_bare = self.potential.sr_from_dist(neighbor_distances)
 
+        # Multiply the bare potential terms V(r_ij) with the corresponding charges
+        # of ``atom j'' to obtain q_j*V(r_ij). Since each atom j can be a neighbor of
+        # multiple atom i's, we need to access those from neighbor_indices
         atom_is = neighbor_indices[:, 0]
         atom_js = neighbor_indices[:, 1]
-
         with profiler.record_function("compute real potential"):
             contributions_is = charges[atom_js] * potentials_bare.unsqueeze(-1)
 
+        # For each atom i, add up all contributions of the form q_j*V(r_ij) for j
+        # ranging over all of its neighbors.
         with profiler.record_function("assign potential"):
             potential = torch.zeros_like(charges)
             potential.index_add_(0, atom_is, contributions_is)

@@ -7,10 +7,11 @@ from ..lib.kspace_filter import KSpaceFilter
 from ..lib.kvectors import get_ns_mesh
 from ..lib.mesh_interpolator import MeshInterpolator
 from ..lib.potentials import gamma
-from .base import CalculatorBaseTorch
+from ..lib import Potential
+from .calculatorbase import CalculatorBaseTorch
 
 
-class PMEPotential(CalculatorBaseTorch):
+class CalculatorPME(CalculatorBaseTorch):
     r"""
     Potential using a particle mesh-based Ewald (PME).
 
@@ -27,7 +28,6 @@ class PMEPotential(CalculatorBaseTorch):
 
     This ensures a accuracy of the short range part of ``1e-5``.
 
-    :param exponent: the exponent :math:`p` in :math:`1/r^p` potentials
     :param full_neighbor_list: If set to :py:obj:`True`, a "full" neighbor list
         is expected as input. This means that each atom pair appears twice. If
         set to :py:obj:`False`, a "half" neighbor list is expected.
@@ -80,7 +80,7 @@ class PMEPotential(CalculatorBaseTorch):
     range part of the potential. Finally, we initlize the potential class and
     ``compute`` the potential for the crystal.
 
-    >>> pme = PMEPotential()
+    >>> pme = CalculatorPME()
     >>> pme.forward(
     ...     positions=positions,
     ...     charges=charges,
@@ -97,25 +97,19 @@ class PMEPotential(CalculatorBaseTorch):
 
     def __init__(
         self,
-        exponent: float = 1.0,
-        atomic_smearing: Union[float, torch.Tensor, None] = None,
+        potential: Potential,
         mesh_spacing: Optional[float] = None,
         interpolation_order: int = 3,
         subtract_interior: bool = False,
         full_neighbor_list: bool = False,
     ):
         super().__init__(
-            exponent=exponent,
-            smearing=atomic_smearing,
+            potential=potential,
             full_neighbor_list=full_neighbor_list,
         )
 
         self.mesh_spacing = mesh_spacing
         self.subtract_interior = subtract_interior
-
-        if atomic_smearing is not None and atomic_smearing <= 0:
-            raise ValueError(f"`atomic_smearing` {atomic_smearing} has to be positive")
-        self.atomic_smearing = atomic_smearing
 
         if interpolation_order not in [1, 2, 3, 4, 5]:
             raise ValueError("Only `interpolation_order` from 1 to 5 are allowed")
@@ -123,8 +117,6 @@ class PMEPotential(CalculatorBaseTorch):
 
         # Initialize the filter module. Set dummy value for smearing to propper
         # initilize the `KSpaceFilter` below
-        if self.atomic_smearing is None:
-            self.potential.smearing = 1.0
         self._KF = KSpaceFilter(
             cell=torch.eye(3),
             ns_mesh=torch.ones(3, dtype=int),
@@ -148,13 +140,9 @@ class PMEPotential(CalculatorBaseTorch):
         # the cost of the LR part. The auxilary parameter mesh_spacing then controls the
         # convergence of the SR and LR sums, respectively. The default values are chosen
         # to reach a convergence on the order of 1e-4 to 1e-5 for the test structures.
-        if self.atomic_smearing is None:
-            smearing = self.estimate_smearing(cell)
-        else:
-            smearing = self.atomic_smearing
 
         if self.mesh_spacing is None:
-            mesh_spacing = smearing / 8.0
+            mesh_spacing = smearing / 8.0 # TODO take from Potential class
         else:
             mesh_spacing = self.mesh_spacing
 
@@ -165,7 +153,6 @@ class PMEPotential(CalculatorBaseTorch):
                 charges=charges,
                 neighbor_indices=neighbor_indices,
                 neighbor_distances=neighbor_distances,
-                subtract_interior=self.subtract_interior,
             )
 
         with profiler.record_function("compute LR"):
@@ -174,7 +161,6 @@ class PMEPotential(CalculatorBaseTorch):
                 positions=positions,
                 charges=charges,
                 cell=cell,
-                smearing=smearing,
                 lr_wavelength=mesh_spacing,
             )
 
@@ -185,7 +171,6 @@ class PMEPotential(CalculatorBaseTorch):
         positions: torch.Tensor,
         charges: torch.Tensor,
         cell: torch.Tensor,
-        smearing: float,
         lr_wavelength: float,
     ) -> torch.Tensor:
         # TODO: Kernel function `G` and initialization of `MeshInterpolator` only depend
@@ -223,8 +208,9 @@ class PMEPotential(CalculatorBaseTorch):
             # the potential into a SR and LR part. This contribution always should be
             # subtracted since it depends on the smearing parameter, which is purely a
             # convergence parameter.
-            phalf = self.exponent / 2
-            fill_value = 1 / gamma(torch.tensor(phalf + 1)) / (2 * smearing**2) ** phalf
+            #phalf = self.exponent / 2
+            #fill_value = 1 / gamma(torch.tensor(phalf + 1)) / (2 * smearing**2) ** phalf
+            fill_value = self.potential.self_contribution # TODO: implement this
             self_contrib = torch.full([], fill_value, device=self._device)
             interpolated_potential -= charges * self_contrib
 
@@ -235,8 +221,9 @@ class PMEPotential(CalculatorBaseTorch):
             # to be adjusted to compensate for this. An extra factor of 2 is added to
             # compensate for the division by 2 later on
             charge_tot = torch.sum(charges, dim=0)
-            prefac = torch.pi**1.5 * (2 * smearing**2) ** ((3 - self.exponent) / 2)
-            prefac /= (3 - self.exponent) * gamma(torch.tensor(self.exponent / 2))
+            #prefac = torch.pi**1.5 * (2 * smearing**2) ** ((3 - self.exponent) / 2)
+            #prefac /= (3 - self.exponent) * gamma(torch.tensor(self.exponent / 2))
+            prefac = self.potential.charge_correction_prefac # TODO: implement this
             interpolated_potential -= 2 * prefac * charge_tot * ivolume
 
         # Compensate for double counting of pairs (i,j) and (j,i)

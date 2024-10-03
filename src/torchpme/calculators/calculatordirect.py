@@ -1,9 +1,9 @@
 import torch
 
-from .base import CalculatorBaseTorch
+from .calculatorbase import CalculatorBaseTorch
 
 
-class DirectPotential(CalculatorBaseTorch):
+class CalculatorDirect(CalculatorBaseTorch):
     r"""
     Potential using a direct summation.
 
@@ -50,7 +50,7 @@ class DirectPotential(CalculatorBaseTorch):
     Finally, we initlize the potential class and ``compute`` the potential for the
     system.
 
-    >>> direct = DirectPotential()
+    >>> direct = CalculatorDirect()
     >>> direct.forward(
     ...     positions=positions,
     ...     charges=charges,
@@ -65,14 +65,6 @@ class DirectPotential(CalculatorBaseTorch):
     distance between the particles.
 
     """
-
-    def __init__(self, exponent: float = 1.0, full_neighbor_list: bool = False):
-        # Use a dummy value for the smearing. We don't use the methods for smeared
-        # potentials in a direct potential.
-        super().__init__(
-            exponent=exponent, smearing=0.0, full_neighbor_list=full_neighbor_list
-        )
-
     def _compute_single_system(
         self,
         positions: torch.Tensor,
