@@ -46,7 +46,6 @@ class PMEPotential(CalculatorBaseTorch):
         atom the contributions to the potential arising from all atoms within the cutoff
         Note that if set to true, the self contribution (see previous) is also
         subtracted by default.
-    :param interpolation_method: The interpolation method to use. Either "Lagrange" or "P3M".
 
     Example
     -------
