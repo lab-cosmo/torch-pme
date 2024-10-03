@@ -342,9 +342,7 @@ def test_order_not_allowed():
     match = "Only `order` from 1 to 5 are allowed"
 
     with pytest.raises(ValueError, match=match):
-        MeshInterpolator(cell, ns_mesh, order)._compute_1d_weights(
-            torch.tensor([0])
-        )
+        MeshInterpolator(cell, ns_mesh, order)._compute_1d_weights(torch.tensor([0]))
 
 
 def test_order_not_allowed_private():
