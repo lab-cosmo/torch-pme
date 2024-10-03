@@ -6,27 +6,41 @@ from torch.special import gammainc, gammaincc, gammaln
 
 # TODO MUST POLISH DOCUMENTATION AND REFACTOR TESTS
 
-
 class Potential(torch.nn.Module):
     r"""
-    Base class defining the interface for a pair potential energy function.
+    Base class defining the interface for a pair potential energy function
 
-    Exposes:
-    from_dist(d) -> full pair potential, real space
-    sr_from_dist -> short-range component, real space
-    lr_from_dist -> long-range component, real space
-    f_cut -> cutoff function for near field, real space
-    lr_from_k2 -> k-space filter, long-range term
-    kernel_from_k2 -> compatibility with Filter
-
-    Internal state variables and parameters in derived classes should be defined
-    in the ``__init__``  method. It provides a short-range and long-range
+    It provides the interface to compute a short-range and long-range
     functions in real space (such that
-    :math:`V(r)=V_{\mathrm{SR}}(r)+V_{\mathrm{LR}}(r))` ).
+    :math:`V(r)=V_{\mathrm{SR}}(r)+V_{\mathrm{LR}}(r)` ),
+    as well as a reciprocal-space version of the long-range
+    component :math:`\hat{V}_{\mathrm{LR}}(k))` ).
+    
+    Derived classes can decide to implement a subset of these 
+    functionalities (e.g. providing only the real-space potential
+    :math:`V(r)`). 
+    Internal state variables and parameters in derived classes should 
+    be defined in the ``__init__``  method. 
 
-    It also should provide a ``from_k_sq`` method
-    (following the API of :py:class:`KSpaceKernel`) that are used
-    to evaluate the long-range part of the potential in the Fourier domain.
+    This base class also provides parameters to set the length
+    scale associated with the range separation, and a cutoff 
+    function that can be optionally set to zero out the potential
+    *inside* a short-range cutoff. This is often useful when
+    combining ``torch-pme``-based ML models with local models that
+    are better suited to describe the structure within a local
+    cutoff.
+
+    Note that a :py:class:`Potential` class can also be used 
+    inside a :py:class:`KSpaceFilter`, see 
+    :py:func:`Potential.kernel_from_k_sq`.
+
+    :param range_radius: The length scale associated with the 
+        switching between 
+        :math:`V_{\mathrm{SR}}(r)` and :math:`V_{\mathrm{LR}}(r)`        
+    :param cutoff_radius: A length scale that defines a 
+        *local environment* within which the potential should be 
+        smoothly zeroed out, as it will be described by a separate
+        model.        
     """
 
     def __init__(
@@ -41,7 +55,14 @@ class Potential(torch.nn.Module):
     @torch.jit.export
     def f_cutoff(self, dist: torch.Tensor) -> torch.Tensor:
         """
-        Default cutoff function defining the interior region.
+        Default cutoff function defining the *local* region
+        that should be excluded from the computation of a
+        long-range model. Defaults to a shifted cosine
+        :math:`(1+\cos \pi r/r_\mathrm{cut})/2`.
+
+        :param dist: a torc.Tensor containing the interatomic
+            distances over which the cutoff function should be
+            computed. 
         """
 
         if self.cutoff_radius is None:
@@ -90,8 +111,9 @@ class Potential(torch.nn.Module):
         """
         Compatibility function with the interface of
         :py:class:`KSpaceKernel`, so that potentials can be
-        used as kernel for :py:class:`KSpaceFilter`.
+        used as kernels for :py:class:`KSpaceFilter`.
         """
+
         return self.lr_from_k_sq(k_sq)
 
 
