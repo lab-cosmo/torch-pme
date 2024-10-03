@@ -140,9 +140,8 @@ class CalculatorPME(CalculatorBaseTorch):
         # the cost of the LR part. The auxilary parameter mesh_spacing then controls the
         # convergence of the SR and LR sums, respectively. The default values are chosen
         # to reach a convergence on the order of 1e-4 to 1e-5 for the test structures.
-
         if self.mesh_spacing is None:
-            mesh_spacing = smearing / 8.0 # TODO take from Potential class
+            mesh_spacing = self.potential.range_radius / 8.0
         else:
             mesh_spacing = self.mesh_spacing
 
