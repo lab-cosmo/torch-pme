@@ -38,7 +38,7 @@ class MeshInterpolator:
         cell: torch.Tensor,
         ns_mesh: torch.Tensor,
         order: int,
-        method: str = "P3M",  # Cannot use `Literal` here because of TorchScript
+        method: str = "P3M",
     ):
         if method not in ["Lagrange", "P3M"]:
             raise ValueError("Only `method` `Lagrange` and `P3M` are allowed")
