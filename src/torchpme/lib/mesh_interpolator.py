@@ -40,9 +40,8 @@ class MeshInterpolator:
         order: int,
         method: str = "P3M",
     ):
-        if method not in ["Lagrange", "P3M"]:
-            raise ValueError("Only `method` `Lagrange` and `P3M` are allowed")
-        self.method = method
+        # Get method and order, they will be validated later.
+        self.method, self.order = method, order
         # Check that the provided parameters match the specifications
         if cell.shape != (3, 3):
             raise ValueError(
@@ -50,11 +49,6 @@ class MeshInterpolator:
             )
         if ns_mesh.shape != (3,):
             raise ValueError(f"shape {list(ns_mesh.shape)} of `ns_mesh` has to be (3,)")
-
-        if (self.method == "Lagrange") and (order not in [2, 3, 4, 5, 6]):
-            raise ValueError("Only `order` from 2 to 6 are allowed")
-        if (self.method == "P3M") and (order not in [1, 2, 3, 4, 5]):
-            raise ValueError("Only `order` from 1 to 5 are allowed")
 
         if cell.device != ns_mesh.device:
             raise ValueError(
