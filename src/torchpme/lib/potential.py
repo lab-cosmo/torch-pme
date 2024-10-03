@@ -297,6 +297,33 @@ class InversePowerLawPotential(Potential):
             0.0,
             prefac * gammaincc(peff, x) / x**peff * gamma(peff),
         )
+    
+    @torch.jit.export
+    def self_contribution(self) -> torch.Tensor:
+        """
+        Using the Coulomb potential as an
+        example, this is the potential generated at the origin by the fictituous
+        Gaussian charge density in order to split the potential into a SR and LR part.
+        This contribution always should be subtracted since it depends on the smearing
+        parameter, which is purely a convergence parameter.
+        """
+        phalf = self.exponent / 2
+        fill_value = (1 / gamma(torch.tensor(phalf + 1)) / (2 * self.range_radius**2) ** phalf)
+        return fill_value
+
+    @torch.jit.export
+    def charge_correction(self) -> torch.Tensor:
+        """
+        The method requires that the unit cell is charge-neutral.
+        # If the cell has a net charge (i.e. if sum(charges) != 0), the method
+        # implicitly assumes that a homogeneous background charge of the opposite sign
+        # is present to make the cell neutral. In this case, the potential has to be
+        # adjusted to compensate for this.
+        # An extra factor of 2 is required to compensate for the division by 2 later on
+        """
+        prefac = torch.pi**1.5 * (2 * self.range_radius**2) ** ((3 - self.exponent) / 2)
+        prefac /= (3 - self.exponent) * gamma(torch.tensor(self.exponent / 2))
+        return prefac
 
 
 # since pytorch has implemented the incomplete Gamma functions, but not the much more

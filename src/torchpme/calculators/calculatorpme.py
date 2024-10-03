@@ -186,7 +186,6 @@ class CalculatorPME(CalculatorBaseTorch):
             interpolator = MeshInterpolator(cell, ns, order=self.interpolation_order)
 
         with profiler.record_function("update the mesh for the k-space filter"):
-            self.potential.smearing = smearing
             self._KF.update_mesh(cell, ns)
 
         with profiler.record_function("step 1: compute density interpolation"):
@@ -208,9 +207,7 @@ class CalculatorPME(CalculatorBaseTorch):
             # the potential into a SR and LR part. This contribution always should be
             # subtracted since it depends on the smearing parameter, which is purely a
             # convergence parameter.
-            #phalf = self.exponent / 2
-            #fill_value = 1 / gamma(torch.tensor(phalf + 1)) / (2 * smearing**2) ** phalf
-            fill_value = self.potential.self_contribution # TODO: implement this
+            fill_value = self.potential.self_contribution
             self_contrib = torch.full([], fill_value, device=self._device)
             interpolated_potential -= charges * self_contrib
 
@@ -221,9 +218,7 @@ class CalculatorPME(CalculatorBaseTorch):
             # to be adjusted to compensate for this. An extra factor of 2 is added to
             # compensate for the division by 2 later on
             charge_tot = torch.sum(charges, dim=0)
-            #prefac = torch.pi**1.5 * (2 * smearing**2) ** ((3 - self.exponent) / 2)
-            #prefac /= (3 - self.exponent) * gamma(torch.tensor(self.exponent / 2))
-            prefac = self.potential.charge_correction_prefac # TODO: implement this
+            prefac = self.potential.charge_correction_prefac
             interpolated_potential -= 2 * prefac * charge_tot * ivolume
 
         # Compensate for double counting of pairs (i,j) and (j,i)
