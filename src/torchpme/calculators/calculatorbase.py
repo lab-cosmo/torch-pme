@@ -5,7 +5,6 @@ from torch import profiler
 
 from ..lib import Potential
 
-
 class CalculatorBaseTorch(torch.nn.Module):
     """
     Base calculator for the torch interface.
@@ -28,13 +27,111 @@ class CalculatorBaseTorch(torch.nn.Module):
 
         self.full_neighbor_list = full_neighbor_list
 
-    def _compute_sr(
-        self,
-        is_periodic: bool,
+    def compute_direct(self,
         charges: torch.Tensor,
         neighbor_indices: torch.Tensor,
         neighbor_distances: torch.Tensor,
-        subtract_interior: bool,
+    ) -> torch.Tensor:
+        """
+        Computes the potential in "real space"
+        """
+
+        # Compute the pair potential terms V(r_ij) for each pair of atoms (i,j)
+        # contained in the neighbor list
+        with profiler.record_function("compute bare potential"):
+            potentials_bare = self.potential.from_dist(neighbor_distances)
+
+        # Multiply the bare potential terms V(r_ij) with the corresponding charges
+        # of ``atom j'' to obtain q_j*V(r_ij). Since each atom j can be a neighbor of
+        # multiple atom i's, we need to access those from neighbor_indices
+        atom_is = neighbor_indices[:, 0]
+        atom_js = neighbor_indices[:, 1]
+        with profiler.record_function("compute real potential"):
+            contributions_is = charges[atom_js] * potentials_bare.unsqueeze(-1)
+
+        # For each atom i, add up all contributions of the form q_j*V(r_ij) for j
+        # ranging over all of its neighbors.
+        with profiler.record_function("assign potential"):
+            potential = torch.zeros_like(charges)
+            potential.index_add_(0, atom_is, contributions_is)
+            # If we are using a half neighbor list, we need to add the contributions
+            # from the "inverse" pairs (j, i) to the atoms i
+            if not self.full_neighbor_list:
+                contributions_js = charges[atom_is] * potentials_bare.unsqueeze(-1)
+                potential.index_add_(0, atom_js, contributions_js)
+
+        # Compensate for double counting of pairs (i,j) and (j,i)
+        return potential / 2
+
+    def compute_sr(
+        self,
+        charges: torch.Tensor,
+        neighbor_indices: torch.Tensor,
+        neighbor_distances: torch.Tensor,
+    ) -> torch.Tensor:
+        # Compute the pair potential terms V(r_ij) for each pair of atoms (i,j)
+        # contained in the neighbor list
+        with profiler.record_function("compute bare potential"):
+            potentials_bare = self.potential.sr_from_dist(neighbor_distances)
+
+        # Multiply the bare potential terms V(r_ij) with the corresponding charges
+        # of ``atom j'' to obtain q_j*V(r_ij). Since each atom j can be a neighbor of
+        # multiple atom i's, we need to access those from neighbor_indices
+        atom_is = neighbor_indices[:, 0]
+        atom_js = neighbor_indices[:, 1]
+        with profiler.record_function("compute real potential"):
+            contributions_is = charges[atom_js] * potentials_bare.unsqueeze(-1)
+
+        # For each atom i, add up all contributions of the form q_j*V(r_ij) for j
+        # ranging over all of its neighbors.
+        with profiler.record_function("assign potential"):
+            potential = torch.zeros_like(charges)
+            potential.index_add_(0, atom_is, contributions_is)
+            # If we are using a half neighbor list, we need to add the contributions
+            # from the "inverse" pairs (j, i) to the atoms i
+            if not self.full_neighbor_list:
+                contributions_js = charges[atom_is] * potentials_bare.unsqueeze(-1)
+                potential.index_add_(0, atom_js, contributions_js)
+
+        # Compensate for double counting of pairs (i,j) and (j,i)
+        return potential / 2
+    
+    def compute_lr(
+        self,
+        charges: torch.Tensor,
+        cell: torch.Tensor,
+        positions: torch.Tensor,        
+    ) -> torch.Tensor:
+        raise NotImplementedError(f"`compute_lr` not implemented for {self.__class__.__name__}")
+        
+    def compute(self,
+        charges: torch.Tensor,
+        cell: torch.Tensor,
+        positions: torch.Tensor,   
+        neighbor_indices: torch.Tensor,
+        neighbor_distances: torch.Tensor,
+    ) -> torch.Tensor:
+        # Compute short-range (SR) part using a real space sum
+        potential_sr = self.compute_sr(
+            charges=charges,
+            neighbor_indices=neighbor_indices,
+            neighbor_distances=neighbor_distances,
+        )
+
+        # Compute long-range (LR) part using a Fourier / reciprocal space sum
+        potential_lr = self.compute_lr(
+            charges=charges,
+            cell=cell,
+            positions=positions,
+        )
+
+        return potential_sr + potential_lr
+
+    def _compute_sr(
+        self,
+        charges: torch.Tensor,
+        neighbor_indices: torch.Tensor,
+        neighbor_distances: torch.Tensor,
     ) -> torch.Tensor:
         # Compute the pair potential terms V(r_ij) for each pair of atoms (i,j)
         # contained in the neighbor list
