@@ -16,7 +16,10 @@ positions = torch.tensor([[1,0,0],[-1.,0,0]], dtype=dtype, device=device)
 charges = torch.tensor([[1],[-1.]], dtype=dtype, device=device)
 
 nl = vesin.torch.NeighborList(cutoff=5.0, full_list=False)
-
+i, j, S, D, neighbor_distances = nl.compute(
+    points=positions, box=cell, periodic=True, quantities="ijSDd"
+)
+neighbor_indices = torch.stack([i, j], dim=1)
 
 do_jit = True
 def jit(obj):
@@ -62,7 +65,6 @@ plt.show()
 mesh_size = (1,3,4,5)
 mesh = torch.randn(size=mesh_size)
 ns_mesh = torch.tensor(mesh_size[1:])
-cell = torch.eye(3)*3.0
 class MyKernel(kspace_filter.KSpaceKernel):
     def kernel_from_k_sq(self, k_sq:torch.Tensor) -> torch.Tensor:
         return 1.0/(1.0+k_sq)        
@@ -100,7 +102,6 @@ fmesh = myfilter.compute(mesh)
 fig, ax = plt.subplots(1,2)
 ax[0].imshow(mesh[0,0])
 ax[1].imshow(fmesh[0,0])
-fig.show()
 
 # %%
 # Define calculators
@@ -109,4 +110,7 @@ mycalc = calculators.CalculatorPME(
     potential=lrpot  
 )
 
-mycalc.forward()
+mycalc.forward(cell=cell, positions=positions, charges=charges,
+               neighbor_distances=neighbor_distances, 
+               neighbor_indices=neighbor_indices)
+# %%
