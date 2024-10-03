@@ -162,6 +162,17 @@ def tune_pme(
         verbose: bool = False,
 ):
     r"""Find the optimal parameters for a single system for the ewald method.
+
+    For the error formulas are given `elsewhere <https://www2.icp.uni-stuttgart.de/~icp/mediawiki/images/4/4d/Script_Longrange_Interactions.pdf>`_.
+    Note the difference notation between the parameters in the reference and ours:
+
+    .. math::
+
+        \alpha &= \left( \sqrt{2}\,\mathrm{smearing} \right)^{-1}
+
+        K &= \frac{2 \pi}{\mathrm{lr\_wavelength}}
+
+        r_c &= \mathrm{cutoff}
     """
 
     if exponent != 1:
@@ -207,7 +218,27 @@ def tune_pme(
     volume = torch.abs(cell.det())
 
     def err_Fourier(smearing, mesh_spacing, order):
-        raise NotImplementedError
+        def H(mesh_spacing):
+            return torch.prod(1 / get_ns_mesh(cell, mesh_spacing)) ** (1 / 3)
+        
+        def RMS_pi(mesh_spacing, order):
+            raise NotImplementedError
+
+        def log_factorial(x):
+            return torch.lgamma(x + 1)
+
+        def factorial(x):
+            return torch.exp(log_factorial(x))
+
+        return (
+            prefac
+            * torch.pi**0.25
+            * (6 * (1 / 2**0.5 / smearing) / (2 * order + 3)) ** 0.5
+            / volume ** (2 / 3)
+            * (2**0.5 / smearing * H(mesh_spacing)) ** (order + 1)
+            / factorial(order + 1)
+            * torch.exp((order + 1) * (torch.log(order + 1) - torch.log(2) - 1) / 2) * RMS_pi(mesh_spacing, order)
+        )
 
     def err_real(smearing, cutoff):
         return (
@@ -218,9 +249,10 @@ def tune_pme(
 
     def loss(smearing, mesh_spacing, order, cutoff):
         return torch.sqrt(
-            err_Fourier(smearing, mesh_spacing, order) ** 2 + err_real(smearing, cutoff) ** 2
+            err_Fourier(smearing, mesh_spacing, order) ** 2
+            + err_real(smearing, cutoff) ** 2
         )
-    
+
     # initial guess
     smearing = torch.tensor(
         smearing_init, device=device, dtype=dtype, requires_grad=True
@@ -228,9 +260,7 @@ def tune_pme(
     mesh_spacing = torch.tensor(
         smearing / 8, device=device, dtype=dtype, requires_grad=True
     )
-    cutoff = torch.tensor(
-        half_cell / 5, device=device, dtype=dtype, requires_grad=True
-    )
+    cutoff = torch.tensor(half_cell / 5, device=device, dtype=dtype, requires_grad=True)
 
     optimizer = torch.optim.Adam([smearing, mesh_spacing, cutoff], lr=learning_rate)
 
