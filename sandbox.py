@@ -3,8 +3,20 @@
 # init 
 import torchpme.lib.potential as potential
 import torchpme.lib.kspace_filter as kspace_filter
+import torchpme.calculators as calculators
 import torch
 import matplotlib.pyplot as plt
+import vesin.torch
+
+dtype=torch.float64
+device="cpu"
+
+cell = torch.eye(3, dtype=dtype, device=device) * 20.0
+positions = torch.tensor([[1,0,0],[-1.,0,0]], dtype=dtype, device=device)
+charges = torch.tensor([[1],[-1.]], dtype=dtype, device=device)
+
+nl = vesin.torch.NeighborList(cutoff=5.0, full_list=False)
+
 
 do_jit = True
 def jit(obj):
@@ -91,3 +103,10 @@ ax[1].imshow(fmesh[0,0])
 fig.show()
 
 # %%
+# Define calculators
+
+mycalc = calculators.CalculatorPME(
+    potential=lrpot  
+)
+
+mycalc.forward()

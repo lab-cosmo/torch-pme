@@ -1,13 +1,12 @@
-from typing import Optional, Union
+from typing import Optional
 
 import torch
 from torch import profiler
 
+from ..lib import Potential
 from ..lib.kspace_filter import KSpaceFilter
 from ..lib.kvectors import get_ns_mesh
 from ..lib.mesh_interpolator import MeshInterpolator
-from ..lib.potentials import gamma
-from ..lib import Potential
 from .calculatorbase import CalculatorBaseTorch
 
 

@@ -36,7 +36,6 @@ class CalculatorBaseTorch(torch.nn.Module):
         neighbor_distances: torch.Tensor,
         subtract_interior: bool,
     ) -> torch.Tensor:
-        
         # Compute the pair potential terms V(r_ij) for each pair of atoms (i,j)
         # contained in the neighbor list
         with profiler.record_function("compute bare potential"):

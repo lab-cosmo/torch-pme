@@ -6,6 +6,7 @@ from torch.special import gammainc, gammaincc, gammaln
 
 # TODO MUST POLISH DOCUMENTATION AND REFACTOR TESTS
 
+
 class Potential(torch.nn.Module):
     r"""
     Base class defining the interface for a pair potential energy function
@@ -15,32 +16,32 @@ class Potential(torch.nn.Module):
     :math:`V(r)=V_{\mathrm{SR}}(r)+V_{\mathrm{LR}}(r)` ),
     as well as a reciprocal-space version of the long-range
     component :math:`\hat{V}_{\mathrm{LR}}(k))` ).
-    
-    Derived classes can decide to implement a subset of these 
+
+    Derived classes can decide to implement a subset of these
     functionalities (e.g. providing only the real-space potential
-    :math:`V(r)`). 
-    Internal state variables and parameters in derived classes should 
-    be defined in the ``__init__``  method. 
+    :math:`V(r)`).
+    Internal state variables and parameters in derived classes should
+    be defined in the ``__init__``  method.
 
     This base class also provides parameters to set the length
-    scale associated with the range separation, and a cutoff 
+    scale associated with the range separation, and a cutoff
     function that can be optionally set to zero out the potential
     *inside* a short-range cutoff. This is often useful when
     combining ``torch-pme``-based ML models with local models that
     are better suited to describe the structure within a local
     cutoff.
 
-    Note that a :py:class:`Potential` class can also be used 
-    inside a :py:class:`KSpaceFilter`, see 
+    Note that a :py:class:`Potential` class can also be used
+    inside a :py:class:`KSpaceFilter`, see
     :py:func:`Potential.kernel_from_k_sq`.
 
-    :param range_radius: The length scale associated with the 
-        switching between 
-        :math:`V_{\mathrm{SR}}(r)` and :math:`V_{\mathrm{LR}}(r)`        
-    :param cutoff_radius: A length scale that defines a 
-        *local environment* within which the potential should be 
+    :param range_radius: The length scale associated with the
+        switching between
+        :math:`V_{\mathrm{SR}}(r)` and :math:`V_{\mathrm{LR}}(r)`
+    :param cutoff_radius: A length scale that defines a
+        *local environment* within which the potential should be
         smoothly zeroed out, as it will be described by a separate
-        model.        
+        model.
     """
 
     def __init__(
@@ -58,7 +59,7 @@ class Potential(torch.nn.Module):
 
     @torch.jit.export
     def f_cutoff(self, dist: torch.Tensor) -> torch.Tensor:
-        """
+        r"""
         Default cutoff function defining the *local* region
         that should be excluded from the computation of a
         long-range model. Defaults to a shifted cosine
@@ -66,7 +67,7 @@ class Potential(torch.nn.Module):
 
         :param dist: a torc.Tensor containing the interatomic
             distances over which the cutoff function should be
-            computed. 
+            computed.
         """
 
         if self.cutoff_radius is None:
@@ -95,14 +96,14 @@ class Potential(torch.nn.Module):
     @torch.jit.export
     def sr_from_dist(self, dist: torch.Tensor) -> torch.Tensor:
         r"""
-        Computes the short-range part of the pair potential 
+        Computes the short-range part of the pair potential
         in real space, given a tensor of interatomic distances.
         Even though one can provide a custom version, this is usually
-        evaluated as 
-        :math:`V_{\mathrm{SR}}(r)=V(r)-V_{\mathrm{LR}}(r)`, 
+        evaluated as
+        :math:`V_{\mathrm{SR}}(r)=V(r)-V_{\mathrm{LR}}(r)`,
         based on the full and long-range parts of the potential.
-        If the parameter ``cutoff_radius`` is defined, it computes 
-        this part as 
+        If the parameter ``cutoff_radius`` is defined, it computes
+        this part as
         :math:`V_{\mathrm{SR}}(r)=-V_{\mathrm{LR}}(r)*f_\mathrm{cut}(r)`
         so that, when added to the part of the potential computed
         in the Fourier domain, the potential within the local region
@@ -119,10 +120,10 @@ class Potential(torch.nn.Module):
     @torch.jit.export
     def lr_from_dist(self, dist: torch.Tensor) -> torch.Tensor:
         r"""
-        Computes the long-range part of the pair potential 
+        Computes the long-range part of the pair potential
         :math:`V_\mathrm{LR}(r)`.
         in real space, given a tensor of interatomic distances.
-        
+
         :param dist: torch.tensor containing the distances at which the potential
             is to be evaluated.
         """
@@ -133,13 +134,13 @@ class Potential(torch.nn.Module):
 
     @torch.jit.export
     def lr_from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
-        """
-        Computes the Fourier-domain version of the long-range part of the pair potential 
-        :math:`\hat{V}_\mathrm{LR}(k)`. The function is expressed in terms of 
-        :math:`k^2`, as that avoids, in several important cases, an 
-        unnecessary square root operation. 
+        r"""
+        Computes the Fourier-domain version of the long-range part of the pair potential
+        :math:`\hat{V}_\mathrm{LR}(k)`. The function is expressed in terms of
+        :math:`k^2`, as that avoids, in several important cases, an
+        unnecessary square root operation.
 
-        :param k_sq: torch.tensor containing the squared norm of the 
+        :param k_sq: torch.tensor containing the squared norm of the
             Fourier domain vectors at which :math:`\hat{V}_\mathrm{LR}`
             must be evaluated.
         """
@@ -156,14 +157,15 @@ class Potential(torch.nn.Module):
         """
 
         return self.lr_from_k_sq(k_sq)
-    
+
+    # TODO: discuss more generic names and explanations
     @torch.jit.export
     def self_contribution(self) -> torch.Tensor:
         """
         Using the Coulomb potential as an
         example, this is the potential generated at the origin by the fictituous
         Gaussian charge density in order to split the potential into a SR and LR part.
-        This contribution always should always be subtracted since it depends on the 
+        This contribution always should always be subtracted since it depends on the
         smearing parameter, which is purely a convergence parameter.
         """
         raise NotImplementedError(
@@ -295,7 +297,7 @@ class InversePowerLawPotential(Potential):
             0.0,
             prefac * gammaincc(peff, x) / x**peff * gamma(peff),
         )
-    
+
     @torch.jit.export
     def self_contribution(self) -> torch.Tensor:
         """
@@ -306,7 +308,9 @@ class InversePowerLawPotential(Potential):
         parameter, which is purely a convergence parameter.
         """
         phalf = self.exponent / 2
-        fill_value = (1 / gamma(torch.tensor(phalf + 1)) / (2 * self.range_radius**2) ** phalf)
+        fill_value = (
+            1 / gamma(torch.tensor(phalf + 1)) / (2 * self.range_radius**2) ** phalf
+        )
         return fill_value
 
     @torch.jit.export

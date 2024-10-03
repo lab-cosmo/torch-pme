@@ -1,12 +1,10 @@
 import math
 import warnings
-from typing import Literal, Optional, Union
+from typing import Literal, Optional
 
 import torch
 
-from ..lib import generate_kvectors_for_ewald
-from ..lib.potentials import gamma
-from ..lib import Potential
+from ..lib import Potential, generate_kvectors_for_ewald
 from .calculatorbase import CalculatorBaseTorch
 
 

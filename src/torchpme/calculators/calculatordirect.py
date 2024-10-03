@@ -65,6 +65,7 @@ class CalculatorDirect(CalculatorBaseTorch):
     distance between the particles.
 
     """
+
     def _compute_single_system(
         self,
         positions: torch.Tensor,
