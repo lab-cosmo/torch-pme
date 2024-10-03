@@ -84,7 +84,7 @@ class Potential(torch.nn.Module):
         """
         Computes a pair potential given a tensor of interatomic distances.
 
-        :param dist: torch.tensor containing the distances at which the potential
+        :param dist: torch.Tensor containing the distances at which the potential
             is to be evaluated.
         """
 
@@ -163,8 +163,8 @@ class Potential(torch.nn.Module):
         Using the Coulomb potential as an
         example, this is the potential generated at the origin by the fictituous
         Gaussian charge density in order to split the potential into a SR and LR part.
-        This contribution always should be subtracted since it depends on the smearing
-        parameter, which is purely a convergence parameter.
+        This contribution always should always be subtracted since it depends on the 
+        smearing parameter, which is purely a convergence parameter.
         """
         raise NotImplementedError(
             f"self_contribution is not implemented for {self.__class__.__name__}"
@@ -183,8 +183,6 @@ class Potential(torch.nn.Module):
         raise NotImplementedError(
             f"charge_correction is not implemented for {self.__class__.__name__}"
         )
-
-
 
 
 class InversePowerLawPotential(Potential):
