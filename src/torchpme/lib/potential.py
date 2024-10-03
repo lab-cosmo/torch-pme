@@ -1,15 +1,17 @@
 import math
-from typing import Union, Optional
+from typing import Optional, Union
 
 import torch
 from torch.special import gammainc, gammaincc, gammaln
-from .kspace_filter import KSpaceKernel
+
+# TODO MUST POLISH DOCUMENTATION AND REFACTOR TESTS
+
 
 class Potential(torch.nn.Module):
     r"""
     Base class defining the interface for a pair potential energy function.
 
-    Exposes: 
+    Exposes:
     from_dist(d) -> full pair potential, real space
     sr_from_dist -> short-range component, real space
     lr_from_dist -> long-range component, real space
@@ -19,7 +21,7 @@ class Potential(torch.nn.Module):
 
     Internal state variables and parameters in derived classes should be defined
     in the ``__init__``  method. It provides a short-range and long-range
-    functions in real space (such that 
+    functions in real space (such that
     :math:`V(r)=V_{\mathrm{SR}}(r)+V_{\mathrm{LR}}(r))` ).
 
     It also should provide a ``from_k_sq`` method
@@ -27,11 +29,11 @@ class Potential(torch.nn.Module):
     to evaluate the long-range part of the potential in the Fourier domain.
     """
 
-    def __init__(self, 
-                 range_radius : Optional[float] = None,
-                 cutoff_radius : Optional[float] = None,
-                 ):
-        
+    def __init__(
+        self,
+        range_radius: Optional[float] = None,
+        cutoff_radius: Optional[float] = None,
+    ):
         super().__init__()
         self.range_radius = range_radius
         self.cutoff_radius = cutoff_radius
@@ -43,11 +45,15 @@ class Potential(torch.nn.Module):
         """
 
         if self.cutoff_radius is None:
-            raise ValueError("Cannot compute cutoff function when cutoff radius is not set")
-        return torch.where(dist<self.cutoff_radius,
-                           (1+torch.cos(dist*(torch.pi/self.cutoff_radius)))*0.5,
-                           0.0)
-    
+            raise ValueError(
+                "Cannot compute cutoff function when cutoff radius is not set"
+            )
+        return torch.where(
+            dist < self.cutoff_radius,
+            (1 + torch.cos(dist * (torch.pi / self.cutoff_radius))) * 0.5,
+            0.0,
+        )
+
     @torch.jit.export
     def from_dist(self, dist: torch.Tensor) -> torch.Tensor:
         """
@@ -65,15 +71,14 @@ class Potential(torch.nn.Module):
     def sr_from_dist(self, dist: torch.Tensor) -> torch.Tensor:
         if self.cutoff_radius is None:
             return self.from_dist(dist) - self.lr_from_dist(dist)
-        else:
-            return -self.lr_from_dist(dist)*self.f_cutoff(dist)
+        return -self.lr_from_dist(dist) * self.f_cutoff(dist)
 
     @torch.jit.export
     def lr_from_dist(self, dist: torch.Tensor) -> torch.Tensor:
         raise NotImplementedError(
             f"lr_from_dist is not implemented for {self.__class__.__name__}"
         )
-    
+
     @torch.jit.export
     def lr_from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
         raise NotImplementedError(
@@ -82,7 +87,13 @@ class Potential(torch.nn.Module):
 
     @torch.jit.export
     def kernel_from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
+        """
+        Compatibility function with the interface of
+        :py:class:`KSpaceKernel`, so that potentials can be
+        used as kernel for :py:class:`KSpaceFilter`.
+        """
         return self.lr_from_k_sq(k_sq)
+
 
 class InversePowerLawPotential(Potential):
     """
@@ -113,7 +124,7 @@ class InversePowerLawPotential(Potential):
         cutoff_radius: Union[float, torch.Tensor],
     ):
         super().__init__(range_radius, cutoff_radius)
-        self.exponent = exponent        
+        self.exponent = exponent
 
     @torch.jit.export
     def from_dist(self, dist: torch.Tensor) -> torch.Tensor:
@@ -145,7 +156,9 @@ class InversePowerLawPotential(Potential):
         """
 
         exponent = torch.full([], self.exponent, device=dist.device, dtype=dist.dtype)
-        smearing = torch.full([], self.range_radius, device=dist.device, dtype=dist.dtype)
+        smearing = torch.full(
+            [], self.range_radius, device=dist.device, dtype=dist.dtype
+        )
         x = 0.5 * dist**2 / smearing**2
         peff = exponent / 2
         prefac = 1.0 / (2 * smearing**2) ** peff
@@ -173,7 +186,9 @@ class InversePowerLawPotential(Potential):
             this smearing parameter corresponds to the "width" of the Gaussian.
         """
         exponent = torch.full([], self.exponent, device=k_sq.device, dtype=k_sq.dtype)
-        smearing = torch.full([], self.range_radius, device=k_sq.device, dtype=k_sq.dtype)
+        smearing = torch.full(
+            [], self.range_radius, device=k_sq.device, dtype=k_sq.dtype
+        )
         peff = (3 - exponent) / 2
         prefac = math.pi**1.5 / gamma(exponent / 2) * (2 * smearing**2) ** peff
         x = 0.5 * smearing**2 * k_sq

@@ -1,6 +1,9 @@
+from typing import Union
+
 import torch
 
 from .kvectors import generate_kvectors_for_mesh
+from .potential import Potential
 
 
 class KSpaceKernel(torch.nn.Module):
@@ -19,16 +22,6 @@ class KSpaceKernel(torch.nn.Module):
 
     def __init__(self):
         super().__init__()
-
-    def from_k(self, k: torch.Tensor) -> torch.Tensor:
-        r"""
-        Computes the reciprocal-space kernel on a grid of k points given a
-        tensor containing :math:`|\mathbf{k}|`.
-
-        :param k: torch.tensor containing the k vector moduli at which the kernel
-            is to be evaluated.
-        """
-        return self.from_k_sq(k**2)
 
     def from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
         r"""
@@ -83,7 +76,7 @@ class KSpaceFilter(torch.nn.Module):
         self,
         cell: torch.Tensor,
         ns_mesh: torch.Tensor,
-        kernel: KSpaceKernel,
+        kernel: Union[KSpaceKernel, Potential],
         fft_norm: str = "ortho",
         ifft_norm: str = "ortho",
     ):
@@ -112,7 +105,7 @@ class KSpaceFilter(torch.nn.Module):
         :py:class:`KSpaceKernel`-derived object provided upon initialization
         to compute the kernel values over the grid points.
         """
-        self._kfilter = self._kernel.from_k_sq(self._knorm_sq)
+        self._kfilter = self._kernel.kernel_from_k_sq(self._knorm_sq)
 
     @torch.jit.export
     def update_mesh(self, cell: torch.Tensor, ns_mesh: torch.Tensor):
