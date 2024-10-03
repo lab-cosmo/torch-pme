@@ -5,6 +5,7 @@ from torch import profiler
 
 from ..lib import Potential
 
+
 class CalculatorBaseTorch(torch.nn.Module):
     """
     Base calculator for the torch interface.
@@ -27,7 +28,8 @@ class CalculatorBaseTorch(torch.nn.Module):
 
         self.full_neighbor_list = full_neighbor_list
 
-    def compute_direct(self,
+    def compute_direct(
+        self,
         charges: torch.Tensor,
         neighbor_indices: torch.Tensor,
         neighbor_distances: torch.Tensor,
@@ -95,19 +97,24 @@ class CalculatorBaseTorch(torch.nn.Module):
 
         # Compensate for double counting of pairs (i,j) and (j,i)
         return potential / 2
-    
+
     def compute_lr(
         self,
         charges: torch.Tensor,
         cell: torch.Tensor,
-        positions: torch.Tensor,        
+        positions: torch.Tensor,
     ) -> torch.Tensor:
-        raise NotImplementedError(f"`compute_lr` not implemented for {self.__class__.__name__}")
-        
-    def compute(self,
+        raise NotImplementedError(
+            f"`compute_lr` not implemented for {self.__class__.__name__}"
+        )
+
+    # >> this could become the forward() call
+    @torch.jit.export
+    def compute(
+        self,
         charges: torch.Tensor,
         cell: torch.Tensor,
-        positions: torch.Tensor,   
+        positions: torch.Tensor,
         neighbor_indices: torch.Tensor,
         neighbor_distances: torch.Tensor,
     ) -> torch.Tensor:

@@ -25,6 +25,20 @@ do_jit = True
 def jit(obj):
     return torch.jit.script(obj) if do_jit else obj
 
+
+# %%
+# Define calculators
+
+mycalc = jit(calculators.calculatorpme.PMECalculator(
+    potential=potential.InversePowerLawPotential(exponent=1.0, range_radius=1.5, cutoff_radius=None)
+))
+
+pots = mycalc.compute(charges=charges, cell=cell, positions=positions,
+               neighbor_distances=neighbor_distances, 
+               neighbor_indices=neighbor_indices)
+
+print(f"Here come the pots {pots}")
+
 # %%
 #  No cutoff
 
@@ -103,14 +117,4 @@ fig, ax = plt.subplots(1,2)
 ax[0].imshow(mesh[0,0])
 ax[1].imshow(fmesh[0,0])
 
-# %%
-# Define calculators
-
-mycalc = calculators.CalculatorPME(
-    potential=lrpot  
-)
-
-mycalc.forward(cell=cell, positions=positions, charges=charges,
-               neighbor_distances=neighbor_distances, 
-               neighbor_indices=neighbor_indices)
 # %%
