@@ -22,8 +22,10 @@ i, j, S, D, neighbor_distances = nl.compute(
 neighbor_indices = torch.stack([i, j], dim=1)
 
 do_jit = True
+torch._dynamo.config.capture_scalar_outputs = True
 def jit(obj):
     return torch.jit.script(obj) if do_jit else obj
+    #return torch.compile(obj, fullgraph=True) if do_jit else obj
 
 # %%
 # Direct calculators

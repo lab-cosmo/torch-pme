@@ -12,9 +12,16 @@ class Calculator(torch.nn.Module):
     :py:class:`Potential` class, it computes the value of a potential
     by either directly summing over neighbor atoms, or by combining
     a local part computed in real space, and a long-range part computed
-    in the Fourier domain.
+    in the Fourier domain. The class can be used directly to evaluate
+    the real-space part of the potential, or subclassed providing
+    a strategy to evalate the long-range contribution in k-space
+    (see e.g. :py:class:`PMEPotential` or :py:class:`EwaldPotential`).
+    NB: typically a subclass should only provide an implementation of
+    :py:func:`Calculator._compute_kspace`.
 
-    :param potential: a Potential class object containing the necessary functions
+    :param potential: a :py:class:`Potential` class object containing the functions
+        that are necessary to compute the various components of the potential, as
+        well as the parameters that determine the behavior of the potential itself.
     :param full_neighbor_list: parameter indicating whether the neighbor information
         will come from a full (True) or half (False, default) neighbor list.
     """
@@ -40,9 +47,27 @@ class Calculator(torch.nn.Module):
         neighbor_distances: torch.Tensor,
     ) -> torch.Tensor:
         """
-        Computes the potential in "real space"
+        Computes the "real space" part of the potential. Depending on the
+        ``range_radius`` in the potential class, it will either evaluate the
+        full potential, or only the short-range, "local" part.
 
-        TODO more complete docstring
+        :param charges: 2D tensor or list of 2D tensor of shape (``n_channels,
+            len(positions))``. ``n_channels`` is the number of charge channels the
+            potential should be calculated for a standard potential ``n_channels=1``.
+            If more than one "channel" is provided multiple potentials for the same
+            position are computed depending on the charges and the potentials.
+        :param neighbor_indices: Single or list of 2D tensors of shape ``(n, 2)``, where
+            ``n`` is the number of neighbors. The two columns correspond to the indices
+            of a **half neighbor list** for the two atoms which are considered neighbors
+            (e.g. within a cutoff distance) if ``full_neighbor_list=False`` (default).
+            Otherwise, a full neighbor list is expected.
+        :param neighbor_distances: single or list of 1D tensors containing the distance
+            between the ``n`` pairs corresponding to a **half (or full) neighbor list**
+            (see ``neighbor_indices``).
+        :return: Torch tensor containing the potential(s) for all
+            positions. Each tensor in the list is of shape ``(len(positions),
+            len(charges))``, where If the inputs are only single tensors only a single
+            torch tensor with the potentials is returned.
         """
 
         # Compute the pair potential terms V(r_ij) for each pair of atoms (i,j)

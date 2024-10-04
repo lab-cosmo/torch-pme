@@ -1,5 +1,5 @@
-from .calculatordirect import CalculatorDirect
-from .calculatorewald import CalculatorEwald
-from .calculatorpme import CalculatorPME
+from .calculatorbase import Calculator, estimate_smearing
+from .calculatorewald import EwaldCalculator, tune_ewald
+from .calculatorpme import PMECalculator
 
-__all__ = ["CalculatorDirect", "CalculatorEwald", "CalculatorPME", "tune_ewald"]
+__all__ = ["Calculator", "EwaldCalculator", "PMECalculator", "tune_ewald"]
