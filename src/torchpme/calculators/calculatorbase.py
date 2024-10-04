@@ -135,8 +135,6 @@ class Calculator(torch.nn.Module):
             neighbor_distances=neighbor_distances,
         )
 
-        if self.potential.range_radius is None:
-            return self._compute_rspace(charges, neighbor_indices, neighbor_distances)
         # Compute short-range (SR) part using a real space sum
         potential_sr = self._compute_rspace(
             charges=charges,
@@ -144,14 +142,17 @@ class Calculator(torch.nn.Module):
             neighbor_distances=neighbor_distances,
         )
 
-        # Compute long-range (LR) part using a Fourier / reciprocal space sum
-        potential_lr = self._compute_kspace(
-            charges=charges,
-            cell=cell,
-            positions=positions,
-        )
+        if self.potential.range_radius is None:
+            return potential_sr
+        else:
+            # Compute long-range (LR) part using a Fourier / reciprocal space sum
+            potential_lr = self._compute_kspace(
+                charges=charges,
+                cell=cell,
+                positions=positions,
+            )
 
-        return potential_sr + potential_lr
+            return potential_sr + potential_lr
 
     @staticmethod
     def _validate_compute_parameters(
