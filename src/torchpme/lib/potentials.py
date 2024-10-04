@@ -297,6 +297,8 @@ class InversePowerLawPotential(Potential):
         cutoff_radius: Optional[float] = None,
     ):
         super().__init__(range_radius, cutoff_radius)
+        if exponent <= 0 or exponent > 3:
+            raise ValueError(f"`exponent` p={exponent} has to satisfy 0 < p <= 3")
         self.register_buffer("exponent", torch.tensor(exponent))
 
     @torch.jit.export

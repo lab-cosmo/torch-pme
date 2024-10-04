@@ -13,7 +13,8 @@ def gamma(x):
 
 
 # Define precision of floating point variables
-dtype = torch.float32
+dtype = torch.float64
+torch.set_default_dtype(dtype)
 
 # Define range of exponents covering relevant special values and more general
 # floating point values beyond this range. The last four of which are inspired by:
@@ -105,8 +106,8 @@ def test_exact_sr(exponent, range_radius):
         potential_exact = potential_1 / dists_sq + prefac * potential_2
 
     # Compare results. Large tolerance due to singular division
-    rtol = 10 * machine_epsilon
-    atol = 3e-16
+    rtol = 1e2 * machine_epsilon
+    atol = 4e-15
     assert_close(potential_sr_from_dist, potential_exact, rtol=rtol, atol=atol)
 
 
