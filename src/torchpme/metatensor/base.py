@@ -12,13 +12,24 @@ except ImportError:
         "Try installing it with:\npip install metatensor[torch]"
     ) from None
 
+from .. import calculators as torch_calculators
+from ..lib.potentials import Potential
 
 class CalculatorBaseMetatensor(torch.nn.Module):
+    pass
+
+class Calculator(torch.nn.Module):
     """Base calculator for the metatensor interface."""
 
-    def __init__(self):
+    _base_calculator = torch_calculators.Calculator
+
+    def __init__(self, potential:Potential, 
+        **kwargs
+    ):
         super().__init__()
 
+        self._calculator = self._base_calculator(potential, **kwargs)
+        
         # TorchScript requires to initialize all attributes in __init__
         self._device = torch.device("cpu")
         self._dtype = torch.float32
@@ -26,9 +37,9 @@ class CalculatorBaseMetatensor(torch.nn.Module):
 
     @staticmethod
     def _validate_compute_parameters(
-        systems: Union[list[System], System],
-        neighbors: Union[list[TensorBlock], TensorBlock],
-    ) -> tuple[list[System], list[TensorBlock]]:
+        system: System,
+        neighbors: TensorBlock,
+    ):
         # check that all inputs are of the same type
 
         if isinstance(systems, list):
@@ -142,11 +153,11 @@ class CalculatorBaseMetatensor(torch.nn.Module):
 
     def forward(
         self,
-        systems: Union[list[System], System],
-        neighbors: Union[list[TensorBlock], TensorBlock],
+        system: System,
+        neighbors: TensorBlock,
     ) -> TensorMap:
         """
-        Compute potential for all provided ``systems``.
+        Compute potential for the provided ``system``.
 
         All ``systems`` must have the same ``dtype`` and the same ``device``. If each
         system contains a custom data field ``charges`` the potential will be calculated
@@ -168,51 +179,48 @@ class CalculatorBaseMetatensor(torch.nn.Module):
 
         :return: TensorMap containing the potential of all types.
         """
-        systems, neighbors = self._validate_compute_parameters(systems, neighbors)
+        #systems, neighbors = self._validate_compute_parameters(systems, neighbors)
 
         # In actual computations, the data type (dtype) and device (e.g. CPU, GPU) of
         # all remaining variables need to be consistent
-        self._dtype = systems[0].positions.dtype
-        self._device = systems[0].positions.device
-        self._n_charges_channels = systems[0].get_data("charges").values.shape[1]
+        self._dtype = system.positions.dtype
+        self._device = system.positions.device
+        self._n_charges_channels = system.get_data("charges").values.shape[1]
 
-        potentials: list[torch.Tensor] = []
-        samples_list: list[torch.Tensor] = []
-
-        for i_system, (system, neighbors_single) in enumerate(zip(systems, neighbors)):
-            n_atoms = len(system)
-            samples = torch.zeros((n_atoms, 2), device=self._device, dtype=torch.int32)
-            samples[:, 0] = i_system
-            samples[:, 1] = torch.arange(
-                n_atoms, device=self._device, dtype=torch.int32
-            )
-            samples_list.append(samples)
-
-            neighbor_indices = neighbors_single.samples.view(
+        
+        n_atoms = len(system)
+        samples = torch.zeros((n_atoms, 2), device=self._device, dtype=torch.int32)
+        samples[:, 0] = 0
+        samples[:, 1] = torch.arange(
+            n_atoms, device=self._device, dtype=torch.int32
+        )
+        
+        neighbor_indices = neighbors.samples.view(
                 ["first_atom", "second_atom"]
             ).values
-            if self._device.type == "cpu":
-                # move data to 64-bit integers, for some reason indexing with 64-bit
-                # is a lot faster than using 32-bit integers on CPU. CUDA seems fine
-                # with either types
-                neighbor_indices = neighbor_indices.to(
-                    torch.int64, memory_format=torch.contiguous_format
-                )
-
-            neighbor_distances = torch.linalg.norm(
-                neighbors_single.values, dim=1
-            ).squeeze(1)
-
-            # `calculator._compute_single_system` is implemented only in child classes!
-            potentials.append(
-                self.calculator._compute_single_system(
-                    positions=system.positions,
-                    charges=system.get_data("charges").values,
-                    cell=system.cell,
-                    neighbor_indices=neighbor_indices,
-                    neighbor_distances=neighbor_distances,
-                )
+        
+        if self._device.type == "cpu":
+            # move data to 64-bit integers, for some reason indexing with 64-bit
+            # is a lot faster than using 32-bit integers on CPU. CUDA seems fine
+            # with either types
+            neighbor_indices = neighbor_indices.to(
+                torch.int64, memory_format=torch.contiguous_format
             )
+
+        neighbor_distances = torch.linalg.norm(
+            neighbors.values, dim=1
+        ).squeeze(1)
+
+        # `calculator._compute_single_system` is implemented only in child classes!
+        potential = (
+            self._calculator.forward(
+                charges=system.get_data("charges").values,
+                cell=system.cell,
+                positions=system.positions,
+                neighbor_indices=neighbor_indices,
+                neighbor_distances=neighbor_distances,
+            )
+        )
 
         with profiler.record_function("wrap metatensor"):
             properties_values = torch.arange(
@@ -220,8 +228,8 @@ class CalculatorBaseMetatensor(torch.nn.Module):
             )
 
             block = TensorBlock(
-                values=torch.vstack(potentials),
-                samples=Labels(["system", "atom"], torch.vstack(samples_list)),
+                values=potential,
+                samples=Labels(["system", "atom"], samples),
                 components=[],
                 properties=Labels("charges_channel", properties_values.unsqueeze(1)),
             )

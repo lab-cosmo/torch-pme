@@ -7,7 +7,7 @@ from ..lib import Potential
 from ..lib.kspace_filter import KSpaceFilter
 from ..lib.kvectors import get_ns_mesh
 from ..lib.mesh_interpolator import MeshInterpolator
-from .calculatorbase import Calculator
+from .base import Calculator
 
 
 class PMECalculator(Calculator):

@@ -1,10 +1,11 @@
 from typing import Optional
 
-from ..calculators.pmepotential import PMEPotential as PMEPotentialTorch
-from .base import CalculatorBaseMetatensor
+from .. import calculators as torch_calculators
+from .base import Calculator
+from ..lib.potentials import Potential
 
 
-class PMEPotential(CalculatorBaseMetatensor):
+class PMECalculator(Calculator):
     r"""
     Potential using a particle mesh-based Ewald (PME).
 
@@ -100,21 +101,4 @@ class PMEPotential(CalculatorBaseMetatensor):
 
     """
 
-    def __init__(
-        self,
-        exponent: float = 1.0,
-        atomic_smearing: Optional[float] = None,
-        mesh_spacing: Optional[float] = None,
-        interpolation_order: int = 3,
-        subtract_interior: bool = False,
-        full_neighbor_list: bool = False,
-    ):
-        super().__init__()
-        self.calculator = PMEPotentialTorch(
-            exponent=exponent,
-            atomic_smearing=atomic_smearing,
-            mesh_spacing=mesh_spacing,
-            interpolation_order=interpolation_order,
-            subtract_interior=subtract_interior,
-            full_neighbor_list=full_neighbor_list,
-        )
+    _base_calculator = torch_calculators.PMECalculator

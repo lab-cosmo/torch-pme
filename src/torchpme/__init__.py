@@ -1,8 +1,8 @@
 import contextlib
 
-from .calculators.calculatorbase import Calculator
-from .calculators.calculatorewald import EwaldCalculator, tune_ewald
-from .calculators.calculatorpme import PMECalculator
+from .calculators.base import Calculator
+from .calculators.ewald import EwaldCalculator, tune_ewald
+from .calculators.pme import PMECalculator
 
 with contextlib.suppress(ImportError):
     from . import metatensor  # noqa
