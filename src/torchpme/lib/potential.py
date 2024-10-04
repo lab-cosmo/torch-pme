@@ -308,10 +308,7 @@ class InversePowerLawPotential(Potential):
         parameter, which is purely a convergence parameter.
         """
         phalf = self.exponent / 2
-        fill_value = (
-            1 / gamma(torch.tensor(phalf + 1)) / (2 * self.range_radius**2) ** phalf
-        )
-        return fill_value
+        return 1 / gamma(torch.tensor(phalf + 1)) / (2 * self.range_radius**2) ** phalf
 
     @torch.jit.export
     def charge_correction(self) -> torch.Tensor:

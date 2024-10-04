@@ -7,7 +7,7 @@ from ..lib import Potential
 from ..lib.kspace_filter import KSpaceFilter
 from ..lib.kvectors import get_ns_mesh
 from ..lib.mesh_interpolator import MeshInterpolator
-from .calculatorbase import CalculatorBaseTorch
+from .calculatorbase import Calculator, CalculatorBaseTorch
 
 
 class CalculatorPME(CalculatorBaseTorch):
@@ -223,7 +223,7 @@ class CalculatorPME(CalculatorBaseTorch):
         return interpolated_potential / 2
 
 
-class PMECalculator(CalculatorBaseTorch):
+class PMECalculator(Calculator):
     r"""
     Potential using a particle mesh-based Ewald (PME).
 
@@ -294,9 +294,9 @@ class PMECalculator(CalculatorBaseTorch):
 
     >>> pme = CalculatorPME()
     >>> pme.forward(
-    ...     positions=positions,
     ...     charges=charges,
     ...     cell=cell,
+    ...     positions=positions,
     ...     neighbor_indices=neighbor_indices,
     ...     neighbor_distances=neighbor_distances,
     ... )
@@ -337,7 +337,7 @@ class PMECalculator(CalculatorBaseTorch):
             ifft_norm="forward",
         )
 
-    def compute_lr(
+    def compute_kspace(
         self,
         charges: torch.Tensor,
         cell: torch.Tensor,

@@ -98,7 +98,7 @@ fmesh = myfilter.compute(mesh)
 fig, ax = plt.subplots(1,2)
 ax[0].imshow(mesh[0,0])
 ax[1].imshow(fmesh[0,0])
-fig.show()
+plt.show()
 
 # %%
 # KSpace filters from potential
