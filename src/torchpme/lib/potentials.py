@@ -220,6 +220,7 @@ class CoulombPotential(Potential):
     ):
         super().__init__(range_radius, cutoff_radius)
         self.register_buffer("_rsqrt2", torch.rsqrt(torch.tensor(2.0)))
+        self.register_buffer("_sqrt_2_on_pi", torch.sqrt(torch.tensor(2.0/torch.pi)) )
 
     def from_dist(self, dist: torch.Tensor) -> torch.Tensor:
         """
@@ -263,6 +264,14 @@ class CoulombPotential(Potential):
             0.0,
             4 * torch.pi * torch.exp(-0.5 * self.range_radius**2 * k_sq) / k_sq,
         )
+
+    def self_contribution(self) -> torch.Tensor:
+        # self-correction for 1/r^p potential        
+        return  self._sqrt_2_on_pi/self.range_radius
+
+    def background_correction(self) -> torch.Tensor:
+        # "charge neutrality" correction for 1/r^p potential
+        return torch.pi*self.range_radius**2
 
 
 class InversePowerLawPotential(Potential):
@@ -386,12 +395,12 @@ class InversePowerLawPotential(Potential):
     def self_contribution(self) -> torch.Tensor:
         # self-correction for 1/r^p potential
         phalf = self.exponent / 2
-        return 1 / gamma(torch.tensor(phalf + 1)) / (2 * self.range_radius**2) ** phalf
+        return 1 / gamma(phalf + 1) / (2 * self.range_radius**2) ** phalf
 
     def background_correction(self) -> torch.Tensor:
         # "charge neutrality" correction for 1/r^p potential
         prefac = torch.pi**1.5 * (2 * self.range_radius**2) ** ((3 - self.exponent) / 2)
-        prefac /= (3 - self.exponent) * gamma(torch.tensor(self.exponent / 2))
+        prefac /= (3 - self.exponent) * gamma(self.exponent / 2)
         return prefac
 
     self_contribution.__doc__ = Potential.self_contribution.__doc__

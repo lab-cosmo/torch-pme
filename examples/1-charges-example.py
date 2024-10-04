@@ -62,7 +62,7 @@ neighbor_indices = torch.stack([i, j], dim=1)
 # *1* for electrostatic interactions between the two atoms. This calculator
 # will be used to *compute* the potential energy of the system.
 
-calculator = torchpme.PMEPotential(exponent=1.0)
+calculator = torchpme.PMECalculator(torchpme.lib.CoulombPotential(range_radius=1.0))
 
 # %%
 # Single Charge Channel
@@ -126,9 +126,9 @@ charges_one_hot = torch.tensor([[1.0, 0.0], [0.0, 1.0]], dtype=torch.float64)
 # the ``charges_one_hot`` as input.
 
 potential_one_hot = calculator(
-    positions=positions,
-    cell=cell,
     charges=charges_one_hot,
+    cell=cell,
+    positions=positions,
     neighbor_indices=neighbor_indices,
     neighbor_distances=neighbor_distances,
 )
@@ -153,7 +153,7 @@ print(charge_Na * potential_one_hot[0] + charge_Cl * potential_one_hot[1])
 # Next, we will perform the same exercise with the Metatensor interface. This involves
 # creating a new calculator with the metatensor interface.
 
-calculator_metatensor = torchpme.metatensor.PMEPotential(exponent=1.0)
+calculator_metatensor = torchpme.metatensor.PMEPotential(torch.lib.CoulombPotential(range_radius=1.0))
 
 # %%
 # Computation with metatensor involves using Metatensor's :py:class:`System
