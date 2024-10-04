@@ -33,14 +33,14 @@ class Calculator(torch.nn.Module):
 
         self.full_neighbor_list = full_neighbor_list
 
-    def _compute_direct(
+    def _compute_rspace(
         self,
         charges: torch.Tensor,
         neighbor_indices: torch.Tensor,
         neighbor_distances: torch.Tensor,
     ) -> torch.Tensor:
         """
-        Computes the full potential in "real space"
+        Computes the potential in "real space"
 
         TODO more complete docstring
         """
@@ -48,44 +48,10 @@ class Calculator(torch.nn.Module):
         # Compute the pair potential terms V(r_ij) for each pair of atoms (i,j)
         # contained in the neighbor list
         with profiler.record_function("compute bare potential"):
-            potentials_bare = self.potential.from_dist(neighbor_distances)
-
-        # Multiply the bare potential terms V(r_ij) with the corresponding charges
-        # of ``atom j'' to obtain q_j*V(r_ij). Since each atom j can be a neighbor of
-        # multiple atom i's, we need to access those from neighbor_indices
-        atom_is = neighbor_indices[:, 0]
-        atom_js = neighbor_indices[:, 1]
-        with profiler.record_function("compute real potential"):
-            contributions_is = charges[atom_js] * potentials_bare.unsqueeze(-1)
-
-        # For each atom i, add up all contributions of the form q_j*V(r_ij) for j
-        # ranging over all of its neighbors.
-        with profiler.record_function("assign potential"):
-            potential = torch.zeros_like(charges)
-            potential.index_add_(0, atom_is, contributions_is)
-            # If we are using a half neighbor list, we need to add the contributions
-            # from the "inverse" pairs (j, i) to the atoms i
-            if not self.full_neighbor_list:
-                contributions_js = charges[atom_is] * potentials_bare.unsqueeze(-1)
-                potential.index_add_(0, atom_js, contributions_js)
-
-        # Compensate for double counting of pairs (i,j) and (j,i)
-        return potential / 2
-
-    def _compute_local(
-        self,
-        charges: torch.Tensor,
-        neighbor_indices: torch.Tensor,
-        neighbor_distances: torch.Tensor,
-    ) -> torch.Tensor:
-        """
-        Computes only the "local" part of the potential in real space,
-        evaluating the short-range part of the potential.
-        """
-        # Compute the pair potential terms V(r_ij) for each pair of atoms (i,j)
-        # contained in the neighbor list
-        with profiler.record_function("compute bare potential"):
-            potentials_bare = self.potential.sr_from_dist(neighbor_distances)
+            if self.potential.range_radius is None:
+                potentials_bare = self.potential.from_dist(neighbor_distances)
+            else:
+                potentials_bare = self.potential.sr_from_dist(neighbor_distances)
 
         # Multiply the bare potential terms V(r_ij) with the corresponding charges
         # of ``atom j'' to obtain q_j*V(r_ij). Since each atom j can be a neighbor of
@@ -123,38 +89,6 @@ class Calculator(torch.nn.Module):
             f"`compute_kspace` not implemented for {self.__class__.__name__}"
         )
 
-    # >> maybe this could become the forward() call
-    @torch.jit.export
-    def _compute_range_separated(
-        self,
-        charges: torch.Tensor,
-        cell: torch.Tensor,
-        positions: torch.Tensor,
-        neighbor_indices: torch.Tensor,
-        neighbor_distances: torch.Tensor,
-    ) -> torch.Tensor:
-        """
-        Computes the full potential by combining the terms obtained from
-        :py:func:`Calculator._compute_local` and :py:func:`Calculator._compute_kspace`.
-
-        TODO fuller docstring with examples
-        """
-        # Compute short-range (SR) part using a real space sum
-        potential_sr = self._compute_local(
-            charges=charges,
-            neighbor_indices=neighbor_indices,
-            neighbor_distances=neighbor_distances,
-        )
-
-        # Compute long-range (LR) part using a Fourier / reciprocal space sum
-        potential_lr = self._compute_kspace(
-            charges=charges,
-            cell=cell,
-            positions=positions,
-        )
-
-        return potential_sr + potential_lr
-
     def forward(
         self,
         charges: torch.Tensor,
@@ -176,13 +110,25 @@ class Calculator(torch.nn.Module):
             neighbor_distances=neighbor_distances,
         )
 
-        return self._compute_range_separated(
-            charges,
-            cell,
-            positions,
-            neighbor_indices,
-            neighbor_distances,
-        )
+        if self.potential.range_radius is None:
+            return self._compute_rspace(charges, neighbor_indices, neighbor_distances)
+        else:
+            # Compute short-range (SR) part using a real space sum
+            potential_sr = self._compute_rspace(
+                charges=charges,
+                neighbor_indices=neighbor_indices,
+                neighbor_distances=neighbor_distances,
+            )
+
+            # Compute long-range (LR) part using a Fourier / reciprocal space sum
+            potential_lr = self._compute_kspace(
+                charges=charges,
+                cell=cell,
+                positions=positions,
+            )
+
+            return potential_sr + potential_lr               
+        
 
     @staticmethod
     def _validate_compute_parameters(
@@ -298,40 +244,6 @@ class Calculator(torch.nn.Module):
                 f"{device} as `positions`, got at least one tensor with "
                 f"device {neighbor_distances.device}"
             )
-
-
-class DirectCalculator(Calculator):
-    """Compute using the direct potential"""
-
-    def forward(
-        self,
-        charges: torch.Tensor,
-        cell: torch.Tensor,
-        positions: torch.Tensor,
-        neighbor_indices: torch.Tensor,
-        neighbor_distances: torch.Tensor,
-    ):
-        """
-        Default forward method is to call _compute_range_separated
-
-        TODO: documentation and examples
-        """
-        self._validate_compute_parameters(
-            positions=positions,
-            charges=charges,
-            cell=cell,
-            neighbor_indices=neighbor_indices,
-            neighbor_distances=neighbor_distances,
-        )
-
-        return self._compute_direct(
-            positions,
-            charges,
-            cell,
-            neighbor_indices,
-            neighbor_distances,
-        )
-
 
 # TODO remove below this line after all documentation has been updated
 class CalculatorBaseTorch(torch.nn.Module):
