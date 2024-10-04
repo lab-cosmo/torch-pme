@@ -1,5 +1,5 @@
-from .calculatorbase import Calculator, estimate_smearing
-from .calculatorewald import EwaldCalculator, tune_ewald
-from .calculatorpme import PMECalculator
+from .base import Calculator, estimate_smearing
+from .ewald import EwaldCalculator, tune_ewald
+from .pme import PMECalculator
 
 __all__ = ["Calculator", "EwaldCalculator", "PMECalculator", "tune_ewald"]
