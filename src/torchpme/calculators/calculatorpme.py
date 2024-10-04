@@ -27,24 +27,20 @@ class PMECalculator(Calculator):
 
     This ensures a accuracy of the short range part of ``1e-5``.
 
+    :param potential: A :py:class:`Potential` object that implements the evaluation
+        of short and long-range potential terms. The ``range_radius`` parameter of the
+        potential determines the smearing of the atom-centered Gaussian used to split the
+        Coulomb potential into the short- and long-range parts. A reasonable value for
+        most systems is to set it to ``1/5`` times the neighbor list cutoff.
     :param full_neighbor_list: If set to :py:obj:`True`, a "full" neighbor list
         is expected as input. This means that each atom pair appears twice. If
         set to :py:obj:`False`, a "half" neighbor list is expected.
-    :param atomic_smearing: Width of the atom-centered Gaussian used to split the
-        Coulomb potential into the short- and long-range parts. A reasonable value for
-        most systems is to set it to ``1/5`` times the neighbor list cutoff. If
-        :py:obj:`None` ,it will be set to 1/5 times of half the largest box vector
-        (separately for each structure).
     :param mesh_spacing: Value that determines the umber of Fourier-space grid points
         that will be used along each axis. If set to None, it will automatically be set
-        to half of ``atomic_smearing``.
+        to half of ``range_radius``.
     :param interpolation_order: Interpolation order for mapping onto the grid, where an
         interpolation order of p corresponds to interpolation by a polynomial of degree
         ``p - 1`` (e.g. ``p = 4`` for cubic interpolation).
-    :param subtract_interior: If set to :py:obj:`True`, subtract from the features of an
-        atom the contributions to the potential arising from all atoms within the cutoff
-        Note that if set to true, the self contribution (see previous) is also
-        subtracted by default.
 
     Example
     -------
@@ -74,12 +70,16 @@ class PMECalculator(Calculator):
     ... )
     >>> neighbor_indices = torch.stack([i, j], dim=1)
 
+    Define the pair potential used in the calculator
+
+    >>> pot = InversePowerLawPotential(exponent=1.0, range_radius=1.0)
+
     If you inspect the neighbor list you will notice that the tensors are empty for the
     given system, which means the the whole potential will be calculated using the long
     range part of the potential. Finally, we initlize the potential class and
     ``compute`` the potential for the crystal.
 
-    >>> pme = CalculatorPME()
+    >>> pme = PMECalculator(potential=pot)
     >>> pme.forward(
     ...     charges=charges,
     ...     cell=cell,
