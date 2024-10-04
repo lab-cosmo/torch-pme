@@ -1,4 +1,3 @@
-
 from .. import calculators as torch_calculators
 from .base import Calculator
 

@@ -43,7 +43,8 @@ import torch
 import vesin
 import vesin.torch
 
-from torchpme import PMEPotential
+from torchpme import PMECalculator
+from torchpme.lib import CoulombPotential
 
 # %%
 #
@@ -156,11 +157,11 @@ neighbor_distances = distances(
 #
 # and initialize a PME instance to compute the potential.
 
-pme = PMEPotential()
+pme = PMECalculator(potential=CoulombPotential(range_radius=1.5))
 potential = pme(
-    positions=positions,
     charges=charges,
     cell=cell,
+    positions=positions,
     neighbor_indices=neighbor_indices,
     neighbor_distances=neighbor_distances,
 )
@@ -210,9 +211,9 @@ neighbor_indices_new = torch.stack([i, j], dim=1)
 # Following the same steps as above, we compute the forces.
 
 potential_new = pme(
-    positions=positions_new,
     charges=charges,
     cell=cell,
+    positions=positions_new,
     neighbor_indices=neighbor_indices_new,
     neighbor_distances=d,
 )

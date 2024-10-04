@@ -153,8 +153,8 @@ print(charge_Na * potential_one_hot[0] + charge_Cl * potential_one_hot[1])
 # Next, we will perform the same exercise with the Metatensor interface. This involves
 # creating a new calculator with the metatensor interface.
 
-calculator_metatensor = torchpme.metatensor.PMEPotential(
-    torch.lib.CoulombPotential(range_radius=1.0)
+calculator_metatensor = torchpme.metatensor.PMECalculator(
+    torchpme.lib.CoulombPotential(range_radius=1.0)
 )
 
 # %%
