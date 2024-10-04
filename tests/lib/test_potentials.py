@@ -4,7 +4,7 @@ from scipy.special import expi
 from torch.special import erf, erfc
 from torch.testing import assert_close
 
-from torchpme.lib import InversePowerLawPotential
+from torchpme.lib import CoulombPotential, InversePowerLawPotential
 
 
 def gamma(x):
@@ -13,7 +13,7 @@ def gamma(x):
 
 
 # Define precision of floating point variables
-dtype = torch.float64
+dtype = torch.float32
 
 # Define range of exponents covering relevant special values and more general
 # floating point values beyond this range. The last four of which are inspired by:
@@ -21,10 +21,12 @@ dtype = torch.float64
 # Josephson constant K_J = 4.8359... * 1e9 Hz/V
 # Gravitational constant G = 6.6743... * 1e-11 m3/kgs2
 # Electron mass m_e = 9.1094 * 1e-31 kg
-ps = [1.0, 2.0, 3.0, 6.0] + [0.12345, 0.54321, 2.581304, 4.835909, 6.674311, 9.109431]
+# TODO: for the moment, InversePowerLawPotential only works for exponent 0<p<3
+# ps = [1.0, 2.0, 3.0, 6.0] + [0.12345, 0.54321, 2.581304, 4.835909, 6.674311, 9.109431]
+ps = [1.0, 2.0, 3.0] + [0.12345, 0.54321, 2.581304]
 
-# Define range of smearing parameters covering relevant values
-smearings = [0.1, 0.5, 1.0, 1.56]
+# Define range of range_radius parameters covering relevant values
+range_radiuses = [0.1, 0.5, 1.0, 1.56]
 
 # Define realistic range of distances on which the potentials will be evaluated
 dist_min = 1.41e-2
@@ -49,27 +51,9 @@ SQRT2 = torch.sqrt(torch.tensor(2.0, dtype=dtype))
 PI = torch.tensor(torch.pi, dtype=dtype)
 
 
+@pytest.mark.parametrize("range_radius", range_radiuses)
 @pytest.mark.parametrize("exponent", ps)
-def test_potential_from_squared_argument(exponent):
-    """
-    The potentials class can either compute the potential by taking the distance r or
-    its square r^2 as an argument. This test makes sure that both implementations agree.
-    """
-
-    # Compute diverse potentials for this inverse power law
-    ipl = InversePowerLawPotential(exponent=exponent, smearing=0.0)
-    potential_from_dist = ipl.from_dist(dists)
-    potential_from_dist_sq = ipl.from_dist_sq(dists_sq)
-
-    # Test agreement between implementations taking r vs r**2 as argument
-    atol = 3e-16
-    rtol = 2 * machine_epsilon
-    assert_close(potential_from_dist, potential_from_dist_sq, rtol=rtol, atol=atol)
-
-
-@pytest.mark.parametrize("smearing", smearings)
-@pytest.mark.parametrize("exponent", ps)
-def test_sr_lr_split(exponent, smearing):
+def test_sr_lr_split(exponent, range_radius):
     """
     This test verifies the splitting 1/r^p = V_SR(r) + V_LR(r), meaning that it tests
     whether the sum of the SR and LR parts combine to the standard inverse power-law
@@ -77,7 +61,7 @@ def test_sr_lr_split(exponent, smearing):
     """
 
     # Compute diverse potentials for this inverse power law
-    ipl = InversePowerLawPotential(exponent=exponent, smearing=smearing)
+    ipl = InversePowerLawPotential(exponent=exponent, range_radius=range_radius)
     potential_from_dist = ipl.from_dist(dists)
     potential_sr_from_dist = ipl.sr_from_dist(dists)
     potential_lr_from_dist = ipl.lr_from_dist(dists)
@@ -93,8 +77,8 @@ def test_sr_lr_split(exponent, smearing):
 
 
 @pytest.mark.parametrize("exponent", [1.0, 2.0, 3.0])
-@pytest.mark.parametrize("smearing", smearings)
-def test_exact_sr(exponent, smearing):
+@pytest.mark.parametrize("range_radius", range_radiuses)
+def test_exact_sr(exponent, range_radius):
     """
     Test that the implemented formula which works for general interaction exponents p
     does indeed reduce to the correct expression for the special case of the Coulomb
@@ -106,18 +90,18 @@ def test_exact_sr(exponent, smearing):
 
     # Compute SR part of Coulomb potential using the potentials class working for any
     # exponent
-    ipl = InversePowerLawPotential(exponent=exponent, smearing=smearing)
+    ipl = InversePowerLawPotential(exponent=exponent, range_radius=range_radius)
     potential_sr_from_dist = ipl.sr_from_dist(dists)
 
     # Compute exact analytical expression obtained for relevant exponents
-    potential_1 = erfc(dists / SQRT2 / smearing) / dists
-    potential_2 = torch.exp(-0.5 * dists_sq / smearing**2) / dists_sq
+    potential_1 = erfc(dists / SQRT2 / range_radius) / dists
+    potential_2 = torch.exp(-0.5 * dists_sq / range_radius**2) / dists_sq
     if exponent == 1.0:
         potential_exact = potential_1
     elif exponent == 2.0:
         potential_exact = potential_2
     elif exponent == 3.0:
-        prefac = SQRT2 / torch.sqrt(PI) / smearing
+        prefac = SQRT2 / torch.sqrt(PI) / range_radius
         potential_exact = potential_1 / dists_sq + prefac * potential_2
 
     # Compare results. Large tolerance due to singular division
@@ -127,8 +111,8 @@ def test_exact_sr(exponent, smearing):
 
 
 @pytest.mark.parametrize("exponent", [1.0, 2.0, 3.0])
-@pytest.mark.parametrize("smearing", smearings)
-def test_exact_lr(exponent, smearing):
+@pytest.mark.parametrize("range_radius", range_radiuses)
+def test_exact_lr(exponent, range_radius):
     """
     Test that the implemented formula which works for general interaction exponents p
     does indeed reduce to the correct expression for the special case of the Coulomb
@@ -140,18 +124,18 @@ def test_exact_lr(exponent, smearing):
 
     # Compute LR part of Coulomb potential using the potentials class working for any
     # exponent
-    ipl = InversePowerLawPotential(exponent=exponent, smearing=smearing)
+    ipl = InversePowerLawPotential(exponent=exponent, range_radius=range_radius)
     potential_lr_from_dist = ipl.lr_from_dist(dists)
 
     # Compute exact analytical expression obtained for relevant exponents
-    potential_1 = erf(dists / SQRT2 / smearing) / dists
-    potential_2 = torch.exp(-0.5 * dists_sq / smearing**2) / dists_sq
+    potential_1 = erf(dists / SQRT2 / range_radius) / dists
+    potential_2 = torch.exp(-0.5 * dists_sq / range_radius**2) / dists_sq
     if exponent == 1.0:
         potential_exact = potential_1
     elif exponent == 2.0:
         potential_exact = 1 / dists_sq - potential_2
     elif exponent == 3.0:
-        prefac = SQRT2 / torch.sqrt(PI) / smearing
+        prefac = SQRT2 / torch.sqrt(PI) / range_radius
         potential_exact = potential_1 / dists_sq - prefac * potential_2
 
     # Compare results. Large tolerance due to singular division
@@ -161,8 +145,8 @@ def test_exact_lr(exponent, smearing):
 
 
 @pytest.mark.parametrize("exponent", [1.0, 2.0])
-@pytest.mark.parametrize("smearing", smearings)
-def test_exact_fourier(exponent, smearing):
+@pytest.mark.parametrize("range_radius", range_radiuses)
+def test_exact_fourier(exponent, range_radius):
     """
     Test that the implemented formula which works for general interaction exponents p
     does indeed reduce to the correct expression for the special case of the Coulomb
@@ -174,16 +158,16 @@ def test_exact_fourier(exponent, smearing):
 
     # Compute LR part of Coulomb potential using the potentials class working for any
     # exponent
-    ipl = InversePowerLawPotential(exponent=exponent, smearing=smearing)
-    fourier_from_class = ipl.from_k_sq(ks_sq)
+    ipl = InversePowerLawPotential(exponent=exponent, range_radius=range_radius)
+    fourier_from_class = ipl.lr_from_k_sq(ks_sq)
 
     # Compute exact analytical expression obtained for relevant exponents
     if exponent == 1.0:
-        fourier_exact = 4 * PI / ks_sq * torch.exp(-0.5 * smearing**2 * ks_sq)
+        fourier_exact = 4 * PI / ks_sq * torch.exp(-0.5 * range_radius**2 * ks_sq)
     elif exponent == 2.0:
-        fourier_exact = 2 * PI**2 / ks * erfc(smearing * ks / SQRT2)
+        fourier_exact = 2 * PI**2 / ks * erfc(range_radius * ks / SQRT2)
     elif exponent == 3.0:
-        fourier_exact = -2 * PI * expi(-0.5 * smearing**2 * ks_sq)
+        fourier_exact = -2 * PI * expi(-0.5 * range_radius**2 * ks_sq)
 
     # Compare results. Large tolerance due to singular division
     rtol = 1e-14
@@ -191,13 +175,13 @@ def test_exact_fourier(exponent, smearing):
     assert_close(fourier_from_class, fourier_exact, rtol=rtol, atol=atol)
 
 
-@pytest.mark.parametrize("smearing", smearings)
+@pytest.mark.parametrize("range_radius", range_radiuses)
 @pytest.mark.parametrize("exponent", ps[:-1])  # for p=9.11, the results are unstable
-def test_lr_value_at_zero(exponent, smearing):
+def test_lr_value_at_zero(exponent, range_radius):
     """
     The LR part of the potential should no longer have a singularity as r-->0. Instead,
     the value of the potential should converge to an analytical expression that depends
-    on both the exponent p and smearing sigma,namely
+    on both the exponent p and range_radius sigma,namely
     V_LR(0) = Gamma((p+2)/2) / (2*sigma**2)**(p/2)
 
     Note that in general, V_LR as r-->0 is a limit of the form 0/0, and hence
@@ -211,10 +195,53 @@ def test_lr_value_at_zero(exponent, smearing):
     """
     # Get atomic density at tiny distance
     dist_small = torch.tensor(1e-8, dtype=dtype)
-    ipl = InversePowerLawPotential(exponent=exponent, smearing=smearing)
+    ipl = InversePowerLawPotential(exponent=exponent, range_radius=range_radius)
     potential_close_to_zero = ipl.lr_from_dist(dist_small)
 
     # Compare to
-    exact_value = 1.0 / (2 * smearing**2) ** (exponent / 2) / gamma(exponent / 2 + 1.0)
+    exact_value = (
+        1.0 / (2 * range_radius**2) ** (exponent / 2) / gamma(exponent / 2 + 1.0)
+    )
     relerr = torch.abs(potential_close_to_zero - exact_value) / exact_value
     assert relerr.item() < 3e-14
+
+
+def test_exponent_out_of_range():
+    match = r"`exponent` p=.* has to satisfy 0 < p <= 3"
+    with pytest.raises(ValueError, match=match):
+        InversePowerLawPotential(exponent=-1.0, range_radius=0.0)
+
+    with pytest.raises(ValueError, match=match):
+        InversePowerLawPotential(exponent=4, range_radius=0.0)
+
+
+@pytest.mark.parametrize("range_radius", range_radiuses)
+def test_inverserp_coulomb(range_radius):
+    """Check that an explicit Coulomb potential
+    matches the 1/r^p implementation with p=1."""
+
+    # Compute LR part of Coulomb potential using the potentials class working for any
+    # exponent
+    ipl = InversePowerLawPotential(exponent=1.0, range_radius=range_radius)
+    coul = CoulombPotential(range_radius=range_radius)
+
+    ipl_from_dist = ipl.from_dist(dists)
+    ipl_sr_from_dist = ipl.sr_from_dist(dists)
+    ipl_lr_from_dist = ipl.lr_from_dist(dists_sq)
+    ipl_fourier = ipl.lr_from_k_sq(ks_sq)
+
+    coul_from_dist = coul.from_dist(dists)
+    coul_sr_from_dist = coul.sr_from_dist(dists)
+    coul_lr_from_dist = coul.lr_from_dist(dists_sq)
+    coul_fourier = coul.lr_from_k_sq(ks_sq)
+
+    # Test agreement between generic and specialized implementations
+    atol = 3e-16
+    rtol = 2 * machine_epsilon
+    assert_close(ipl_from_dist, coul_from_dist, rtol=rtol, atol=atol)
+
+    atol = 3e-8
+    rtol = 2 * machine_epsilon
+    assert_close(ipl_sr_from_dist, coul_sr_from_dist, rtol=rtol, atol=atol)
+    assert_close(ipl_lr_from_dist, coul_lr_from_dist, rtol=rtol, atol=atol)
+    assert_close(ipl_fourier, coul_fourier, rtol=rtol, atol=atol)

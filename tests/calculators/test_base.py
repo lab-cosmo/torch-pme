@@ -1,7 +1,8 @@
 import pytest
 import torch
 
-from torchpme.calculators.base import CalculatorBaseTorch
+from torchpme.calculators import Calculator
+from torchpme.lib.potentials import InversePowerLawPotential
 
 # Define some example parameters
 DTYPE = torch.float32
@@ -16,48 +17,38 @@ NEIGHBOR_INDICES = torch.ones(3, 2)
 NEIGHBOR_DISTANCES = torch.ones(3)
 
 
-class CalculatorTest(CalculatorBaseTorch):
-    def __init__(self, exponent: float = 1.0):
-        super().__init__(exponent=exponent)
+class PotentialTest(InversePowerLawPotential):
+    def __init__(self):
+        super().__init__(exponent=1.0, range_radius=1.0, cutoff_radius=1.0)
 
-    def _compute_single_system(
-        self, positions, charges, cell, neighbor_indices, neighbor_distances
-    ):
+
+class CalculatorTest(Calculator):
+    def __init__(self):
+        super().__init__(potential=PotentialTest())
+
+    def forward(self, charges, cell, positions, neighbor_indices, neighbor_distances):
         return charges
 
 
-@pytest.mark.parametrize("n_elements", [0, 1, 2])
-def test_compute_output_shapes(n_elements):
+def test_compute_output_shapes():
     """Test that output type matches the input type"""
     calculator = CalculatorTest()
 
-    if n_elements > 0:
-        positions = n_elements * [POSITIONS_1]
-        charges = n_elements * [CHARGES_1]
-        cell = n_elements * [CELL_1]
-        neighbor_indices = n_elements * [NEIGHBOR_INDICES]
-        neighbor_distances = n_elements * [NEIGHBOR_DISTANCES]
-    else:
-        positions = POSITIONS_1
-        charges = CHARGES_1
-        cell = CELL_1
-        neighbor_indices = NEIGHBOR_INDICES
-        neighbor_distances = NEIGHBOR_DISTANCES
+    positions = POSITIONS_1
+    charges = CHARGES_1
+    cell = CELL_1
+    neighbor_indices = NEIGHBOR_INDICES
+    neighbor_distances = NEIGHBOR_DISTANCES
 
     result = calculator.forward(
-        positions=positions,
         charges=charges,
         cell=cell,
+        positions=positions,
         neighbor_indices=neighbor_indices,
         neighbor_distances=neighbor_distances,
     )
-    if type(positions) is list:
-        assert type(result) is list
-        for charge_single, result_single in zip(charges, result):
-            assert result_single.shape == charge_single.shape
-    else:
-        assert type(result) is torch.Tensor
-        assert result.shape == charges.shape
+    assert type(result) is torch.Tensor
+    assert result.shape == charges.shape
 
 
 def test_type_check_error():
@@ -400,4 +391,4 @@ def test_no_cell():
         "periodic calculation"
     )
     with pytest.raises(ValueError, match=match):
-        CalculatorBaseTorch.estimate_smearing(cell=torch.zeros(3, 3))
+        Calculator.estimate_smearing(cell=torch.zeros(3, 3))

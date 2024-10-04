@@ -21,7 +21,7 @@ i, j, S, D, neighbor_distances = nl.compute(
 )
 neighbor_indices = torch.stack([i, j], dim=1)
 
-do_jit = True
+do_jit = False
 torch._dynamo.config.capture_scalar_outputs = True
 def jit(obj):
     return torch.jit.script(obj) if do_jit else obj

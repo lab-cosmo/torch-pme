@@ -175,7 +175,7 @@ class PMECalculator(Calculator):
             # to be adjusted to compensate for this. An extra factor of 2 is added to
             # compensate for the division by 2 later on
             charge_tot = torch.sum(charges, dim=0)
-            prefac = self.potential.charge_correction()
+            prefac = self.potential.background_correction()
             interpolated_potential -= 2 * prefac * charge_tot * ivolume
 
         # Compensate for double counting of pairs (i,j) and (j,i)

@@ -3,7 +3,7 @@ from typing import Union
 import torch
 
 from .kvectors import generate_kvectors_for_mesh
-from .potential import Potential
+from .potentials import Potential
 
 
 class KSpaceKernel(torch.nn.Module):

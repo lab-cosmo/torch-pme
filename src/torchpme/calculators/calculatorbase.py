@@ -291,7 +291,7 @@ def estimate_smearing(
 
 
 # TODO remove below this line after all documentation has been updated
-class CalculatorBaseTorch(torch.nn.Module):
+class CalculatorTorch(torch.nn.Module):
     """
     Base calculator for the torch interface.
 

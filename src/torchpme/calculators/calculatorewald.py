@@ -135,7 +135,7 @@ class EwaldCalculator(Calculator):
         # An extra factor of 2 is added to compensate for the division by 2 later on
         ivolume = torch.abs(cell.det()).pow(-1)
         charge_tot = torch.sum(charges, dim=0)
-        prefac = self.potential.charge_correction()
+        prefac = self.potential.background_correction()
         energy -= 2 * prefac * charge_tot * ivolume
 
         # Compensate for double counting of pairs (i,j) and (j,i)
@@ -224,7 +224,7 @@ def tune_ewald(
         cell,
         _,
         _,
-    ) = CalculatorBaseTorch._validate_compute_parameters(
+    ) = Calculator._validate_compute_parameters(
         positions=positions,
         charges=charges,
         cell=cell,
@@ -270,7 +270,7 @@ def tune_ewald(
     min_dimension = float(torch.min(cell_dimensions))
     half_cell = float(torch.min(cell_dimensions) / 2)
 
-    smearing_init = CalculatorBaseTorch.estimate_smearing(cell)
+    smearing_init = Calculator.estimate_smearing(cell)
     prefac = 2 * torch.sum(charges**2) / math.sqrt(len(positions))
     volume = torch.abs(cell.det())
 
@@ -344,10 +344,10 @@ def tune_ewald(
 
 
 # TODO remobe everything from here on
-from .calculatorbase import CalculatorBaseTorch
+from .calculatorbase import Calculator
 
 
-class CalculatorEwald(CalculatorBaseTorch):
+class CalculatorEwald(Calculator):
     r"""
     Potential computed using the Ewald sum.
 
@@ -503,7 +503,7 @@ class CalculatorEwald(CalculatorBaseTorch):
         # An extra factor of 2 is added to compensate for the division by 2 later on
         ivolume = torch.abs(cell.det()).pow(-1)
         charge_tot = torch.sum(charges, dim=0)
-        prefac = self.potential.charge_correction
+        prefac = self.potential.background_correction
         energy -= 2 * prefac * charge_tot * ivolume
 
         # Compensate for double counting of pairs (i,j) and (j,i)
