@@ -14,10 +14,6 @@ from .. import calculators as torch_calculators
 from ..lib.potentials import Potential
 
 
-class CalculatorBaseMetatensor(torch.nn.Module):
-    pass
-
-
 class Calculator(torch.nn.Module):
     """Base calculator for the metatensor interface.
 
