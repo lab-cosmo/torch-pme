@@ -112,23 +112,21 @@ class Calculator(torch.nn.Module):
 
         if self.potential.range_radius is None:
             return self._compute_rspace(charges, neighbor_indices, neighbor_distances)
-        else:
-            # Compute short-range (SR) part using a real space sum
-            potential_sr = self._compute_rspace(
-                charges=charges,
-                neighbor_indices=neighbor_indices,
-                neighbor_distances=neighbor_distances,
-            )
+        # Compute short-range (SR) part using a real space sum
+        potential_sr = self._compute_rspace(
+            charges=charges,
+            neighbor_indices=neighbor_indices,
+            neighbor_distances=neighbor_distances,
+        )
 
-            # Compute long-range (LR) part using a Fourier / reciprocal space sum
-            potential_lr = self._compute_kspace(
-                charges=charges,
-                cell=cell,
-                positions=positions,
-            )
+        # Compute long-range (LR) part using a Fourier / reciprocal space sum
+        potential_lr = self._compute_kspace(
+            charges=charges,
+            cell=cell,
+            positions=positions,
+        )
 
-            return potential_sr + potential_lr               
-        
+        return potential_sr + potential_lr
 
     @staticmethod
     def _validate_compute_parameters(
@@ -244,6 +242,28 @@ class Calculator(torch.nn.Module):
                 f"{device} as `positions`, got at least one tensor with "
                 f"device {neighbor_distances.device}"
             )
+
+
+def estimate_smearing(
+    cell: torch.Tensor,
+) -> float:
+    """
+    Estimate the smearing for ewald calculators.
+
+    :param cell: A 3x3 tensor representing the periodic system
+    :returns: estimated smearing
+    """
+    if torch.equal(cell.det(), torch.full([], 0, dtype=cell.dtype, device=cell.device)):
+        raise ValueError(
+            "provided `cell` has a determinant of 0 and therefore is not valid "
+            "for periodic calculation"
+        )
+
+    cell_dimensions = torch.linalg.norm(cell, dim=1)
+    max_cutoff = torch.min(cell_dimensions) / 2 - 1e-6
+
+    return max_cutoff.item() / 5.0
+
 
 # TODO remove below this line after all documentation has been updated
 class CalculatorBaseTorch(torch.nn.Module):

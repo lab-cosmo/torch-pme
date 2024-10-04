@@ -5,11 +5,12 @@ from typing import Literal, Optional
 import torch
 
 from ..lib import Potential, generate_kvectors_for_ewald
-from .calculatorbase import CalculatorBaseTorch
+from .calculatorbase import Calculator
 
 
-class CalculatorEwald(CalculatorBaseTorch):
+class EwaldCalculator(Calculator):
     r"""
+    TODO update parameters
     Potential computed using the Ewald sum.
 
     Scaling as :math:`\mathcal{O}(N^2)` with respect to the number of particles
@@ -52,7 +53,6 @@ class CalculatorEwald(CalculatorBaseTorch):
     def __init__(
         self,
         potential: Potential,
-        lr_wavelength: float,
         full_neighbor_list: bool = False,
     ):
         super().__init__(
@@ -60,43 +60,14 @@ class CalculatorEwald(CalculatorBaseTorch):
             full_neighbor_list=full_neighbor_list,
         )
 
-        if lr_wavelength <= 0:
-            raise ValueError(f"`lr_wavelength` {lr_wavelength} has to be positive")
-        self.lr_wavelength = lr_wavelength
-
-    def _compute_single_system(
+    def _compute_kspace(
         self,
-        positions: torch.Tensor,
         charges: torch.Tensor,
         cell: torch.Tensor,
-        neighbor_indices: torch.Tensor,
-        neighbor_distances: torch.Tensor,
-    ) -> torch.Tensor:
-        # Compute short-range (SR) part using a real space sum
-        potential_sr = self._compute_sr(
-            is_periodic=True,
-            charges=charges,
-            neighbor_indices=neighbor_indices,
-            neighbor_distances=neighbor_distances,
-        )
-
-        # Compute long-range (LR) part using a Fourier / reciprocal space sum
-        potential_lr = self._compute_lr(
-            positions=positions,
-            charges=charges,
-            cell=cell,
-        )
-
-        return potential_sr + potential_lr
-
-    def _compute_lr(
-        self,
         positions: torch.Tensor,
-        charges: torch.Tensor,
-        cell: torch.Tensor,
     ) -> torch.Tensor:
         # Define k-space cutoff from required real-space resolution
-        k_cutoff = 2 * torch.pi / self.lr_wavelength
+        k_cutoff = 2 * torch.pi / self.potential.range_radius
 
         # Compute number of times each basis vector of the reciprocal space can be
         # scaled until the cutoff is reached
@@ -115,7 +86,7 @@ class CalculatorEwald(CalculatorBaseTorch):
         # value to be equal to zero. This mathematically corresponds
         # to the requirement that the net charge of the cell is zero.
         # G = 4 * torch.pi * torch.exp(-0.5 * smearing**2 * knorm_sq) / knorm_sq
-        G = self.potential.from_k_sq(knorm_sq)
+        G = self.potential.lr_from_k_sq(knorm_sq)
 
         # Compute the energy using the explicit method that
         # follows directly from the Poisson summation formula.
@@ -152,7 +123,7 @@ class CalculatorEwald(CalculatorBaseTorch):
         # Gaussian charge density in order to split the potential into a SR and LR part.
         # This contribution always should be subtracted since it depends on the smearing
         # parameter, which is purely a convergence parameter.
-        fill_value = self.potential.self_contribution
+        fill_value = self.potential.self_contribution()
         self_contrib = torch.full([], fill_value)
         energy -= charges * self_contrib
 
@@ -164,7 +135,7 @@ class CalculatorEwald(CalculatorBaseTorch):
         # An extra factor of 2 is added to compensate for the division by 2 later on
         ivolume = torch.abs(cell.det()).pow(-1)
         charge_tot = torch.sum(charges, dim=0)
-        prefac = self.potential.charge_correction
+        prefac = self.potential.charge_correction()
         energy -= 2 * prefac * charge_tot * ivolume
 
         # Compensate for double counting of pairs (i,j) and (j,i)
@@ -370,3 +341,170 @@ def tune_ewald(
         "atomic_smearing": float(smearing),
         "lr_wavelength": float(smooth_lr_wavelength(lr_wavelength)),
     }, float(cutoff)
+
+
+# TODO remobe everything from here on
+from .calculatorbase import CalculatorBaseTorch
+
+
+class CalculatorEwald(CalculatorBaseTorch):
+    r"""
+    Potential computed using the Ewald sum.
+
+    Scaling as :math:`\mathcal{O}(N^2)` with respect to the number of particles
+    :math:`N`.
+
+    For computing a **neighborlist** a reasonable ``cutoff`` is half the length of the
+    shortest cell vector, which can be for example computed according as
+
+    .. code-block:: python
+
+        cell_dimensions = torch.linalg.norm(cell, dim=1)
+        cutoff = torch.min(cell_dimensions) / 2 - 1e-6
+
+    This ensures a accuracy of the short range part of ``1e-5``.
+
+    :param atomic_smearing: Width of the atom-centered Gaussian used to split the
+        Coulomb potential into the short- and long-range parts. A reasonable value for
+        most systems is to set it to ``1/5`` times the neighbor list cutoff. If
+        :py:obj:`None` ,it will be set to 1/5 times of half the largest box vector
+        (separately for each structure).
+    :param lr_wavelength: Spatial resolution used for the long-range (reciprocal space)
+        part of the Ewald sum. More conretely, all Fourier space vectors with a
+        wavelength >= this value will be kept. If not set to a global value, it will be
+        set to half the atomic_smearing parameter to ensure convergence of the
+        long-range part to a relative precision of 1e-5.
+    :param exponent: the exponent :math:`p` in :math:`1/r^p` potentials
+    :param subtract_interior: If set to :py:obj:`True`, subtract from the features of an
+        atom the contributions to the potential arising from all atoms within the cutoff
+        Note that if set to true, the self contribution (see previous) is also
+        subtracted by default.
+    :param full_neighbor_list: If set to :py:obj:`True`, a "full" neighbor list is
+        expected as input. This means that each atom pair appears twice. If set to
+        :py:obj:`False`, a "half" neighbor list is expected.
+
+    To tune the ``atomic_smearing`` and  ``lr_wavelength`` for a system you can use the
+    :py:func:`tune_pme` function. For an **example** on the calculator usage refer to
+    :py:class:`CalculatorPME`.
+    """
+
+    def __init__(
+        self,
+        potential: Potential,
+        lr_wavelength: float,
+        full_neighbor_list: bool = False,
+    ):
+        super().__init__(
+            potential=potential,
+            full_neighbor_list=full_neighbor_list,
+        )
+
+        if lr_wavelength <= 0:
+            raise ValueError(f"`lr_wavelength` {lr_wavelength} has to be positive")
+        self.lr_wavelength = lr_wavelength
+
+    def _compute_single_system(
+        self,
+        positions: torch.Tensor,
+        charges: torch.Tensor,
+        cell: torch.Tensor,
+        neighbor_indices: torch.Tensor,
+        neighbor_distances: torch.Tensor,
+    ) -> torch.Tensor:
+        # Compute short-range (SR) part using a real space sum
+        potential_sr = self._compute_sr(
+            is_periodic=True,
+            charges=charges,
+            neighbor_indices=neighbor_indices,
+            neighbor_distances=neighbor_distances,
+        )
+
+        # Compute long-range (LR) part using a Fourier / reciprocal space sum
+        potential_lr = self._compute_lr(
+            positions=positions,
+            charges=charges,
+            cell=cell,
+        )
+
+        return potential_sr + potential_lr
+
+    def _compute_lr(
+        self,
+        positions: torch.Tensor,
+        charges: torch.Tensor,
+        cell: torch.Tensor,
+    ) -> torch.Tensor:
+        # Define k-space cutoff from required real-space resolution
+        k_cutoff = 2 * torch.pi / self.lr_wavelength
+
+        # Compute number of times each basis vector of the reciprocal space can be
+        # scaled until the cutoff is reached
+        basis_norms = torch.linalg.norm(cell, dim=1)
+        ns_float = k_cutoff * basis_norms / 2 / torch.pi
+        ns = torch.ceil(ns_float).long()
+
+        # Generate k-vectors and evaluate
+        # kvectors = self._generate_kvectors(ns=ns, cell=cell)
+        kvectors = generate_kvectors_for_ewald(ns=ns, cell=cell)
+        knorm_sq = torch.sum(kvectors**2, dim=1)
+
+        # G(k) is the Fourier transform of the Coulomb potential
+        # generated by a Gaussian charge density
+        # We remove the singularity at k=0 by explicitly setting its
+        # value to be equal to zero. This mathematically corresponds
+        # to the requirement that the net charge of the cell is zero.
+        # G = 4 * torch.pi * torch.exp(-0.5 * smearing**2 * knorm_sq) / knorm_sq
+        G = self.potential.from_k_sq(knorm_sq)
+
+        # Compute the energy using the explicit method that
+        # follows directly from the Poisson summation formula.
+        # For this, we precompute trigonometric factors for optimization, which leads
+        # to N^2 rather than N^3 scaling.
+        trig_args = kvectors @ (positions.T)  # shape num_k x num_atoms
+
+        # Reshape charges into suitable form for array/tensor broadcasting
+        num_atoms = len(positions)
+        if charges.dim() > 1:
+            num_channels = charges.shape[1]
+            charges_reshaped = (charges.T).reshape(num_channels, 1, num_atoms)
+            sum_idx = 2
+        else:
+            charges_reshaped = charges
+            sum_idx = 1
+
+        # Actual computation of trigonometric factors
+        cos_all = torch.cos(trig_args)
+        sin_all = torch.sin(trig_args)
+        cos_summed = torch.sum(cos_all * charges_reshaped, dim=sum_idx)
+        sin_summed = torch.sum(sin_all * charges_reshaped, dim=sum_idx)
+
+        # Add up the contributions to compute the potential
+        energy = torch.zeros_like(charges)
+        for i in range(num_atoms):
+            energy[i] += torch.sum(
+                G * cos_all[:, i] * cos_summed, dim=sum_idx - 1
+            ) + torch.sum(G * sin_all[:, i] * sin_summed, dim=sum_idx - 1)
+        energy /= torch.abs(cell.det())
+
+        # Remove the self-contribution: Using the Coulomb potential as an
+        # example, this is the potential generated at the origin by the fictituous
+        # Gaussian charge density in order to split the potential into a SR and LR part.
+        # This contribution always should be subtracted since it depends on the smearing
+        # parameter, which is purely a convergence parameter.
+        fill_value = self.potential.self_contribution
+        self_contrib = torch.full([], fill_value)
+        energy -= charges * self_contrib
+
+        # Step 5: The method requires that the unit cell is charge-neutral.
+        # If the cell has a net charge (i.e. if sum(charges) != 0), the method
+        # implicitly assumes that a homogeneous background charge of the opposite sign
+        # is present to make the cell neutral. In this case, the potential has to be
+        # adjusted to compensate for this.
+        # An extra factor of 2 is added to compensate for the division by 2 later on
+        ivolume = torch.abs(cell.det()).pow(-1)
+        charge_tot = torch.sum(charges, dim=0)
+        prefac = self.potential.charge_correction
+        energy -= 2 * prefac * charge_tot * ivolume
+
+        # Compensate for double counting of pairs (i,j) and (j,i)
+        return energy / 2

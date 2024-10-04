@@ -21,13 +21,26 @@ i, j, S, D, neighbor_distances = nl.compute(
 )
 neighbor_indices = torch.stack([i, j], dim=1)
 
-do_jit = False
+do_jit = True
 def jit(obj):
     return torch.jit.script(obj) if do_jit else obj
 
+# %%
+# Direct calculators
+
+mycalc = jit(calculators.calculatorbase.Calculator(
+    potential=potential.InversePowerLawPotential(exponent=1.0, range_radius=None, cutoff_radius=None)
+))
+
+pots = mycalc(charges=charges, cell=cell, positions=positions,
+               neighbor_distances=neighbor_distances, 
+               neighbor_indices=neighbor_indices)
+
+print(f"Here come the pots (Direct) {pots}")
+
 
 # %%
-# Define calculators
+# PME calculators
 
 mycalc = jit(calculators.calculatorpme.PMECalculator(
     potential=potential.InversePowerLawPotential(exponent=1.0, range_radius=1.5, cutoff_radius=None)
@@ -37,7 +50,21 @@ pots = mycalc(charges=charges, cell=cell, positions=positions,
                neighbor_distances=neighbor_distances, 
                neighbor_indices=neighbor_indices)
 
-print(f"Here come the pots {pots}")
+print(f"Here come the pots (PME) {pots}")
+
+# %%
+# Ewald calculators
+
+mycalc = jit(calculators.calculatorewald.EwaldCalculator(
+    potential=potential.InversePowerLawPotential(exponent=1.0, range_radius=1.5, cutoff_radius=None)
+))
+
+pots = mycalc(charges=charges, cell=cell, positions=positions,
+               neighbor_distances=neighbor_distances, 
+               neighbor_indices=neighbor_indices)
+
+print(f"Here come the pots (EWALD) {pots}")
+
 
 # %%
 #  No cutoff
