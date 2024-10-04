@@ -21,7 +21,7 @@ i, j, S, D, neighbor_distances = nl.compute(
 )
 neighbor_indices = torch.stack([i, j], dim=1)
 
-do_jit = True
+do_jit = False
 def jit(obj):
     return torch.jit.script(obj) if do_jit else obj
 
@@ -33,7 +33,7 @@ mycalc = jit(calculators.calculatorpme.PMECalculator(
     potential=potential.InversePowerLawPotential(exponent=1.0, range_radius=1.5, cutoff_radius=None)
 ))
 
-pots = mycalc.compute(charges=charges, cell=cell, positions=positions,
+pots = mycalc(charges=charges, cell=cell, positions=positions,
                neighbor_distances=neighbor_distances, 
                neighbor_indices=neighbor_indices)
 
