@@ -25,9 +25,10 @@ class MeshInterpolator:
         vector of the unit cell
     :param ns_mesh: toch.tensor of shape ``(3,)``
         Number of mesh points to use along each of the three axes
-    :param order: int
-        The degree of the polynomials used for interpolation. A higher order leads
-        to smoother interpolation, at a computational cost that grows cubically with
+    :param num_nodes_per_axis: int
+        The number of nodes used in the interpolation. Larger number means higher order
+        of the polynomials used for interpolation. A higher order leads to smoother
+        interpolation, at a computational cost that grows cubically with
         the interpolation order (once one moves to the 3D case).
     :param method: str
         The interpolation method to use. Either "Lagrange" or "P3M".
@@ -37,11 +38,11 @@ class MeshInterpolator:
         self,
         cell: torch.Tensor,
         ns_mesh: torch.Tensor,
-        order: int,
+        num_nodes_per_axis: int,
         method: str = "P3M",
     ):
         # Get method and order, they will be validated later.
-        self.method, self.order = method, order
+        self.method, self.num_nodes_per_axis = method, num_nodes_per_axis
         # Check that the provided parameters match the specifications
         if cell.shape != (3, 3):
             raise ValueError(
@@ -65,7 +66,7 @@ class MeshInterpolator:
             self.inverse_cell = torch.linalg.inv(cell)
 
         self.ns_mesh = ns_mesh
-        self.order = order
+        self.num_nodes_per_axis = num_nodes_per_axis
 
         self._dtype = cell.dtype
         self._device = cell.device
@@ -121,19 +122,19 @@ class MeshInterpolator:
         :param x: torch.tensor of shape ``(n,)``
             Set of relative positions in the interval [-1/2, 1/2].
 
-        :return: torch.tensor of shape ``(order, n)``
+        :return: torch.tensor of shape ``(num_nodes_per_axis, n)``
             Interpolation weights
         """
-        # Compute weights based on the given order
-        if self.order == 1:
+        # Compute weights based on the given num_nodes_per_axis
+        if self.num_nodes_per_axis == 1:
             return torch.ones(
                 (1, x.shape[0], x.shape[1]), dtype=self._dtype, device=self._device
             )
-        if self.order == 2:
+        if self.num_nodes_per_axis == 2:
             return torch.stack([0.5 * (1 - 2 * x), 0.5 * (1 + 2 * x)])
 
         x2 = x * x
-        if self.order == 3:
+        if self.num_nodes_per_axis == 3:
             return torch.stack(
                 [
                     1 / 8 * (1 - 4 * x + 4 * x2),
@@ -143,7 +144,7 @@ class MeshInterpolator:
             )
 
         x3 = x * x2
-        if self.order == 4:
+        if self.num_nodes_per_axis == 4:
             return torch.stack(
                 [
                     1 / 48 * (1 - 6 * x + 12 * x2 - 8 * x3),
@@ -154,7 +155,7 @@ class MeshInterpolator:
             )
 
         x4 = x * x3
-        if self.order == 5:
+        if self.num_nodes_per_axis == 5:
             return torch.stack(
                 [
                     1 / 384 * (1 - 8 * x + 24 * x2 - 32 * x3 + 16 * x4),
@@ -177,12 +178,12 @@ class MeshInterpolator:
         :param x: torch.tensor of shape ``(n,)``
             Set of relative positions in the interval [-1/2, 1/2].
 
-        :return: torch.tensor of shape ``(order, n)``
+        :return: torch.tensor of shape ``(num_nodes_per_axis, n)``
             Interpolation weights
         """
-        # Compute weights based on the given order
+        # Compute weights based on the given num_nodes_per_axis
         x2 = x * x
-        if self.order == 2:
+        if self.num_nodes_per_axis == 3:
             return torch.stack(
                 [
                     1 / 2 * (-x + x2),
@@ -192,7 +193,7 @@ class MeshInterpolator:
             )
 
         x3 = x * x2
-        if self.order == 3:
+        if self.num_nodes_per_axis == 4:
             return torch.stack(
                 [
                     1 / 48 * (-3 + 2 * x + 12 * x2 - 8 * x3),
@@ -203,7 +204,7 @@ class MeshInterpolator:
             )
 
         x4 = x * x3
-        if self.order == 4:
+        if self.num_nodes_per_axis == 5:
             return torch.stack(
                 [
                     1 / 24 * (2 * x - x2 - 2 * x3 + x4),
@@ -215,7 +216,7 @@ class MeshInterpolator:
             )
 
         x5 = x * x4
-        if self.order == 5:
+        if self.num_nodes_per_axis == 6:
             return torch.stack(
                 [
                     1 / 3840 * (45 - 18 * x - 200 * x2 + 80 * x3 + 80 * x4 - 32 * x5),
@@ -235,7 +236,7 @@ class MeshInterpolator:
                 ]
             )
         x6 = x * x5
-        if self.order == 6:
+        if self.num_nodes_per_axis == 7:
             return torch.stack(
                 [
                     1 / 720 * (-12 * x + 4 * x2 + 15 * x3 - 5 * x4 - 3 * x5 + x6),
@@ -282,11 +283,9 @@ class MeshInterpolator:
         # Compute positions relative to the mesh basis vectors
         positions_rel = self.ns_mesh * torch.matmul(positions, self.inverse_cell)
 
-        # Calculate positions and distances based on interpolation order
-        even_order = self.order % 2 == 0
-        if (self.method == "Lagrange" and not even_order) or (
-            self.method == "P3M" and even_order
-        ):
+        # Calculate positions and distances based on interpolation nodes
+        even = self.num_nodes_per_axis % 2 == 0
+        if even:
             # For Lagrange interpolation, when the order is odd, the relative position
             # of a charge is the midpoint of the two nearest gridpoints. For P3M, the
             # same is true for even orders.
@@ -305,48 +304,24 @@ class MeshInterpolator:
         # Calculate indices of mesh points on which the particle weights are
         # interpolated. For each particle, its weight is "smeared" onto `order**3` mesh
         # points, which can be achived using meshgrid below.
-        if self.method == "P3M":
-            indices_to_interpolate = torch.stack(
-                [
-                    (positions_rel_idx + i) % self.ns_mesh
-                    for i in range(
-                        1 - (self.order + 1) // 2,
-                        1 + self.order // 2,
-                    )
-                ],
-                dim=0,
-            )
-        elif self.method == "Lagrange":
-            indices_to_interpolate = torch.stack(
-                [
-                    (positions_rel_idx + i) % self.ns_mesh
-                    for i in range(
-                        1 - (self.order + 2) // 2,
-                        1 + (self.order + 1) // 2,
-                    )
-                ],
-                dim=0,
-            )
-        else:
-            raise ValueError("Only `method` `Lagrange` and `P3M` are allowed")
+        indices_to_interpolate = torch.stack(
+            [
+                (positions_rel_idx + i) % self.ns_mesh
+                for i in range(
+                    1 - (self.num_nodes_per_axis + 1) // 2,
+                    1 + self.num_nodes_per_axis // 2,
+                )
+            ],
+            dim=0,
+        )
 
         # Generate shifts for x, y, z axes and flatten for indexing
-        if self.method == "P3M":
-            x_shifts, y_shifts, z_shifts = torch.meshgrid(
-                torch.arange(self.order, device=self._device),
-                torch.arange(self.order, device=self._device),
-                torch.arange(self.order, device=self._device),
-                indexing="ij",
-            )
-        elif self.method == "Lagrange":
-            x_shifts, y_shifts, z_shifts = torch.meshgrid(
-                torch.arange(self.order + 1, device=self._device),
-                torch.arange(self.order + 1, device=self._device),
-                torch.arange(self.order + 1, device=self._device),
-                indexing="ij",
-            )
-        else:
-            raise ValueError("Only `method` `Lagrange` and `P3M` are allowed")
+        x_shifts, y_shifts, z_shifts = torch.meshgrid(
+            torch.arange(self.num_nodes_per_axis, device=self._device),
+            torch.arange(self.num_nodes_per_axis, device=self._device),
+            torch.arange(self.num_nodes_per_axis, device=self._device),
+            indexing="ij",
+        )
         self.x_shifts = x_shifts.flatten()
         self.y_shifts = y_shifts.flatten()
         self.z_shifts = z_shifts.flatten()

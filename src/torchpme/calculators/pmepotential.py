@@ -39,9 +39,9 @@ class PMEPotential(CalculatorBaseTorch):
     :param mesh_spacing: Value that determines the umber of Fourier-space grid points
         that will be used along each axis. If set to None, it will automatically be set
         to half of ``atomic_smearing``.
-    :param interpolation_order: Interpolation order for mapping onto the grid, where an
-        interpolation order of p corresponds to interpolation by a polynomial of degree
-        ``p - 1`` (e.g. ``p = 4`` for cubic interpolation).
+    :param num_nodes_per_axis: The number of nodes used in the interpolation, where the
+        number of n corresponds to interpolation by a polynomial of degree
+        ``n - 1`` (e.g. ``n = 4`` for cubic interpolation).
     :param subtract_interior: If set to :py:obj:`True`, subtract from the features of an
         atom the contributions to the potential arising from all atoms within the cutoff
         Note that if set to true, the self contribution (see previous) is also
@@ -100,7 +100,7 @@ class PMEPotential(CalculatorBaseTorch):
         exponent: float = 1.0,
         atomic_smearing: Union[float, torch.Tensor, None] = None,
         mesh_spacing: Optional[float] = None,
-        interpolation_order: int = 3,
+        num_nodes_per_axis: int = 4,
         subtract_interior: bool = False,
         full_neighbor_list: bool = False,
     ):
@@ -117,9 +117,9 @@ class PMEPotential(CalculatorBaseTorch):
             raise ValueError(f"`atomic_smearing` {atomic_smearing} has to be positive")
         self.atomic_smearing = atomic_smearing
 
-        if interpolation_order not in [1, 2, 3, 4, 5]:
-            raise ValueError("Only `interpolation_order` from 1 to 5 are allowed")
-        self.interpolation_order = interpolation_order
+        if num_nodes_per_axis not in [3, 4, 5, 6, 7]:
+            raise ValueError("Only `num_nodes_per_axis` from 3 to 7 are allowed")
+        self.num_nodes_per_axis = num_nodes_per_axis
 
         # Initialize the filter module. Set dummy value for smearing to propper
         # initilize the `KSpaceFilter` below
@@ -201,8 +201,8 @@ class PMEPotential(CalculatorBaseTorch):
             interpolator = MeshInterpolator(
                 cell,
                 ns,
-                order=self.interpolation_order,
-                method="Lagrange",  # For classic PME
+                num_nodes_per_axis=self.num_nodes_per_axis,
+                method="Lagrange",  # convention for classic PME
             )
 
         with profiler.record_function("update the mesh for the k-space filter"):

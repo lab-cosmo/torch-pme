@@ -316,9 +316,7 @@ def test_madelung(crystal_name, scaling_factor, calc_name):
     elif calc_name == "pme":
         sr_cutoff = 2 * scaling_factor
         atomic_smearing = sr_cutoff / 5.0
-        calc = PMEPotential(
-            atomic_smearing=atomic_smearing,
-        )
+        calc = PMEPotential(atomic_smearing=atomic_smearing)
         rtol = 9e-4
 
     # Compute neighbor list

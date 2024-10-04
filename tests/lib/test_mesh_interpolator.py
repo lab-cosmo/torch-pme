@@ -16,7 +16,7 @@ class TestMeshInterpolatorForward:
 
     # Define parameters that are common to all tests
     order_P3M = [1, 2, 3, 4, 5]
-    order_Lagrange = [2, 3, 4, 5, 6]
+    order_Lagrange = [3, 4, 5, 6, 7]
 
     @pytest.mark.parametrize(
         ("order", "method"),
@@ -44,7 +44,7 @@ class TestMeshInterpolatorForward:
 
         # Run interpolation
         interpolator = MeshInterpolator(
-            cell=cell, ns_mesh=ns_mesh, order=order, method=method
+            cell=cell, ns_mesh=ns_mesh, num_nodes_per_axis=order, method=method
         )
         interpolator.compute_weights(positions)
         mesh_values = interpolator.points_to_mesh(particle_weights)
@@ -82,7 +82,7 @@ class TestMeshInterpolatorForward:
 
         # Run interpolation
         inetrpolator = MeshInterpolator(
-            cell=cell, ns_mesh=ns_mesh, order=order, method=method
+            cell=cell, ns_mesh=ns_mesh, num_nodes_per_axis=order, method=method
         )
         inetrpolator.compute_weights(positions)
         mesh_values = inetrpolator.points_to_mesh(particle_weights)
@@ -121,7 +121,9 @@ class TestMeshInterpolatorForward:
         ns_mesh = torch.tensor([n_mesh, n_mesh, n_mesh])
 
         # Perform interpolation
-        inetrpolator = MeshInterpolator(cell=cell, ns_mesh=ns_mesh, order=order)
+        inetrpolator = MeshInterpolator(
+            cell=cell, ns_mesh=ns_mesh, num_nodes_per_axis=order
+        )
         inetrpolator.compute_weights(positions)
         mesh_values = inetrpolator.points_to_mesh(particle_weights)
 
@@ -174,7 +176,9 @@ class TestMeshInterpolatorBackward:
 
         # Smear particles onto mesh and interpolate back onto
         # their own positions.
-        interpolator = MeshInterpolator(cell=cell, ns_mesh=ns_mesh, order=1)
+        interpolator = MeshInterpolator(
+            cell=cell, ns_mesh=ns_mesh, num_nodes_per_axis=1
+        )
         interpolator.compute_weights(positions)
         mesh_values = interpolator.points_to_mesh(particle_weights)
         interpolated_values = interpolator.mesh_to_points(mesh_values)
@@ -211,7 +215,9 @@ class TestMeshInterpolatorBackward:
 
         # Smear particles onto mesh and interpolate back onto
         # their own positions.
-        interpolator = MeshInterpolator(cell=cell, ns_mesh=ns_mesh, order=2)
+        interpolator = MeshInterpolator(
+            cell=cell, ns_mesh=ns_mesh, num_nodes_per_axis=2
+        )
         interpolator.compute_weights(positions)
         mesh_values = interpolator.points_to_mesh(particle_weights)
         interpolated_values = interpolator.mesh_to_points(mesh_values)
@@ -257,7 +263,9 @@ class TestMeshInterpolatorBackward:
         positions = (ax * nxs + ay * nys + az * nzs).T
 
         # Generate mesh with random values and interpolate
-        interpolator = MeshInterpolator(cell=cell, ns_mesh=ns_mesh, order=order)
+        interpolator = MeshInterpolator(
+            cell=cell, ns_mesh=ns_mesh, num_nodes_per_axis=order
+        )
         interpolator.compute_weights(positions)
         mesh_values = torch.randn(size=(n_channels, nx, ny, nz)) * 3.0 + 9.3
         interpolated_values = interpolator.mesh_to_points(mesh_values)
@@ -293,7 +301,9 @@ class TestMeshInterpolatorBackward:
         weights.requires_grad_(True)
         positions.requires_grad_(True)
 
-        interpolator = MeshInterpolator(cell=cell, ns_mesh=ns_mesh, order=order)
+        interpolator = MeshInterpolator(
+            cell=cell, ns_mesh=ns_mesh, num_nodes_per_axis=order
+        )
 
         interpolator.compute_weights(positions)
         mesh_values = interpolator.points_to_mesh(weights)
@@ -349,8 +359,8 @@ def test_order_not_allowed_private():
     cell = torch.eye(3)
     ns_mesh = torch.tensor([2, 2, 2])
 
-    interpolator = MeshInterpolator(cell, ns_mesh, order=5)
-    interpolator.order = 6  # not allowed
+    interpolator = MeshInterpolator(cell, ns_mesh, num_nodes_per_axis=5)
+    interpolator.num_nodes_per_axis = 6  # not allowed
     match = "Only `order` from 1 to 5 are allowed"
 
     with pytest.raises(ValueError, match=match):

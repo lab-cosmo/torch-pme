@@ -39,7 +39,7 @@ dtype = torch.float64
 
 cell = torch.eye(3, dtype=dtype, device=device) * 6.0
 ns_mesh = torch.tensor([9, 9, 9])
-interpolator = torchpme.lib.MeshInterpolator(cell, ns_mesh, order=2)
+interpolator = torchpme.lib.MeshInterpolator(cell, ns_mesh, num_nodes_per_axis=2)
 xyz_mesh = interpolator.get_mesh_xyz()
 
 mesh_value = (
