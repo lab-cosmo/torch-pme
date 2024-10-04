@@ -1,15 +1,13 @@
-from typing import Optional
 
 from .. import calculators as torch_calculators
 from .base import Calculator
-from ..lib.potentials import Potential
 
 
 class PMECalculator(Calculator):
     r"""
     Potential using a particle mesh-based Ewald (PME).
 
-    Refer to :class:`torchpme.PMEPotential` for parameter documentation.
+    Refer to :class:`torchpme.PMECalculator` for parameter documentation.
 
     Example
     -------
@@ -87,7 +85,7 @@ class PMECalculator(Calculator):
     ``compute`` the potential for the crystal. Finally, we initlize the potential class
     and ``compute`` the potential for the crystal
 
-    >>> pme = PMEPotential()
+    >>> pme = PMECalculator()
     >>> potential = pme.forward(systems=system, neighbors=neighbors)
 
     The results are stored inside the ``values`` property inside the first
@@ -101,4 +99,5 @@ class PMECalculator(Calculator):
 
     """
 
+    # see torchpme.metatensor.base
     _base_calculator = torch_calculators.PMECalculator

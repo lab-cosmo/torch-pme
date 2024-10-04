@@ -220,7 +220,7 @@ class CoulombPotential(Potential):
     ):
         super().__init__(range_radius, cutoff_radius)
         self.register_buffer("_rsqrt2", torch.rsqrt(torch.tensor(2.0)))
-        self.register_buffer("_sqrt_2_on_pi", torch.sqrt(torch.tensor(2.0/torch.pi)) )
+        self.register_buffer("_sqrt_2_on_pi", torch.sqrt(torch.tensor(2.0 / torch.pi)))
 
     def from_dist(self, dist: torch.Tensor) -> torch.Tensor:
         """
@@ -266,12 +266,12 @@ class CoulombPotential(Potential):
         )
 
     def self_contribution(self) -> torch.Tensor:
-        # self-correction for 1/r^p potential        
-        return  self._sqrt_2_on_pi/self.range_radius
+        # self-correction for 1/r^p potential
+        return self._sqrt_2_on_pi / self.range_radius
 
     def background_correction(self) -> torch.Tensor:
         # "charge neutrality" correction for 1/r^p potential
-        return torch.pi*self.range_radius**2
+        return torch.pi * self.range_radius**2
 
 
 class InversePowerLawPotential(Potential):

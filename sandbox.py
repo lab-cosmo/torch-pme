@@ -7,7 +7,7 @@ import vesin.torch
 import torchpme.lib.potentials as potentials
 import torchpme.lib.kspace_filter as kspace_filter
 import torchpme.calculators as calculators
-from torchpme.metatensor import PMECalculator as MetaCalculator
+from torchpme.metatensor import EwaldCalculator as MetaCalculator
 from metatensor.torch import Labels, TensorBlock
 from metatensor.torch.atomistic import System
 
@@ -96,7 +96,7 @@ print(f"Here come the pots (PME) {pots}")
 # Ewald calculators
 
 mycalc = jit(calculators.ewald.EwaldCalculator(
-    potentials=potentials.InversePowerLawPotential(exponent=1.0, range_radius=1.5, cutoff_radius=None)
+    potential=potentials.InversePowerLawPotential(exponent=1.0, range_radius=1.5, cutoff_radius=None)
 ))
 
 pots = mycalc(charges=charges, cell=cell, positions=positions,

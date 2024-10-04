@@ -1,4 +1,5 @@
-from .pme import PMECalculator
 from .base import Calculator
+from .ewald import EwaldCalculator
+from .pme import PMECalculator
 
-__all__ = ["Calculator", "PMECalculator"]
+__all__ = ["Calculator", "PMECalculator", "EwaldCalculator"]

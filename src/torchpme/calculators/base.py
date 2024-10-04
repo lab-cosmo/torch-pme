@@ -1,4 +1,3 @@
-from typing import Union
 
 import torch
 from torch import profiler
@@ -144,15 +143,14 @@ class Calculator(torch.nn.Module):
 
         if self.potential.range_radius is None:
             return potential_sr
-        else:
-            # Compute long-range (LR) part using a Fourier / reciprocal space sum
-            potential_lr = self._compute_kspace(
-                charges=charges,
-                cell=cell,
-                positions=positions,
-            )
+        # Compute long-range (LR) part using a Fourier / reciprocal space sum
+        potential_lr = self._compute_kspace(
+            charges=charges,
+            cell=cell,
+            positions=positions,
+        )
 
-            return potential_sr + potential_lr
+        return potential_sr + potential_lr
 
     @staticmethod
     def _validate_compute_parameters(

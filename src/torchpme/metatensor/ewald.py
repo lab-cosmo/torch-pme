@@ -1,10 +1,7 @@
-from typing import Literal, Optional, Union
+from typing import Literal, Optional
 
-import torch
-
-from ..calculators.ewaldpotential import EwaldPotential as EwaldPotentialTorch
-from ..calculators.ewaldpotential import tune_ewald as tune_ewald_torch
-from .base import CalculatorBaseMetatensor
+from .. import calculators as torch_calculators
+from .base import Calculator
 
 try:
     from metatensor.torch.atomistic import System
@@ -15,7 +12,7 @@ except ImportError:
     ) from None
 
 
-class EwaldPotential(CalculatorBaseMetatensor):
+class EwaldCalculator(Calculator):
     r"""
     Potential computed using the Ewald sum.
 
@@ -25,22 +22,8 @@ class EwaldPotential(CalculatorBaseMetatensor):
     <torchpme.metatensor.PMEPotential>`.
     """
 
-    def __init__(
-        self,
-        atomic_smearing: Union[float, torch.Tensor],
-        lr_wavelength: float,
-        exponent: float = 1.0,
-        subtract_interior: bool = False,
-        full_neighbor_list: bool = False,
-    ):
-        super().__init__()
-        self.calculator = EwaldPotentialTorch(
-            exponent=exponent,
-            atomic_smearing=atomic_smearing,
-            lr_wavelength=lr_wavelength,
-            subtract_interior=subtract_interior,
-            full_neighbor_list=full_neighbor_list,
-        )
+    # see torchpme.metatensor.base
+    _base_calculator = torch_calculators.PMECalculator
 
 
 def tune_ewald(
@@ -56,7 +39,7 @@ def tune_ewald(
     Refer to :class:`torchpme.tune_ewald` for parameter documentation.
     """
 
-    return tune_ewald_torch(
+    return torch_calculators.ewald.tune_ewald(
         positions=system.positions,
         charges=system.get_data("charges").values,
         cell=system.cell,
