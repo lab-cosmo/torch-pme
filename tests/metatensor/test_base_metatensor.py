@@ -55,23 +55,20 @@ def neighbors():
     )
 
 
-class CalculatorTestTorch(torchpme.calculators.base.Calculator):
-    def _compute_single_system(
-        self, positions, charges, cell, neighbor_indices, neighbor_distances
-    ):
-        self._positions = positions
-        self._charges = charges
-        self._cell = cell
-        self._neighbor_indices = neighbor_indices
-        self._neighbor_distances = neighbor_distances
-
-        return charges
+# non-range-separated Coulomb direct calculator
+class CalculatorTestTorch(torchpme.Calculator):
+    def __init__(self, potential=None):
+        super().__init__(
+            potential=potential
+            or torchpme.CoulombPotential(range_radius=None, cutoff_radius=None)
+        )
 
 
-class CalculatorTest(torchpme.metatensor.base.CalculatorBaseMetatensor):
+class CalculatorTest(torchpme.metatensor.Calculator):
+    _base_calculator = CalculatorTestTorch
+
     def __init__(self):
-        super().__init__()
-        self.calculator = CalculatorTestTorch(exponent=1.0)
+        super().__init__(potential=torchpme.CoulombPotential(range_radius=None))
 
 
 def test_compute_output_shapes_single(system, neighbors):
@@ -88,83 +85,6 @@ def test_compute_output_shapes_single(system, neighbors):
     assert result[0].properties.names == ["charges_channel"]
 
     assert tuple(result[0].values.shape) == (len(system), 1)
-
-
-def test_corrrect_value_extraction_from_neighbors_tensormap(system, neighbors):
-    calculator = CalculatorTest()
-    calculator.forward(system, neighbors)
-
-    neighbor_indices = neighbors.samples.view(["first_atom", "second_atom"]).values
-    neighbor_distances = torch.linalg.norm(neighbors.values, dim=1).squeeze(1)
-
-    assert torch.equal(
-        calculator.calculator._charges, torch.tensor([[1.0], [-0.5], [-0.5]])
-    )
-    assert torch.equal(calculator.calculator._neighbor_indices, neighbor_indices)
-    assert torch.equal(calculator.calculator._neighbor_distances, neighbor_distances)
-
-
-def test_compute_output_shapes_multiple(system, neighbors):
-    calculator = CalculatorTest()
-    result = calculator.forward([system, system], [neighbors, neighbors])
-
-    assert isinstance(result, torch.ScriptObject)
-    if version.parse(torch.__version__) >= version.parse("2.1"):
-        assert result._type().name() == "TensorMap"
-
-    assert len(result) == 1
-    assert result[0].samples.names == ["system", "atom"]
-    assert result[0].components == []
-    assert result[0].properties.names == ["charges_channel"]
-
-    assert tuple(result[0].values.shape) == (2 * len(system), 1)
-
-
-def test_type_check_error(system, neighbors):
-    calculator = CalculatorTest()
-
-    match = (
-        "Inconsistent parameter types. `systems` is a list, while `neighbors` is a "
-        "TensorBlock. Both need either be a list or System/TensorBlock!"
-    )
-    with pytest.raises(TypeError, match=match):
-        calculator._validate_compute_parameters([system], neighbors)
-
-    match = (
-        "Inconsistent parameter types. `systems` is a not a list, while `neighbors` "
-        "is a list. Both need either be a list or System/TensorBlock!"
-    )
-    with pytest.raises(TypeError, match=match):
-        calculator._validate_compute_parameters(system, [neighbors])
-
-
-def test_inconsistent_length(system):
-    calculator = CalculatorTest()
-    match = r"Got inconsistent numbers of systems \(1\) and neighbors \(2\)"
-    with pytest.raises(ValueError, match=match):
-        calculator.forward(systems=[system], neighbors=[None, None])
-
-
-def test_wrong_system_dtype(system, neighbors):
-    system_float64 = system.to(torch.float64)
-
-    calculator = CalculatorTest()
-
-    match = (
-        r"`dtype` of all systems must be the same, got torch.float64 and torch.float32"
-    )
-    with pytest.raises(ValueError, match=match):
-        calculator.forward([system, system_float64], [neighbors, neighbors])
-
-
-def test_wrong_system_device(system, neighbors):
-    system_meta = system.to("meta")
-
-    calculator = CalculatorTest()
-
-    match = r"`device` of all systems must be the same, got meta and cpu"
-    with pytest.raises(ValueError, match=match):
-        calculator.forward([system, system_meta], [neighbors, neighbors])
 
 
 def test_wrong_neighbors_dtype(system, neighbors):
@@ -250,9 +170,9 @@ def test_wrong_system_not_all_charges(system, neighbors):
 
     calculator = CalculatorTest()
 
-    match = r"`systems` do not consistently contain `charges` data"
+    match = r"`system` does not contain `charges` data"
     with pytest.raises(ValueError, match=match):
-        calculator.forward([system, system_nocharge], [neighbors, neighbors])
+        calculator.forward(system_nocharge, neighbors)
 
 
 def test_different_number_charge_channels(system, neighbors):
@@ -270,11 +190,12 @@ def test_different_number_charge_channels(system, neighbors):
     calculator = CalculatorTest()
 
     match = (
-        r"number of charges-channels in system index 1 \(2\) is inconsistent with "
-        r"first system \(1\)"
+        r"each `charges` must be a tensor with shape \[n_atoms, n_channels\], "
+        r"with `n_atoms` being the same as the variable `positions`. "
+        r"Got at least one tensor with shape \[2, 2\] where positions contains 3 atoms"
     )
     with pytest.raises(ValueError, match=match):
-        calculator.forward([system, system_channels], [neighbors, neighbors])
+        calculator.forward(system_channels, neighbors)
 
 
 def test_systems_with_different_number_of_atoms(system, neighbors):
@@ -296,4 +217,5 @@ def test_systems_with_different_number_of_atoms(system, neighbors):
     system_more_atoms.add_data(name="charges", data=data)
 
     calculator = CalculatorTest()
-    calculator.forward([system, system_more_atoms], [neighbors, neighbors])
+    calculator.forward(system, neighbors)
+    calculator.forward(system_more_atoms, neighbors)
