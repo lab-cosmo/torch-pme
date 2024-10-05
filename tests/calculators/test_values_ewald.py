@@ -9,9 +9,10 @@ import torch
 from ase.io import read
 from utils import neighbor_list_torch
 
-from torchpme import EwaldCalculator, PMECalculator
+from torchpme import EwaldCalculator, InversePowerLawPotential, PMECalculator
 
 DTYPE = torch.float64
+torch.set_default_dtype(DTYPE)
 
 
 def generate_orthogonal_transformations():
@@ -310,13 +311,22 @@ def test_madelung(crystal_name, scaling_factor, calc_name):
         atomic_smearing = sr_cutoff / 5.0
         lr_wavelength = 0.5 * atomic_smearing
         calc = EwaldCalculator(
-            atomic_smearing=atomic_smearing, lr_wavelength=lr_wavelength
+            InversePowerLawPotential(
+                exponent=1.0,
+                range_radius=atomic_smearing,
+            ),
+            lr_wavelength=lr_wavelength,
         )
         rtol = 4e-6
     elif calc_name == "pme":
         sr_cutoff = 2 * scaling_factor
         atomic_smearing = sr_cutoff / 5.0
-        calc = PMECalculator(atomic_smearing=atomic_smearing)
+        calc = PMECalculator(
+            InversePowerLawPotential(
+                exponent=1.0,
+                range_radius=atomic_smearing,
+            )
+        )
         rtol = 9e-4
 
     # Compute neighbor list
@@ -380,16 +390,20 @@ def test_wigner(crystal_name, scaling_factor):
     for smearing in smearings:
         # Readjust smearing parameter to match nearest neighbor distance
         if crystal_name in ["wigner_fcc", "wigner_fcc_cubiccell"]:
-            smeareff = smearing / np.sqrt(2)
+            smeareff = float(smearing) / np.sqrt(2)
         elif crystal_name in ["wigner_bcc_cubiccell", "wigner_bcc"]:
-            smeareff = smearing * np.sqrt(3) / 2
+            smeareff = float(smearing) * np.sqrt(3) / 2
         elif crystal_name == "wigner_sc":
-            smeareff = smearing
+            smeareff = float(smearing)
         smeareff *= scaling_factor
-        lr_wavelength = 0.5 * smeareff
 
         # Compute potential and compare against reference
-        calc = EwaldCalculator(atomic_smearing=smeareff, lr_wavelength=lr_wavelength)
+        calc = EwaldCalculator(
+            InversePowerLawPotential(
+                exponent=1.0,
+                range_radius=smeareff,
+            )
+        )
         potentials = calc.forward(
             positions=positions,
             charges=charges,
@@ -459,7 +473,10 @@ def test_random_structure(
     if calc_name == "ewald":
         lr_wavelength = 0.5 * atomic_smearing
         calc = EwaldCalculator(
-            atomic_smearing=atomic_smearing,
+            InversePowerLawPotential(
+                exponent=1.0,
+                range_radius=atomic_smearing,
+            ),
             lr_wavelength=lr_wavelength,
             full_neighbor_list=full_neighbor_list,
         )
@@ -467,7 +484,11 @@ def test_random_structure(
         rtol_f = 3.5e-3
     elif calc_name == "pme":
         calc = PMECalculator(
-            atomic_smearing=atomic_smearing, full_neighbor_list=full_neighbor_list
+            InversePowerLawPotential(
+                exponent=1.0,
+                range_radius=atomic_smearing,
+            ),
+            full_neighbor_list=full_neighbor_list,
         )
         rtol_e = 4.5e-3
         rtol_f = 3.5e-3

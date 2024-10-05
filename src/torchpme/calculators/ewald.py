@@ -32,7 +32,7 @@ class EwaldCalculator(Calculator):
         :py:obj:`None` ,it will be set to 1/5 times of half the largest box vector
         (separately for each structure).
     :param lr_wavelength: Spatial resolution used for the long-range (reciprocal space)
-        part of the Ewald sum. More conretely, all Fourier space vectors with a
+        part of the Ewald sum. More concretely, all Fourier space vectors with a
         wavelength >= this value will be kept. If not set to a global value, it will be
         set to half the atomic_smearing parameter to ensure convergence of the
         long-range part to a relative precision of 1e-5.
@@ -53,12 +53,14 @@ class EwaldCalculator(Calculator):
     def __init__(
         self,
         potential: Potential,
+        lr_wavelength: Optional[float] = None,
         full_neighbor_list: bool = False,
     ):
         super().__init__(
             potential=potential,
             full_neighbor_list=full_neighbor_list,
         )
+        self.lr_wavelength = lr_wavelength or potential.range_radius * 0.5
 
     def _compute_kspace(
         self,
@@ -67,7 +69,7 @@ class EwaldCalculator(Calculator):
         positions: torch.Tensor,
     ) -> torch.Tensor:
         # Define k-space cutoff from required real-space resolution
-        k_cutoff = 2 * torch.pi / self.potential.range_radius
+        k_cutoff = 2 * torch.pi / self.lr_wavelength
 
         # Compute number of times each basis vector of the reciprocal space can be
         # scaled until the cutoff is reached
