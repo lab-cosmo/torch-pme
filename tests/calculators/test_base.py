@@ -22,7 +22,7 @@ class PotentialTest(InversePowerLawPotential):
 class CalculatorTest(Calculator):
     def __init__(self):
         super().__init__(potential=PotentialTest())
-    
+
 
 def test_compute_output_shapes():
     """Test that output type matches the input type"""
