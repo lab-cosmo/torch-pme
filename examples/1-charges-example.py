@@ -58,7 +58,7 @@ i, j, S, D, neighbor_distances = nl.compute(
 neighbor_indices = torch.stack([i, j], dim=1)
 
 # %%
-# Next, we initialize the :py:class:`PMEPotential` calculator with an ``exponent`` of
+# Next, we initialize the :py:class:`PMECalculator` calculator with an ``exponent`` of
 # *1* for electrostatic interactions between the two atoms. This calculator
 # will be used to *compute* the potential energy of the system.
 
@@ -80,7 +80,7 @@ charges = torch.tensor([[1.0], [-1.0]], dtype=torch.float64)
 print(charges.shape)
 
 # %%
-# Calculate the potential using the PMEPotential calculator
+# Calculate the potential using the PMECalculator calculator
 
 potential = calculator(
     positions=positions,
@@ -122,7 +122,7 @@ charges_one_hot = torch.tensor([[1.0, 0.0], [0.0, 1.0]], dtype=torch.float64)
 # of the ``charges_one_hot`` is zero as well as the ``(1,0)`` which corresponds to the
 # charge of Cl in the Na channel.
 #
-# We now again calculate the potential using the same ``PMEPotential`` calculator using
+# We now again calculate the potential using the same ``PMECalculator`` calculator using
 # the ``charges_one_hot`` as input.
 
 potential_one_hot = calculator(
@@ -212,7 +212,7 @@ data = TensorBlock(
 system.add_data(name="charges", data=data)
 
 # %%
-# We now calculate the potential using the MetaPMEPotential calculator
+# We now calculate the potential using the MetaPMECalculator calculator
 
 potential_metatensor = calculator_metatensor.forward(system, neighbors)
 

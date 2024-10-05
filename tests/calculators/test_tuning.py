@@ -3,7 +3,7 @@ import torch
 from test_values_ewald import define_crystal
 from utils import neighbor_list_torch
 
-from torchpme import EwaldPotential, tune_ewald
+from torchpme import EwaldCalculator, tune_ewald
 
 
 @pytest.mark.parametrize(
@@ -32,7 +32,7 @@ def test_parameter_choose(accuracy, rtol):
     )
 
     # Compute potential and compare against target value using default hypers
-    calc = EwaldPotential(**ewald_params)
+    calc = EwaldCalculator(**ewald_params)
     potentials = calc.forward(
         positions=pos,
         charges=charges,

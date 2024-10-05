@@ -8,7 +8,7 @@ import pytest
 import torch
 from torch.testing import assert_close
 
-from torchpme import DirectPotential, EwaldPotential, PMEPotential
+from torchpme import Calculator, EwaldCalculator, PMECalculator
 
 AVAILABLE_DEVICES = [torch.device("cpu")] + torch.cuda.is_available() * [
     torch.device("cuda")
@@ -24,16 +24,16 @@ INTERPOLATION_ORDER = 2
 @pytest.mark.parametrize(
     "CalculatorClass, params",
     [
-        (DirectPotential, {}),
+        (Calculator, {}),
         (
-            EwaldPotential,
+            EwaldCalculator,
             {
                 "atomic_smearing": ATOMIC_SMEARING,
                 "lr_wavelength": LR_WAVELENGTH,
             },
         ),
         (
-            PMEPotential,
+            PMECalculator,
             {
                 "atomic_smearing": ATOMIC_SMEARING,
                 "mesh_spacing": MESH_SPACING,
@@ -65,7 +65,7 @@ class TestWorkflow:
     def test_atomic_smearing_non_positive(self, CalculatorClass, params):
         params = params.copy()
         match = r"`atomic_smearing` .* has to be positive"
-        if type(CalculatorClass) in [EwaldPotential, PMEPotential]:
+        if type(CalculatorClass) in [EwaldCalculator, PMECalculator]:
             params["atomic_smearing"] = 0
             with pytest.raises(ValueError, match=match):
                 CalculatorClass(**params)
@@ -75,7 +75,7 @@ class TestWorkflow:
 
     def test_interpolation_order_error(self, CalculatorClass, params):
         params = params.copy()
-        if type(CalculatorClass) in [PMEPotential]:
+        if type(CalculatorClass) in [PMECalculator]:
             match = "Only `interpolation_order` from 1 to 5"
             params["interpolation_order"] = 10
             with pytest.raises(ValueError, match=match):
@@ -84,7 +84,7 @@ class TestWorkflow:
     def test_lr_wavelength_non_positive(self, CalculatorClass, params):
         params = params.copy()
         match = r"`lr_wavelength` .* has to be positive"
-        if type(CalculatorClass) in [EwaldPotential]:
+        if type(CalculatorClass) in [EwaldCalculator]:
             params["lr_wavelength"] = 0
             with pytest.raises(ValueError, match=match):
                 CalculatorClass(**params)

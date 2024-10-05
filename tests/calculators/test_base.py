@@ -1,7 +1,7 @@
 import pytest
 import torch
 
-from torchpme.calculators import Calculator
+from torchpme.calculators import Calculator, estimate_smearing
 from torchpme.lib.potentials import InversePowerLawPotential
 
 # Define some example parameters
@@ -9,26 +9,20 @@ DTYPE = torch.float32
 DEVICE = "cpu"
 CHARGES_1 = torch.ones((4, 1), dtype=DTYPE, device=DEVICE)
 POSITIONS_1 = 0.3 * torch.arange(12, dtype=DTYPE, device=DEVICE).reshape((4, 3))
-CHARGES_2 = torch.ones((5, 3), dtype=DTYPE, device=DEVICE)
-POSITIONS_2 = 0.7 * torch.arange(15, dtype=DTYPE, device=DEVICE).reshape((5, 3))
 CELL_1 = torch.eye(3, dtype=DTYPE, device=DEVICE)
-CELL_2 = torch.arange(9, dtype=DTYPE, device=DEVICE).reshape((3, 3))
-NEIGHBOR_INDICES = torch.ones(3, 2)
+NEIGHBOR_INDICES = torch.ones(3, 2, dtype=int)
 NEIGHBOR_DISTANCES = torch.ones(3)
 
 
 class PotentialTest(InversePowerLawPotential):
     def __init__(self):
-        super().__init__(exponent=1.0, range_radius=1.0, cutoff_radius=1.0)
+        super().__init__(exponent=1.0, range_radius=None, cutoff_radius=None)
 
 
 class CalculatorTest(Calculator):
     def __init__(self):
         super().__init__(potential=PotentialTest())
-
-    def forward(self, charges, cell, positions, neighbor_indices, neighbor_distances):
-        return charges
-
+    
 
 def test_compute_output_shapes():
     """Test that output type matches the input type"""
@@ -51,104 +45,6 @@ def test_compute_output_shapes():
     assert result.shape == charges.shape
 
 
-def test_type_check_error():
-    calculator = CalculatorTest()
-
-    for positions_type in [torch.Tensor, list]:
-        for key in ["charges", "cell", "neighbor_indices", "neighbor_distances"]:
-            kwargs = {
-                "positions": positions_type([1]),
-                "charges": positions_type([1]),
-                "cell": positions_type([1]),
-                "neighbor_indices": positions_type([1]),
-                "neighbor_distances": positions_type([1]),
-            }
-
-            # Set key of interest to a different type then `positions`
-            if positions_type is torch.Tensor:
-                type_name = "torch.Tensor"
-                item_type = "list"
-                kwargs[key] = [1]
-            else:
-                type_name = "list"
-                item_type = "torch.Tensor"
-                kwargs[key] = torch.tensor([1])
-
-            match = (
-                f"Inconsistent parameter types. `positions` is a {type_name}, while "
-                f"`{key}` is a {item_type}. Both need either be a list or a "
-                "torch.Tensor!"
-            )
-            with pytest.raises(TypeError, match=match):
-                calculator._validate_compute_parameters(**kwargs)
-
-
-def test_exponent_out_of_range():
-    match = r"`exponent` p=.* has to satisfy 0 < p <= 3"
-    with pytest.raises(ValueError, match=match):
-        CalculatorTest(exponent=-1)
-
-    with pytest.raises(ValueError, match=match):
-        CalculatorTest(exponent=4)
-
-
-# Tests for a mismatch in the number of provided inputs for different variables
-def test_mismatched_numbers_cell():
-    calculator = CalculatorTest()
-    match = r"Got inconsistent numbers of positions \(2\) and cell \(3\)"
-    with pytest.raises(ValueError, match=match):
-        calculator.forward(
-            positions=[POSITIONS_1, POSITIONS_2],
-            charges=[CHARGES_1, CHARGES_2],
-            cell=[CELL_1, CELL_2, torch.eye(3)],
-            neighbor_indices=[NEIGHBOR_INDICES, NEIGHBOR_INDICES],
-            neighbor_distances=[NEIGHBOR_DISTANCES, NEIGHBOR_DISTANCES],
-        )
-
-
-def test_mismatched_numbers_charges():
-    calculator = CalculatorTest()
-    match = r"Got inconsistent numbers of positions \(2\) and charges \(3\)"
-    with pytest.raises(ValueError, match=match):
-        calculator.forward(
-            positions=[POSITIONS_1, POSITIONS_2],
-            charges=[CHARGES_1, CHARGES_2, CHARGES_2],
-            cell=[CELL_1, CELL_2],
-            neighbor_indices=[NEIGHBOR_INDICES, NEIGHBOR_INDICES],
-            neighbor_distances=[NEIGHBOR_DISTANCES, NEIGHBOR_DISTANCES],
-        )
-
-
-def test_mismatched_numbers_neighbor_indices():
-    calculator = CalculatorTest()
-    match = r"Got inconsistent numbers of positions \(2\) and neighbor_indices \(3\)"
-    with pytest.raises(ValueError, match=match):
-        calculator.forward(
-            positions=[POSITIONS_1, POSITIONS_2],
-            charges=[CHARGES_1, CHARGES_2],
-            cell=[CELL_1, CELL_2],
-            neighbor_indices=[NEIGHBOR_INDICES, NEIGHBOR_INDICES, NEIGHBOR_INDICES],
-            neighbor_distances=[NEIGHBOR_DISTANCES, NEIGHBOR_DISTANCES],
-        )
-
-
-def test_mismatched_numbers_neighbor_distances():
-    calculator = CalculatorTest()
-    match = r"Got inconsistent numbers of positions \(2\) and neighbor_distances \(3\)"
-    with pytest.raises(ValueError, match=match):
-        calculator.forward(
-            positions=[POSITIONS_1, POSITIONS_2],
-            charges=[CHARGES_1, CHARGES_2],
-            cell=[CELL_1, CELL_2],
-            neighbor_indices=[NEIGHBOR_INDICES, NEIGHBOR_INDICES],
-            neighbor_distances=[
-                NEIGHBOR_DISTANCES,
-                NEIGHBOR_DISTANCES,
-                NEIGHBOR_DISTANCES,
-            ],
-        )
-
-
 # Tests for invalid shape, dtype and device of positions
 def test_invalid_shape_positions():
     calculator = CalculatorTest()
@@ -163,42 +59,6 @@ def test_invalid_shape_positions():
             cell=CELL_1,
             neighbor_indices=NEIGHBOR_INDICES,
             neighbor_distances=NEIGHBOR_DISTANCES,
-        )
-
-
-def test_invalid_dtype_positions():
-    calculator = CalculatorTest()
-    match = (
-        r"each `positions` must have the same type torch.float32 as the "
-        r"first provided one. Got at least one tensor of type "
-        r"torch.float64"
-    )
-    positions_2_wrong_dtype = torch.ones((5, 3), dtype=torch.float64, device=DEVICE)
-    with pytest.raises(ValueError, match=match):
-        calculator.forward(
-            positions=[POSITIONS_1, positions_2_wrong_dtype],
-            charges=[CHARGES_1, CHARGES_2],
-            cell=[CELL_1, CELL_2],
-            neighbor_indices=[NEIGHBOR_INDICES, NEIGHBOR_INDICES],
-            neighbor_distances=[NEIGHBOR_DISTANCES, NEIGHBOR_DISTANCES],
-        )
-
-
-def test_invalid_device_positions():
-    calculator = CalculatorTest()
-    match = (
-        r"each `positions` must be on the same device cpu as the "
-        r"first provided one. Got at least one tensor on device "
-        r"meta"
-    )
-    positions_2_wrong_device = POSITIONS_1.to(dtype=DTYPE, device="meta")
-    with pytest.raises(ValueError, match=match):
-        calculator.forward(
-            positions=[POSITIONS_1, positions_2_wrong_device],
-            charges=[CHARGES_1, CHARGES_2],
-            cell=[CELL_1, CELL_2],
-            neighbor_indices=[NEIGHBOR_INDICES, NEIGHBOR_INDICES],
-            neighbor_distances=[NEIGHBOR_DISTANCES, NEIGHBOR_DISTANCES],
         )
 
 
@@ -391,4 +251,4 @@ def test_no_cell():
         "periodic calculation"
     )
     with pytest.raises(ValueError, match=match):
-        Calculator.estimate_smearing(cell=torch.zeros(3, 3))
+        estimate_smearing(cell=torch.zeros(3, 3))

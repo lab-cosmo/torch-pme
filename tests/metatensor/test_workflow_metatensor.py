@@ -25,9 +25,9 @@ INTERPOLATION_ORDER = 2
 @pytest.mark.parametrize(
     "CalculatorClass, params",
     [
-        (torchpme.metatensor.DirectPotential, {}),
+        (torchpme.metatensor.Calculator, {}),
         (
-            torchpme.metatensor.EwaldPotential,
+            torchpme.metatensor.EwaldCalculator,
             {
                 "atomic_smearing": ATOMIC_SMEARING,
                 "lr_wavelength": LR_WAVELENGTH,

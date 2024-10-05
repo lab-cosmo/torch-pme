@@ -159,8 +159,8 @@ class Calculator(torch.nn.Module):
         neighbor_indices: torch.Tensor,
         neighbor_distances: torch.Tensor,
     ) -> None:
-        device = positions[0].device
-        dtype = positions[0].dtype
+        device = positions.device
+        dtype = positions.dtype
 
         # check shape, dtype and device of positions
         num_atoms = len(positions)
@@ -168,20 +168,6 @@ class Calculator(torch.nn.Module):
             raise ValueError(
                 "each `positions` must be a tensor with shape [n_atoms, 3], got at "
                 f"least one tensor with shape {list(positions.shape)}"
-            )
-
-        if positions.dtype != dtype:
-            raise ValueError(
-                f"each `positions` must have the same type {dtype} as the "
-                "first provided one. Got at least one tensor of type "
-                f"{positions.dtype}"
-            )
-
-        if positions.device != device:
-            raise ValueError(
-                f"each `positions` must be on the same device {device} as "
-                "the first provided one. Got at least one tensor on device "
-                f"{positions.device}"
             )
 
         # check shape, dtype and device of cell

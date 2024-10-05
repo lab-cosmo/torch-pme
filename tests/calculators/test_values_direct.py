@@ -4,7 +4,7 @@ import pytest
 import torch
 from utils import neighbor_list_torch
 
-from torchpme import DirectPotential
+from torchpme import Calculator
 
 DTYPE = torch.float64
 
@@ -164,7 +164,7 @@ def test_coulomb_exact(
     """
     # Call Ewald potential class without specifying any of the convergence parameters
     # so that they are chosen by default (in a structure-dependent way)
-    direct = DirectPotential(full_neighbor_list=full_neighbor_list)
+    direct = Calculator(full_neighbor_list=full_neighbor_list)
 
     # Compute potential at the position of the atoms for the specified structure
     molecule_name = molecule + molecule_charge
