@@ -7,7 +7,6 @@ import torchpme.calculators
 
 mts_torch = pytest.importorskip("metatensor.torch")
 mts_atomistic = pytest.importorskip("metatensor.torch.atomistic")
-torch.set_default_dtype(torch.float32)
 
 
 @pytest.fixture
@@ -89,6 +88,7 @@ def test_compute_output_shapes_single(system, neighbors):
 
 
 def test_wrong_neighbors_dtype(system, neighbors):
+    system = system.to(torch.float32)
     neighbors = neighbors.to(torch.float64)
 
     calculator = CalculatorTest()
