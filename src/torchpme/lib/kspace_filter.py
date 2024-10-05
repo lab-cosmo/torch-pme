@@ -23,7 +23,7 @@ class KSpaceKernel(torch.nn.Module):
     def __init__(self):
         super().__init__()
 
-    def from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
+    def kernel_from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
         r"""
         Computes the reciprocal-space kernel on a grid of k points given a
         tensor containing :math:`|\mathbf{k}|^2`.
@@ -32,7 +32,7 @@ class KSpaceKernel(torch.nn.Module):
             at which the kernel is to be evaluated.
         """
         raise NotImplementedError(
-            f"from_k_sq is not implemented for '{self.__class__.__name__}'"
+            f"kernel_from_k_sq is not implemented for '{self.__class__.__name__}'"
         )
 
 
