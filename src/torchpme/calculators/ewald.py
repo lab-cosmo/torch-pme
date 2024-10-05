@@ -60,6 +60,10 @@ class EwaldCalculator(Calculator):
             potential=potential,
             full_neighbor_list=full_neighbor_list,
         )
+        if potential.range_radius is None:
+            raise ValueError(
+                "Must specify range radius to use a potential with EwaldCalculator"
+            )
         self.lr_wavelength = lr_wavelength or potential.range_radius * 0.5
 
     def _compute_kspace(

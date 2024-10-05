@@ -85,6 +85,11 @@ class PMECalculator(Calculator):
             full_neighbor_list=full_neighbor_list,
         )
 
+        if potential.range_radius is None:
+            raise ValueError(
+                "Must specify range radius to use a potential with EwaldCalculator"
+            )
+
         if mesh_spacing is None:
             mesh_spacing = potential.range_radius / 8.0
         self.mesh_spacing = mesh_spacing

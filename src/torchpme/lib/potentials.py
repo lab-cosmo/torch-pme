@@ -276,11 +276,19 @@ class CoulombPotential(Potential):
         )
 
     def self_contribution(self) -> torch.Tensor:
-        # self-correction for 1/r^p potential
+        # self-correction for 1/r potential
+        if self.range_radius is None:
+            raise ValueError(
+                "Cannot compute self contribution without specifying the range."
+            )
         return self._sqrt_2_on_pi / self.range_radius
 
     def background_correction(self) -> torch.Tensor:
-        # "charge neutrality" correction for 1/r^p potential
+        # "charge neutrality" correction for 1/r potential
+        if self.range_radius is None:
+            raise ValueError(
+                "Cannot compute background correction without specifying the range."
+            )
         return torch.pi * self.range_radius**2
 
 
@@ -404,11 +412,19 @@ class InversePowerLawPotential(Potential):
 
     def self_contribution(self) -> torch.Tensor:
         # self-correction for 1/r^p potential
+        if self.range_radius is None:
+            raise ValueError(
+                "Cannot compute self contribution without specifying the range."
+            )
         phalf = self.exponent / 2
         return 1 / gamma(phalf + 1) / (2 * self.range_radius**2) ** phalf
 
     def background_correction(self) -> torch.Tensor:
         # "charge neutrality" correction for 1/r^p potential
+        if self.range_radius is None:
+            raise ValueError(
+                "Cannot compute background correction without specifying the range."
+            )
         prefac = torch.pi**1.5 * (2 * self.range_radius**2) ** ((3 - self.exponent) / 2)
         prefac /= (3 - self.exponent) * gamma(self.exponent / 2)
         return prefac

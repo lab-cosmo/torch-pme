@@ -5,7 +5,7 @@ from .base import Calculator
 from .ewald import EwaldCalculator, tune_ewald
 from .pme import PMECalculator
 
-__all__ = ["Calculator", "PMECalculator", "EwaldCalculator"]
+__all__ = ["Calculator", "PMECalculator", "EwaldCalculator", "tune_ewald"]
 
 
 def get_cscl_data():

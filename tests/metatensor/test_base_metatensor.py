@@ -7,6 +7,7 @@ import torchpme.calculators
 
 mts_torch = pytest.importorskip("metatensor.torch")
 mts_atomistic = pytest.importorskip("metatensor.torch.atomistic")
+torch.set_default_dtype(torch.float32)
 
 
 @pytest.fixture

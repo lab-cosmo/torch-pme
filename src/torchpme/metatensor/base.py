@@ -26,7 +26,7 @@ class Calculator(torch.nn.Module):
     torch calculator.
     """
 
-    _base_calculator = torch_calculators.Calculator
+    _base_calculator: torch_calculators.Calculator = torch_calculators.Calculator
 
     def __init__(self, potential: Potential, **kwargs):
         super().__init__()
