@@ -16,10 +16,10 @@ class EwaldCalculator(Calculator):
     r"""
     Potential computed using the Ewald sum.
 
-    Refer to :class:`torchpme.EwaldPotential` for parameter documentation.
+    Refer to :class:`torchpme.EwaldCalculator` for parameter documentation.
 
-    For an **example** on the usage refer to :py:class:`metatensor.PMEPotential
-    <torchpme.metatensor.PMEPotential>`.
+    For an **example** on the usage refer to :py:class:`metatensor.PMECalculator
+    <torchpme.metatensor.PMECalculator>`.
     """
 
     # see torchpme.metatensor.base

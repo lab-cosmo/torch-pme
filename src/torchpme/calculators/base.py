@@ -13,7 +13,7 @@ class Calculator(torch.nn.Module):
     in the Fourier domain. The class can be used directly to evaluate
     the real-space part of the potential, or subclassed providing
     a strategy to evalate the long-range contribution in k-space
-    (see e.g. :py:class:`PMEPotential` or :py:class:`EwaldPotential`).
+    (see e.g. :py:class:`PMECalculator` or :py:class:`EwaldCalculator`).
     NB: typically a subclass should only provide an implementation of
     :py:func:`Calculator._compute_kspace`.
 

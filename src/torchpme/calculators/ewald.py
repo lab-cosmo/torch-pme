@@ -218,16 +218,10 @@ def tune_ewald(
     # Create valid dummy tensors to verify `positions`, `charges` and `cell`
     neighbor_indices = torch.zeros(0, 2, device=device)
     neighbor_distances = torch.zeros(0, device=device)
-    (
-        positions,
-        charges,
-        cell,
-        _,
-        _,
-    ) = Calculator._validate_compute_parameters(
-        positions=positions,
+    Calculator._validate_compute_parameters(
         charges=charges,
         cell=cell,
+        positions=positions,
         neighbor_indices=neighbor_indices,
         neighbor_distances=neighbor_distances,
     )

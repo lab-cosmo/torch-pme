@@ -49,7 +49,7 @@ components = Labels(names=["xyz"], values=torch.tensor([[0, 1, 2]]).T)
 properties = Labels(names=["distance"], values=torch.tensor([[0]]))
 neighbors = TensorBlock(D.reshape(-1, 3, 1), samples, [components], properties)
 
-do_jit = False
+do_jit = True
 torch._dynamo.config.capture_scalar_outputs = True
 def jit(obj):
     return torch.jit.script(obj) if do_jit else obj

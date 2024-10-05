@@ -47,37 +47,16 @@ class PMECalculator(Calculator):
     We calculate the Madelung constant of a CsCl (Cesium-Chloride) crystal. The
     reference value is :math:`2 \cdot 1.7626 / \sqrt{3} \approx 2.0354`.
 
-    >>> import torch
-    >>> from vesin.torch import NeighborList
-
-    Define crystal structure
-
-    >>> positions = torch.tensor(
-    ...     [[0.0, 0.0, 0.0], [0.5, 0.5, 0.5]], dtype=torch.float64
-    ... )
-    >>> charges = torch.tensor([[1.0], [-1.0]], dtype=torch.float64)
-    >>> cell = torch.eye(3, dtype=torch.float64)
-
-    Compute the neighbor indices (``"i"``, ``"j"``) and the neighbor distances ("``d``")
-    using the ``vesin`` package. Refer to the `documentation <https://luthaf.fr/vesin>`_
-    for details on the API.
-
-    >>> cell_dimensions = torch.linalg.norm(cell, dim=1)
-    >>> cutoff = torch.min(cell_dimensions) / 2 - 1e-6
-    >>> nl = NeighborList(cutoff=cutoff, full_list=False)
-    >>> i, j, neighbor_distances = nl.compute(
-    ...     points=positions, box=cell, periodic=True, quantities="ijd"
-    ... )
-    >>> neighbor_indices = torch.stack([i, j], dim=1)
+    >>> charges, cell, positions, neighbor_distances, neighbor_indices = get_cscl_data()
 
     Define the pair potential used in the calculator
 
-    >>> pot = InversePowerLawPotential(exponent=1.0, range_radius=1.0)
+    >>> pot = InversePowerLawPotential(exponent=1.0, range_radius=0.1)
 
     If you inspect the neighbor list you will notice that the tensors are empty for the
     given system, which means the the whole potential will be calculated using the long
     range part of the potential. Finally, we initlize the potential class and
-    ``compute`` the potential for the crystal.
+    compute the potential for the crystal.
 
     >>> pme = PMECalculator(potential=pot)
     >>> pme.forward(

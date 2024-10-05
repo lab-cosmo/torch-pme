@@ -47,7 +47,7 @@ class PMECalculator(Calculator):
     ...     points=system.positions, box=system.cell, periodic=True, quantities="ijSD"
     ... )
 
-    The ``vesin`` calculator returned the indices and the neighbor shifts. We know stack
+    The ``vesin`` calculator returned the indices and the neighbor shifts. We now stack
     them together
 
     >>> neighbor_indices = torch.stack([i, j], dim=1)
