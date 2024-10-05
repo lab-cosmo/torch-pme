@@ -4,9 +4,17 @@ import pytest
 import torch
 from utils import neighbor_list_torch
 
-from torchpme import Calculator
+from torchpme import Calculator, CoulombPotential
 
 DTYPE = torch.float64
+
+
+# non-range-separated Coulomb direct calculator
+class CalculatorTest(Calculator):
+    def __init__(self, **kwargs):
+        super().__init__(
+            potential=CoulombPotential(range_radius=None, cutoff_radius=None), **kwargs
+        )
 
 
 def define_molecule(molecule_name="dimer"):
@@ -164,7 +172,7 @@ def test_coulomb_exact(
     """
     # Call Ewald potential class without specifying any of the convergence parameters
     # so that they are chosen by default (in a structure-dependent way)
-    direct = Calculator(full_neighbor_list=full_neighbor_list)
+    direct = CalculatorTest(full_neighbor_list=full_neighbor_list)
 
     # Compute potential at the position of the atoms for the specified structure
     molecule_name = molecule + molecule_charge
@@ -180,9 +188,9 @@ def test_coulomb_exact(
     )
 
     potentials = direct.forward(
-        positions,
         charges=charges,
         cell=torch.eye(3, dtype=DTYPE),  # ignored in actual calculations
+        positions=positions,
         neighbor_indices=neighbor_indices,
         neighbor_distances=neighbor_distances,
     )

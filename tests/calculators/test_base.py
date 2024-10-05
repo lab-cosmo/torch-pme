@@ -2,7 +2,7 @@ import pytest
 import torch
 
 from torchpme.calculators import Calculator, estimate_smearing
-from torchpme.lib.potentials import InversePowerLawPotential
+from torchpme.lib.potentials import CoulombPotential
 
 # Define some example parameters
 DTYPE = torch.float32
@@ -14,14 +14,12 @@ NEIGHBOR_INDICES = torch.ones(3, 2, dtype=int)
 NEIGHBOR_DISTANCES = torch.ones(3)
 
 
-class PotentialTest(InversePowerLawPotential):
-    def __init__(self):
-        super().__init__(exponent=1.0, range_radius=None, cutoff_radius=None)
-
-
+# non-range-separated Coulomb direct calculator
 class CalculatorTest(Calculator):
     def __init__(self):
-        super().__init__(potential=PotentialTest())
+        super().__init__(
+            potential=CoulombPotential(range_radius=None, cutoff_radius=None)
+        )
 
 
 def test_compute_output_shapes():

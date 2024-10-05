@@ -34,7 +34,7 @@ INTERPOLATION_ORDER = 2
             },
         ),
         (
-            torchpme.metatensor.PMEPotential,
+            torchpme.metatensor.PMECalculator,
             {
                 "atomic_smearing": ATOMIC_SMEARING,
                 "mesh_spacing": MESH_SPACING,
