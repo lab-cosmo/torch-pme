@@ -19,7 +19,7 @@ Implemented Calculators
 .. autoclass:: torchpme.metatensor.PMECalculator
     :members: forward
     :undoc-members:
-    
+
 .. autoclass:: torchpme.metatensor.EwaldCalculator
     :members: forward
     :undoc-members:

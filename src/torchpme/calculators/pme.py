@@ -92,15 +92,15 @@ class PMECalculator(Calculator):
 
         if mesh_spacing is None:
             mesh_spacing = potential.range_radius / 8.0
-        self.mesh_spacing = mesh_spacing
+        self.mesh_spacing: float = mesh_spacing
 
         if interpolation_order not in [1, 2, 3, 4, 5]:
             raise ValueError("Only `interpolation_order` from 1 to 5 are allowed")
-        self.interpolation_order = interpolation_order
+        self.interpolation_order: int = interpolation_order
 
         # Initialize the filter module. Set dummy value for smearing to propper
         # initilize the `KSpaceFilter` below
-        self._KF = KSpaceFilter(
+        self._KF: KSpaceFilter = KSpaceFilter(
             cell=torch.eye(3),
             ns_mesh=torch.ones(3, dtype=int),
             kernel=self.potential,

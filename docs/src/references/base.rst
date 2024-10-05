@@ -3,10 +3,10 @@
 Core classes
 ############
 
-The core functionality of ``torch-pme`` entails calculators that 
-can evaluate range-separated models of non-bonded interactions. 
+The core functionality of ``torch-pme`` entails calculators that
+can evaluate range-separated models of non-bonded interactions.
 The base classes that provide the interface to compute these types
-of interactions are *calculators*, that take information on the 
+of interactions are *calculators*, that take information on the
 periodic cell and the atom types and positions and computes
 interatomic potential-like terms.
 
