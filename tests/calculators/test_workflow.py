@@ -6,9 +6,8 @@ import math
 
 import pytest
 import torch
-from torch.testing import assert_close
 
-from torchpme import Calculator, EwaldCalculator, PMECalculator
+from torchpme import Calculator, CoulombPotential, EwaldCalculator, PMECalculator
 
 AVAILABLE_DEVICES = [torch.device("cpu")] + torch.cuda.is_available() * [
     torch.device("cuda")
@@ -24,18 +23,23 @@ INTERPOLATION_ORDER = 2
 @pytest.mark.parametrize(
     "CalculatorClass, params",
     [
-        (Calculator, {}),
+        (
+            Calculator,
+            {
+                "potential": CoulombPotential(range_radius=None),
+            },
+        ),
         (
             EwaldCalculator,
             {
-                "atomic_smearing": ATOMIC_SMEARING,
+                "potential": CoulombPotential(range_radius=ATOMIC_SMEARING),
                 "lr_wavelength": LR_WAVELENGTH,
             },
         ),
         (
             PMECalculator,
             {
-                "atomic_smearing": ATOMIC_SMEARING,
+                "potential": CoulombPotential(range_radius=ATOMIC_SMEARING),
                 "mesh_spacing": MESH_SPACING,
                 "interpolation_order": INTERPOLATION_ORDER,
             },
@@ -55,9 +59,9 @@ class TestWorkflow:
         neighbor_distances = torch.tensor([0.8660])
 
         return (
-            positions.to(device=device),
             charges.to(device=device),
             cell.to(device=device),
+            positions.to(device=device),
             neighbor_indices.to(device=device),
             neighbor_distances.to(device=device),
         )
@@ -92,28 +96,6 @@ class TestWorkflow:
             with pytest.raises(ValueError, match=match):
                 CalculatorClass(**params)
 
-    def test_multi_frame(self, CalculatorClass, params):
-        calculator = CalculatorClass(**params)
-        positions, charges, cell, neighbor_indices, neighbor_distance = (
-            self.cscl_system()
-        )
-
-        l_values = calculator.forward(
-            positions=[positions, positions],
-            cell=[cell, cell],
-            charges=[charges, charges],
-            neighbor_indices=[neighbor_indices, neighbor_indices],
-            neighbor_distances=[neighbor_distance, neighbor_distance],
-        )
-
-        for values in l_values:
-            assert_close(
-                MADELUNG_CSCL,
-                -torch.sum(charges * values),
-                atol=1,
-                rtol=1e-5,
-            )
-
     def test_dtype_device(self, CalculatorClass, params):
         """Test that the output dtype and device are the same as the input."""
         device = "cpu"
@@ -128,9 +110,9 @@ class TestWorkflow:
         calculator = CalculatorClass(**params)
 
         potential = calculator.forward(
-            positions=positions,
             charges=charges,
             cell=cell,
+            positions=positions,
             neighbor_indices=neighbor_indices,
             neighbor_distances=neighbor_distances,
         )

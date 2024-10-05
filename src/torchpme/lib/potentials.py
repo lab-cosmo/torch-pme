@@ -242,6 +242,11 @@ class CoulombPotential(Potential):
             be evaluated.
         """
 
+        if self.range_radius is None:
+            raise ValueError(
+                "Cannot compute long-range contribution without specifying the range."
+            )
+
         return torch.erf(dist * (self._rsqrt2 / self.range_radius)) / dist
 
     def lr_from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
@@ -259,6 +264,11 @@ class CoulombPotential(Potential):
         # Fourier-transformed LR potential does not diverge as k->0, and one
         # could instead assign the correct limit. This is not implemented for now
         # for consistency reasons.
+        if self.range_radius is None:
+            raise ValueError(
+                "Cannot compute long-range kernel without specifying the range."
+            )
+
         return torch.where(
             k_sq == 0,
             0.0,
