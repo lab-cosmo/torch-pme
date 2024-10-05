@@ -3,7 +3,7 @@ import torch
 from test_values_ewald import define_crystal
 from utils import neighbor_list_torch
 
-from torchpme import EwaldCalculator, tune_ewald
+from torchpme import CoulombPotential, EwaldCalculator, tune_ewald
 
 
 @pytest.mark.parametrize(
@@ -22,7 +22,7 @@ def test_parameter_choose(accuracy, rtol):
     # Get input parameters and adjust to account for scaling
     pos, charges, cell, madelung_ref, num_units = define_crystal()
 
-    ewald_params, sr_cutoff = tune_ewald(pos, charges, cell, accuracy=accuracy)
+    ewald_params, sr_cutoff = tune_ewald(charges, cell, pos, accuracy=accuracy)
 
     assert len(ewald_params) == 2
 
@@ -32,7 +32,10 @@ def test_parameter_choose(accuracy, rtol):
     )
 
     # Compute potential and compare against target value using default hypers
-    calc = EwaldCalculator(**ewald_params)
+    calc = EwaldCalculator(
+        potential=CoulombPotential(range_radius=ewald_params["atomic_smearing"]),
+        lr_wavelength=ewald_params["lr_wavelength"],
+    )
     potentials = calc.forward(
         positions=pos,
         charges=charges,
@@ -49,7 +52,7 @@ def test_parameter_choose(accuracy, rtol):
 def test_paramaters_fast():
     pos, charges, cell, _, _ = define_crystal()
 
-    ewald_params, sr_cutoff = tune_ewald(pos, charges, cell, accuracy="fast")
+    ewald_params, sr_cutoff = tune_ewald(charges, cell, pos, accuracy="fast")
 
     smearing = len(pos) ** (1 / 6) / 2**0.5 * 1.3
 
@@ -66,7 +69,7 @@ def test_accuracy_error():
         "'medium' or 'accurate', or provide a float for the accuracy."
     )
     with pytest.raises(ValueError, match=match):
-        tune_ewald(pos, charges, cell, accuracy="foo")
+        tune_ewald(charges, cell, pos, accuracy="foo")
 
 
 def test_multi_charge_channel_error():
@@ -75,4 +78,4 @@ def test_multi_charge_channel_error():
 
     match = "Found 2 charge channels, but only one iss supported"
     with pytest.raises(NotImplementedError, match=match):
-        tune_ewald(pos, charges, cell, accuracy=None)
+        tune_ewald(charges, cell, pos, accuracy=None)

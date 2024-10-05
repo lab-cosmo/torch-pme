@@ -5,7 +5,7 @@ from typing import Literal, Optional
 import torch
 
 from ..lib import Potential, generate_kvectors_for_ewald
-from .base import Calculator
+from .base import Calculator, estimate_smearing
 
 
 class EwaldCalculator(Calculator):
@@ -145,9 +145,9 @@ class EwaldCalculator(Calculator):
 
 
 def tune_ewald(
-    positions: torch.Tensor,
     charges: torch.Tensor,
     cell: torch.Tensor,
+    positions: torch.Tensor,
     exponent: int = 1,
     accuracy: Optional[Literal["fast", "medium", "accurate"] | float] = "fast",
     max_steps: int = 50000,
@@ -228,10 +228,6 @@ def tune_ewald(
         neighbor_distances=neighbor_distances,
     )
 
-    positions = positions[0]
-    charges = charges[0]
-    cell = cell[0]
-
     if charges.shape[1] > 1:
         raise NotImplementedError(
             f"Found {charges.shape[1]} charge channels, but only one iss supported"
@@ -266,7 +262,7 @@ def tune_ewald(
     min_dimension = float(torch.min(cell_dimensions))
     half_cell = float(torch.min(cell_dimensions) / 2)
 
-    smearing_init = Calculator.estimate_smearing(cell)
+    smearing_init = estimate_smearing(cell)
     prefac = 2 * torch.sum(charges**2) / math.sqrt(len(positions))
     volume = torch.abs(cell.det())
 
