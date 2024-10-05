@@ -25,18 +25,23 @@ INTERPOLATION_ORDER = 2
 @pytest.mark.parametrize(
     "CalculatorClass, params",
     [
-        (torchpme.metatensor.Calculator, {}),
+        (
+            torchpme.metatensor.Calculator,
+            {
+                "potential": torchpme.CoulombPotential(range_radius=None),
+            },
+        ),
         (
             torchpme.metatensor.EwaldCalculator,
             {
-                "atomic_smearing": ATOMIC_SMEARING,
+                "potential": torchpme.CoulombPotential(range_radius=ATOMIC_SMEARING),
                 "lr_wavelength": LR_WAVELENGTH,
             },
         ),
         (
             torchpme.metatensor.PMECalculator,
             {
-                "atomic_smearing": ATOMIC_SMEARING,
+                "potential": torchpme.CoulombPotential(range_radius=ATOMIC_SMEARING),
                 "mesh_spacing": MESH_SPACING,
                 "interpolation_order": INTERPOLATION_ORDER,
             },

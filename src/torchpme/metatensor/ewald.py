@@ -23,7 +23,7 @@ class EwaldCalculator(Calculator):
     """
 
     # see torchpme.metatensor.base
-    _base_calculator = torch_calculators.PMECalculator
+    _base_calculator = torch_calculators.EwaldCalculator
 
 
 def tune_ewald(
