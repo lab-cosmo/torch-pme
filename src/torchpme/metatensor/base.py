@@ -19,11 +19,14 @@ class Calculator(torch.nn.Module):
 
     This is just a thin wrapper around the corresponding
     generic torch :py:class:`torchpme.calculators.Calculator`.
-    If you want to wrap a
-    ``metatensor`` interface around another calculator,
-    you can just define the class and set the static
+    If you want to wrap a ``metatensor`` interface around another
+    calculator, you can just define the class and set the static
     member ``_base_calculator`` to the corresponding
     torch calculator.
+
+    :param potential: every calculator requires an instance of a
+        :py:class:`Potential <torchpme.lib.Potential>` that is used
+        to compute real and k-space terms for a 2-body potential.
     """
 
     _base_calculator: type[torch_calculators.Calculator] = torch_calculators.Calculator

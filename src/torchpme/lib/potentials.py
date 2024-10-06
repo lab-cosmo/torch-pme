@@ -5,7 +5,6 @@ import torch
 from torch.special import gammainc, gammaincc, gammaln
 
 
-# TODO MUST REFACTOR TESTS
 class Potential(torch.nn.Module):
     r"""
     Base class defining the interface for a pair potential energy function
@@ -164,7 +163,6 @@ class Potential(torch.nn.Module):
 
         return self.lr_from_k_sq(k_sq)
 
-    # TODO: discuss more generic names and explanations
     @torch.jit.export
     def self_contribution(self) -> torch.Tensor:
         """

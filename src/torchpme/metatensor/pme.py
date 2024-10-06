@@ -6,7 +6,7 @@ class PMECalculator(Calculator):
     r"""
     Potential using a particle mesh-based Ewald (PME).
 
-    Refer to :class:`torchpme.PMECalculator` for parameter documentation.
+    Refer to :py:class:`torchpme.PMECalculator` for parameter documentation.
 
     Example
     -------

@@ -10,7 +10,6 @@ from .base import Calculator, estimate_smearing
 
 class EwaldCalculator(Calculator):
     r"""
-    TODO update parameters
     Potential computed using the Ewald sum.
 
     Scaling as :math:`\mathcal{O}(N^2)` with respect to the number of particles
@@ -24,23 +23,21 @@ class EwaldCalculator(Calculator):
         cell_dimensions = torch.linalg.norm(cell, dim=1)
         cutoff = torch.min(cell_dimensions) / 2 - 1e-6
 
-    This ensures a accuracy of the short range part of ``1e-5``.
+    For an electrostatic potential, and following the guidelines discussed below
+    for the other parameters, this ensures an accuracy of approximately ``1e-5``.
 
-    :param range_radius: Width of the atom-centered Gaussian used to split the
-        Coulomb potential into the short- and long-range parts. A reasonable value for
-        most systems is to set it to ``1/5`` times the neighbor list cutoff. If
-        :py:obj:`None` ,it will be set to 1/5 times of half the largest box vector
-        (separately for each structure).
+    :param potential: the two-body potential that should be computed, implemented
+        as a :py:class:`torchpme.lib.Potential` object. The ``range_radius`` parameter
+        of the potential determines the split between real and k-space regions.
+        For a :py:class:`torchpme.lib.CoulombPotential` it corresponds to the
+        width of the atom-centered Gaussian used to split the Coulomb potential
+        into the short- and long-range parts. A reasonable value for
+        most systems is to set it to ``1/5`` times the neighbor list cutoff.
     :param lr_wavelength: Spatial resolution used for the long-range (reciprocal space)
         part of the Ewald sum. More concretely, all Fourier space vectors with a
         wavelength >= this value will be kept. If not set to a global value, it will be
         set to half the range_radius parameter to ensure convergence of the
         long-range part to a relative precision of 1e-5.
-    :param exponent: the exponent :math:`p` in :math:`1/r^p` potentials
-    :param subtract_interior: If set to :py:obj:`True`, subtract from the features of an
-        atom the contributions to the potential arising from all atoms within the cutoff
-        Note that if set to true, the self contribution (see previous) is also
-        subtracted by default.
     :param full_neighbor_list: If set to :py:obj:`True`, a "full" neighbor list is
         expected as input. This means that each atom pair appears twice. If set to
         :py:obj:`False`, a "half" neighbor list is expected.

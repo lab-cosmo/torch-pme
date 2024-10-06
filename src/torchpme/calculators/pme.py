@@ -28,19 +28,22 @@ class PMECalculator(Calculator):
     This ensures a accuracy of the short range part of ``1e-5``.
 
     :param potential: A :py:class:`Potential` object that implements the evaluation
-        of short and long-range potential terms. The ``range_radius`` parameter of the
-        potential determines the smearing of the atom-centered Gaussian used to split the
+        of short and long-range potential terms. The ``range_radius`` parameter
+        of the potential determines the split between real and k-space regions.
+        For a :py:class:`torchpme.lib.CoulombPotential` it corresponds
+        to the smearing of the atom-centered Gaussian used to split the
         Coulomb potential into the short- and long-range parts. A reasonable value for
         most systems is to set it to ``1/5`` times the neighbor list cutoff.
-    :param full_neighbor_list: If set to :py:obj:`True`, a "full" neighbor list
-        is expected as input. This means that each atom pair appears twice. If
-        set to :py:obj:`False`, a "half" neighbor list is expected.
     :param mesh_spacing: Value that determines the umber of Fourier-space grid points
         that will be used along each axis. If set to None, it will automatically be set
         to half of ``range_radius``.
     :param interpolation_order: Interpolation order for mapping onto the grid, where an
         interpolation order of p corresponds to interpolation by a polynomial of degree
         ``p - 1`` (e.g. ``p = 4`` for cubic interpolation).
+    :param full_neighbor_list: If set to :py:obj:`True`, a "full" neighbor list
+        is expected as input. This means that each atom pair appears twice. If
+        set to :py:obj:`False`, a "half" neighbor list is expected.
+
 
     Example
     -------

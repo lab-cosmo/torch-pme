@@ -120,10 +120,29 @@ class Calculator(torch.nn.Module):
         neighbor_indices: torch.Tensor,
         neighbor_distances: torch.Tensor,
     ):
-        """
-        Default forward method is to call _compute_range_separated
+        r"""
+        The ``forward`` method computes the potential "energy" as
+        :math:`\frac{1}{2}\sum_{ij} \frac{q_i q_j}{v(r_{ij})}` where
+        :math:`v(r)` is the pair potential defined by the ``potential``
+        parameter and :math:`q_i` are atomic "charges" (corresponding
+        to the electrostatic charge when using a Coulomb potential).
 
-        TODO: documentation and examples
+        If the ``range_radius`` of the ``potential` is not set,
+        the calculator evaluates only the real-space part of the potential.
+        Otherwise, provided that the calculator implements a
+        `_compute_kspace` method, it will also evaluate the long-range
+        part using a Fourier-domain method.
+
+        :param charges: torch.Tensor, atomic (pseudo-)charges
+        :param cell: torch.Tensor, periodic supercell for the system
+        :param positions: torch.Tensor, Cartesian coordinates of the
+            particles within the supercell.
+        :param neighbor_indices: torch.Tensor with the ``i,j`` indices of
+            neighbors for which the potential should be computed in real
+            space.
+        :param neighbor_distances: torch.Tensor with the pair distances of the
+            neighbors for which the potential should be computed in real
+            space.
         """
         self._validate_compute_parameters(
             charges=charges,
