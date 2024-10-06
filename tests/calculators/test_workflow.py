@@ -66,14 +66,14 @@ class TestWorkflow:
             neighbor_distances.to(device=device),
         )
 
-    def test_atomic_smearing_non_positive(self, CalculatorClass, params):
+    def test_range_radius_non_positive(self, CalculatorClass, params):
         params = params.copy()
-        match = r"`atomic_smearing` .* has to be positive"
+        match = r"`range_radius` .* has to be positive"
         if type(CalculatorClass) in [EwaldCalculator, PMECalculator]:
-            params["atomic_smearing"] = 0
+            params["range_radius"] = 0
             with pytest.raises(ValueError, match=match):
                 CalculatorClass(**params)
-            params["atomic_smearing"] = -0.1
+            params["range_radius"] = -0.1
             with pytest.raises(ValueError, match=match):
                 CalculatorClass(**params)
 

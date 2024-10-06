@@ -8,6 +8,7 @@ __all__ = [
     "Calculator",
     "EwaldCalculator",
     "PMECalculator",
+    "get_cscl_data",
     "estimate_smearing",
     "tune_ewald",
 ]
@@ -33,12 +34,22 @@ def get_cscl_data():
     # Compute the neighbor indices (``"i"``, ``"j"``) and the neighbor
     # distances ("``d``") using the ``vesin`` package. Refer to the
     # `documentation <https://luthaf.fr/vesin>`_ for details on the API.
+    # We also return cell shifts ("``S``") and interatomic displacements ("``D``")
+    # that are needed in the metatensor neighbor list format
     cell_dimensions = torch.linalg.norm(cell, dim=1)
     cutoff = torch.min(cell_dimensions) / 2 - 1e-6
     nl = NeighborList(cutoff=cutoff, full_list=False)
-    i, j, neighbor_distances = nl.compute(
-        points=positions, box=cell, periodic=True, quantities="ijd"
+    i, j, neighbor_distances, cell_shifts, displacements = nl.compute(
+        points=positions, box=cell, periodic=True, quantities="ijdSD"
     )
     neighbor_indices = torch.stack([i, j], dim=1)
 
-    return charges, cell, positions, neighbor_distances, neighbor_indices
+    return (
+        charges,
+        cell,
+        positions,
+        neighbor_distances,
+        neighbor_indices,
+        cell_shifts,
+        displacements,
+    )

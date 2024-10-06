@@ -26,7 +26,7 @@ class EwaldCalculator(Calculator):
 
     This ensures a accuracy of the short range part of ``1e-5``.
 
-    :param atomic_smearing: Width of the atom-centered Gaussian used to split the
+    :param range_radius: Width of the atom-centered Gaussian used to split the
         Coulomb potential into the short- and long-range parts. A reasonable value for
         most systems is to set it to ``1/5`` times the neighbor list cutoff. If
         :py:obj:`None` ,it will be set to 1/5 times of half the largest box vector
@@ -34,7 +34,7 @@ class EwaldCalculator(Calculator):
     :param lr_wavelength: Spatial resolution used for the long-range (reciprocal space)
         part of the Ewald sum. More concretely, all Fourier space vectors with a
         wavelength >= this value will be kept. If not set to a global value, it will be
-        set to half the atomic_smearing parameter to ensure convergence of the
+        set to half the range_radius parameter to ensure convergence of the
         long-range part to a relative precision of 1e-5.
     :param exponent: the exponent :math:`p` in :math:`1/r^p` potentials
     :param subtract_interior: If set to :py:obj:`True`, subtract from the features of an
@@ -45,7 +45,7 @@ class EwaldCalculator(Calculator):
         expected as input. This means that each atom pair appears twice. If set to
         :py:obj:`False`, a "half" neighbor list is expected.
 
-    To tune the ``atomic_smearing`` and  ``lr_wavelength`` for a system you can use the
+    To tune the ``range_radius`` and  ``lr_wavelength`` for a system you can use the
     :py:func:`tune_pme` function. For an **example** on the calculator usage refer to
     :py:class:`CalculatorPME`.
     """
@@ -201,18 +201,18 @@ def tune_ewald(
     ... )
     >>> charges = torch.tensor([[1.0], [-1.0]], dtype=torch.float64)
     >>> cell = torch.eye(3, dtype=torch.float64)
-    >>> ewald_parameter, cutoff = tune_ewald(positions, charges, cell, accuracy="fast")
+    >>> ewald_parameter, cutoff = tune_ewald(charges, cell, positions, accuracy="fast")
 
     You can check the values of the parameters
 
     >>> print(ewald_parameter)
-    {'atomic_smearing': 1.0318106837793297, 'lr_wavelength': 2.9468444218696392}
+    {'range_radius': 1.0318106837793297, 'lr_wavelength': 2.9468444218696392}
 
     >>> print(cutoff)
     2.2699835043145256
 
-    Which can be used to initilize an :py:class:`CalculatorEwald` instance optimal for
-    the system.
+    Which can be used to initilize an :py:class:`CalculatorEwald` instance with
+    parameters that are optimal for the system.
     """
 
     if exponent != 1:
@@ -248,7 +248,7 @@ def tune_ewald(
         smearing = smearing_factor * len(positions) ** (1 / 6) / 2**0.5
 
         return {
-            "atomic_smearing": smearing,
+            "range_radius": smearing,
             "lr_wavelength": 2 * torch.pi * smearing / lr_wavelength_factor,
         }, smearing * lr_wavelength_factor
 
@@ -334,6 +334,6 @@ def tune_ewald(
         )
 
     return {
-        "atomic_smearing": float(smearing),
+        "range_radius": float(smearing),
         "lr_wavelength": float(smooth_lr_wavelength(lr_wavelength)),
     }, float(cutoff)

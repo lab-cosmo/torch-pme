@@ -21,7 +21,7 @@ class TestMeshInterpolatorForward:
     @pytest.mark.parametrize("n_mesh", torch.arange(19, 26))
     def test_charge_conservation_cubic(self, order, n_mesh):
         """
-        Test that the total "charge" on the grid after the atomic_smearing the particles
+        Test that the total "charge" on the grid after the range_radius the particles
         onto the mesh is conserved for a cubic cell.
         """
         # Define some basic parameteres for this test
@@ -51,7 +51,7 @@ class TestMeshInterpolatorForward:
     @pytest.mark.parametrize("order", order)
     def test_charge_conservation_general(self, order):
         """
-        Test that the total "charge" on the grid after the atomic_smearing the particles
+        Test that the total "charge" on the grid after the range_radius the particles
         onto the mesh is conserved for a generic triclinic cell.
         It is basically the same test as the previous one, but without the restriction
         to cubic cells.

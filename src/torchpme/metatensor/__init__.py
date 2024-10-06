@@ -5,22 +5,34 @@ from .base import Calculator
 from .ewald import EwaldCalculator, tune_ewald
 from .pme import PMECalculator
 
-__all__ = ["Calculator", "PMECalculator", "EwaldCalculator", "tune_ewald"]
+__all__ = [
+    "Calculator",
+    "PMECalculator",
+    "EwaldCalculator",
+    "tune_ewald",
+    "get_cscl_data",
+]
 
 
 def get_cscl_data():
     """
     Returns a CsCl structure (with a lattice parameter of 1 unit)
-    and the neighbor list data.
+    and the neighbor list data, in `metatensor` format.
     """
 
     from metatensor.torch import Labels, TensorBlock
     from metatensor.torch.atomistic import System
 
     # Get CsCl data in pure torch tensors
-    charges, cell, positions, neighbor_distances, neighbor_indices = (
-        get_cscl_data_torch()
-    )
+    (
+        charges,
+        cell,
+        positions,
+        neighbor_distances,
+        neighbor_indices,
+        cell_shifts,
+        displacements,
+    ) = get_cscl_data_torch()
     types = torch.tensor([55, 17])
 
     # Convert the geometry in a `System` object
@@ -39,6 +51,33 @@ def get_cscl_data():
     )
     system.add_data(name="charges", data=data)
 
-    # WIP, must still add neighbor list!
+    # `metatensor`-style neighbor lists contain also information that is
+    # not strictly necessary for `torch-pme` (cell shifts, and displacement vectors)
+    # that must combined in a  :py:class:`TensorBlock <metatensor.torch.TensorBlock>`
+    # object.
 
-    return system
+    sample_values = torch.hstack([neighbor_indices, cell_shifts])
+    samples = Labels(
+        names=[
+            "first_atom",
+            "second_atom",
+            "cell_shift_a",
+            "cell_shift_b",
+            "cell_shift_c",
+        ],
+        values=sample_values,
+    )
+
+    values = displacements.reshape(-1, 3, 1)
+    neighbors = TensorBlock(
+        values=values,
+        samples=samples,
+        components=[Labels.range("xyz", 3)],
+        properties=Labels.range("distance", 1),
+    )
+
+    # NB: for this specific toy system, the neighbor-list cutoff is shorter than
+    # the first-neighbor distance, s neighbor list the TensorBlock.
+    # is empty.
+
+    return system, neighbors

@@ -47,7 +47,11 @@ class PMECalculator(Calculator):
     We calculate the Madelung constant of a CsCl (Cesium-Chloride) crystal. The
     reference value is :math:`2 \cdot 1.7626 / \sqrt{3} \approx 2.0354`.
 
-    >>> charges, cell, positions, neighbor_distances, neighbor_indices = get_cscl_data()
+    >>> from torchpme.calculators import get_cscl_data
+    >>> from torchpme import InversePowerLawPotential
+    >>> charges, cell, positions, neighbor_distances, neighbor_indices, _, _ = (
+    ...     get_cscl_data()
+    ... )
 
     Define the pair potential used in the calculator
 
