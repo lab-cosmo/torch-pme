@@ -49,8 +49,9 @@ class Calculator(torch.nn.Module):
         ``range_radius`` in the potential class, it will either evaluate the
         full potential, or only the short-range, "local" part.
 
-        :param charges: 2D tensor or list of 2D tensor of shape (``n_channels,
-            len(positions))``. ``n_channels`` is the number of charge channels the
+        :param charges: 2D tensor or list of 2D tensor of shape 
+            ``(n_channels,len(positions))``. 
+            ``n_channels`` is the number of charge channels the
             potential should be calculated for a standard potential ``n_channels=1``.
             If more than one "channel" is provided multiple potentials for the same
             position are computed depending on the charges and the potentials.
@@ -127,10 +128,10 @@ class Calculator(torch.nn.Module):
         parameter and :math:`q_i` are atomic "charges" (corresponding
         to the electrostatic charge when using a Coulomb potential).
 
-        If the ``range_radius`` of the ``potential` is not set,
+        If the ``range_radius`` of the ``potential`` is not set,
         the calculator evaluates only the real-space part of the potential.
         Otherwise, provided that the calculator implements a
-        `_compute_kspace` method, it will also evaluate the long-range
+        ``_compute_kspace`` method, it will also evaluate the long-range
         part using a Fourier-domain method.
 
         :param charges: torch.Tensor, atomic (pseudo-)charges
