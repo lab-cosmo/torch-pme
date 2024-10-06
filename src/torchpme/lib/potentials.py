@@ -72,7 +72,7 @@ class Potential(torch.nn.Module):
 
         if self.cutoff_radius is None:
             raise ValueError(
-                "Cannot compute cutoff function when cutoff radius is not set"
+                "Cannot compute cutoff function when `cutoff_radius` is not set"
             )
 
         return torch.where(
@@ -116,7 +116,7 @@ class Potential(torch.nn.Module):
 
         if self.range_radius is None:
             raise ValueError(
-                "Cannot compute range-separated potential when a range radius is not specified."
+                "Cannot compute range-separated potential when `range_radius` is not specified."
             )
         if self.cutoff_radius is None:
             return self.from_dist(dist) - self.lr_from_dist(dist)
@@ -242,7 +242,7 @@ class CoulombPotential(Potential):
 
         if self.range_radius is None:
             raise ValueError(
-                "Cannot compute long-range contribution without specifying the range."
+                "Cannot compute long-range contribution without specifying `range_radius`."
             )
 
         return torch.erf(dist * (self._rsqrt2 / self.range_radius)) / dist
@@ -264,7 +264,7 @@ class CoulombPotential(Potential):
         # for consistency reasons.
         if self.range_radius is None:
             raise ValueError(
-                "Cannot compute long-range kernel without specifying the range."
+                "Cannot compute long-range kernel without specifying `range_radius`."
             )
 
         return torch.where(
@@ -277,7 +277,7 @@ class CoulombPotential(Potential):
         # self-correction for 1/r potential
         if self.range_radius is None:
             raise ValueError(
-                "Cannot compute self contribution without specifying the range."
+                "Cannot compute self contribution without specifying `range_radius`."
             )
         return self._sqrt_2_on_pi / self.range_radius
 
@@ -285,7 +285,7 @@ class CoulombPotential(Potential):
         # "charge neutrality" correction for 1/r potential
         if self.range_radius is None:
             raise ValueError(
-                "Cannot compute background correction without specifying the range."
+                "Cannot compute background correction without specifying `range_radius`."
             )
         return torch.pi * self.range_radius**2
 
@@ -357,7 +357,7 @@ class InversePowerLawPotential(Potential):
 
         if self.range_radius is None:
             raise ValueError(
-                "Cannot compute long-range contribution without specifying the range."
+                "Cannot compute long-range contribution without specifying `range_radius`."
             )
 
         exponent = self.exponent
@@ -385,7 +385,7 @@ class InversePowerLawPotential(Potential):
         """
         if self.range_radius is None:
             raise ValueError(
-                "Cannot compute long-range kernel without specifying the range."
+                "Cannot compute long-range kernel without specifying `range_radius`."
             )
 
         exponent = self.exponent
@@ -412,7 +412,7 @@ class InversePowerLawPotential(Potential):
         # self-correction for 1/r^p potential
         if self.range_radius is None:
             raise ValueError(
-                "Cannot compute self contribution without specifying the range."
+                "Cannot compute self contribution without specifying `range_radius`."
             )
         phalf = self.exponent / 2
         return 1 / gamma(phalf + 1) / (2 * self.range_radius**2) ** phalf
@@ -421,7 +421,7 @@ class InversePowerLawPotential(Potential):
         # "charge neutrality" correction for 1/r^p potential
         if self.range_radius is None:
             raise ValueError(
-                "Cannot compute background correction without specifying the range."
+                "Cannot compute background correction without specifying `range_radius`."
             )
         prefac = torch.pi**1.5 * (2 * self.range_radius**2) ** ((3 - self.exponent) / 2)
         prefac /= (3 - self.exponent) * gamma(self.exponent / 2)

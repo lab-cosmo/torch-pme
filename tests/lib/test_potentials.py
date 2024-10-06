@@ -216,6 +216,36 @@ def test_exponent_out_of_range():
         InversePowerLawPotential(exponent=4, range_radius=0.0)
 
 
+@pytest.mark.parametrize("potential", [CoulombPotential, InversePowerLawPotential])
+def test_range_none(potential):
+    if potential is InversePowerLawPotential:
+        pot = potential(exponent=2.0)
+    else:
+        pot = potential()
+
+    dist = torch.tensor([0.3])
+    match = r".*range_radius.*"
+    with pytest.raises(ValueError, match=match):
+        _ = pot.sr_from_dist(dist)
+    with pytest.raises(ValueError, match=match):
+        _ = pot.lr_from_dist(dist)
+    with pytest.raises(ValueError, match=match):
+        _ = pot.lr_from_k_sq(dist)
+    with pytest.raises(ValueError, match=match):
+        _ = pot.self_contribution()
+    with pytest.raises(ValueError, match=match):
+        _ = pot.background_correction()
+
+
+@pytest.mark.parametrize("cutoff_radius", [0.5, 1.0, 2.0])
+def test_f_cutoff(cutoff_radius):
+    coul = CoulombPotential(cutoff_radius=cutoff_radius)
+
+    dist = torch.tensor([0.3])
+    fcut = coul.f_cutoff(dist)
+    torch.allclose(fcut, 0.5 * (1.0 + torch.cos(torch.pi * dist / cutoff_radius)))
+
+
 @pytest.mark.parametrize("range_radius", range_radiuses)
 def test_inverserp_coulomb(range_radius):
     """Check that an explicit Coulomb potential
@@ -230,11 +260,15 @@ def test_inverserp_coulomb(range_radius):
     ipl_sr_from_dist = ipl.sr_from_dist(dists)
     ipl_lr_from_dist = ipl.lr_from_dist(dists_sq)
     ipl_fourier = ipl.lr_from_k_sq(ks_sq)
+    ipl_self = ipl.self_contribution()
+    ipl_bg = ipl.background_correction()
 
     coul_from_dist = coul.from_dist(dists)
     coul_sr_from_dist = coul.sr_from_dist(dists)
     coul_lr_from_dist = coul.lr_from_dist(dists_sq)
     coul_fourier = coul.lr_from_k_sq(ks_sq)
+    coul_self = coul.self_contribution()
+    coul_bg = coul.background_correction()
 
     # Test agreement between generic and specialized implementations
     atol = 3e-16
@@ -246,3 +280,5 @@ def test_inverserp_coulomb(range_radius):
     assert_close(ipl_sr_from_dist, coul_sr_from_dist, rtol=rtol, atol=atol)
     assert_close(ipl_lr_from_dist, coul_lr_from_dist, rtol=rtol, atol=atol)
     assert_close(ipl_fourier, coul_fourier, rtol=rtol, atol=atol)
+    assert_close(ipl_self, coul_self, rtol=rtol, atol=atol)
+    assert_close(ipl_bg, coul_bg, rtol=rtol, atol=atol)
