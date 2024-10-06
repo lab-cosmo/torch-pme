@@ -1,7 +1,7 @@
 import pytest
 import torch
 
-from torchpme.calculators import Calculator, estimate_smearing
+from torchpme.calculators import Calculator, estimate_smearing, get_cscl_data
 from torchpme.lib.potentials import CoulombPotential
 
 # Define some example parameters
@@ -20,6 +20,14 @@ class CalculatorTest(Calculator):
         super().__init__(
             potential=CoulombPotential(range_radius=None, cutoff_radius=None)
         )
+
+
+def test_cscl_data():
+    data = get_cscl_data()
+
+    assert len(data) == 7
+    for el in data:
+        assert type(el) is torch.Tensor
 
 
 def test_compute_output_shapes():
