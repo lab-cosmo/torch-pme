@@ -49,8 +49,8 @@ class Calculator(torch.nn.Module):
         ``range_radius`` in the potential class, it will either evaluate the
         full potential, or only the short-range, "local" part.
 
-        :param charges: 2D tensor or list of 2D tensor of shape 
-            ``(n_channels,len(positions))``. 
+        :param charges: 2D tensor or list of 2D tensor of shape
+            ``(n_channels,len(positions))``.
             ``n_channels`` is the number of charge channels the
             potential should be calculated for a standard potential ``n_channels=1``.
             If more than one "channel" is provided multiple potentials for the same
