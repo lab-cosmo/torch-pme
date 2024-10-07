@@ -84,7 +84,9 @@ charges.requires_grad_(True)
 cell.requires_grad_(True)
 
 ns = torch.tensor([5, 5, 5])
-interpolator = torchpme.lib.MeshInterpolator(cell=cell, ns_mesh=ns, order=3)
+interpolator = torchpme.lib.MeshInterpolator(
+    cell=cell, ns_mesh=ns, num_nodes_per_axis=3
+)
 interpolator.compute_weights(positions)
 mesh = interpolator.points_to_mesh(charges)
 
@@ -329,7 +331,7 @@ class KSpaceModule(torch.nn.Module):
 
         dummy_cell = torch.eye(3, dtype=dtype)
         self._MI = torchpme.lib.MeshInterpolator(
-            cell=dummy_cell, ns_mesh=torch.tensor([1, 1, 1]), order=3
+            cell=dummy_cell, ns_mesh=torch.tensor([1, 1, 1]), num_nodes_per_axis=3
         )
         self._KF = torchpme.lib.KSpaceFilter(
             cell=dummy_cell,
@@ -358,7 +360,7 @@ class KSpaceModule(torch.nn.Module):
         ns_mesh = torchpme.lib.get_ns_mesh(cell, self._mesh_spacing)
         ns_mesh = torch.tensor([4, 4, 4])
         self._interpolator = torchpme.lib.MeshInterpolator(
-            cell=cell, ns_mesh=ns_mesh, order=3
+            cell=cell, ns_mesh=ns_mesh, num_nodes_per_axis=3
         )
         self._interpolator.compute_weights(positions)
         mesh = self._interpolator.points_to_mesh(charges)

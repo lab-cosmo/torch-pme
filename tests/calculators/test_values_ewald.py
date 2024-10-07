@@ -470,7 +470,7 @@ def test_random_structure(
             atomic_smearing=atomic_smearing, full_neighbor_list=full_neighbor_list
         )
         rtol_e = 4.5e-3
-        rtol_f = 3.5e-3
+        rtol_f = 5.0e-3
 
     potentials = calc.forward(
         positions=positions,

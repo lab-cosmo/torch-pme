@@ -93,8 +93,8 @@ class PMEPotential(CalculatorBaseMetatensor):
     :py:class:`TensorBlock <metatensor.torch.TensorBlock>` of the ``potential``.
 
     >>> potential[0].values
-    tensor([[-1.0192],
-            [ 1.0192]], dtype=torch.float64)
+    tensor([[-1.0177],
+            [ 1.0177]], dtype=torch.float64)
 
     Which is close to the reference value given above.
 
@@ -105,7 +105,7 @@ class PMEPotential(CalculatorBaseMetatensor):
         exponent: float = 1.0,
         atomic_smearing: Optional[float] = None,
         mesh_spacing: Optional[float] = None,
-        interpolation_order: int = 3,
+        num_nodes_per_axis: int = 4,
         subtract_interior: bool = False,
         full_neighbor_list: bool = False,
     ):
@@ -114,7 +114,7 @@ class PMEPotential(CalculatorBaseMetatensor):
             exponent=exponent,
             atomic_smearing=atomic_smearing,
             mesh_spacing=mesh_spacing,
-            interpolation_order=interpolation_order,
+            num_nodes_per_axis=num_nodes_per_axis,
             subtract_interior=subtract_interior,
             full_neighbor_list=full_neighbor_list,
         )

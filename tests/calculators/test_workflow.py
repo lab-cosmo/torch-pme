@@ -18,7 +18,7 @@ CHARGES_CSCL = torch.tensor([1.0, -1.0])
 ATOMIC_SMEARING = 0.1
 LR_WAVELENGTH = ATOMIC_SMEARING / 4
 MESH_SPACING = ATOMIC_SMEARING / 4
-INTERPOLATION_ORDER = 2
+NUM_NODES_PER_AXIS = 3
 
 
 @pytest.mark.parametrize(
@@ -37,7 +37,7 @@ INTERPOLATION_ORDER = 2
             {
                 "atomic_smearing": ATOMIC_SMEARING,
                 "mesh_spacing": MESH_SPACING,
-                "interpolation_order": INTERPOLATION_ORDER,
+                "num_nodes_per_axis": NUM_NODES_PER_AXIS,
             },
         ),
     ],
