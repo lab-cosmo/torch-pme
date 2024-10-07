@@ -39,9 +39,11 @@ class PMEPotential(CalculatorBaseTorch):
     :param mesh_spacing: Value that determines the umber of Fourier-space grid points
         that will be used along each axis. If set to None, it will automatically be set
         to half of ``atomic_smearing``.
-    :param num_nodes_per_axis: The number of nodes used in the interpolation, where the
-        number of n corresponds to interpolation by a polynomial of degree
-        ``n - 1`` (e.g. ``n = 4`` for cubic interpolation).
+    :param num_nodes_per_axis: The number ``n`` of nodes used in the interpolation per
+        coordinate axis. The total number of interpolation nodes in 3D will be ``n^3``.
+        In general, for ``n`` nodes, the interpolation will be performed by piecewise
+        polynomials of degree ``n - 1`` (e.g. ``n = 4`` for cubic interpolation).
+        Only the values ``3, 4, 5, 6, 7`` are supported.
     :param subtract_interior: If set to :py:obj:`True`, subtract from the features of an
         atom the contributions to the potential arising from all atoms within the cutoff
         Note that if set to true, the self contribution (see previous) is also

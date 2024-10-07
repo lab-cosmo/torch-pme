@@ -26,10 +26,11 @@ class MeshInterpolator:
     :param ns_mesh: toch.tensor of shape ``(3,)``
         Number of mesh points to use along each of the three axes
     :param num_nodes_per_axis: int
-        The number of nodes used in the interpolation. Larger number means higher order
-        of the polynomials used for interpolation. A higher order leads to smoother
-        interpolation, at a computational cost that grows cubically with
-        the interpolation order (once one moves to the 3D case).
+        The number ``n`` of nodes used in the interpolation per
+        coordinate axis. The total number of interpolation nodes in 3D will be ``n^3``.
+        In general, for ``n`` nodes, the interpolation will be performed by piecewise
+        polynomials of degree ``n - 1`` (e.g. ``n = 4`` for cubic interpolation).
+        Only the values ``3, 4, 5, 6, 7`` are supported.
     :param method: str
         The interpolation method to use. Either "Lagrange" or "P3M".
     """
