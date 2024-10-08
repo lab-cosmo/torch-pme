@@ -10,7 +10,7 @@ functions together you might take a look at the :ref:`userdoc-how-to` section.
 .. toctree::
     :maxdepth: 1
 
-    calculators/index
-    metatensor/index
     base
+    calculators/index
+    metatensor
     lib/index

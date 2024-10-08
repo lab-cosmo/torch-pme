@@ -16,29 +16,34 @@ mts_atomistic = pytest.importorskip("metatensor.torch.atomistic")
 AVAILABLE_DEVICES = [torch.device("cpu")] + torch.cuda.is_available() * [
     torch.device("cuda")
 ]
-ATOMIC_SMEARING = 0.1
-LR_WAVELENGTH = ATOMIC_SMEARING / 4
-MESH_SPACING = ATOMIC_SMEARING / 4
+SMEARING = 0.1
+LR_WAVELENGTH = SMEARING / 4
+MESH_SPACING = SMEARING / 4
 NUM_NODES_PER_AXIS = 3
 
 
 @pytest.mark.parametrize(
     "CalculatorClass, params",
     [
-        (torchpme.metatensor.DirectPotential, {}),
         (
-            torchpme.metatensor.EwaldPotential,
+            torchpme.metatensor.Calculator,
             {
-                "atomic_smearing": ATOMIC_SMEARING,
+                "potential": torchpme.CoulombPotential(smearing=None),
+            },
+        ),
+        (
+            torchpme.metatensor.EwaldCalculator,
+            {
+                "potential": torchpme.CoulombPotential(smearing=SMEARING),
                 "lr_wavelength": LR_WAVELENGTH,
             },
         ),
         (
-            torchpme.metatensor.PMEPotential,
+            torchpme.metatensor.PMECalculator,
             {
-                "atomic_smearing": ATOMIC_SMEARING,
+                "potential": torchpme.CoulombPotential(smearing=SMEARING),
                 "mesh_spacing": MESH_SPACING,
-                "num_nodes_per_axis": NUM_NODES_PER_AXIS,
+                "interpolation_nodes": NUM_NODES_PER_AXIS,
             },
         ),
     ],

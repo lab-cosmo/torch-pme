@@ -15,18 +15,18 @@ class TestMeshInterpolatorForward:
     """
 
     # Define parameters that are common to all tests
-    order_P3M = [1, 2, 3, 4, 5]
-    order_Lagrange = [3, 4, 5, 6, 7]
+    interpolation_nodes_P3M = [1, 2, 3, 4, 5]
+    interpolation_nodes_Lagrange = [3, 4, 5, 6, 7]
 
     @pytest.mark.parametrize(
-        ("order", "method"),
-        [(order, "P3M") for order in order_P3M]
-        + [(order, "Lagrange") for order in order_Lagrange],
+        ("interpolation_nodes", "method"),
+        [(n, "P3M") for n in interpolation_nodes_P3M]
+        + [(n, "Lagrange") for n in interpolation_nodes_Lagrange],
     )
     @pytest.mark.parametrize("n_mesh", torch.arange(19, 26))
-    def test_charge_conservation_cubic(self, order, method, n_mesh):
+    def test_charge_conservation_cubic(self, interpolation_nodes, method, n_mesh):
         """
-        Test that the total "charge" on the grid after the atomic_smearing the particles
+        Test that the total "charge" on the grid after the smearing the particles
         onto the mesh is conserved for a cubic cell.
         """
         # Define some basic parameteres for this test
@@ -44,7 +44,10 @@ class TestMeshInterpolatorForward:
 
         # Run interpolation
         interpolator = MeshInterpolator(
-            cell=cell, ns_mesh=ns_mesh, num_nodes_per_axis=order, method=method
+            cell=cell,
+            ns_mesh=ns_mesh,
+            interpolation_nodes=interpolation_nodes,
+            method=method,
         )
         interpolator.compute_weights(positions)
         mesh_values = interpolator.points_to_mesh(particle_weights)
@@ -56,13 +59,13 @@ class TestMeshInterpolatorForward:
         assert_close(total_weight, total_weight_target, rtol=3e-6, atol=3e-6)
 
     @pytest.mark.parametrize(
-        ("order", "method"),
-        [(order, "P3M") for order in order_P3M]
-        + [(order, "Lagrange") for order in order_Lagrange],
+        ("interpolation_nodes", "method"),
+        [(n, "P3M") for n in interpolation_nodes_P3M]
+        + [(n, "Lagrange") for n in interpolation_nodes_Lagrange],
     )
-    def test_charge_conservation_general(self, order, method):
+    def test_charge_conservation_general(self, interpolation_nodes, method):
         """
-        Test that the total "charge" on the grid after the atomic_smearing the particles
+        Test that the total "charge" on the grid after the smearing the particles
         onto the mesh is conserved for a generic triclinic cell.
         It is basically the same test as the previous one, but without the restriction
         to cubic cells.
@@ -82,7 +85,10 @@ class TestMeshInterpolatorForward:
 
         # Run interpolation
         inetrpolator = MeshInterpolator(
-            cell=cell, ns_mesh=ns_mesh, num_nodes_per_axis=order, method=method
+            cell=cell,
+            ns_mesh=ns_mesh,
+            interpolation_nodes=interpolation_nodes,
+            method=method,
         )
         inetrpolator.compute_weights(positions)
         mesh_values = inetrpolator.points_to_mesh(particle_weights)
@@ -96,12 +102,12 @@ class TestMeshInterpolatorForward:
     # Since the results of the next test fail if two randomly placed atoms are
     # too close to one another to share the identical nearest mesh point,
     # we fix the seed of the random number generator
-    @pytest.mark.parametrize("order", [1, 2])
+    @pytest.mark.parametrize("interpolation_nodes", [1, 2])
     @pytest.mark.parametrize("n_mesh", torch.arange(7, 13))
-    def test_exact_agreement(self, order, n_mesh):
+    def test_exact_agreement(self, interpolation_nodes, n_mesh):
         """
-        Test that for interpolation order = 1, 2, if atoms start exactly on the mesh,
-        their total mass matches the exact value.
+        Test that for interpolation interpolation_nodes = 1, 2, if atoms start exactly on
+        the mesh, their total mass matches the exact value.
         """
         torch.random.manual_seed(8794329)
         # Define some basic parameteres for this test
@@ -122,7 +128,7 @@ class TestMeshInterpolatorForward:
 
         # Perform interpolation
         inetrpolator = MeshInterpolator(
-            cell=cell, ns_mesh=ns_mesh, num_nodes_per_axis=order
+            cell=cell, ns_mesh=ns_mesh, interpolation_nodes=interpolation_nodes
         )
         inetrpolator.compute_weights(positions)
         mesh_values = inetrpolator.points_to_mesh(particle_weights)
@@ -143,20 +149,18 @@ class TestMeshInterpolatorForward:
 
 
 class TestMeshInterpolatorBackward:
-    """
-    Tests for the "mesh_to_points" function of the MeshInterpolator class
-    """
+    """Tests for the "mesh_to_points" function of the MeshInterpolator class"""
 
     # Define parameters that are common to all tests
-    orders = [1, 2, 3, 4, 5]
+    interpolation_nodes = [1, 2, 3, 4, 5]
     random_runs = torch.arange(10)
 
     torch.random.manual_seed(3482389)
 
     @pytest.mark.parametrize("random_runs", random_runs)
-    def test_exact_invertibility_for_order_one(self, random_runs):
+    def test_exact_invertibility_for_interpolation_nodes_one(self, random_runs):
         """
-        For interpolation order = 1, interpolating forwards and backwards with no
+        For interpolation_nodes = 1, interpolating forwards and backwards with no
         changes should recover the original values.
         """
         # Define some basic parameteres for this test
@@ -177,7 +181,7 @@ class TestMeshInterpolatorBackward:
         # Smear particles onto mesh and interpolate back onto
         # their own positions.
         interpolator = MeshInterpolator(
-            cell=cell, ns_mesh=ns_mesh, num_nodes_per_axis=1
+            cell=cell, ns_mesh=ns_mesh, interpolation_nodes=1
         )
         interpolator.compute_weights(positions)
         mesh_values = interpolator.points_to_mesh(particle_weights)
@@ -192,9 +196,9 @@ class TestMeshInterpolatorBackward:
         assert_close(particle_weights, interpolated_values, rtol=0.0, atol=0.0)
 
     @pytest.mark.parametrize("n_mesh", torch.arange(18, 31))
-    def test_exact_invertibility_for_order_two(self, n_mesh):
+    def test_exact_invertibility_for_interpolation_nodes_two(self, n_mesh):
         """
-        Test for interpolation order = 2
+        Test for interpolation interpolation_nodes = 2
         """
         torch.random.manual_seed(3351285)
         # Define some basic parameteres for this test
@@ -216,7 +220,7 @@ class TestMeshInterpolatorBackward:
         # Smear particles onto mesh and interpolate back onto
         # their own positions.
         interpolator = MeshInterpolator(
-            cell=cell, ns_mesh=ns_mesh, num_nodes_per_axis=2
+            cell=cell, ns_mesh=ns_mesh, interpolation_nodes=2
         )
         interpolator.compute_weights(positions)
         mesh_values = interpolator.points_to_mesh(particle_weights)
@@ -231,8 +235,8 @@ class TestMeshInterpolatorBackward:
         assert_close(particle_weights, interpolated_values, rtol=3e-4, atol=1e-6)
 
     @pytest.mark.parametrize("random_runs", random_runs)
-    @pytest.mark.parametrize("order", orders)
-    def test_total_mass(self, order, random_runs):
+    @pytest.mark.parametrize("interpolation_nodes", interpolation_nodes)
+    def test_total_mass(self, interpolation_nodes, random_runs):
         """
         interpolate on all mesh points: should yield same total mass
         """
@@ -264,7 +268,7 @@ class TestMeshInterpolatorBackward:
 
         # Generate mesh with random values and interpolate
         interpolator = MeshInterpolator(
-            cell=cell, ns_mesh=ns_mesh, num_nodes_per_axis=order
+            cell=cell, ns_mesh=ns_mesh, interpolation_nodes=interpolation_nodes
         )
         interpolator.compute_weights(positions)
         mesh_values = torch.randn(size=(n_channels, nx, ny, nz)) * 3.0 + 9.3
@@ -276,8 +280,8 @@ class TestMeshInterpolatorBackward:
         torch.testing.assert_close(weight_before, weight_after, rtol=1e-5, atol=1e-6)
 
     @pytest.mark.parametrize("random_runs", random_runs)
-    @pytest.mark.parametrize("order", [2, 3])
-    def test_derivatives(self, order, random_runs):
+    @pytest.mark.parametrize("interpolation_nodes", [2, 3])
+    def test_derivatives(self, interpolation_nodes, random_runs):
         """
         check that derivatives on charges are all ones, and derivatives
         on cell and positions are zero (should be the case if the interpolation
@@ -302,7 +306,7 @@ class TestMeshInterpolatorBackward:
         positions.requires_grad_(True)
 
         interpolator = MeshInterpolator(
-            cell=cell, ns_mesh=ns_mesh, num_nodes_per_axis=order
+            cell=cell, ns_mesh=ns_mesh, interpolation_nodes=interpolation_nodes
         )
 
         interpolator.compute_weights(positions)
@@ -327,41 +331,43 @@ class TestMeshInterpolatorBackward:
 def test_cell_wrong_shape(method):
     ns_mesh = torch.tensor([2, 2, 2])
     cell = torch.randn(size=(2, 3))  # incorrect shape
-    order = 3
+    interpolation_nodes = 3
     match = "cell of shape \\[2, 3\\] should be of shape \\(3, 3\\)"
 
     with pytest.raises(ValueError, match=match):
-        MeshInterpolator(cell, ns_mesh, order, method=method)
+        MeshInterpolator(cell, ns_mesh, interpolation_nodes, method=method)
 
 
 @pytest.mark.parametrize("method", ["P3M", "Lagrange"])
 def test_ns_mesh_wrong_shape(method):
     cell = torch.eye(3)
     ns_mesh = torch.tensor([2, 2])  # incorrect shape
-    order = 3
+    interpolation_nodes = 3
     match = "shape \\[2\\] of `ns_mesh` has to be \\(3,\\)"
 
     with pytest.raises(ValueError, match=match):
-        MeshInterpolator(cell, ns_mesh, order, method=method)
+        MeshInterpolator(cell, ns_mesh, interpolation_nodes, method=method)
 
 
-def test_order_not_allowed():
+def test_interpolation_nodes_not_allowed():
     cell = torch.eye(3)
     ns_mesh = torch.tensor([2, 2, 2])
-    order = 6  # not allowed
-    match = "Only `order` from 1 to 5 are allowed"
+    interpolation_nodes = 6  # not allowed
+    match = "Only `interpolation_nodes` from 1 to 5 are allowed"
 
     with pytest.raises(ValueError, match=match):
-        MeshInterpolator(cell, ns_mesh, order)._compute_1d_weights(torch.tensor([0]))
+        MeshInterpolator(cell, ns_mesh, interpolation_nodes)._compute_1d_weights(
+            torch.tensor([0])
+        )
 
 
-def test_order_not_allowed_private():
+def test_interpolation_nodes_not_allowed_private():
     cell = torch.eye(3)
     ns_mesh = torch.tensor([2, 2, 2])
 
-    interpolator = MeshInterpolator(cell, ns_mesh, num_nodes_per_axis=5)
-    interpolator.num_nodes_per_axis = 6  # not allowed
-    match = "Only `order` from 1 to 5 are allowed"
+    interpolator = MeshInterpolator(cell, ns_mesh, interpolation_nodes=5)
+    interpolator.interpolation_nodes = 6  # not allowed
+    match = "Only `interpolation_nodes` from 1 to 5 are allowed"
 
     with pytest.raises(ValueError, match=match):
         interpolator._compute_1d_weights(torch.tensor([0]))
@@ -371,27 +377,27 @@ def test_order_not_allowed_private():
 def test_different_devices_cell_ns_mesh(method):
     cell = torch.eye(3, device="cpu")
     ns_mesh = torch.tensor([2, 2, 2], device="meta")  # different device
-    order = 3
+    interpolation_nodes = 3
     match = "`cell` and `ns_mesh` are on different devices, got cpu and meta"
 
     with pytest.raises(ValueError, match=match):
-        MeshInterpolator(cell, ns_mesh, order, method=method)
+        MeshInterpolator(cell, ns_mesh, interpolation_nodes, method=method)
 
 
 @pytest.fixture
 def P3M_mesh_interpolator():
     cell = torch.eye(3)
     ns_mesh = torch.tensor([2, 2, 2])
-    order = 3
-    return MeshInterpolator(cell, ns_mesh, order, method="P3M")
+    interpolation_nodes = 3
+    return MeshInterpolator(cell, ns_mesh, interpolation_nodes, method="P3M")
 
 
 @pytest.fixture
 def Lagrange_mesh_interpolator():
     cell = torch.eye(3)
     ns_mesh = torch.tensor([2, 2, 2])
-    order = 3
-    return MeshInterpolator(cell, ns_mesh, order, method="Lagrange")
+    interpolation_nodes = 3
+    return MeshInterpolator(cell, ns_mesh, interpolation_nodes, method="Lagrange")
 
 
 @pytest.mark.parametrize("method", ["P3M", "Lagrange"])
@@ -473,3 +479,9 @@ def test_mesh_to_points_wrong_dim(mesh_interpolator, request):
 
     with pytest.raises(ValueError, match=match):
         mesh_interpolator.mesh_to_points(mesh_vals)
+
+
+def test_wrong_method():
+    match = "method 'foo' is not supported. Choose from 'Lagrange' or 'P3M'"
+    with pytest.raises(ValueError, match=match):
+        MeshInterpolator(torch.eye(3), torch.ones(3), 2, method="foo")

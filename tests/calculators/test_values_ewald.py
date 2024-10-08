@@ -9,7 +9,7 @@ import torch
 from ase.io import read
 from utils import neighbor_list_torch
 
-from torchpme import EwaldPotential, PMEPotential
+from torchpme import EwaldCalculator, InversePowerLawPotential, PMECalculator
 
 DTYPE = torch.float64
 
@@ -307,16 +307,25 @@ def test_madelung(crystal_name, scaling_factor, calc_name):
     # Define calculator and tolerances
     if calc_name == "ewald":
         sr_cutoff = scaling_factor
-        atomic_smearing = sr_cutoff / 5.0
-        lr_wavelength = 0.5 * atomic_smearing
-        calc = EwaldPotential(
-            atomic_smearing=atomic_smearing, lr_wavelength=lr_wavelength
+        smearing = sr_cutoff / 5.0
+        lr_wavelength = 0.5 * smearing
+        calc = EwaldCalculator(
+            InversePowerLawPotential(
+                exponent=1.0,
+                smearing=smearing,
+            ),
+            lr_wavelength=lr_wavelength,
         )
         rtol = 4e-6
     elif calc_name == "pme":
         sr_cutoff = 2 * scaling_factor
-        atomic_smearing = sr_cutoff / 5.0
-        calc = PMEPotential(atomic_smearing=atomic_smearing)
+        smearing = sr_cutoff / 5.0
+        calc = PMECalculator(
+            InversePowerLawPotential(
+                exponent=1.0,
+                smearing=smearing,
+            )
+        )
         rtol = 9e-4
 
     # Compute neighbor list
@@ -325,6 +334,7 @@ def test_madelung(crystal_name, scaling_factor, calc_name):
     )
 
     # Compute potential and compare against target value using default hypers
+    calc.to(dtype=DTYPE)
     potentials = calc.forward(
         positions=pos,
         charges=charges,
@@ -380,16 +390,21 @@ def test_wigner(crystal_name, scaling_factor):
     for smearing in smearings:
         # Readjust smearing parameter to match nearest neighbor distance
         if crystal_name in ["wigner_fcc", "wigner_fcc_cubiccell"]:
-            smeareff = smearing / np.sqrt(2)
+            smeareff = float(smearing) / np.sqrt(2)
         elif crystal_name in ["wigner_bcc_cubiccell", "wigner_bcc"]:
-            smeareff = smearing * np.sqrt(3) / 2
+            smeareff = float(smearing) * np.sqrt(3) / 2
         elif crystal_name == "wigner_sc":
-            smeareff = smearing
+            smeareff = float(smearing)
         smeareff *= scaling_factor
-        lr_wavelength = 0.5 * smeareff
 
         # Compute potential and compare against reference
-        calc = EwaldPotential(atomic_smearing=smeareff, lr_wavelength=lr_wavelength)
+        calc = EwaldCalculator(
+            InversePowerLawPotential(
+                exponent=1.0,
+                smearing=smeareff,
+            )
+        )
+        calc.to(dtype=DTYPE)
         potentials = calc.forward(
             positions=positions,
             charges=charges,
@@ -444,7 +459,7 @@ def test_random_structure(
     cell = scaling_factor * torch.tensor(np.array(frame.cell), dtype=DTYPE) @ ortho
     charges = torch.tensor([1, 1, 1, 1, -1, -1, -1, -1], dtype=DTYPE).reshape((-1, 1))
     sr_cutoff = scaling_factor * sr_cutoff
-    atomic_smearing = sr_cutoff / 6.0
+    smearing = sr_cutoff / 6.0
 
     # Compute neighbor list
     neighbor_indices, neighbor_distances = neighbor_list_torch(
@@ -457,21 +472,29 @@ def test_random_structure(
 
     # Compute potential using torch-pme and compare against reference values
     if calc_name == "ewald":
-        lr_wavelength = 0.5 * atomic_smearing
-        calc = EwaldPotential(
-            atomic_smearing=atomic_smearing,
+        lr_wavelength = 0.5 * smearing
+        calc = EwaldCalculator(
+            InversePowerLawPotential(
+                exponent=1.0,
+                smearing=smearing,
+            ),
             lr_wavelength=lr_wavelength,
             full_neighbor_list=full_neighbor_list,
         )
         rtol_e = 2e-5
         rtol_f = 3.5e-3
     elif calc_name == "pme":
-        calc = PMEPotential(
-            atomic_smearing=atomic_smearing, full_neighbor_list=full_neighbor_list
+        calc = PMECalculator(
+            InversePowerLawPotential(
+                exponent=1.0,
+                smearing=smearing,
+            ),
+            full_neighbor_list=full_neighbor_list,
         )
         rtol_e = 4.5e-3
         rtol_f = 5.0e-3
 
+    calc.to(dtype=DTYPE)
     potentials = calc.forward(
         positions=positions,
         charges=charges,

@@ -6,38 +6,42 @@ import math
 
 import pytest
 import torch
-from torch.testing import assert_close
 
-from torchpme import DirectPotential, EwaldPotential, PMEPotential
+from torchpme import Calculator, CoulombPotential, EwaldCalculator, PMECalculator
 
 AVAILABLE_DEVICES = [torch.device("cpu")] + torch.cuda.is_available() * [
     torch.device("cuda")
 ]
 MADELUNG_CSCL = torch.tensor(2 * 1.7626 / math.sqrt(3))
 CHARGES_CSCL = torch.tensor([1.0, -1.0])
-ATOMIC_SMEARING = 0.1
-LR_WAVELENGTH = ATOMIC_SMEARING / 4
-MESH_SPACING = ATOMIC_SMEARING / 4
+SMEARING = 0.1
+LR_WAVELENGTH = SMEARING / 4
+MESH_SPACING = SMEARING / 4
 NUM_NODES_PER_AXIS = 3
 
 
 @pytest.mark.parametrize(
     "CalculatorClass, params",
     [
-        (DirectPotential, {}),
         (
-            EwaldPotential,
+            Calculator,
             {
-                "atomic_smearing": ATOMIC_SMEARING,
+                "potential": CoulombPotential(smearing=None),
+            },
+        ),
+        (
+            EwaldCalculator,
+            {
+                "potential": CoulombPotential(smearing=SMEARING),
                 "lr_wavelength": LR_WAVELENGTH,
             },
         ),
         (
-            PMEPotential,
+            PMECalculator,
             {
-                "atomic_smearing": ATOMIC_SMEARING,
+                "potential": CoulombPotential(smearing=SMEARING),
                 "mesh_spacing": MESH_SPACING,
-                "num_nodes_per_axis": NUM_NODES_PER_AXIS,
+                "interpolation_nodes": NUM_NODES_PER_AXIS,
             },
         ),
     ],
@@ -55,64 +59,42 @@ class TestWorkflow:
         neighbor_distances = torch.tensor([0.8660])
 
         return (
-            positions.to(device=device),
             charges.to(device=device),
             cell.to(device=device),
+            positions.to(device=device),
             neighbor_indices.to(device=device),
             neighbor_distances.to(device=device),
         )
 
-    def test_atomic_smearing_non_positive(self, CalculatorClass, params):
+    def test_smearing_non_positive(self, CalculatorClass, params):
         params = params.copy()
-        match = r"`atomic_smearing` .* has to be positive"
-        if type(CalculatorClass) in [EwaldPotential, PMEPotential]:
-            params["atomic_smearing"] = 0
+        match = r"`smearing` .* has to be positive"
+        if type(CalculatorClass) in [EwaldCalculator, PMECalculator]:
+            params["smearing"] = 0
             with pytest.raises(ValueError, match=match):
                 CalculatorClass(**params)
-            params["atomic_smearing"] = -0.1
+            params["smearing"] = -0.1
             with pytest.raises(ValueError, match=match):
                 CalculatorClass(**params)
 
     def test_interpolation_order_error(self, CalculatorClass, params):
         params = params.copy()
-        if type(CalculatorClass) in [PMEPotential]:
-            match = "Only `interpolation_order` from 1 to 5"
-            params["interpolation_order"] = 10
+        if type(CalculatorClass) in [PMECalculator]:
+            match = "Only `interpolation_nodes` from 1 to 5"
+            params["interpolation_nodes"] = 10
             with pytest.raises(ValueError, match=match):
                 CalculatorClass(**params)
 
     def test_lr_wavelength_non_positive(self, CalculatorClass, params):
         params = params.copy()
         match = r"`lr_wavelength` .* has to be positive"
-        if type(CalculatorClass) in [EwaldPotential]:
+        if type(CalculatorClass) in [EwaldCalculator]:
             params["lr_wavelength"] = 0
             with pytest.raises(ValueError, match=match):
                 CalculatorClass(**params)
             params["lr_wavelength"] = -0.1
             with pytest.raises(ValueError, match=match):
                 CalculatorClass(**params)
-
-    def test_multi_frame(self, CalculatorClass, params):
-        calculator = CalculatorClass(**params)
-        positions, charges, cell, neighbor_indices, neighbor_distance = (
-            self.cscl_system()
-        )
-
-        l_values = calculator.forward(
-            positions=[positions, positions],
-            cell=[cell, cell],
-            charges=[charges, charges],
-            neighbor_indices=[neighbor_indices, neighbor_indices],
-            neighbor_distances=[neighbor_distance, neighbor_distance],
-        )
-
-        for values in l_values:
-            assert_close(
-                MADELUNG_CSCL,
-                -torch.sum(charges * values),
-                atol=1,
-                rtol=1e-5,
-            )
 
     def test_dtype_device(self, CalculatorClass, params):
         """Test that the output dtype and device are the same as the input."""
@@ -128,9 +110,9 @@ class TestWorkflow:
         calculator = CalculatorClass(**params)
 
         potential = calculator.forward(
-            positions=positions,
             charges=charges,
             cell=cell,
+            positions=positions,
             neighbor_indices=neighbor_indices,
             neighbor_distances=neighbor_distances,
         )

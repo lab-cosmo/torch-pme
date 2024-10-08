@@ -1,7 +1,7 @@
-EwaldPotential
-##############
+EwaldCalculator
+###############
 
-.. autoclass:: torchpme.EwaldPotential
+.. autoclass:: torchpme.EwaldCalculator
     :members: forward
     :undoc-members:
 

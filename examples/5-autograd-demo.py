@@ -85,7 +85,7 @@ cell.requires_grad_(True)
 
 ns = torch.tensor([5, 5, 5])
 interpolator = torchpme.lib.MeshInterpolator(
-    cell=cell, ns_mesh=ns, num_nodes_per_axis=3
+    cell=cell, ns_mesh=ns, interpolation_nodes=3
 )
 interpolator.compute_weights(positions)
 mesh = interpolator.points_to_mesh(charges)
@@ -194,7 +194,7 @@ class ParametricKernel(torch.nn.Module):
         self._sigma = sigma
         self._a0 = a0
 
-    def from_k_sq(self, k2):
+    def kernel_from_k_sq(self, k2):
         filter = torch.stack([torch.exp(-k2 * s**2 / 2) for s in self._sigma])
         filter[0, :] *= self._a0[0] / (1 + k2)
         filter[1, :] *= self._a0[1] / (1 + k2**3)
@@ -305,7 +305,7 @@ class SmearedCoulomb(torchpme.lib.KSpaceKernel):
         super().__init__()
         self._sigma2 = sigma2
 
-    def from_k_sq(self, k2):
+    def kernel_from_k_sq(self, k2):
         # we use a mask to set to zero the Gamma-point filter
         mask = torch.ones_like(k2, dtype=torch.bool, device=k2.device)
         mask[..., 0, 0, 0] = False
@@ -331,7 +331,7 @@ class KSpaceModule(torch.nn.Module):
 
         dummy_cell = torch.eye(3, dtype=dtype)
         self._MI = torchpme.lib.MeshInterpolator(
-            cell=dummy_cell, ns_mesh=torch.tensor([1, 1, 1]), num_nodes_per_axis=3
+            cell=dummy_cell, ns_mesh=torch.tensor([1, 1, 1]), interpolation_nodes=3
         )
         self._KF = torchpme.lib.KSpaceFilter(
             cell=dummy_cell,
@@ -360,7 +360,7 @@ class KSpaceModule(torch.nn.Module):
         ns_mesh = torchpme.lib.get_ns_mesh(cell, self._mesh_spacing)
         ns_mesh = torch.tensor([4, 4, 4])
         self._interpolator = torchpme.lib.MeshInterpolator(
-            cell=cell, ns_mesh=ns_mesh, num_nodes_per_axis=3
+            cell=cell, ns_mesh=ns_mesh, interpolation_nodes=3
         )
         self._interpolator.compute_weights(positions)
         mesh = self._interpolator.points_to_mesh(charges)
