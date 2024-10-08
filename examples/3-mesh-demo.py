@@ -83,15 +83,15 @@ cell = torch.from_numpy(structure.cell.array).to(device=device, dtype=dtype)
 # We now use :py:class:`MeshInterpolator <torchpme.lib.MeshInterpolator>` to project
 # atomic positions on a grid. Note that ideally the interpolation represents a sharp
 # density peaked at atomic positions, so the degree of smoothening depends on the grid
-# resolution (as well as on the number of nodes per axis)
+# resolution (as well as on the interpolation nodes)
 #
 # We demonstrate this by computing a projection on two grids with 3 and 7 mesh points.
 
 interpolator = torchpme.lib.MeshInterpolator(
-    cell=cell, ns_mesh=torch.tensor([3, 3, 3]), num_nodes_per_axis=3
+    cell=cell, ns_mesh=torch.tensor([3, 3, 3]), interpolation_nodes=3
 )
 interpolator_fine = torchpme.lib.MeshInterpolator(
-    cell=cell, ns_mesh=torch.tensor([7, 7, 7]), num_nodes_per_axis=3
+    cell=cell, ns_mesh=torch.tensor([7, 7, 7]), interpolation_nodes=3
 )
 interpolator.compute_weights(positions)
 interpolator_fine.compute_weights(positions)

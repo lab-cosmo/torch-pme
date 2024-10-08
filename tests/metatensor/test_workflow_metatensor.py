@@ -16,9 +16,9 @@ mts_atomistic = pytest.importorskip("metatensor.torch.atomistic")
 AVAILABLE_DEVICES = [torch.device("cpu")] + torch.cuda.is_available() * [
     torch.device("cuda")
 ]
-RANGE_RADIUS = 0.1
-LR_WAVELENGTH = RANGE_RADIUS / 4
-MESH_SPACING = RANGE_RADIUS / 4
+SMEARING = 0.1
+LR_WAVELENGTH = SMEARING / 4
+MESH_SPACING = SMEARING / 4
 NUM_NODES_PER_AXIS = 3
 
 
@@ -28,22 +28,22 @@ NUM_NODES_PER_AXIS = 3
         (
             torchpme.metatensor.Calculator,
             {
-                "potential": torchpme.CoulombPotential(range_radius=None),
+                "potential": torchpme.CoulombPotential(smearing=None),
             },
         ),
         (
             torchpme.metatensor.EwaldCalculator,
             {
-                "potential": torchpme.CoulombPotential(range_radius=RANGE_RADIUS),
+                "potential": torchpme.CoulombPotential(smearing=SMEARING),
                 "lr_wavelength": LR_WAVELENGTH,
             },
         ),
         (
             torchpme.metatensor.PMECalculator,
             {
-                "potential": torchpme.CoulombPotential(range_radius=RANGE_RADIUS),
+                "potential": torchpme.CoulombPotential(smearing=SMEARING),
                 "mesh_spacing": MESH_SPACING,
-                "num_nodes_per_axis": NUM_NODES_PER_AXIS,
+                "interpolation_nodes": NUM_NODES_PER_AXIS,
             },
         ),
     ],

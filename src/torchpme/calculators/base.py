@@ -46,7 +46,7 @@ class Calculator(torch.nn.Module):
     ) -> torch.Tensor:
         """
         Computes the "real space" part of the potential. Depending on the
-        ``range_radius`` in the potential class, it will either evaluate the
+        ``smearing`` in the potential class, it will either evaluate the
         full potential, or only the short-range, "local" part.
 
         :param charges: 2D tensor or list of 2D tensor of shape
@@ -72,7 +72,7 @@ class Calculator(torch.nn.Module):
         # Compute the pair potential terms V(r_ij) for each pair of atoms (i,j)
         # contained in the neighbor list
         with profiler.record_function("compute bare potential"):
-            if self.potential.range_radius is None:
+            if self.potential.smearing is None:
                 potentials_bare = self.potential.from_dist(neighbor_distances)
             else:
                 potentials_bare = self.potential.sr_from_dist(neighbor_distances)
@@ -128,7 +128,7 @@ class Calculator(torch.nn.Module):
         parameter and :math:`q_i` are atomic "charges" (corresponding
         to the electrostatic charge when using a Coulomb potential).
 
-        If the ``range_radius`` of the ``potential`` is not set,
+        If the ``smearing`` of the ``potential`` is not set,
         the calculator evaluates only the real-space part of the potential.
         Otherwise, provided that the calculator implements a
         ``_compute_kspace`` method, it will also evaluate the long-range
@@ -160,7 +160,7 @@ class Calculator(torch.nn.Module):
             neighbor_distances=neighbor_distances,
         )
 
-        if self.potential.range_radius is None:
+        if self.potential.smearing is None:
             return potential_sr
         # Compute long-range (LR) part using a Fourier / reciprocal space sum
         potential_lr = self._compute_kspace(

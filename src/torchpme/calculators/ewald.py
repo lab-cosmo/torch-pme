@@ -27,7 +27,7 @@ class EwaldCalculator(Calculator):
     for the other parameters, this ensures an accuracy of approximately ``1e-5``.
 
     :param potential: the two-body potential that should be computed, implemented
-        as a :py:class:`torchpme.lib.Potential` object. The ``range_radius`` parameter
+        as a :py:class:`torchpme.lib.Potential` object. The ``smearing`` parameter
         of the potential determines the split between real and k-space regions.
         For a :py:class:`torchpme.lib.CoulombPotential` it corresponds to the
         width of the atom-centered Gaussian used to split the Coulomb potential
@@ -36,13 +36,13 @@ class EwaldCalculator(Calculator):
     :param lr_wavelength: Spatial resolution used for the long-range (reciprocal space)
         part of the Ewald sum. More concretely, all Fourier space vectors with a
         wavelength >= this value will be kept. If not set to a global value, it will be
-        set to half the range_radius parameter to ensure convergence of the
+        set to half the smearing parameter to ensure convergence of the
         long-range part to a relative precision of 1e-5.
     :param full_neighbor_list: If set to :py:obj:`True`, a "full" neighbor list is
         expected as input. This means that each atom pair appears twice. If set to
         :py:obj:`False`, a "half" neighbor list is expected.
 
-    To tune the ``range_radius`` and  ``lr_wavelength`` for a system you can use the
+    To tune the ``smearing`` and  ``lr_wavelength`` for a system you can use the
     :py:func:`tune_pme` function.
 
     For an **example** on the usage for any calculator refer to :ref:`userdoc-how-to`.
@@ -58,11 +58,11 @@ class EwaldCalculator(Calculator):
             potential=potential,
             full_neighbor_list=full_neighbor_list,
         )
-        if potential.range_radius is None:
+        if potential.smearing is None:
             raise ValueError(
                 "Must specify range radius to use a potential with EwaldCalculator"
             )
-        self.lr_wavelength: float = lr_wavelength or potential.range_radius * 0.5
+        self.lr_wavelength: float = lr_wavelength or potential.smearing * 0.5
 
     def _compute_kspace(
         self,
@@ -204,7 +204,7 @@ def tune_ewald(
     You can check the values of the parameters
 
     >>> print(ewald_parameter)
-    {'range_radius': 1.0318106837793297, 'lr_wavelength': 2.9468444218696392}
+    {'smearing': 1.0318106837793297, 'lr_wavelength': 2.9468444218696392}
 
     >>> print(cutoff)
     2.2699835043145256
@@ -246,7 +246,7 @@ def tune_ewald(
         smearing = smearing_factor * len(positions) ** (1 / 6) / 2**0.5
 
         return {
-            "range_radius": smearing,
+            "smearing": smearing,
             "lr_wavelength": 2 * torch.pi * smearing / lr_wavelength_factor,
         }, smearing * lr_wavelength_factor
 
@@ -332,6 +332,6 @@ def tune_ewald(
         )
 
     return {
-        "range_radius": float(smearing),
+        "smearing": float(smearing),
         "lr_wavelength": float(smooth_lr_wavelength(lr_wavelength)),
     }, float(cutoff)

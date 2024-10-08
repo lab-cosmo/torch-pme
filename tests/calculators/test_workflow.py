@@ -14,9 +14,9 @@ AVAILABLE_DEVICES = [torch.device("cpu")] + torch.cuda.is_available() * [
 ]
 MADELUNG_CSCL = torch.tensor(2 * 1.7626 / math.sqrt(3))
 CHARGES_CSCL = torch.tensor([1.0, -1.0])
-RANGE_RADIUS = 0.1
-LR_WAVELENGTH = RANGE_RADIUS / 4
-MESH_SPACING = RANGE_RADIUS / 4
+SMEARING = 0.1
+LR_WAVELENGTH = SMEARING / 4
+MESH_SPACING = SMEARING / 4
 NUM_NODES_PER_AXIS = 3
 
 
@@ -26,22 +26,22 @@ NUM_NODES_PER_AXIS = 3
         (
             Calculator,
             {
-                "potential": CoulombPotential(range_radius=None),
+                "potential": CoulombPotential(smearing=None),
             },
         ),
         (
             EwaldCalculator,
             {
-                "potential": CoulombPotential(range_radius=RANGE_RADIUS),
+                "potential": CoulombPotential(smearing=SMEARING),
                 "lr_wavelength": LR_WAVELENGTH,
             },
         ),
         (
             PMECalculator,
             {
-                "potential": CoulombPotential(range_radius=RANGE_RADIUS),
+                "potential": CoulombPotential(smearing=SMEARING),
                 "mesh_spacing": MESH_SPACING,
-                "num_nodes_per_axis": NUM_NODES_PER_AXIS,
+                "interpolation_nodes": NUM_NODES_PER_AXIS,
             },
         ),
     ],
@@ -66,22 +66,22 @@ class TestWorkflow:
             neighbor_distances.to(device=device),
         )
 
-    def test_range_radius_non_positive(self, CalculatorClass, params):
+    def test_smearing_non_positive(self, CalculatorClass, params):
         params = params.copy()
-        match = r"`range_radius` .* has to be positive"
+        match = r"`smearing` .* has to be positive"
         if type(CalculatorClass) in [EwaldCalculator, PMECalculator]:
-            params["range_radius"] = 0
+            params["smearing"] = 0
             with pytest.raises(ValueError, match=match):
                 CalculatorClass(**params)
-            params["range_radius"] = -0.1
+            params["smearing"] = -0.1
             with pytest.raises(ValueError, match=match):
                 CalculatorClass(**params)
 
     def test_interpolation_order_error(self, CalculatorClass, params):
         params = params.copy()
         if type(CalculatorClass) in [PMECalculator]:
-            match = "Only `num_nodes_per_axis` from 1 to 5"
-            params["num_nodes_per_axis"] = 10
+            match = "Only `interpolation_nodes` from 1 to 5"
+            params["interpolation_nodes"] = 10
             with pytest.raises(ValueError, match=match):
                 CalculatorClass(**params)
 

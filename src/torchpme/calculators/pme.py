@@ -28,7 +28,7 @@ class PMECalculator(Calculator):
     This ensures a accuracy of the short range part of ``1e-5``.
 
     :param potential: A :py:class:`Potential` object that implements the evaluation
-        of short and long-range potential terms. The ``range_radius`` parameter
+        of short and long-range potential terms. The ``smearing`` parameter
         of the potential determines the split between real and k-space regions.
         For a :py:class:`torchpme.lib.CoulombPotential` it corresponds
         to the smearing of the atom-centered Gaussian used to split the
@@ -36,8 +36,8 @@ class PMECalculator(Calculator):
         most systems is to set it to ``1/5`` times the neighbor list cutoff.
     :param mesh_spacing: Value that determines the umber of Fourier-space grid points
         that will be used along each axis. If set to None, it will automatically be set
-        to half of ``range_radius``.
-    :param num_nodes_per_axis: The number ``n`` of nodes used in the interpolation per
+        to half of ``smearing``.
+    :param interpolation_nodes: The number ``n`` of nodes used in the interpolation per
         coordinate axis. The total number of interpolation nodes in 3D will be ``n^3``.
         In general, for ``n`` nodes, the interpolation will be performed by piecewise
         polynomials of degree ``n - 1`` (e.g. ``n = 4`` for cubic interpolation).
@@ -54,7 +54,7 @@ class PMECalculator(Calculator):
         self,
         potential: Potential,
         mesh_spacing: Optional[float] = None,
-        num_nodes_per_axis: int = 4,
+        interpolation_nodes: int = 4,
         full_neighbor_list: bool = False,
     ):
         super().__init__(
@@ -62,18 +62,18 @@ class PMECalculator(Calculator):
             full_neighbor_list=full_neighbor_list,
         )
 
-        if potential.range_radius is None:
+        if potential.smearing is None:
             raise ValueError(
                 "Must specify range radius to use a potential with EwaldCalculator"
             )
 
         if mesh_spacing is None:
-            mesh_spacing = potential.range_radius / 8.0
+            mesh_spacing = potential.smearing / 8.0
         self.mesh_spacing: float = mesh_spacing
 
-        if num_nodes_per_axis not in [3, 4, 5, 6, 7]:
-            raise ValueError("Only `num_nodes_per_axis` from 3 to 7 are allowed")
-        self.num_nodes_per_axis: int = num_nodes_per_axis
+        if interpolation_nodes not in [3, 4, 5, 6, 7]:
+            raise ValueError("Only `interpolation_nodes` from 3 to 7 are allowed")
+        self.interpolation_nodes: int = interpolation_nodes
 
         # Initialize the filter module. Set dummy value for smearing to propper
         # initilize the `KSpaceFilter` below
@@ -104,7 +104,7 @@ class PMECalculator(Calculator):
             interpolator = MeshInterpolator(
                 cell,
                 ns,
-                num_nodes_per_axis=self.num_nodes_per_axis,
+                interpolation_nodes=self.interpolation_nodes,
                 method="Lagrange",  # convention for classic PME
             )
 

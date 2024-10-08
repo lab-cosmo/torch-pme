@@ -308,23 +308,23 @@ def test_madelung(crystal_name, scaling_factor, calc_name):
     # Define calculator and tolerances
     if calc_name == "ewald":
         sr_cutoff = scaling_factor
-        range_radius = sr_cutoff / 5.0
-        lr_wavelength = 0.5 * range_radius
+        smearing = sr_cutoff / 5.0
+        lr_wavelength = 0.5 * smearing
         calc = EwaldCalculator(
             InversePowerLawPotential(
                 exponent=1.0,
-                range_radius=range_radius,
+                smearing=smearing,
             ),
             lr_wavelength=lr_wavelength,
         )
         rtol = 4e-6
     elif calc_name == "pme":
         sr_cutoff = 2 * scaling_factor
-        range_radius = sr_cutoff / 5.0
+        smearing = sr_cutoff / 5.0
         calc = PMECalculator(
             InversePowerLawPotential(
                 exponent=1.0,
-                range_radius=range_radius,
+                smearing=smearing,
             )
         )
         rtol = 9e-4
@@ -401,7 +401,7 @@ def test_wigner(crystal_name, scaling_factor):
         calc = EwaldCalculator(
             InversePowerLawPotential(
                 exponent=1.0,
-                range_radius=smeareff,
+                smearing=smeareff,
             )
         )
         potentials = calc.forward(
@@ -458,7 +458,7 @@ def test_random_structure(
     cell = scaling_factor * torch.tensor(np.array(frame.cell), dtype=DTYPE) @ ortho
     charges = torch.tensor([1, 1, 1, 1, -1, -1, -1, -1], dtype=DTYPE).reshape((-1, 1))
     sr_cutoff = scaling_factor * sr_cutoff
-    range_radius = sr_cutoff / 6.0
+    smearing = sr_cutoff / 6.0
 
     # Compute neighbor list
     neighbor_indices, neighbor_distances = neighbor_list_torch(
@@ -471,11 +471,11 @@ def test_random_structure(
 
     # Compute potential using torch-pme and compare against reference values
     if calc_name == "ewald":
-        lr_wavelength = 0.5 * range_radius
+        lr_wavelength = 0.5 * smearing
         calc = EwaldCalculator(
             InversePowerLawPotential(
                 exponent=1.0,
-                range_radius=range_radius,
+                smearing=smearing,
             ),
             lr_wavelength=lr_wavelength,
             full_neighbor_list=full_neighbor_list,
@@ -486,7 +486,7 @@ def test_random_structure(
         calc = PMECalculator(
             InversePowerLawPotential(
                 exponent=1.0,
-                range_radius=range_radius,
+                smearing=smearing,
             ),
             full_neighbor_list=full_neighbor_list,
         )

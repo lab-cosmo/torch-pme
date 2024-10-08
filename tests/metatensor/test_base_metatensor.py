@@ -60,7 +60,7 @@ class CalculatorTestTorch(torchpme.Calculator):
     def __init__(self, potential=None):
         super().__init__(
             potential=potential
-            or torchpme.CoulombPotential(range_radius=None, cutoff_radius=None)
+            or torchpme.CoulombPotential(smearing=None, separation_radius=None)
         )
 
 
@@ -68,7 +68,7 @@ class CalculatorTest(torchpme.metatensor.Calculator):
     _base_calculator = CalculatorTestTorch
 
     def __init__(self):
-        super().__init__(potential=torchpme.CoulombPotential(range_radius=None))
+        super().__init__(potential=torchpme.CoulombPotential(smearing=None))
 
 
 def test_compute_output_shapes_single(system, neighbors):

@@ -25,7 +25,7 @@ class MeshInterpolator:
         vector of the unit cell
     :param ns_mesh: toch.tensor of shape ``(3,)``
         Number of mesh points to use along each of the three axes
-    :param num_nodes_per_axis: int
+    :param interpolation_nodes: int
         The number ``n`` of nodes used in the interpolation per
         coordinate axis. The total number of interpolation nodes in 3D will be ``n^3``.
         In general, for ``n`` nodes, the interpolation will be performed by piecewise
@@ -39,7 +39,7 @@ class MeshInterpolator:
         self,
         cell: torch.Tensor,
         ns_mesh: torch.Tensor,
-        num_nodes_per_axis: int,
+        interpolation_nodes: int,
         method: str = "P3M",
     ):
         # Check that the provided parameters match the specifications
@@ -71,7 +71,7 @@ class MeshInterpolator:
             self.inverse_cell = torch.linalg.inv(cell)
 
         self.ns_mesh = ns_mesh
-        self.num_nodes_per_axis = num_nodes_per_axis
+        self.interpolation_nodes = interpolation_nodes
 
         self._dtype = cell.dtype
         self._device = cell.device
@@ -127,19 +127,19 @@ class MeshInterpolator:
         :param x: torch.tensor of shape ``(n,)``
             Set of relative positions in the interval [-1/2, 1/2].
 
-        :return: torch.tensor of shape ``(num_nodes_per_axis, n)``
+        :return: torch.tensor of shape ``(interpolation_nodes, n)``
             Interpolation weights
         """
-        # Compute weights based on the given num_nodes_per_axis
-        if self.num_nodes_per_axis == 1:
+        # Compute weights based on the given interpolation_nodes
+        if self.interpolation_nodes == 1:
             return torch.ones(
                 (1, x.shape[0], x.shape[1]), dtype=self._dtype, device=self._device
             )
-        if self.num_nodes_per_axis == 2:
+        if self.interpolation_nodes == 2:
             return torch.stack([0.5 * (1 - 2 * x), 0.5 * (1 + 2 * x)])
 
         x2 = x * x
-        if self.num_nodes_per_axis == 3:
+        if self.interpolation_nodes == 3:
             return torch.stack(
                 [
                     1 / 8 * (1 - 4 * x + 4 * x2),
@@ -149,7 +149,7 @@ class MeshInterpolator:
             )
 
         x3 = x * x2
-        if self.num_nodes_per_axis == 4:
+        if self.interpolation_nodes == 4:
             return torch.stack(
                 [
                     1 / 48 * (1 - 6 * x + 12 * x2 - 8 * x3),
@@ -160,7 +160,7 @@ class MeshInterpolator:
             )
 
         x4 = x * x3
-        if self.num_nodes_per_axis == 5:
+        if self.interpolation_nodes == 5:
             return torch.stack(
                 [
                     1 / 384 * (1 - 8 * x + 24 * x2 - 32 * x3 + 16 * x4),
@@ -170,7 +170,7 @@ class MeshInterpolator:
                     1 / 384 * (1 + 8 * x + 24 * x2 + 32 * x3 + 16 * x4),
                 ]
             )
-        raise ValueError("Only `num_nodes_per_axis` from 1 to 5 are allowed")
+        raise ValueError("Only `interpolation_nodes` from 1 to 5 are allowed")
 
     def _compute_1d_weights_Lagrange(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -183,12 +183,12 @@ class MeshInterpolator:
         :param x: torch.tensor of shape ``(n,)``
             Set of relative positions in the interval [-1/2, 1/2].
 
-        :return: torch.tensor of shape ``(num_nodes_per_axis, n)``
+        :return: torch.tensor of shape ``(interpolation_nodes, n)``
             Interpolation weights
         """
-        # Compute weights based on the given num_nodes_per_axis
+        # Compute weights based on the given interpolation_nodes
         x2 = x * x
-        if self.num_nodes_per_axis == 3:
+        if self.interpolation_nodes == 3:
             return torch.stack(
                 [
                     1 / 2 * (-x + x2),
@@ -198,7 +198,7 @@ class MeshInterpolator:
             )
 
         x3 = x * x2
-        if self.num_nodes_per_axis == 4:
+        if self.interpolation_nodes == 4:
             return torch.stack(
                 [
                     1 / 48 * (-3 + 2 * x + 12 * x2 - 8 * x3),
@@ -209,7 +209,7 @@ class MeshInterpolator:
             )
 
         x4 = x * x3
-        if self.num_nodes_per_axis == 5:
+        if self.interpolation_nodes == 5:
             return torch.stack(
                 [
                     1 / 24 * (2 * x - x2 - 2 * x3 + x4),
@@ -221,7 +221,7 @@ class MeshInterpolator:
             )
 
         x5 = x * x4
-        if self.num_nodes_per_axis == 6:
+        if self.interpolation_nodes == 6:
             return torch.stack(
                 [
                     1 / 3840 * (45 - 18 * x - 200 * x2 + 80 * x3 + 80 * x4 - 32 * x5),
@@ -241,7 +241,7 @@ class MeshInterpolator:
                 ]
             )
         x6 = x * x5
-        if self.num_nodes_per_axis == 7:
+        if self.interpolation_nodes == 7:
             return torch.stack(
                 [
                     1 / 720 * (-12 * x + 4 * x2 + 15 * x3 - 5 * x4 - 3 * x5 + x6),
@@ -261,7 +261,7 @@ class MeshInterpolator:
                     1 / 720 * (12 * x + 4 * x2 - 15 * x3 - 5 * x4 + 3 * x5 + x6),
                 ]
             )
-        raise ValueError("Only `num_nodes_per_axis` from 2 to 6 are allowed")
+        raise ValueError("Only `interpolation_nodes` from 2 to 6 are allowed")
 
     def compute_weights(self, positions: torch.Tensor):
         """
@@ -289,7 +289,7 @@ class MeshInterpolator:
         positions_rel = self.ns_mesh * torch.matmul(positions, self.inverse_cell)
 
         # Calculate positions and distances based on interpolation nodes
-        even = self.num_nodes_per_axis % 2 == 0
+        even = self.interpolation_nodes % 2 == 0
         if even:
             # For Lagrange interpolation, when the order is odd, the relative position
             # of a charge is the midpoint of the two nearest gridpoints. For P3M, the
@@ -308,14 +308,14 @@ class MeshInterpolator:
 
         # Calculate indices of mesh points on which the particle weights are
         # interpolated. For each particle, its weight is "smeared" onto
-        # `num_nodes_per_axis**3` mesh points, which can be achived using meshgrid
+        # `interpolation_nodes**3` mesh points, which can be achived using meshgrid
         # below.
         indices_to_interpolate = torch.stack(
             [
                 (positions_rel_idx + i) % self.ns_mesh
                 for i in range(
-                    1 - (self.num_nodes_per_axis + 1) // 2,
-                    1 + self.num_nodes_per_axis // 2,
+                    1 - (self.interpolation_nodes + 1) // 2,
+                    1 + self.interpolation_nodes // 2,
                 )
             ],
             dim=0,
@@ -323,9 +323,9 @@ class MeshInterpolator:
 
         # Generate shifts for x, y, z axes and flatten for indexing
         x_shifts, y_shifts, z_shifts = torch.meshgrid(
-            torch.arange(self.num_nodes_per_axis, device=self._device),
-            torch.arange(self.num_nodes_per_axis, device=self._device),
-            torch.arange(self.num_nodes_per_axis, device=self._device),
+            torch.arange(self.interpolation_nodes, device=self._device),
+            torch.arange(self.interpolation_nodes, device=self._device),
+            torch.arange(self.interpolation_nodes, device=self._device),
             indexing="ij",
         )
         self.x_shifts = x_shifts.flatten()

@@ -18,7 +18,7 @@ NEIGHBOR_DISTANCES = torch.ones(3)
 class CalculatorTest(Calculator):
     def __init__(self):
         super().__init__(
-            potential=CoulombPotential(range_radius=None, cutoff_radius=None)
+            potential=CoulombPotential(smearing=None, separation_radius=None)
         )
 
 

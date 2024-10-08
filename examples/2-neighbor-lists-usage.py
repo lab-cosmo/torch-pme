@@ -157,7 +157,7 @@ neighbor_distances = distances(
 #
 # and initialize a PME instance to compute the potential.
 
-pme = PMECalculator(potential=CoulombPotential(range_radius=1.5))
+pme = PMECalculator(potential=CoulombPotential(smearing=1.5))
 potential = pme(
     charges=charges,
     cell=cell,

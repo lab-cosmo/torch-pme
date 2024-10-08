@@ -33,7 +33,7 @@ def test_parameter_choose(accuracy, rtol):
 
     # Compute potential and compare against target value using default hypers
     calc = EwaldCalculator(
-        potential=CoulombPotential(range_radius=ewald_params["range_radius"]),
+        potential=CoulombPotential(smearing=ewald_params["smearing"]),
         lr_wavelength=ewald_params["lr_wavelength"],
     )
     potentials = calc.forward(
@@ -56,7 +56,7 @@ def test_paramaters_fast():
 
     smearing = len(pos) ** (1 / 6) / 2**0.5 * 1.3
 
-    assert ewald_params["range_radius"] == smearing
+    assert ewald_params["smearing"] == smearing
     assert ewald_params["lr_wavelength"] == 2 * torch.pi * smearing / 2.2
     assert sr_cutoff == smearing * 2.2
 
