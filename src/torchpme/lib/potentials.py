@@ -214,7 +214,7 @@ class CoulombPotential(Potential):
             dtype = torch.get_default_dtype()
         if device is None:
             device = torch.device("cpu")
-        
+
         # constants used in the forwward
         self.register_buffer(
             "_rsqrt2",
@@ -333,7 +333,7 @@ class InversePowerLawPotential(Potential):
             dtype = torch.get_default_dtype()
         if device is None:
             device = torch.device("cpu")
-        
+
         if exponent <= 0 or exponent > 3:
             raise ValueError(f"`exponent` p={exponent} has to satisfy 0 < p <= 3")
         self.register_buffer(
