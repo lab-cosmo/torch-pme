@@ -61,8 +61,7 @@ def test_sr_lr_split(exponent, smearing):
     """
 
     # Compute diverse potentials for this inverse power law
-    ipl = InversePowerLawPotential(exponent=exponent, smearing=smearing)
-    ipl.to(dtype=dtype)
+    ipl = InversePowerLawPotential(exponent=exponent, smearing=smearing, dtype=dtype)
 
     potential_from_dist = ipl.from_dist(dists)
     potential_sr_from_dist = ipl.sr_from_dist(dists)
@@ -92,8 +91,7 @@ def test_exact_sr(exponent, smearing):
 
     # Compute SR part of Coulomb potential using the potentials class working for any
     # exponent
-    ipl = InversePowerLawPotential(exponent=exponent, smearing=smearing)
-    ipl.to(dtype=dtype)
+    ipl = InversePowerLawPotential(exponent=exponent, smearing=smearing, dtype=dtype)
 
     potential_sr_from_dist = ipl.sr_from_dist(dists)
 
@@ -128,8 +126,7 @@ def test_exact_lr(exponent, smearing):
 
     # Compute LR part of Coulomb potential using the potentials class working for any
     # exponent
-    ipl = InversePowerLawPotential(exponent=exponent, smearing=smearing)
-    ipl.to(dtype=dtype)
+    ipl = InversePowerLawPotential(exponent=exponent, smearing=smearing, dtype=dtype)
 
     potential_lr_from_dist = ipl.lr_from_dist(dists)
 
@@ -164,8 +161,7 @@ def test_exact_fourier(exponent, smearing):
 
     # Compute LR part of Coulomb potential using the potentials class working for any
     # exponent
-    ipl = InversePowerLawPotential(exponent=exponent, smearing=smearing)
-    ipl.to(dtype=dtype)
+    ipl = InversePowerLawPotential(exponent=exponent, smearing=smearing, dtype=dtype)
 
     fourier_from_class = ipl.lr_from_k_sq(ks_sq)
 
@@ -203,8 +199,7 @@ def test_lr_value_at_zero(exponent, smearing):
     """
     # Get atomic density at tiny distance
     dist_small = torch.tensor(1e-8, dtype=dtype)
-    ipl = InversePowerLawPotential(exponent=exponent, smearing=smearing)
-    ipl.to(dtype=dtype)
+    ipl = InversePowerLawPotential(exponent=exponent, smearing=smearing, dtype=dtype)
 
     potential_close_to_zero = ipl.lr_from_dist(dist_small)
 
@@ -244,14 +239,13 @@ def test_range_none(potential):
         _ = pot.background_correction()
 
 
-@pytest.mark.parametrize("separation_radius", [0.5, 1.0, 2.0])
-def test_f_cutoff(separation_radius):
-    coul = CoulombPotential(separation_radius=separation_radius)
-    coul.to(dtype=dtype)
+@pytest.mark.parametrize("exclusion_radius", [0.5, 1.0, 2.0])
+def test_f_cutoff(exclusion_radius):
+    coul = CoulombPotential(exclusion_radius=exclusion_radius, dtype=dtype)
 
     dist = torch.tensor([0.3])
     fcut = coul.f_cutoff(dist)
-    torch.allclose(fcut, 0.5 * (1.0 + torch.cos(torch.pi * dist / separation_radius)))
+    torch.allclose(fcut, 0.5 * (1.0 + torch.cos(torch.pi * dist / exclusion_radius)))
 
 
 @pytest.mark.parametrize("smearing", smearinges)
@@ -261,11 +255,8 @@ def test_inverserp_coulomb(smearing):
 
     # Compute LR part of Coulomb potential using the potentials class working for any
     # exponent
-    ipl = InversePowerLawPotential(exponent=1.0, smearing=smearing)
-    coul = CoulombPotential(smearing=smearing)
-
-    ipl.to(dtype=dtype)
-    coul.to(dtype=dtype)
+    ipl = InversePowerLawPotential(exponent=1.0, smearing=smearing, dtype=dtype)
+    coul = CoulombPotential(smearing=smearing, dtype=dtype)
 
     ipl_from_dist = ipl.from_dist(dists)
     ipl_sr_from_dist = ipl.sr_from_dist(dists)

@@ -19,7 +19,7 @@ class Potential(torch.nn.Module):
 
     This base class also provides parameters to set the length scale associated with the
     range separation (``smearing``), and a cutoff function that can be optionally
-    set to zero out the potential *inside* a short-range ``separation_radius``. This is
+    set to zero out the potential *inside* a short-range ``exclusion_radius``. This is
     often useful when combining ``torch-pme``-based ML models with local models that are
     better suited to describe the structure within a local cutoff.
 
@@ -28,25 +28,40 @@ class Potential(torch.nn.Module):
 
     :param smearing: The length scale associated with the switching between
         :math:`V_{\mathrm{SR}}(r)` and :math:`V_{\mathrm{LR}}(r)`
-    :param separation_radius: A length scale that defines a *local environment* within which
+    :param exclusion_radius: A length scale that defines a *local environment* within which
         the potential should be smoothly zeroed out, as it will be described by a
         separate model.
+    :param dtype: Optional, the type used for the internal buffers and parameters
+    :param device: Optional, the device used for the internal buffers and parameters
     """
 
     def __init__(
         self,
         smearing: Optional[float] = None,
-        separation_radius: Optional[float] = None,
+        exclusion_radius: Optional[float] = None,
+        dtype: Optional[torch.dtype] = None,
+        device: Optional[torch.device] = None,
     ):
         super().__init__()
+        if dtype is None:
+            dtype = torch.get_default_dtype()
+        if device is None:
+            device = torch.device("cpu")
+        self.dtype = dtype
+        self.device = device
         if smearing is not None:
-            self.register_buffer("smearing", torch.tensor(smearing))
+            self.register_buffer(
+                "smearing", torch.tensor(smearing, device=device, dtype=dtype)
+            )
         else:
             self.smearing = None
-        if separation_radius is not None:
-            self.register_buffer("separation_radius", torch.tensor(separation_radius))
+        if exclusion_radius is not None:
+            self.register_buffer(
+                "exclusion_radius",
+                torch.tensor(exclusion_radius, device=device, dtype=dtype),
+            )
         else:
-            self.separation_radius = None
+            self.exclusion_radius = None
 
     @torch.jit.export
     def f_cutoff(self, dist: torch.Tensor) -> torch.Tensor:
@@ -59,14 +74,14 @@ class Potential(torch.nn.Module):
             cutoff function should be computed.
         """
 
-        if self.separation_radius is None:
+        if self.exclusion_radius is None:
             raise ValueError(
-                "Cannot compute cutoff function when `separation_radius` is not set"
+                "Cannot compute cutoff function when `exclusion_radius` is not set"
             )
 
         return torch.where(
-            dist < self.separation_radius,
-            (1 + torch.cos(dist * (torch.pi / self.separation_radius))) * 0.5,
+            dist < self.exclusion_radius,
+            (1 + torch.cos(dist * (torch.pi / self.exclusion_radius))) * 0.5,
             0.0,
         )
 
@@ -88,7 +103,7 @@ class Potential(torch.nn.Module):
 
         Even though one can provide a custom version, this is usually evaluated as
         :math:`V_{\mathrm{SR}}(r)=V(r)-V_{\mathrm{LR}}(r)`, based on the full and
-        long-range parts of the potential. If the parameter ``separation_radius`` is
+        long-range parts of the potential. If the parameter ``exclusion_radius`` is
         defined, it computes this part as
         :math:`V_{\mathrm{SR}}(r)=-V_{\mathrm{LR}}(r)*f_\mathrm{cut}(r)` so that, when
         added to the part of the potential computed in the Fourier domain, the potential
@@ -102,7 +117,7 @@ class Potential(torch.nn.Module):
             raise ValueError(
                 "Cannot compute range-separated potential when `smearing` is not specified."
             )
-        if self.separation_radius is None:
+        if self.exclusion_radius is None:
             return self.from_dist(dist) - self.lr_from_dist(dist)
         return -self.lr_from_dist(dist) * self.f_cutoff(dist)
 
@@ -192,11 +207,21 @@ class CoulombPotential(Potential):
     def __init__(
         self,
         smearing: Optional[float] = None,
-        separation_radius: Optional[float] = None,
+        exclusion_radius: Optional[float] = None,
+        dtype: Optional[torch.dtype] = None,
+        device: Optional[torch.device] = None,
     ):
-        super().__init__(smearing, separation_radius)
-        self.register_buffer("_rsqrt2", torch.rsqrt(torch.tensor(2.0)))
-        self.register_buffer("_sqrt_2_on_pi", torch.sqrt(torch.tensor(2.0 / torch.pi)))
+        super().__init__(smearing, exclusion_radius, dtype, device)
+        self.register_buffer(
+            "_rsqrt2",
+            torch.rsqrt(torch.tensor(2.0, dtype=self.dtype, device=self.device)),
+        )
+        self.register_buffer(
+            "_sqrt_2_on_pi",
+            torch.sqrt(
+                torch.tensor(2.0 / torch.pi, dtype=self.dtype, device=self.device)
+            ),
+        )
 
     def from_dist(self, dist: torch.Tensor) -> torch.Tensor:
         """
@@ -288,7 +313,7 @@ class InversePowerLawPotential(Potential):
         Coulomb potential (:math:`p=1`), this potential can be interpreted as the
         effective potential generated by a Gaussian charge density, in which case this
         smearing parameter corresponds to the "width" of the Gaussian.
-    :param: separation_radius: float or torch.Tensor containing the length scale
+    :param: exclusion_radius: float or torch.Tensor containing the length scale
         corresponding to a local environment. See also
         :py:class:`Potential`.
     """
@@ -297,12 +322,16 @@ class InversePowerLawPotential(Potential):
         self,
         exponent: float,
         smearing: Optional[float] = None,
-        separation_radius: Optional[float] = None,
+        exclusion_radius: Optional[float] = None,
+        dtype: Optional[torch.dtype] = None,
+        device: Optional[torch.device] = None,
     ):
-        super().__init__(smearing, separation_radius)
+        super().__init__(smearing, exclusion_radius, dtype, device)
         if exponent <= 0 or exponent > 3:
             raise ValueError(f"`exponent` p={exponent} has to satisfy 0 < p <= 3")
-        self.register_buffer("exponent", torch.tensor(exponent))
+        self.register_buffer(
+            "exponent", torch.tensor(exponent, dtype=self.dtype, device=self.device)
+        )
 
     @torch.jit.export
     def from_dist(self, dist: torch.Tensor) -> torch.Tensor:

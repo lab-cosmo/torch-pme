@@ -13,7 +13,7 @@ DTYPE = torch.float64
 class CalculatorTest(Calculator):
     def __init__(self, **kwargs):
         super().__init__(
-            potential=CoulombPotential(smearing=None, separation_radius=None), **kwargs
+            potential=CoulombPotential(smearing=None, exclusion_radius=None), **kwargs
         )
 
 

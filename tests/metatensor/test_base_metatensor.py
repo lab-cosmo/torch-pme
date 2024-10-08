@@ -60,7 +60,7 @@ class CalculatorTestTorch(torchpme.Calculator):
     def __init__(self, potential=None):
         super().__init__(
             potential=potential
-            or torchpme.CoulombPotential(smearing=None, separation_radius=None)
+            or torchpme.CoulombPotential(smearing=None, exclusion_radius=None)
         )
 
 
