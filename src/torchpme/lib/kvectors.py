@@ -1,7 +1,7 @@
 import torch
 
 
-def get_ns_mesh(cell: torch.Tensor, mesh_spacing: float):
+def get_ns_mesh(cell: torch.Tensor, mesh_spacing: float, differentiable: bool = False):
     """
     Computes the mesh size given a target mesh spacing and cell
     getting the closest powers of 2 to help with FFT.
@@ -10,14 +10,32 @@ def get_ns_mesh(cell: torch.Tensor, mesh_spacing: float):
         Tensor specifying the real space unit cell of a structure, where ``cell[i]`` is
         the i-th basis vector
     :param mesh_spacing: float
+    :param differentiable: boll
 
     :return: torch.tensor of length 3 containing the mesh size
     """
+
+    class Ceil(torch.autograd.Function):
+        """To implement a ceil function with non-zero gradient"""
+
+        @staticmethod
+        def forward(ctx, input):
+            result = torch.ceil(input)
+            ctx.save_for_backward(result)
+            return result
+
+        @staticmethod
+        def backward(ctx, grad_output):
+            (result,) = ctx.saved_tensors
+            return grad_output
+
     basis_norms = torch.linalg.norm(cell, dim=1)
     ns_approx = basis_norms / mesh_spacing
     ns_actual_approx = 2 * ns_approx + 1  # actual number of mesh points
     # ns = [nx, ny, nz], closest power of 2 (helps for FT efficiency)
-    return torch.tensor(2).pow(torch.ceil(torch.log2(ns_actual_approx)).long())
+    if differentiable:
+        return torch.tensor(2).pow(Ceil.apply(torch.log2(ns_actual_approx)))
+    return torch.tensor(2).pow(Ceil.apply(torch.log2(ns_actual_approx)).long())
 
 
 def _generate_kvectors(

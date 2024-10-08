@@ -211,18 +211,35 @@ def tune_pme(
         )
 
     cell_dimensions = torch.linalg.norm(cell, dim=1)
+    min_dimension = float(torch.min(cell_dimensions))
     half_cell = float(torch.min(cell_dimensions) / 2)
     
     smearing_init = estimate_smearing(cell)
     prefac = 2 * torch.sum(charges**2) / math.sqrt(len(positions))
     volume = torch.abs(cell.det())
+    interpolator = MeshInterpolator(
+        cell=cell,
+        ns_mesh=torch.tensor([1, 1, 1]),
+        interpolation_nodes=interpolation_nodes,
+    )
+    interpolation_nodes = torch.tensor(interpolation_nodes)
 
-    def err_Fourier(smearing, mesh_spacing, order):
+    def smooth_mesh_spacing(mesh_spacing):
+        """Confine to (0, min_dimension), ensuring that the ``ns``
+        parameter is not smaller than 1
+        (see :py:func:`_compute_lr` of :py:class:`EwaldPotential`)."""
+        return min_dimension * torch.sigmoid(mesh_spacing)
+
+    def err_Fourier(smearing, mesh_spacing):
         def H(mesh_spacing):
-            return torch.prod(1 / get_ns_mesh(cell, mesh_spacing)) ** (1 / 3)
-        
-        def RMS_pi(mesh_spacing, order):
-            raise NotImplementedError
+            return torch.prod(
+                1 / get_ns_mesh(cell, mesh_spacing, differentiable=True)
+            ) ** (1 / 3)
+
+        def RMS_pi(mesh_spacing):
+            ns_mesh = get_ns_mesh(cell, mesh_spacing, differentiable=True)
+            # print(torch.linalg.norm(interpolator.compute_RMS_phi(ns_mesh, positions)))
+            return torch.linalg.norm(interpolator.compute_RMS_phi(ns_mesh, positions))
 
         def log_factorial(x):
             return torch.lgamma(x + 1)
@@ -233,11 +250,14 @@ def tune_pme(
         return (
             prefac
             * torch.pi**0.25
-            * (6 * (1 / 2**0.5 / smearing) / (2 * order + 3)) ** 0.5
+            * (6 * (1 / 2**0.5 / smearing) / (2 * interpolation_nodes + 1)) ** 0.5
             / volume ** (2 / 3)
-            * (2**0.5 / smearing * H(mesh_spacing)) ** (order + 1)
-            / factorial(order + 1)
-            * torch.exp((order + 1) * (torch.log(order + 1) - torch.log(2) - 1) / 2) * RMS_pi(mesh_spacing, order)
+            * (2**0.5 / smearing * H(mesh_spacing)) ** interpolation_nodes
+            / factorial(interpolation_nodes)
+            * torch.exp(
+                (interpolation_nodes) * (torch.log(interpolation_nodes / 2) - 1) / 2
+            )
+            * RMS_pi(mesh_spacing)
         )
 
     def err_real(smearing, cutoff):
@@ -247,10 +267,9 @@ def tune_pme(
             * torch.exp(-(cutoff**2) / 2 / smearing**2)
         )
 
-    def loss(smearing, mesh_spacing, order, cutoff):
+    def loss(smearing, mesh_spacing, cutoff):
         return torch.sqrt(
-            err_Fourier(smearing, mesh_spacing, order) ** 2
-            + err_real(smearing, cutoff) ** 2
+            err_Fourier(smearing, mesh_spacing) ** 2 + err_real(smearing, cutoff) ** 2
         )
 
     # initial guess
@@ -265,7 +284,7 @@ def tune_pme(
     optimizer = torch.optim.Adam([smearing, mesh_spacing, cutoff], lr=learning_rate)
 
     for step in range(max_steps):
-        loss_value = loss(smearing, mesh_spacing, interpolation_nodes, cutoff)
+        loss_value = loss(smearing, smooth_mesh_spacing(mesh_spacing), cutoff)
         if torch.isnan(loss_value):
             raise ValueError(
                 "The value of the estimated error is now nan, consider using a "
@@ -290,6 +309,6 @@ def tune_pme(
 
     return {
         "atomic_smearing": float(smearing),
-        "mesh_spacing": float(mesh_spacing),
+        "mesh_spacing": float(smooth_mesh_spacing(mesh_spacing)),
         "interpolation_nodes": int(interpolation_nodes),
     }, float(cutoff)

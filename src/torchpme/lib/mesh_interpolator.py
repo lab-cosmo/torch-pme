@@ -419,3 +419,86 @@ class MeshInterpolator:
             .sum(dim=1)
             .T
         )
+
+    def compute_RMS_phi(
+        self, ns_mesh: torch.Tensor, positions: torch.Tensor
+    ) -> torch.Tensor:
+        class Floor(torch.autograd.Function):
+            """To implement a floor function with non-zero gradient"""
+
+            @staticmethod
+            def forward(ctx, input):
+                result = torch.floor(input)
+                ctx.save_for_backward(result)
+                return result
+
+            @staticmethod
+            def backward(ctx, grad_output):
+                (result,) = ctx.saved_tensors
+                return grad_output
+
+        class Round(torch.autograd.Function):
+            """To implement a round function with non-zero gradient"""
+
+            @staticmethod
+            def forward(ctx, input):
+                result = torch.round(input)
+                ctx.save_for_backward(result)
+                return result
+
+            @staticmethod
+            def backward(ctx, grad_output):
+                (result,) = ctx.saved_tensors
+                return grad_output
+
+        if positions.device != self._device:
+            raise ValueError(
+                f"`positions` device {positions.device} is not the same as instance "
+                f"device {self._device}"
+            )
+
+        n_positions = len(positions)
+        if positions.shape != (n_positions, 3):
+            raise ValueError(
+                f"shape {list(positions.shape)} of `positions` has to be (N, 3)"
+            )
+
+        # Compute positions relative to the mesh basis vectors
+        positions_rel = ns_mesh * torch.matmul(positions, self.inverse_cell)
+
+        # Calculate positions and distances based on interpolation nodes
+        even = self.num_nodes_per_axis % 2 == 0
+        if even:
+            # For Lagrange interpolation, when the order is odd, the relative position
+            # of a charge is the midpoint of the two nearest gridpoints. For P3M, the
+            # same is true for even orders.
+            positions_rel_idx = Floor.apply(positions_rel)
+        else:
+            # For Lagrange interpolation, when the order is even, the relative position
+            # of a charge is the nearest gridpoint. For P3M, the same is true for
+            # odd orders.
+            positions_rel_idx = Round.apply(positions_rel)
+
+        # Calculate indices of mesh points on which the particle weights are
+        # interpolated. For each particle, its weight is "smeared" onto `order**3` mesh
+        # points, which can be achived using meshgrid below.
+        indices_to_interpolate = torch.stack(
+            [
+                (positions_rel_idx + i)
+                for i in range(
+                    1 - (self.num_nodes_per_axis + 1) // 2,
+                    1 + self.num_nodes_per_axis // 2,
+                )
+            ],
+            dim=0,
+        )
+        positions_rel = positions_rel[torch.newaxis, :, :]
+        positions_rel += (
+            torch.randn(positions_rel.shape) * 1e-6
+        )  # Noises help the algorithm work for tiny systems (<100 atoms)
+        return (
+            torch.mean(
+                (torch.prod(indices_to_interpolate - positions_rel, dim=0)) ** 2, dim=0
+            )
+            ** 0.5
+        )
