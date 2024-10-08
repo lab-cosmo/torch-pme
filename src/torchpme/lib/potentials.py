@@ -85,7 +85,7 @@ class Potential(torch.nn.Module):
     @torch.jit.export
     def sr_from_dist(self, dist: torch.Tensor) -> torch.Tensor:
         r"""Short-range part of the pair potential in real space.
-        
+
         Even though one can provide a custom version, this is usually evaluated as
         :math:`V_{\mathrm{SR}}(r)=V(r)-V_{\mathrm{LR}}(r)`, based on the full and
         long-range parts of the potential. If the parameter ``separation_radius`` is

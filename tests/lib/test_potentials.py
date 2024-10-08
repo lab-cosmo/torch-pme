@@ -14,7 +14,6 @@ def gamma(x):
 
 # Define precision of floating point variables
 dtype = torch.float64
-torch.set_default_dtype(dtype)
 
 # Define range of exponents covering relevant special values and more general
 # floating point values beyond this range. The last four of which are inspired by:
@@ -63,6 +62,8 @@ def test_sr_lr_split(exponent, smearing):
 
     # Compute diverse potentials for this inverse power law
     ipl = InversePowerLawPotential(exponent=exponent, smearing=smearing)
+    ipl.to(dtype=dtype)
+
     potential_from_dist = ipl.from_dist(dists)
     potential_sr_from_dist = ipl.sr_from_dist(dists)
     potential_lr_from_dist = ipl.lr_from_dist(dists)
@@ -92,6 +93,8 @@ def test_exact_sr(exponent, smearing):
     # Compute SR part of Coulomb potential using the potentials class working for any
     # exponent
     ipl = InversePowerLawPotential(exponent=exponent, smearing=smearing)
+    ipl.to(dtype=dtype)
+
     potential_sr_from_dist = ipl.sr_from_dist(dists)
 
     # Compute exact analytical expression obtained for relevant exponents
@@ -126,6 +129,8 @@ def test_exact_lr(exponent, smearing):
     # Compute LR part of Coulomb potential using the potentials class working for any
     # exponent
     ipl = InversePowerLawPotential(exponent=exponent, smearing=smearing)
+    ipl.to(dtype=dtype)
+
     potential_lr_from_dist = ipl.lr_from_dist(dists)
 
     # Compute exact analytical expression obtained for relevant exponents
@@ -160,6 +165,8 @@ def test_exact_fourier(exponent, smearing):
     # Compute LR part of Coulomb potential using the potentials class working for any
     # exponent
     ipl = InversePowerLawPotential(exponent=exponent, smearing=smearing)
+    ipl.to(dtype=dtype)
+
     fourier_from_class = ipl.lr_from_k_sq(ks_sq)
 
     # Compute exact analytical expression obtained for relevant exponents
@@ -197,12 +204,12 @@ def test_lr_value_at_zero(exponent, smearing):
     # Get atomic density at tiny distance
     dist_small = torch.tensor(1e-8, dtype=dtype)
     ipl = InversePowerLawPotential(exponent=exponent, smearing=smearing)
+    ipl.to(dtype=dtype)
+
     potential_close_to_zero = ipl.lr_from_dist(dist_small)
 
     # Compare to
-    exact_value = (
-        1.0 / (2 * smearing**2) ** (exponent / 2) / gamma(exponent / 2 + 1.0)
-    )
+    exact_value = 1.0 / (2 * smearing**2) ** (exponent / 2) / gamma(exponent / 2 + 1.0)
     relerr = torch.abs(potential_close_to_zero - exact_value) / exact_value
     assert relerr.item() < 3e-14
 
@@ -240,6 +247,7 @@ def test_range_none(potential):
 @pytest.mark.parametrize("separation_radius", [0.5, 1.0, 2.0])
 def test_f_cutoff(separation_radius):
     coul = CoulombPotential(separation_radius=separation_radius)
+    coul.to(dtype=dtype)
 
     dist = torch.tensor([0.3])
     fcut = coul.f_cutoff(dist)
@@ -255,6 +263,9 @@ def test_inverserp_coulomb(smearing):
     # exponent
     ipl = InversePowerLawPotential(exponent=1.0, smearing=smearing)
     coul = CoulombPotential(smearing=smearing)
+
+    ipl.to(dtype=dtype)
+    coul.to(dtype=dtype)
 
     ipl_from_dist = ipl.from_dist(dists)
     ipl_sr_from_dist = ipl.sr_from_dist(dists)

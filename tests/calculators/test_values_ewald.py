@@ -12,7 +12,6 @@ from utils import neighbor_list_torch
 from torchpme import EwaldCalculator, InversePowerLawPotential, PMECalculator
 
 DTYPE = torch.float64
-torch.set_default_dtype(DTYPE)
 
 
 def generate_orthogonal_transformations():
@@ -335,6 +334,7 @@ def test_madelung(crystal_name, scaling_factor, calc_name):
     )
 
     # Compute potential and compare against target value using default hypers
+    calc.to(dtype=DTYPE)
     potentials = calc.forward(
         positions=pos,
         charges=charges,
@@ -404,6 +404,7 @@ def test_wigner(crystal_name, scaling_factor):
                 smearing=smeareff,
             )
         )
+        calc.to(dtype=DTYPE)
         potentials = calc.forward(
             positions=positions,
             charges=charges,
@@ -493,6 +494,7 @@ def test_random_structure(
         rtol_e = 4.5e-3
         rtol_f = 5.0e-3
 
+    calc.to(dtype=DTYPE)
     potentials = calc.forward(
         positions=positions,
         charges=charges,
