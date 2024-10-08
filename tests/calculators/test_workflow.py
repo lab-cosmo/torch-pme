@@ -14,10 +14,10 @@ AVAILABLE_DEVICES = [torch.device("cpu")] + torch.cuda.is_available() * [
 ]
 MADELUNG_CSCL = torch.tensor(2 * 1.7626 / math.sqrt(3))
 CHARGES_CSCL = torch.tensor([1.0, -1.0])
-ATOMIC_SMEARING = 0.1
-LR_WAVELENGTH = ATOMIC_SMEARING / 4
-MESH_SPACING = ATOMIC_SMEARING / 4
-INTERPOLATION_ORDER = 2
+RANGE_RADIUS = 0.1
+LR_WAVELENGTH = RANGE_RADIUS / 4
+MESH_SPACING = RANGE_RADIUS / 4
+NUM_NODES_PER_AXIS = 3
 
 
 @pytest.mark.parametrize(
@@ -32,16 +32,16 @@ INTERPOLATION_ORDER = 2
         (
             EwaldCalculator,
             {
-                "potential": CoulombPotential(range_radius=ATOMIC_SMEARING),
+                "potential": CoulombPotential(range_radius=RANGE_RADIUS),
                 "lr_wavelength": LR_WAVELENGTH,
             },
         ),
         (
             PMECalculator,
             {
-                "potential": CoulombPotential(range_radius=ATOMIC_SMEARING),
+                "potential": CoulombPotential(range_radius=RANGE_RADIUS),
                 "mesh_spacing": MESH_SPACING,
-                "interpolation_order": INTERPOLATION_ORDER,
+                "num_nodes_per_axis": NUM_NODES_PER_AXIS,
             },
         ),
     ],
@@ -80,8 +80,8 @@ class TestWorkflow:
     def test_interpolation_order_error(self, CalculatorClass, params):
         params = params.copy()
         if type(CalculatorClass) in [PMECalculator]:
-            match = "Only `interpolation_order` from 1 to 5"
-            params["interpolation_order"] = 10
+            match = "Only `num_nodes_per_axis` from 1 to 5"
+            params["num_nodes_per_axis"] = 10
             with pytest.raises(ValueError, match=match):
                 CalculatorClass(**params)
 

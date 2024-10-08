@@ -43,8 +43,9 @@ class EwaldCalculator(Calculator):
         :py:obj:`False`, a "half" neighbor list is expected.
 
     To tune the ``range_radius`` and  ``lr_wavelength`` for a system you can use the
-    :py:func:`tune_pme` function. For an **example** on the calculator usage refer to
-    :py:class:`CalculatorPME`.
+    :py:func:`tune_pme` function.
+
+    For an **example** on the usage for any calculator refer to :ref:`userdoc-how-to`.
     """
 
     def __init__(

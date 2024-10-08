@@ -16,10 +16,10 @@ mts_atomistic = pytest.importorskip("metatensor.torch.atomistic")
 AVAILABLE_DEVICES = [torch.device("cpu")] + torch.cuda.is_available() * [
     torch.device("cuda")
 ]
-ATOMIC_SMEARING = 0.1
-LR_WAVELENGTH = ATOMIC_SMEARING / 4
-MESH_SPACING = ATOMIC_SMEARING / 4
-INTERPOLATION_ORDER = 2
+RANGE_RADIUS = 0.1
+LR_WAVELENGTH = RANGE_RADIUS / 4
+MESH_SPACING = RANGE_RADIUS / 4
+NUM_NODES_PER_AXIS = 3
 
 
 @pytest.mark.parametrize(
@@ -34,16 +34,16 @@ INTERPOLATION_ORDER = 2
         (
             torchpme.metatensor.EwaldCalculator,
             {
-                "potential": torchpme.CoulombPotential(range_radius=ATOMIC_SMEARING),
+                "potential": torchpme.CoulombPotential(range_radius=RANGE_RADIUS),
                 "lr_wavelength": LR_WAVELENGTH,
             },
         ),
         (
             torchpme.metatensor.PMECalculator,
             {
-                "potential": torchpme.CoulombPotential(range_radius=ATOMIC_SMEARING),
+                "potential": torchpme.CoulombPotential(range_radius=RANGE_RADIUS),
                 "mesh_spacing": MESH_SPACING,
-                "interpolation_order": INTERPOLATION_ORDER,
+                "num_nodes_per_axis": NUM_NODES_PER_AXIS,
             },
         ),
     ],

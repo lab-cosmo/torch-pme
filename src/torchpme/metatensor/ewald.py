@@ -18,8 +18,7 @@ class EwaldCalculator(Calculator):
 
     Refer to :class:`torchpme.EwaldCalculator` for parameter documentation.
 
-    For an **example** on the usage refer to :py:class:`metatensor.PMECalculator
-    <torchpme.metatensor.PMECalculator>`.
+    For an **example** on the usage for any calculator refer to :ref:`userdoc-how-to`.
     """
 
     # see torchpme.metatensor.base

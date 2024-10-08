@@ -37,54 +37,24 @@ class PMECalculator(Calculator):
     :param mesh_spacing: Value that determines the umber of Fourier-space grid points
         that will be used along each axis. If set to None, it will automatically be set
         to half of ``range_radius``.
-    :param interpolation_order: Interpolation order for mapping onto the grid, where an
-        interpolation order of p corresponds to interpolation by a polynomial of degree
-        ``p - 1`` (e.g. ``p = 4`` for cubic interpolation).
+    :param num_nodes_per_axis: The number ``n`` of nodes used in the interpolation per
+        coordinate axis. The total number of interpolation nodes in 3D will be ``n^3``.
+        In general, for ``n`` nodes, the interpolation will be performed by piecewise
+        polynomials of degree ``n - 1`` (e.g. ``n = 4`` for cubic interpolation).
+        Only the values ``3, 4, 5, 6, 7`` are supported.
     :param full_neighbor_list: If set to :py:obj:`True`, a "full" neighbor list
         is expected as input. This means that each atom pair appears twice. If
         set to :py:obj:`False`, a "half" neighbor list is expected.
 
 
-    Example
-    -------
-    We calculate the Madelung constant of a CsCl (Cesium-Chloride) crystal. The
-    reference value is :math:`2 \cdot 1.7626 / \sqrt{3} \approx 2.0354`.
-
-    >>> from torchpme.calculators import get_cscl_data
-    >>> from torchpme import InversePowerLawPotential
-    >>> charges, cell, positions, neighbor_distances, neighbor_indices, _, _ = (
-    ...     get_cscl_data()
-    ... )
-
-    Define the pair potential used in the calculator
-
-    >>> pot = InversePowerLawPotential(exponent=1.0, range_radius=0.1)
-
-    If you inspect the neighbor list you will notice that the tensors are empty for the
-    given system, which means the the whole potential will be calculated using the long
-    range part of the potential. Finally, we initlize the potential class and
-    compute the potential for the crystal.
-
-    >>> pme = PMECalculator(potential=pot)
-    >>> pme.forward(
-    ...     charges=charges,
-    ...     cell=cell,
-    ...     positions=positions,
-    ...     neighbor_indices=neighbor_indices,
-    ...     neighbor_distances=neighbor_distances,
-    ... )
-    tensor([[-1.0192],
-            [ 1.0192]], dtype=torch.float64)
-
-    Which is close to the reference value given above.
-
+    For an **example** on the usage for any calculator refer to :ref:`userdoc-how-to`.
     """
 
     def __init__(
         self,
         potential: Potential,
         mesh_spacing: Optional[float] = None,
-        interpolation_order: int = 3,
+        num_nodes_per_axis: int = 4,
         full_neighbor_list: bool = False,
     ):
         super().__init__(
@@ -101,9 +71,9 @@ class PMECalculator(Calculator):
             mesh_spacing = potential.range_radius / 8.0
         self.mesh_spacing: float = mesh_spacing
 
-        if interpolation_order not in [1, 2, 3, 4, 5]:
-            raise ValueError("Only `interpolation_order` from 1 to 5 are allowed")
-        self.interpolation_order: int = interpolation_order
+        if num_nodes_per_axis not in [3, 4, 5, 6, 7]:
+            raise ValueError("Only `num_nodes_per_axis` from 3 to 7 are allowed")
+        self.num_nodes_per_axis: int = num_nodes_per_axis
 
         # Initialize the filter module. Set dummy value for smearing to propper
         # initilize the `KSpaceFilter` below
@@ -131,7 +101,12 @@ class PMECalculator(Calculator):
             ns = get_ns_mesh(cell, self.mesh_spacing)
 
         with profiler.record_function("init 1: initialize mesh interpolator"):
-            interpolator = MeshInterpolator(cell, ns, order=self.interpolation_order)
+            interpolator = MeshInterpolator(
+                cell,
+                ns,
+                num_nodes_per_axis=self.num_nodes_per_axis,
+                method="Lagrange",  # convention for classic PME
+            )
 
         with profiler.record_function("update the mesh for the k-space filter"):
             self._KF.update_mesh(cell, ns)
