@@ -7,10 +7,10 @@ from torch import profiler
 
 from ..lib import Potential
 from ..lib.kspace_filter import KSpaceFilter
-from ..lib.kvectors import get_ns_mesh
-from ..lib.mesh_interpolator import MeshInterpolator
+from ..lib.kvectors import get_ns_mesh, get_ns_mesh_differentiable
+from ..lib.mesh_interpolator import MeshInterpolator, compute_RMS_phi
+from ..lib.potentials import gamma
 from .base import Calculator, estimate_smearing
-
 
 class PMECalculator(Calculator):
     r"""
@@ -217,29 +217,26 @@ def tune_pme(
     smearing_init = estimate_smearing(cell)
     prefac = 2 * torch.sum(charges**2) / math.sqrt(len(positions))
     volume = torch.abs(cell.det())
-    interpolator = MeshInterpolator(
-        cell=cell,
-        ns_mesh=torch.tensor([1, 1, 1]),
-        interpolation_nodes=interpolation_nodes,
-    )
     interpolation_nodes = torch.tensor(interpolation_nodes)
 
     def smooth_mesh_spacing(mesh_spacing):
         """Confine to (0, min_dimension), ensuring that the ``ns``
         parameter is not smaller than 1
-        (see :py:func:`_compute_lr` of :py:class:`EwaldPotential`)."""
+        (see :py:func:`_compute_lr` of :py:class:`PMEPotential`)."""
         return min_dimension * torch.sigmoid(mesh_spacing)
 
     def err_Fourier(smearing, mesh_spacing):
         def H(mesh_spacing):
-            return torch.prod(
-                1 / get_ns_mesh(cell, mesh_spacing, differentiable=True)
-            ) ** (1 / 3)
+            return torch.prod(1 / get_ns_mesh_differentiable(cell, mesh_spacing)) ** (
+                1 / 3
+            )
 
         def RMS_pi(mesh_spacing):
-            ns_mesh = get_ns_mesh(cell, mesh_spacing, differentiable=True)
+            ns_mesh = get_ns_mesh_differentiable(cell, mesh_spacing)
             # print(torch.linalg.norm(interpolator.compute_RMS_phi(ns_mesh, positions)))
-            return torch.linalg.norm(interpolator.compute_RMS_phi(ns_mesh, positions))
+            return torch.linalg.norm(
+                compute_RMS_phi(cell, interpolation_nodes, ns_mesh, positions)
+            )
 
         def log_factorial(x):
             return torch.lgamma(x + 1)
@@ -277,8 +274,11 @@ def tune_pme(
         smearing_init, device=device, dtype=dtype, requires_grad=True
     )
     mesh_spacing = torch.tensor(
-        smearing / 8, device=device, dtype=dtype, requires_grad=True
-    )
+        -torch.log(min_dimension * 8 / smearing - 1),
+        device=device,
+        dtype=dtype,
+        requires_grad=True,
+    )  # smooth_mesh_spacing(mesh_spacing) = smearing / 8, which is the standard initial guess
     cutoff = torch.tensor(half_cell / 5, device=device, dtype=dtype, requires_grad=True)
 
     optimizer = torch.optim.Adam([smearing, mesh_spacing, cutoff], lr=learning_rate)

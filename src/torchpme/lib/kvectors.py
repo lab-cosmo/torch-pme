@@ -1,7 +1,21 @@
 import torch
 
+class Ceil(torch.autograd.Function):
+    """To implement a ceil function with non-zero gradient"""
 
-def get_ns_mesh(cell: torch.Tensor, mesh_spacing: float, differentiable: bool = False):
+    @staticmethod
+    def forward(ctx, input):
+        result = torch.ceil(input)
+        ctx.save_for_backward(result)
+        return result
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        (result,) = ctx.saved_tensors
+        return grad_output
+
+
+def get_ns_mesh(cell: torch.Tensor, mesh_spacing: float):
     """
     Computes the mesh size given a target mesh spacing and cell
     getting the closest powers of 2 to help with FFT.
@@ -15,27 +29,31 @@ def get_ns_mesh(cell: torch.Tensor, mesh_spacing: float, differentiable: bool = 
     :return: torch.tensor of length 3 containing the mesh size
     """
 
-    class Ceil(torch.autograd.Function):
-        """To implement a ceil function with non-zero gradient"""
+    basis_norms = torch.linalg.norm(cell, dim=1)
+    ns_approx = basis_norms / mesh_spacing
+    ns_actual_approx = 2 * ns_approx + 1  # actual number of mesh points
+    # ns = [nx, ny, nz], closest power of 2 (helps for FT efficiency)
+    return torch.tensor(2).pow(torch.ceil(torch.log2(ns_actual_approx)).long())
 
-        @staticmethod
-        def forward(ctx, input):
-            result = torch.ceil(input)
-            ctx.save_for_backward(result)
-            return result
+def get_ns_mesh_differentiable(cell: torch.Tensor, mesh_spacing: float):
+    """
+    The same as :py:func:`get_ns_mesh`, but differentiable, thus suitable for parameter
+    optimization. This function is only for a compatibility with `TorchScript`.
 
-        @staticmethod
-        def backward(ctx, grad_output):
-            (result,) = ctx.saved_tensors
-            return grad_output
+    :param cell: torch.tensor of shape ``(3, 3)``
+        Tensor specifying the real space unit cell of a structure, where ``cell[i]`` is
+        the i-th basis vector
+    :param mesh_spacing: float
+    :param differentiable: boll
+
+    :return: torch.tensor of length 3 containing the mesh size
+    """
 
     basis_norms = torch.linalg.norm(cell, dim=1)
     ns_approx = basis_norms / mesh_spacing
     ns_actual_approx = 2 * ns_approx + 1  # actual number of mesh points
     # ns = [nx, ny, nz], closest power of 2 (helps for FT efficiency)
-    if differentiable:
-        return torch.tensor(2).pow(Ceil.apply(torch.log2(ns_actual_approx)))
-    return torch.tensor(2).pow(Ceil.apply(torch.log2(ns_actual_approx)).long())
+    return torch.tensor(2).pow(Ceil.apply(torch.log2(ns_actual_approx)))
 
 
 def _generate_kvectors(
