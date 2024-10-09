@@ -25,13 +25,13 @@ class PMECalculator(Calculator):
     _base_calculator = torch_calculators.PMECalculator
 
 
-def tune_PME(
+def tune_pme(
     system: System,
     interpolation_nodes: int = 4,
     exponent: int = 1,
     accuracy: Optional[Literal["medium", "accurate"] | float] = "medium",
     max_steps: int = 50000,
-    learning_rate: float = 5e-2,
+    learning_rate: float = 5e-3,
     verbose: bool = False,
 ) -> tuple[float, dict[str, float], float]:
     """Find the optimal parameters for a single system for the PME method.
