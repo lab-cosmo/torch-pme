@@ -434,14 +434,13 @@ def compute_RMS_phi(
     # Calculate positions and distances based on interpolation nodes
     even = interpolation_nodes % 2 == 0
     if even:
-        # For Lagrange interpolation, when the order is odd, the relative position
-        # of a charge is the midpoint of the two nearest gridpoints. For P3M, the
-        # same is true for even orders.
+        # For Lagrange interpolation, when the number of interpolation
+        # is even, the relative position of a charge is the midpoint of
+        # the two nearest gridpoints.
         positions_rel_idx = Floor.apply(positions_rel)
     else:
-        # For Lagrange interpolation, when the order is even, the relative position
-        # of a charge is the nearest gridpoint. For P3M, the same is true for
-        # odd orders.
+        # For Lagrange interpolation, when the number of interpolation
+        # points is odd, the relative position of a charge is the nearest gridpoint.
         positions_rel_idx = Round.apply(positions_rel)
 
     # Calculate indices of mesh points on which the particle weights are
