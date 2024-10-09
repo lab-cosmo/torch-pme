@@ -6,17 +6,20 @@ from .kvectors import (
 )
 from .mesh_interpolator import MeshInterpolator
 from .potentials import CoulombPotential, InversePowerLawPotential, Potential
+from .tuning import estimate_smearing, tune_ewald
 
 __all__ = [
-    "all_neighbor_indices",
-    "distances",
+    "CoulombPotential",
+    "InversePowerLawPotential",
     "KSpaceFilter",
     "KSpaceKernel",
     "MeshInterpolator",
     "Potential",
-    "CoulombPotential",
-    "InversePowerLawPotential",
-    "get_ns_mesh",
-    "generate_kvectors_for_mesh",
+    "all_neighbor_indices",
+    "distances",
+    "estimate_smearing",
     "generate_kvectors_for_ewald",
+    "generate_kvectors_for_mesh",
+    "get_ns_mesh",
+    "tune_ewald",
 ]

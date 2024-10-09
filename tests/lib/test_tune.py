@@ -1,9 +1,15 @@
+import sys
+
 import pytest
 import torch
-from test_values_ewald import define_crystal
-from utils import neighbor_list_torch
 
-from torchpme import CoulombPotential, EwaldCalculator, tune_ewald
+from torchpme import EwaldCalculator
+from torchpme.lib import CoulombPotential, estimate_smearing, tune_ewald
+
+sys.path.append("..")
+
+from calculators.test_values_ewald import define_crystal
+from calculators.utils import neighbor_list_torch
 
 
 @pytest.mark.parametrize(
@@ -79,3 +85,12 @@ def test_multi_charge_channel_error():
     match = "Found 2 charge channels, but only one iss supported"
     with pytest.raises(NotImplementedError, match=match):
         tune_ewald(charges, cell, pos, accuracy=None)
+
+
+def test_no_cell():
+    match = (
+        "provided `cell` has a determinant of 0 and therefore is not valid for "
+        "periodic calculation"
+    )
+    with pytest.raises(ValueError, match=match):
+        estimate_smearing(cell=torch.zeros(3, 3))

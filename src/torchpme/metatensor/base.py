@@ -42,7 +42,7 @@ class Calculator(torch.nn.Module):
         self._n_charges_channels = 0
 
     @staticmethod
-    def _validate_compute_parameters(
+    def _validate_forward_parameters(
         system: System,
         neighbors: TensorBlock,
     ):
@@ -158,7 +158,7 @@ class Calculator(torch.nn.Module):
         :return: TensorMap containing the potential of all types.
         """
 
-        self._validate_compute_parameters(system, neighbors)
+        self._validate_forward_parameters(system, neighbors)
 
         # In actual computations, the data type (dtype) and device (e.g. CPU, GPU) of
         # all remaining variables need to be consistent
