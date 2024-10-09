@@ -427,7 +427,6 @@ def compute_RMS_phi(
     ns_mesh: torch.Tensor,
     positions: torch.Tensor,
 ) -> torch.Tensor:
-
     inverse_cell = torch.linalg.inv(cell)
     # Compute positions relative to the mesh basis vectors
     positions_rel = ns_mesh * torch.matmul(positions, inverse_cell)

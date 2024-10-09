@@ -1,5 +1,6 @@
 import torch
 
+
 class Ceil(torch.autograd.Function):
     """To implement a ceil function with non-zero gradient"""
 
@@ -34,6 +35,7 @@ def get_ns_mesh(cell: torch.Tensor, mesh_spacing: float):
     ns_actual_approx = 2 * ns_approx + 1  # actual number of mesh points
     # ns = [nx, ny, nz], closest power of 2 (helps for FT efficiency)
     return torch.tensor(2).pow(torch.ceil(torch.log2(ns_actual_approx)).long())
+
 
 def get_ns_mesh_differentiable(cell: torch.Tensor, mesh_spacing: float):
     """

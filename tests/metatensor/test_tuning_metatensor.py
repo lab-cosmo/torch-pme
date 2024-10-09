@@ -28,14 +28,23 @@ def system():
     return system
 
 
+@pytest.mark.parametrize(
+    "tune_mt",
+    "tune_torch",
+    [
+        (torchpme.metatensor.tune_ewald, torchpme.tune_ewald),
+        (torchpme.metatensor.tune_pme, torchpme.tune_pme),
+    ],
+)
 def test_tune(system):
-    params_mts, cutoff_mts = torchpme.metatensor.tune_ewald(system)
+    smearing_mts, params_mts, cutoff_mts = torchpme.metatensor.tune_ewald(system)
 
-    params_torch, cutoff_torch = torchpme.tune_ewald(
+    smearing_torch, params_torch, cutoff_torch = torchpme.tune_ewald(
         positions=system.positions,
         charges=system.get_data("charges").values,
         cell=system.cell,
     )
 
+    assert smearing_mts == smearing_torch
     assert params_mts == params_torch
     assert cutoff_mts == cutoff_torch

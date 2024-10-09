@@ -155,7 +155,7 @@ def tune_ewald(
     max_steps: int = 50000,
     learning_rate: float = 5e-2,
     verbose: bool = False,
-) -> tuple[dict[str, float], float]:
+) -> tuple[float, dict[str, float], float]:
     r"""Find the optimal parameters for a single system for the ewald method.
 
     For the error formulas are given `elsewhere <https://www2.icp.uni-stuttgart.de/~icp/mediawiki/images/4/4d/Script_Longrange_Interactions.pdf>`_.
@@ -169,10 +169,10 @@ def tune_ewald(
 
         r_c &= \mathrm{cutoff}
 
-    :param positions: single tensor of shape (``len(charges), 3``) containing the
-        Cartesian positions of all point charges in the system.
     :param charges: single tensor of shape (``1, len(positions))``.
     :param cell: single tensor of shape (3, 3), describing the bounding
+    :param positions: single tensor of shape (``len(charges), 3``) containing the
+        Cartesian positions of all point charges in the system.
     :param exponent: exponent :math:`p` in :math:`1/r^p` potentials
     :param accuracy: Mode used to determine the optimal parameters. Possible values are
         ``"fast"``, ``"medium"`` or ``"accurate"``. For ``"fast"`` the parameters are
@@ -186,8 +186,8 @@ def tune_ewald(
     :param learning_rate: learning rate for gradient descent
     :param verbose: whether to print the progress of gradient descent
 
-    :return: Tuple containing a dictionary with the parameters for
-        :py:class:`CalculatorEwald` and a float of the optimal cutoff value for the
+    :return: Tuple containing a float of the optimal smearing for the :py:class:
+        `CoulombPotential`, a dictionary with the parameters for :py:class:`EwaldCalculator` and a float of the optimal cutoff value for the
         neighborlist computation.
 
     Example
@@ -199,17 +199,22 @@ def tune_ewald(
     ... )
     >>> charges = torch.tensor([[1.0], [-1.0]], dtype=torch.float64)
     >>> cell = torch.eye(3, dtype=torch.float64)
-    >>> ewald_parameter, cutoff = tune_ewald(charges, cell, positions, accuracy="fast")
+    >>> smearing, parameter, cutoff = tune_ewald(
+    ...     charges, cell, positions, accuracy="fast"
+    ... )
 
     You can check the values of the parameters
 
-    >>> print(ewald_parameter)
-    {'smearing': 1.0318106837793297, 'lr_wavelength': 2.9468444218696392}
+    >>> print(smearing)
+    1.0318106837793297
+
+    >>> print(parameter)
+    {'lr_wavelength': 2.9468444218696392}
 
     >>> print(cutoff)
     2.2699835043145256
 
-    Which can be used to initilize an :py:class:`CalculatorEwald` instance with
+    Which can be used to initilize an :py:class:`EwaldCalculator` instance with
     parameters that are optimal for the system.
     """
 
@@ -245,10 +250,13 @@ def tune_ewald(
 
         smearing = smearing_factor * len(positions) ** (1 / 6) / 2**0.5
 
-        return {
-            "smearing": smearing,
-            "lr_wavelength": 2 * torch.pi * smearing / lr_wavelength_factor,
-        }, smearing * lr_wavelength_factor
+        return (
+            smearing,
+            {
+                "lr_wavelength": 2 * torch.pi * smearing / lr_wavelength_factor,
+            },
+            smearing * lr_wavelength_factor,
+        )
 
     if accuracy == "medium":
         accuracy = 1e-3
@@ -331,7 +339,10 @@ def tune_ewald(
             stacklevel=2,
         )
 
-    return {
-        "smearing": float(smearing),
-        "lr_wavelength": float(smooth_lr_wavelength(lr_wavelength)),
-    }, float(cutoff)
+    return (
+        float(smearing),
+        {
+            "lr_wavelength": float(smooth_lr_wavelength(lr_wavelength)),
+        },
+        float(cutoff),
+    )

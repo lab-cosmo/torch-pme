@@ -9,8 +9,8 @@ from ..lib import Potential
 from ..lib.kspace_filter import KSpaceFilter
 from ..lib.kvectors import get_ns_mesh, get_ns_mesh_differentiable
 from ..lib.mesh_interpolator import MeshInterpolator, compute_RMS_phi
-from ..lib.potentials import gamma
 from .base import Calculator, estimate_smearing
+
 
 class PMECalculator(Calculator):
     r"""
@@ -151,17 +151,17 @@ class PMECalculator(Calculator):
 
 
 def tune_pme(
-        positions: torch.Tensor,
-        charges: torch.Tensor,
-        cell: torch.Tensor,
-        interpolation_nodes: int,
-        exponent: int = 1,
-        accuracy: Optional[Literal["medium", "accurate"] | float] = "medium",
-        max_steps: int = 50000,
-        learning_rate: float = 1e-2,
-        verbose: bool = False,
+    charges: torch.Tensor,
+    cell: torch.Tensor,
+    positions: torch.Tensor,
+    interpolation_nodes: int = 4,
+    exponent: int = 1,
+    accuracy: Optional[Literal["medium", "accurate"] | float] = "medium",
+    max_steps: int = 50000,
+    learning_rate: float = 5e-3,
+    verbose: bool = False,
 ):
-    r"""Find the optimal parameters for a single system for the ewald method.
+    r"""Find the optimal parameters for a single system for the PME method.
 
     For the error formulas are given `elsewhere <https://www2.icp.uni-stuttgart.de/~icp/mediawiki/images/4/4d/Script_Longrange_Interactions.pdf>`_.
     Note the difference notation between the parameters in the reference and ours:
@@ -170,9 +170,54 @@ def tune_pme(
 
         \alpha &= \left( \sqrt{2}\,\mathrm{smearing} \right)^{-1}
 
-        K &= \frac{2 \pi}{\mathrm{lr\_wavelength}}
+    :param charges: single tensor of shape (``1, len(positions))``.
+    :param cell: single tensor of shape (3, 3), describing the bounding
+    :param positions: single tensor of shape (``len(charges), 3``) containing the
+        Cartesian positions of all point charges in the system.
+    :param interpolation_nodes: The number ``n`` of nodes used in the interpolation per
+        coordinate axis. The total number of interpolation nodes in 3D will be ``n^3``.
+        In general, for ``n`` nodes, the interpolation will be performed by piecewise
+        polynomials of degree ``n - 1`` (e.g. ``n = 4`` for cubic interpolation).
+        Only the values ``3, 4, 5, 6, 7`` are supported.
+    :param exponent: exponent :math:`p` in :math:`1/r^p` potentials
+    :param accuracy: Mode used to determine the optimal parameters. Possible values are
+        ``"medium"`` or ``"accurate"``. For ``"medium"`` or ``"accurate"``, the parameters
+        are optimized using gradient descent until an estimated error of :math:`10^{-3}`
+        or :math:`10^{-6}` is reached.
+        Instead of ``"medium"`` or ``"accurate"``, you can give a float
+        value for the accuracy.
+    :param max_steps: maximum number of gradient descent steps
+    :param learning_rate: learning rate for gradient descent
+    :param verbose: whether to print the progress of gradient descent
 
-        r_c &= \mathrm{cutoff}
+    :return: Tuple containing a float of the optimal smearing for the :py:class:
+        `CoulombPotential`, a dictionary with the parameters for :py:class:`PMECalculator` and a float of the optimal cutoff value for the
+        neighborlist computation.
+
+    Example
+    -------
+    >>> import torch
+    >>> from vesin.torch import NeighborList
+    >>> positions = torch.tensor(
+    ...     [[0.0, 0.0, 0.0], [0.5, 0.5, 0.5]], dtype=torch.float64
+    ... )
+    >>> charges = torch.tensor([[1.0], [-1.0]], dtype=torch.float64)
+    >>> cell = torch.eye(3, dtype=torch.float64)
+    >>> smearing, parameter, cutoff = tune_pme(charges, cell, positions, accuracy=1e-1)
+
+    You can check the values of the parameters
+
+    >>> print(smearing)
+    0.04576166523476457
+
+    >>> print(parameter)
+    {'mesh_spacing': 0.012499974999998786, 'interpolation_nodes': 4}
+
+    >>> print(cutoff)
+    0.15078003506282253
+
+    Which can be used to initilize an :py:class:`PMECalculator` instance with
+    parameters that are optimal for the system.
     """
 
     if exponent != 1:
@@ -190,10 +235,6 @@ def tune_pme(
         neighbor_indices=neighbor_indices,
         neighbor_distances=neighbor_distances,
     )
-
-    positions = positions[0]
-    charges = charges[0]
-    cell = cell[0]
 
     if charges.shape[1] > 1:
         raise NotImplementedError(
@@ -213,7 +254,7 @@ def tune_pme(
     cell_dimensions = torch.linalg.norm(cell, dim=1)
     min_dimension = float(torch.min(cell_dimensions))
     half_cell = float(torch.min(cell_dimensions) / 2)
-    
+
     smearing_init = estimate_smearing(cell)
     prefac = 2 * torch.sum(charges**2) / math.sqrt(len(positions))
     volume = torch.abs(cell.det())
@@ -307,8 +348,11 @@ def tune_pme(
             stacklevel=2,
         )
 
-    return {
-        "atomic_smearing": float(smearing),
-        "mesh_spacing": float(smooth_mesh_spacing(mesh_spacing)),
-        "interpolation_nodes": int(interpolation_nodes),
-    }, float(cutoff)
+    return (
+        float(smearing),
+        {
+            "mesh_spacing": float(smooth_mesh_spacing(mesh_spacing)),
+            "interpolation_nodes": int(interpolation_nodes),
+        },
+        float(cutoff),
+    )

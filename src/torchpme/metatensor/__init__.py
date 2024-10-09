@@ -3,13 +3,14 @@ import torch
 from ..calculators import get_cscl_data as get_cscl_data_torch
 from .base import Calculator
 from .ewald import EwaldCalculator, tune_ewald
-from .pme import PMECalculator
+from .pme import PMECalculator, tune_pme
 
 __all__ = [
     "Calculator",
     "PMECalculator",
     "EwaldCalculator",
     "tune_ewald",
+    "tune_pme",
     "get_cscl_data",
 ]
 

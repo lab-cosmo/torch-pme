@@ -15,6 +15,6 @@ __all__ = [
     "CoulombPotential",
     "InversePowerLawPotential",
     "tune_ewald",
-    "tune_pme"
+    "tune_pme",
 ]
 __version__ = "0.0.0-dev"

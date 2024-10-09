@@ -32,7 +32,7 @@ def tune_ewald(
     max_steps: int = 50000,
     learning_rate: float = 5e-2,
     verbose: bool = False,
-) -> tuple[dict[str, float], float]:
+) -> tuple[float, dict[str, float], float]:
     """Find the optimal parameters for a single system for the ewald method.
 
     Refer to :class:`torchpme.tune_ewald` for parameter documentation.
