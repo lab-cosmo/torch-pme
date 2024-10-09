@@ -2,7 +2,7 @@ import torch
 
 from .base import Calculator, estimate_smearing
 from .ewald import EwaldCalculator, tune_ewald
-from .pme import PMECalculator
+from .pme import PMECalculator, tune_pme
 
 __all__ = [
     "Calculator",
@@ -11,6 +11,7 @@ __all__ = [
     "get_cscl_data",
     "estimate_smearing",
     "tune_ewald",
+    "tune_pme",
 ]
 
 

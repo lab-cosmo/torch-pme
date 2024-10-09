@@ -158,7 +158,7 @@ def tune_pme(
         exponent: int = 1,
         accuracy: Optional[Literal["medium", "accurate"] | float] = "medium",
         max_steps: int = 50000,
-        learning_rate: float = 5e-2,
+        learning_rate: float = 1e-2,
         verbose: bool = False,
 ):
     r"""Find the optimal parameters for a single system for the ewald method.
@@ -274,7 +274,7 @@ def tune_pme(
         smearing_init, device=device, dtype=dtype, requires_grad=True
     )
     mesh_spacing = torch.tensor(
-        -torch.log(min_dimension * 8 / smearing - 1),
+        -math.log(min_dimension * 8 / smearing_init - 1),
         device=device,
         dtype=dtype,
         requires_grad=True,

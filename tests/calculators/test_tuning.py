@@ -3,9 +3,16 @@ import torch
 from test_values_ewald import define_crystal
 from utils import neighbor_list_torch
 
-from torchpme import CoulombPotential, EwaldCalculator, tune_ewald
+from torchpme import CoulombPotential, EwaldCalculator, tune_ewald, PMECalculator, tune_pme
 
 
+@pytest.mark.parametrize(
+        ("calculator", "tune", "param_length"),
+        [
+            (EwaldCalculator, tune_ewald, 2),
+            (PMECalculator, tune_pme, 3),
+        ]
+)
 @pytest.mark.parametrize(
     ("accuracy", "rtol"),
     [
@@ -14,7 +21,7 @@ from torchpme import CoulombPotential, EwaldCalculator, tune_ewald
         (1e-1, 1e-1),
     ],
 )
-def test_parameter_choose(accuracy, rtol):
+def test_parameter_choose(calculator, tune, param_length, accuracy, rtol):
     """
     Check that the Madelung constants obtained from the Ewald sum calculator matches
     the reference values and that all branches of the from_accuracy method are covered.
@@ -22,9 +29,9 @@ def test_parameter_choose(accuracy, rtol):
     # Get input parameters and adjust to account for scaling
     pos, charges, cell, madelung_ref, num_units = define_crystal()
 
-    ewald_params, sr_cutoff = tune_ewald(charges, cell, pos, accuracy=accuracy)
+    params, sr_cutoff = tune(pos, charges, cell, accuracy=accuracy)
 
-    assert len(ewald_params) == 2
+    assert len(params) == param_length
 
     # Compute neighbor list
     neighbor_indices, neighbor_distances = neighbor_list_torch(
@@ -32,9 +39,9 @@ def test_parameter_choose(accuracy, rtol):
     )
 
     # Compute potential and compare against target value using default hypers
-    calc = EwaldCalculator(
-        potential=CoulombPotential(smearing=ewald_params["smearing"]),
-        lr_wavelength=ewald_params["lr_wavelength"],
+    calc = calculator(
+        potential=CoulombPotential(smearing=params["smearing"]),
+        lr_wavelength=params["lr_wavelength"],
     )
     potentials = calc.forward(
         positions=pos,
@@ -61,7 +68,8 @@ def test_paramaters_fast():
     assert sr_cutoff == smearing * 2.2
 
 
-def test_accuracy_error():
+@pytest.mark.parametrize("tune", [tune_ewald, tune_pme])
+def test_accuracy_error(tune):
     pos, charges, cell, _, _ = define_crystal()
 
     match = (
@@ -69,13 +77,14 @@ def test_accuracy_error():
         "'medium' or 'accurate', or provide a float for the accuracy."
     )
     with pytest.raises(ValueError, match=match):
-        tune_ewald(charges, cell, pos, accuracy="foo")
+        tune(pos, charges, cell, accuracy="foo")
 
 
-def test_multi_charge_channel_error():
+@pytest.mark.parametrize("tune", [tune_ewald, tune_pme])
+def test_multi_charge_channel_error(tune):
     pos, charges, cell, _, _ = define_crystal()
     charges = torch.hstack([charges, charges])
 
     match = "Found 2 charge channels, but only one iss supported"
     with pytest.raises(NotImplementedError, match=match):
-        tune_ewald(charges, cell, pos, accuracy=None)
+        tune(pos, charges, cell, accuracy=None)
