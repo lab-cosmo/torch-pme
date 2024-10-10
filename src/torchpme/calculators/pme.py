@@ -198,6 +198,7 @@ def tune_pme(
     -------
     >>> import torch
     >>> from vesin.torch import NeighborList
+    >>> torch.manual_seed(0)
     >>> positions = torch.tensor(
     ...     [[0.0, 0.0, 0.0], [0.5, 0.5, 0.5]], dtype=torch.float64
     ... )
@@ -211,7 +212,7 @@ def tune_pme(
     0.04576166523476457
 
     >>> print(parameter)
-    {'mesh_spacing': 0.012499974999998895, 'interpolation_nodes': 4}
+    {'mesh_spacing': 0.012499975000000003, 'interpolation_nodes': 4}
 
     >>> print(cutoff)
     0.15078003506282253

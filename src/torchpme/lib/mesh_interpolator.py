@@ -458,7 +458,7 @@ def compute_RMS_phi(
     )
     positions_rel = positions_rel[torch.newaxis, :, :]
     positions_rel += (
-        torch.randn(positions_rel.shape) * 1e-6
+        torch.randn(positions_rel.shape) * 1e-10
     )  # Noises help the algorithm work for tiny systems (<100 atoms)
     return (
         torch.mean(
