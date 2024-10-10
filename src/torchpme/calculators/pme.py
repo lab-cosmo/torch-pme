@@ -268,14 +268,10 @@ def tune_pme(
         return min_dimension * torch.sigmoid(mesh_spacing)
 
     def err_Fourier(smearing, mesh_spacing):
-        def H(mesh_spacing):
-            return torch.prod(1 / get_ns_mesh_differentiable(cell, mesh_spacing)) ** (
-                1 / 3
-            )
+        def H(ns_mesh):
+            return torch.prod(1 / ns_mesh) ** (1 / 3)
 
-        def RMS_pi(mesh_spacing):
-            ns_mesh = get_ns_mesh_differentiable(cell, mesh_spacing)
-            # print(torch.linalg.norm(interpolator.compute_RMS_phi(ns_mesh, positions)))
+        def RMS_phi(ns_mesh):
             return torch.linalg.norm(
                 compute_RMS_phi(cell, interpolation_nodes, ns_mesh, positions)
             )
@@ -286,17 +282,19 @@ def tune_pme(
         def factorial(x):
             return torch.exp(log_factorial(x))
 
+        ns_mesh = get_ns_mesh_differentiable(cell, mesh_spacing)
+
         return (
             prefac
             * torch.pi**0.25
             * (6 * (1 / 2**0.5 / smearing) / (2 * interpolation_nodes + 1)) ** 0.5
             / volume ** (2 / 3)
-            * (2**0.5 / smearing * H(mesh_spacing)) ** interpolation_nodes
+            * (2**0.5 / smearing * H(ns_mesh)) ** interpolation_nodes
             / factorial(interpolation_nodes)
             * torch.exp(
                 (interpolation_nodes) * (torch.log(interpolation_nodes / 2) - 1) / 2
             )
-            * RMS_pi(mesh_spacing)
+            * RMS_phi(ns_mesh)
         )
 
     def err_real(smearing, cutoff):
