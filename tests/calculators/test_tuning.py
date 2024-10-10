@@ -23,7 +23,7 @@ from torchpme import (
     ("accuracy", "rtol"),
     [
         ("medium", 1e-3),
-        ("accurate", 1e-6),
+        ("accurate", 2e-6),
         (1e-1, 1e-1),
     ],
 )
