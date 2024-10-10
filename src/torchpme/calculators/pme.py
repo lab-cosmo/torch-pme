@@ -198,7 +198,7 @@ def tune_pme(
     -------
     >>> import torch
     >>> from vesin.torch import NeighborList
-    >>> torch.manual_seed(0)
+    >>> _ = torch.manual_seed(0)
     >>> positions = torch.tensor(
     ...     [[0.0, 0.0, 0.0], [0.5, 0.5, 0.5]], dtype=torch.float64
     ... )
