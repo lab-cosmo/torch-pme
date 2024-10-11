@@ -56,10 +56,12 @@ class PMECalculator(Calculator):
         mesh_spacing: Optional[float] = None,
         interpolation_nodes: int = 4,
         full_neighbor_list: bool = False,
+        units: str = "Gaussian",
     ):
         super().__init__(
             potential=potential,
             full_neighbor_list=full_neighbor_list,
+            units=units,
         )
 
         if potential.smearing is None:

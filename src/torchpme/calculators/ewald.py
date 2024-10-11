@@ -53,10 +53,12 @@ class EwaldCalculator(Calculator):
         potential: Potential,
         lr_wavelength: Optional[float] = None,
         full_neighbor_list: bool = False,
+        units: str = "Gaussian",
     ):
         super().__init__(
             potential=potential,
             full_neighbor_list=full_neighbor_list,
+            units=units,
         )
         if potential.smearing is None:
             raise ValueError(
