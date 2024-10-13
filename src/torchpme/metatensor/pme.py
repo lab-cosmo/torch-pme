@@ -1,5 +1,7 @@
 from typing import Literal, Optional
 
+import torch
+
 from .. import calculators as torch_calculators
 from .base import Calculator
 
@@ -41,7 +43,7 @@ def tune_pme(
 
     return torch_calculators.pme.tune_pme(
         positions=system.positions,
-        charges=system.get_data("charges").values,
+        sum_squared_charges=torch.sum(system.get_data("charges").values ** 2, dim=0),
         cell=system.cell,
         interpolation_nodes=interpolation_nodes,
         exponent=exponent,

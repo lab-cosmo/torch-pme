@@ -1,5 +1,7 @@
 from typing import Literal, Optional
 
+import torch
+
 from .. import calculators as torch_calculators
 from .base import Calculator
 
@@ -40,7 +42,7 @@ def tune_ewald(
 
     return torch_calculators.ewald.tune_ewald(
         positions=system.positions,
-        charges=system.get_data("charges").values,
+        sum_squared_charges=torch.sum(system.get_data("charges").values ** 2, dim=0),
         cell=system.cell,
         exponent=exponent,
         accuracy=accuracy,

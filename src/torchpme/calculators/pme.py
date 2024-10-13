@@ -151,7 +151,7 @@ class PMECalculator(Calculator):
 
 
 def tune_pme(
-    charges: torch.Tensor,
+    sum_squared_charges: torch.Tensor,
     cell: torch.Tensor,
     positions: torch.Tensor,
     interpolation_nodes: int = 4,
@@ -170,7 +170,7 @@ def tune_pme(
 
         \alpha &= \left( \sqrt{2}\,\mathrm{smearing} \right)^{-1}
 
-    :param charges: single tensor of shape (``1, len(positions))``.
+    :param sum_squared_charges: single tensor of shape (``number_of_systems)``.
     :param cell: single tensor of shape (3, 3), describing the bounding
     :param positions: single tensor of shape (``len(charges), 3``) containing the
         Cartesian positions of all point charges in the system.
@@ -204,7 +204,9 @@ def tune_pme(
     ... )
     >>> charges = torch.tensor([[1.0], [-1.0]], dtype=torch.float64)
     >>> cell = torch.eye(3, dtype=torch.float64)
-    >>> smearing, parameter, cutoff = tune_pme(charges, cell, positions, accuracy=1e-1)
+    >>> smearing, parameter, cutoff = tune_pme(
+            torch.sum(charges ** 2, dim=0), cell, positions, accuracy=1e-1
+        )
 
     You can check the values of the parameters
 
@@ -227,19 +229,19 @@ def tune_pme(
     device = positions.device
 
     # Create valid dummy tensors to verify `positions`, `charges` and `cell`
-    neighbor_indices = torch.zeros(0, 2, device=device)
-    neighbor_distances = torch.zeros(0, device=device)
-    Calculator._validate_compute_parameters(
-        positions=positions,
-        charges=charges,
-        cell=cell,
-        neighbor_indices=neighbor_indices,
-        neighbor_distances=neighbor_distances,
-    )
+    # neighbor_indices = torch.zeros(0, 2, device=device)
+    # neighbor_distances = torch.zeros(0, device=device)
+    # Calculator._validate_compute_parameters(
+    #     positions=positions,
+    #     charges=sum_squared_charges,
+    #     cell=cell,
+    #     neighbor_indices=neighbor_indices,
+    #     neighbor_distances=neighbor_distances,
+    # )
 
-    if charges.shape[1] > 1:
+    if len(sum_squared_charges) > 1:
         raise NotImplementedError(
-            f"Found {charges.shape[1]} charge channels, but only one iss supported"
+            f"Found {len(sum_squared_charges)} charge channels, but only one is supported"
         )
 
     if accuracy == "medium":
@@ -257,7 +259,7 @@ def tune_pme(
     half_cell = float(torch.min(cell_dimensions) / 2)
 
     smearing_init = estimate_smearing(cell)
-    prefac = 2 * torch.sum(charges**2) / math.sqrt(len(positions))
+    prefac = 2 * sum_squared_charges / math.sqrt(len(positions))
     volume = torch.abs(cell.det())
     interpolation_nodes = torch.tensor(interpolation_nodes)
 

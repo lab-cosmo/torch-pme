@@ -147,7 +147,7 @@ class EwaldCalculator(Calculator):
 
 
 def tune_ewald(
-    charges: torch.Tensor,
+    sum_squared_charges: torch.Tensor,
     cell: torch.Tensor,
     positions: torch.Tensor,
     exponent: int = 1,
@@ -169,7 +169,7 @@ def tune_ewald(
 
         r_c &= \mathrm{cutoff}
 
-    :param charges: single tensor of shape (``1, len(positions))``.
+    :param sum_squared_charges: single tensor of shape (``number_of_systems)``.
     :param cell: single tensor of shape (3, 3), describing the bounding
     :param positions: single tensor of shape (``len(charges), 3``) containing the
         Cartesian positions of all point charges in the system.
@@ -200,7 +200,7 @@ def tune_ewald(
     >>> charges = torch.tensor([[1.0], [-1.0]], dtype=torch.float64)
     >>> cell = torch.eye(3, dtype=torch.float64)
     >>> smearing, parameter, cutoff = tune_ewald(
-    ...     charges, cell, positions, accuracy="fast"
+    ...     torch.sum(charges ** 2, dim=0), cell, positions, accuracy="fast"
     ... )
 
     You can check the values of the parameters
@@ -225,19 +225,19 @@ def tune_ewald(
     device = positions.device
 
     # Create valid dummy tensors to verify `positions`, `charges` and `cell`
-    neighbor_indices = torch.zeros(0, 2, device=device)
-    neighbor_distances = torch.zeros(0, device=device)
-    Calculator._validate_compute_parameters(
-        charges=charges,
-        cell=cell,
-        positions=positions,
-        neighbor_indices=neighbor_indices,
-        neighbor_distances=neighbor_distances,
-    )
+    # neighbor_indices = torch.zeros(0, 2, device=device)
+    # neighbor_distances = torch.zeros(0, device=device)
+    # Calculator._validate_compute_parameters(
+    #     charges=charges,
+    #     cell=cell,
+    #     positions=positions,
+    #     neighbor_indices=neighbor_indices,
+    #     neighbor_distances=neighbor_distances,
+    # )
 
-    if charges.shape[1] > 1:
+    if len(sum_squared_charges) > 1:
         raise NotImplementedError(
-            f"Found {charges.shape[1]} charge channels, but only one iss supported"
+            f"Found {len(sum_squared_charges)} charge channels, but only one is supported"
         )
 
     if accuracy == "fast":
@@ -273,7 +273,7 @@ def tune_ewald(
     half_cell = float(torch.min(cell_dimensions) / 2)
 
     smearing_init = estimate_smearing(cell)
-    prefac = 2 * torch.sum(charges**2) / math.sqrt(len(positions))
+    prefac = 2 * sum_squared_charges / math.sqrt(len(positions))
     volume = torch.abs(cell.det())
 
     def smooth_lr_wavelength(lr_wavelength):

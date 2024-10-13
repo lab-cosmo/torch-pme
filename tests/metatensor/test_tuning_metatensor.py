@@ -40,7 +40,7 @@ def test_tune(system, tune_mt, tune_torch):
 
     smearing_torch, params_torch, cutoff_torch = tune_torch(
         positions=system.positions,
-        charges=system.get_data("charges").values,
+        sum_squared_charges=torch.sum(system.get_data("charges").values ** 2, dim=0),
         cell=system.cell,
     )
 
