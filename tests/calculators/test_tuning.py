@@ -35,7 +35,9 @@ def test_parameter_choose(calculator, tune, param_length, accuracy, rtol):
     # Get input parameters and adjust to account for scaling
     pos, charges, cell, madelung_ref, num_units = define_crystal()
 
-    smearing, params, sr_cutoff = tune(torch.sum(charges ** 2, dim=0), cell, pos, accuracy=accuracy)
+    smearing, params, sr_cutoff = tune(
+        torch.sum(charges**2, dim=0), cell, pos, accuracy=accuracy
+    )
 
     assert len(params) == param_length
 
@@ -65,7 +67,9 @@ def test_parameter_choose(calculator, tune, param_length, accuracy, rtol):
 def test_paramaters_fast():
     pos, charges, cell, _, _ = define_crystal()
 
-    smearing, ewald_params, sr_cutoff = tune_ewald(torch.sum(charges ** 2, dim=0), cell, pos, accuracy="fast")
+    smearing, ewald_params, sr_cutoff = tune_ewald(
+        torch.sum(charges**2, dim=0), cell, pos, accuracy="fast"
+    )
 
     ref_smearing = len(pos) ** (1 / 6) / 2**0.5 * 1.3
 
@@ -83,7 +87,7 @@ def test_accuracy_error(tune):
         "'medium' or 'accurate', or provide a float for the accuracy."
     )
     with pytest.raises(ValueError, match=match):
-        tune(torch.sum(charges ** 2, dim=0), cell, pos, accuracy="foo")
+        tune(torch.sum(charges**2, dim=0), cell, pos, accuracy="foo")
 
 
 @pytest.mark.parametrize("tune", [tune_ewald, tune_pme])
@@ -93,4 +97,4 @@ def test_multi_charge_channel_error(tune):
 
     match = "Found 2 charge channels, but only one is supported"
     with pytest.raises(NotImplementedError, match=match):
-        tune(torch.sum(charges ** 2, dim=0), cell, pos, accuracy=None)
+        tune(torch.sum(charges**2, dim=0), cell, pos, accuracy=None)

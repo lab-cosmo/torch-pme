@@ -200,7 +200,7 @@ def tune_ewald(
     >>> charges = torch.tensor([[1.0], [-1.0]], dtype=torch.float64)
     >>> cell = torch.eye(3, dtype=torch.float64)
     >>> smearing, parameter, cutoff = tune_ewald(
-    ...     torch.sum(charges ** 2, dim=0), cell, positions, accuracy="fast"
+    ...     torch.sum(charges**2, dim=0), cell, positions, accuracy="fast"
     ... )
 
     You can check the values of the parameters
