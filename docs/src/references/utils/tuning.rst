@@ -1,6 +1,8 @@
 Tuning
 ######
 
-.. autofunction:: torchpme.utils.tuning.tune_ewald
+Maybe write some introduction here, why tuning is useful...
 
-.. autofunction:: torchpme.utils.tuning.tune_pme
+.. automodule:: torchpme.utils.tuning
+    :members:
+    :undoc-members:

@@ -1,8 +1,43 @@
 import math
 import warnings
-from typing import Callable, Optional
+from typing import Callable
 
 import torch
+
+
+def _optimize_parameters(
+    params: list[torch.Tensor],
+    loss: Callable,
+    max_steps: int = 10000,
+    accuracy: float = 1e-6,
+    learning_rate: float = 5e-3,
+    verbose: bool = False,
+):
+    optimizer = torch.optim.Adam(params, lr=learning_rate)
+
+    for step in range(max_steps):
+        loss_value = loss(params[0], params[1], params[2])
+        if torch.isnan(loss_value):
+            raise ValueError(
+                "The value of the estimated error is now nan, consider using a "
+                "smaller learning rate."
+            )
+        loss_value.backward()
+        optimizer.step()
+        optimizer.zero_grad()
+
+        if verbose and (step % 100 == 0):
+            print(f"{step}: {loss_value:.2e}")
+        if loss_value <= accuracy:
+            break
+
+    if loss_value > accuracy:
+        warnings.warn(
+            "The searching for the parameters is ended, but the error is "
+            f"{float(loss_value):.3e}, larger than the given accuracy {accuracy}. "
+            "Consider increase max_step and",
+            stacklevel=2,
+        )
 
 
 def tune_ewald(
@@ -10,7 +45,7 @@ def tune_ewald(
     cell: torch.Tensor,
     positions: torch.Tensor,
     exponent: int = 1,
-    accuracy: Optional[float] = 1e-3,
+    accuracy: float = 1e-3,
     max_steps: int = 50000,
     learning_rate: float = 5e-2,
     verbose: bool = False,
@@ -36,7 +71,7 @@ def tune_ewald(
     :param positions: single tensor of shape (``len(charges), 3``) containing the
         Cartesian positions of all point charges in the system.
     :param exponent: exponent :math:`p` in :math:`1/r^p` potentials
-    :param accuracy: Mode used to determine the optimal parameters. Possible values are
+    :param accuracy: Mode used to determine the optimal parameters. Recomended values for fast...
         ``"fast"``, ``"medium"`` or ``"accurate"``. For ``"fast"`` the parameters are
         set based on the number of atoms in the system to achieve a scaling of
         :math:`\mathcal{O}(N^{3/2})`. For ``"medium"`` or ``"accurate"``, the parameters
@@ -146,13 +181,11 @@ def tune_ewald(
         verbose,
     )
 
-    return (
-        float(smearing),
-        {
-            "lr_wavelength": float(smooth_lr_wavelength(lr_wavelength)),
-        },
-        float(cutoff),
-    )
+    return {
+        "smearing": float(smearing),
+        "lr_wavelength": float(smooth_lr_wavelength(lr_wavelength)),
+        "cutoff": float(cutoff)
+    }
 
 
 def tune_pme(
@@ -161,14 +194,14 @@ def tune_pme(
     positions: torch.Tensor,
     interpolation_nodes: int = 4,
     exponent: int = 1,
-    accuracy: Optional[float] = 1e-3,
+    accuracy: float = 1e-3,
     max_steps: int = 50000,
     learning_rate: float = 5e-3,
     verbose: bool = False,
 ):
     r"""Find the optimal parameters for a single system for the PME method.
 
-    For the error formulas are given `elsewhere <https://www2.icp.uni-stuttgart.de/~icp/mediawiki/images/4/4d/Script_Longrange_Interactions.pdf>`_.
+    For the error formulas are given `elsewhere <TODO>`_.
     Note the difference notation between the parameters in the reference and ours:
 
     .. math::
@@ -185,21 +218,21 @@ def tune_pme(
     :param interpolation_nodes: The number ``n`` of nodes used in the interpolation per
         coordinate axis. The total number of interpolation nodes in 3D will be ``n^3``.
         In general, for ``n`` nodes, the interpolation will be performed by piecewise
-        polynomials of degree ``n - 1`` (e.g. ``n = 4`` for cubic interpolation).
-        Only the values ``3, 4, 5, 6, 7`` are supported.
+        polynomials of degree ``n - 1`` (e.g. ``n = 4`` for cubic interpolation). Only
+        the values ``3, 4, 5, 6, 7`` are supported.
     :param exponent: exponent :math:`p` in :math:`1/r^p` potentials
     :param accuracy: Mode used to determine the optimal parameters. Possible values are
-        ``"medium"`` or ``"accurate"``. For ``"medium"`` or ``"accurate"``, the parameters
-        are optimized using gradient descent until an estimated error of :math:`10^{-3}`
-        or :math:`10^{-6}` is reached.
-        Instead of ``"medium"`` or ``"accurate"``, you can give a float
-        value for the accuracy.
+        ``"medium"`` or ``"accurate"``. For ``"medium"`` or ``"accurate"``, the
+        parameters are optimized using gradient descent until an estimated error of
+        :math:`10^{-3}` or :math:`10^{-6}` is reached. Instead of ``"medium"`` or
+        ``"accurate"``, you can give a float value for the accuracy.
     :param max_steps: maximum number of gradient descent steps
     :param learning_rate: learning rate for gradient descent
     :param verbose: whether to print the progress of gradient descent
 
     :return: Tuple containing a float of the optimal smearing for the :py:class:
-        `CoulombPotential`, a dictionary with the parameters for :py:class:`PMECalculator` and a float of the optimal cutoff value for the
+        `CoulombPotential`, a dictionary with the parameters for
+        :py:class:`PMECalculator` and a float of the optimal cutoff value for the
         neighborlist computation.
 
     Example
@@ -410,40 +443,6 @@ def _validate_compute_parameters(
             f"{sum_squared_charges.device}"
         )
 
-
-def _optimize_parameters(
-    params: list[torch.Tensor],
-    loss: Callable,
-    max_steps: int = 10000,
-    accuracy: float = 1e-6,
-    learning_rate: float = 5e-3,
-    verbose: bool = False,
-):
-    optimizer = torch.optim.Adam(params, lr=learning_rate)
-
-    for step in range(max_steps):
-        loss_value = loss(params[0], params[1], params[2])
-        if torch.isnan(loss_value):
-            raise ValueError(
-                "The value of the estimated error is now nan, consider using a "
-                "smaller learning rate."
-            )
-        loss_value.backward()
-        optimizer.step()
-        optimizer.zero_grad()
-
-        if verbose and (step % 100 == 0):
-            print(f"{step}: {loss_value:.2e}")
-        if loss_value <= accuracy:
-            break
-
-    if loss_value > accuracy:
-        warnings.warn(
-            "The searching for the parameters is ended, but the error is "
-            f"{float(loss_value):.3e}, larger than the given accuracy {accuracy}. "
-            "Consider increase max_step and",
-            stacklevel=2,
-        )
 
 
 def compute_RMS_phi(

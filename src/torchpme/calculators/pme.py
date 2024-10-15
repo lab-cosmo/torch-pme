@@ -17,15 +17,11 @@ class PMECalculator(Calculator):
     Scaling as :math:`\mathcal{O}(NlogN)` with respect to the number of particles
     :math:`N` used as a reference to test faster implementations.
 
-    For computing a **neighborlist** a reasonable ``cutoff`` is half the length of
-    the shortest cell vector, which can be for example computed according as
+    For getting reasonable values for a given accuracy you should use
+    :func:`torchpme.utils.tune_pme`, which will also find a reasonable ``cutoff`` for
+    the  **neighborlist**.
 
-    .. code-block:: python
-
-        cell_dimensions = torch.linalg.norm(cell, dim=1)
-        cutoff = torch.min(cell_dimensions) / 2 - 1e-6
-
-    This ensures a accuracy of the short range part of ``1e-5``.
+    For a training exercise it is recommended...
 
     :param potential: A :py:class:`Potential` object that implements the evaluation
         of short and long-range potential terms. The ``smearing`` parameter
@@ -53,7 +49,7 @@ class PMECalculator(Calculator):
     def __init__(
         self,
         potential: Potential,
-        mesh_spacing: Optional[float] = None,
+        mesh_spacing: float,
         interpolation_nodes: int = 4,
         full_neighbor_list: bool = False,
     ):

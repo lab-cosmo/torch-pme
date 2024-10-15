@@ -13,16 +13,7 @@ class EwaldCalculator(Calculator):
     Scaling as :math:`\mathcal{O}(N^2)` with respect to the number of particles
     :math:`N`.
 
-    For computing a **neighborlist** a reasonable ``cutoff`` is half the length of the
-    shortest cell vector, which can be for example computed according as
-
-    .. code-block:: python
-
-        cell_dimensions = torch.linalg.norm(cell, dim=1)
-        cutoff = torch.min(cell_dimensions) / 2 - 1e-6
-
-    For an electrostatic potential, and following the guidelines discussed below
-    for the other parameters, this ensures an accuracy of approximately ``1e-5``.
+    TODO: Copy from EWALD.
 
     :param potential: the two-body potential that should be computed, implemented
         as a :py:class:`torchpme.lib.Potential` object. The ``smearing`` parameter
@@ -49,7 +40,7 @@ class EwaldCalculator(Calculator):
     def __init__(
         self,
         potential: Potential,
-        lr_wavelength: Optional[float] = None,
+        lr_wavelength: float,
         full_neighbor_list: bool = False,
     ):
         super().__init__(
