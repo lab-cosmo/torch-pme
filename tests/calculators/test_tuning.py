@@ -67,9 +67,7 @@ def test_parameter_choose(calculator, tune, param_length, accuracy, rtol):
 def test_accuracy_error(tune):
     pos, charges, cell, _, _ = define_crystal()
 
-    match = (
-        "'foo' is not a float."
-    )
+    match = "'foo' is not a float."
     with pytest.raises(ValueError, match=match):
         tune(torch.sum(charges**2, dim=0), cell, pos, accuracy="foo")
 

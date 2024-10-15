@@ -1,6 +1,6 @@
 import math
 import warnings
-from typing import Callable, List, Optional
+from typing import Callable, Optional
 
 import torch
 
@@ -415,14 +415,13 @@ def _validate_compute_parameters(
 
 
 def _optimize_parameters(
-    params: List[torch.Tensor],
+    params: list[torch.Tensor],
     loss: Callable,
     max_steps: int = 10000,
     accuracy: float = 1e-6,
     learning_rate: float = 5e-3,
     verbose: bool = False,
 ):
-
     optimizer = torch.optim.Adam(params, lr=learning_rate)
 
     for step in range(max_steps):
