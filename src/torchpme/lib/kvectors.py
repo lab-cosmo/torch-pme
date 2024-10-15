@@ -1,7 +1,7 @@
 import torch
 
 
-class Ceil(torch.autograd.Function):
+class _Ceil(torch.autograd.Function):
     """To implement a ceil function with non-zero gradient"""
 
     @staticmethod
@@ -55,7 +55,7 @@ def get_ns_mesh_differentiable(cell: torch.Tensor, mesh_spacing: float):
     ns_approx = basis_norms / mesh_spacing
     ns_actual_approx = 2 * ns_approx + 1  # actual number of mesh points
     # ns = [nx, ny, nz], closest power of 2 (helps for FT efficiency)
-    return torch.tensor(2).pow(Ceil.apply(torch.log2(ns_actual_approx)))
+    return torch.tensor(2).pow(_Ceil.apply(torch.log2(ns_actual_approx)))
 
 
 def _generate_kvectors(

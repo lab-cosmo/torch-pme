@@ -1,8 +1,9 @@
 import pytest
 import torch
 
-from torchpme.calculators import Calculator, estimate_smearing, get_cscl_data
+from torchpme.calculators import Calculator, get_cscl_data
 from torchpme.lib.potentials import CoulombPotential
+from torchpme.utils.tuning import estimate_smearing
 
 # Define some example parameters
 DTYPE = torch.float32

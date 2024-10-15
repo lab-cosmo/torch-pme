@@ -271,24 +271,3 @@ class Calculator(torch.nn.Module):
                 f"{device} as `positions`, got at least one tensor with "
                 f"device {neighbor_distances.device}"
             )
-
-
-def estimate_smearing(
-    cell: torch.Tensor,
-) -> float:
-    """
-    Estimate the smearing for ewald calculators.
-
-    :param cell: A 3x3 tensor representing the periodic system
-    :returns: estimated smearing
-    """
-    if torch.equal(cell.det(), torch.full([], 0, dtype=cell.dtype, device=cell.device)):
-        raise ValueError(
-            "provided `cell` has a determinant of 0 and therefore is not valid "
-            "for periodic calculation"
-        )
-
-    cell_dimensions = torch.linalg.norm(cell, dim=1)
-    max_cutoff = torch.min(cell_dimensions) / 2 - 1e-6
-
-    return max_cutoff.item() / 5.0

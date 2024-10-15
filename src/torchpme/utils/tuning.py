@@ -4,7 +4,6 @@ from typing import Callable, List, Optional
 
 import torch
 
-from ..calculators.base import estimate_smearing
 from ..lib.kvectors import get_ns_mesh_differentiable
 from ..lib.mesh_interpolator import compute_RMS_phi
 
@@ -31,6 +30,9 @@ def tune_ewald(
         K &= \frac{2 \pi}{\mathrm{lr\_wavelength}}
 
         r_c &= \mathrm{cutoff}
+
+    If you are doing a training exercise, you can only run the tuning
+    procedure for the largest system in your dataset.
 
     :param sum_squared_charges: single tensor of shape (``number_of_systems)``.
     :param cell: single tensor of shape (3, 3), describing the bounding
@@ -63,19 +65,19 @@ def tune_ewald(
     >>> charges = torch.tensor([[1.0], [-1.0]], dtype=torch.float64)
     >>> cell = torch.eye(3, dtype=torch.float64)
     >>> smearing, parameter, cutoff = tune_ewald(
-    ...     torch.sum(charges**2, dim=0), cell, positions, accuracy="fast"
+    ...     torch.sum(charges**2, dim=0), cell, positions, accuracy=1e-1
     ... )
 
     You can check the values of the parameters
 
     >>> print(smearing)
-    1.0318106837793297
+    0.20517140875115344
 
     >>> print(parameter)
-    {'lr_wavelength': 2.9468444218696392}
+    {'lr_wavelength': 0.2879512643188817}
 
     >>> print(cutoff)
-    2.2699835043145256
+    0.5961240167485603
 
     Which can be used to initilize an :py:class:`EwaldCalculator` instance with
     parameters that are optimal for the system.
@@ -175,6 +177,9 @@ def tune_pme(
     .. math::
 
         \alpha &= \left( \sqrt{2}\,\mathrm{smearing} \right)^{-1}
+
+    If you are doing a training exercise, you can only run the tuning
+    procedure for the largest system in your dataset.
 
     :param sum_squared_charges: single tensor of shape (``number_of_systems)``.
     :param cell: single tensor of shape (3, 3), describing the bounding
@@ -326,6 +331,27 @@ def tune_pme(
         },
         float(cutoff),
     )
+
+
+def estimate_smearing(
+    cell: torch.Tensor,
+) -> float:
+    """
+    Estimate the smearing for ewald calculators.
+
+    :param cell: A 3x3 tensor representing the periodic system
+    :returns: estimated smearing
+    """
+    if torch.equal(cell.det(), torch.full([], 0, dtype=cell.dtype, device=cell.device)):
+        raise ValueError(
+            "provided `cell` has a determinant of 0 and therefore is not valid "
+            "for periodic calculation"
+        )
+
+    cell_dimensions = torch.linalg.norm(cell, dim=1)
+    max_cutoff = torch.min(cell_dimensions) / 2 - 1e-6
+
+    return max_cutoff.item() / 5.0
 
 
 def _validate_compute_parameters(

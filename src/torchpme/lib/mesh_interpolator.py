@@ -437,11 +437,11 @@ def compute_RMS_phi(
         # For Lagrange interpolation, when the number of interpolation
         # is even, the relative position of a charge is the midpoint of
         # the two nearest gridpoints.
-        positions_rel_idx = Floor.apply(positions_rel)
+        positions_rel_idx = _Floor.apply(positions_rel)
     else:
         # For Lagrange interpolation, when the number of interpolation
         # points is odd, the relative position of a charge is the nearest gridpoint.
-        positions_rel_idx = Round.apply(positions_rel)
+        positions_rel_idx = _Round.apply(positions_rel)
 
     # Calculate indices of mesh points on which the particle weights are
     # interpolated. For each particle, its weight is "smeared" onto `order**3` mesh
@@ -468,7 +468,7 @@ def compute_RMS_phi(
     )
 
 
-class Floor(torch.autograd.Function):
+class _Floor(torch.autograd.Function):
     """To implement a floor function with non-zero gradient"""
 
     @staticmethod
@@ -483,7 +483,7 @@ class Floor(torch.autograd.Function):
         return grad_output
 
 
-class Round(torch.autograd.Function):
+class _Round(torch.autograd.Function):
     """To implement a round function with non-zero gradient"""
 
     @staticmethod

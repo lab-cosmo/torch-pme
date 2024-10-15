@@ -1,8 +1,8 @@
 import contextlib
 
 from .calculators.base import Calculator
-from .calculators.ewald import EwaldCalculator, tune_ewald
-from .calculators.pme import PMECalculator, tune_pme
+from .calculators.ewald import EwaldCalculator
+from .calculators.pme import PMECalculator
 from .lib.potentials import CoulombPotential, InversePowerLawPotential
 
 with contextlib.suppress(ImportError):
@@ -14,7 +14,5 @@ __all__ = [
     "PMECalculator",
     "CoulombPotential",
     "InversePowerLawPotential",
-    "tune_ewald",
-    "tune_pme",
 ]
 __version__ = "0.0.0-dev"

@@ -7,9 +7,8 @@ from torchpme import (
     CoulombPotential,
     EwaldCalculator,
     PMECalculator,
-    tune_ewald,
-    tune_pme,
 )
+from torchpme.utils.tuning import tune_ewald, tune_pme
 
 
 @pytest.mark.parametrize(
@@ -22,8 +21,8 @@ from torchpme import (
 @pytest.mark.parametrize(
     ("accuracy", "rtol"),
     [
-        ("medium", 1e-3),
-        ("accurate", 2e-6),
+        (1e-3, 1e-3),
+        (1e-3, 2e-6),
         (1e-1, 1e-1),
     ],
 )
@@ -64,27 +63,12 @@ def test_parameter_choose(calculator, tune, param_length, accuracy, rtol):
     torch.testing.assert_close(madelung, madelung_ref, atol=0, rtol=rtol)
 
 
-def test_paramaters_fast():
-    pos, charges, cell, _, _ = define_crystal()
-
-    smearing, ewald_params, sr_cutoff = tune_ewald(
-        torch.sum(charges**2, dim=0), cell, pos, accuracy="fast"
-    )
-
-    ref_smearing = len(pos) ** (1 / 6) / 2**0.5 * 1.3
-
-    assert smearing == ref_smearing
-    assert ewald_params["lr_wavelength"] == 2 * torch.pi * ref_smearing / 2.2
-    assert sr_cutoff == ref_smearing * 2.2
-
-
 @pytest.mark.parametrize("tune", [tune_ewald, tune_pme])
 def test_accuracy_error(tune):
     pos, charges, cell, _, _ = define_crystal()
 
     match = (
-        "'foo' is not a valid method or a float: Choose from 'fast',"
-        "'medium' or 'accurate', or provide a float for the accuracy."
+        "'foo' is not a float."
     )
     with pytest.raises(ValueError, match=match):
         tune(torch.sum(charges**2, dim=0), cell, pos, accuracy="foo")
