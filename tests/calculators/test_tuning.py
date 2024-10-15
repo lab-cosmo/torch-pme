@@ -63,6 +63,34 @@ def test_parameter_choose(calculator, tune, param_length, accuracy, rtol):
     torch.testing.assert_close(madelung, madelung_ref, atol=0, rtol=rtol)
 
 
+def test_odd_interpolation_nodes():
+    pos, charges, cell, madelung_ref, num_units = define_crystal()
+
+    smearing, params, sr_cutoff = tune_pme(
+        torch.sum(charges**2, dim=0), cell, pos, interpolation_nodes=5
+    )
+
+    neighbor_indices, neighbor_distances = neighbor_list_torch(
+        positions=pos, periodic=True, box=cell, cutoff=sr_cutoff
+    )
+
+    calc = PMECalculator(
+        potential=CoulombPotential(smearing=smearing),
+        **params,
+    )
+    potentials = calc.forward(
+        positions=pos,
+        charges=charges,
+        cell=cell,
+        neighbor_indices=neighbor_indices,
+        neighbor_distances=neighbor_distances,
+    )
+    energies = potentials * charges
+    madelung = -torch.sum(energies) / num_units
+
+    torch.testing.assert_close(madelung, madelung_ref, atol=0, rtol=1e-3)
+
+
 @pytest.mark.parametrize("tune", [tune_ewald, tune_pme])
 def test_accuracy_error(tune):
     pos, charges, cell, _, _ = define_crystal()
@@ -80,3 +108,24 @@ def test_multi_charge_channel_error(tune):
     match = "Found 2 charge channels, but only one is supported"
     with pytest.raises(NotImplementedError, match=match):
         tune(torch.sum(charges**2, dim=0), cell, pos, accuracy=None)
+
+
+@pytest.mark.parametrize("tune", [tune_ewald, tune_pme])
+def test_loss_is_nan_error(tune):
+    pos, charges, cell, _, _ = define_crystal()
+
+    match = (
+        "The value of the estimated error is now nan, "
+        "consider using a smaller learning rate."
+    )
+    with pytest.raises(ValueError, match=match):
+        tune(torch.sum(charges**2, dim=0), cell, pos, learning_rate=1e2)
+
+
+@pytest.mark.parametrize("tune", [tune_ewald, tune_pme])
+def test_exponent_not_1_error(tune):
+    pos, charges, cell, _, _ = define_crystal()
+
+    match = "Only exponent = 1 is supported"
+    with pytest.raises(NotImplementedError, match=match):
+        tune(torch.sum(charges**2, dim=0), cell, pos, exponent=2)
