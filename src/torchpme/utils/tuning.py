@@ -4,9 +4,6 @@ from typing import Callable, Optional
 
 import torch
 
-from ..lib.kvectors import get_ns_mesh_differentiable
-from ..lib.mesh_interpolator import compute_RMS_phi
-
 
 def tune_ewald(
     sum_squared_charges: torch.Tensor,
@@ -447,3 +444,116 @@ def _optimize_parameters(
             "Consider increase max_step and",
             stacklevel=2,
         )
+
+
+def compute_RMS_phi(
+    cell: torch.Tensor,
+    interpolation_nodes: torch.Tensor,
+    ns_mesh: torch.Tensor,
+    positions: torch.Tensor,
+) -> torch.Tensor:
+    inverse_cell = torch.linalg.inv(cell)
+    # Compute positions relative to the mesh basis vectors
+    positions_rel = ns_mesh * torch.matmul(positions, inverse_cell)
+
+    # Calculate positions and distances based on interpolation nodes
+    even = interpolation_nodes % 2 == 0
+    if even:
+        # For Lagrange interpolation, when the number of interpolation
+        # is even, the relative position of a charge is the midpoint of
+        # the two nearest gridpoints.
+        positions_rel_idx = _Floor.apply(positions_rel)
+    else:
+        # For Lagrange interpolation, when the number of interpolation
+        # points is odd, the relative position of a charge is the nearest gridpoint.
+        positions_rel_idx = _Round.apply(positions_rel)
+
+    # Calculate indices of mesh points on which the particle weights are
+    # interpolated. For each particle, its weight is "smeared" onto `order**3` mesh
+    # points, which can be achived using meshgrid below.
+    indices_to_interpolate = torch.stack(
+        [
+            (positions_rel_idx + i)
+            for i in range(
+                1 - (interpolation_nodes + 1) // 2,
+                1 + interpolation_nodes // 2,
+            )
+        ],
+        dim=0,
+    )
+    positions_rel = positions_rel[torch.newaxis, :, :]
+    positions_rel += (
+        torch.randn(positions_rel.shape) * 1e-10
+    )  # Noises help the algorithm work for tiny systems (<100 atoms)
+    return (
+        torch.mean(
+            (torch.prod(indices_to_interpolate - positions_rel, dim=0)) ** 2, dim=0
+        )
+        ** 0.5
+    )
+
+
+def get_ns_mesh_differentiable(cell: torch.Tensor, mesh_spacing: float):
+    """
+    The same as :py:func:`get_ns_mesh`, but differentiable, thus suitable for parameter
+    optimization. This function is only for a compatibility with `TorchScript`.
+
+    :param cell: torch.tensor of shape ``(3, 3)``
+        Tensor specifying the real space unit cell of a structure, where ``cell[i]`` is
+        the i-th basis vector
+    :param mesh_spacing: float
+    :param differentiable: boll
+
+    :return: torch.tensor of length 3 containing the mesh size
+    """
+
+    basis_norms = torch.linalg.norm(cell, dim=1)
+    ns_approx = basis_norms / mesh_spacing
+    ns_actual_approx = 2 * ns_approx + 1  # actual number of mesh points
+    # ns = [nx, ny, nz], closest power of 2 (helps for FT efficiency)
+    return torch.tensor(2).pow(_Ceil.apply(torch.log2(ns_actual_approx)))
+
+
+class _Ceil(torch.autograd.Function):
+    """To implement a ceil function with non-zero gradient"""
+
+    @staticmethod
+    def forward(ctx, input):
+        result = torch.ceil(input)
+        ctx.save_for_backward(result)
+        return result
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        (result,) = ctx.saved_tensors
+        return grad_output
+
+
+class _Floor(torch.autograd.Function):
+    """To implement a floor function with non-zero gradient"""
+
+    @staticmethod
+    def forward(ctx, input):
+        result = torch.floor(input)
+        ctx.save_for_backward(result)
+        return result
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        (result,) = ctx.saved_tensors
+        return grad_output
+
+
+class _Round(torch.autograd.Function):
+    """To implement a round function with non-zero gradient"""
+
+    @staticmethod
+    def forward(ctx, input):
+        result = torch.round(input)
+        ctx.save_for_backward(result)
+        return result
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        (result,) = ctx.saved_tensors
+        return grad_output
