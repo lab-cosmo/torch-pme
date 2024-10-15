@@ -1,9 +1,5 @@
-.. _utils:
-
-Utils
-#####
-
-Pass
+General helper functions
+########################
 
 .. toctree::
    :maxdepth: 1

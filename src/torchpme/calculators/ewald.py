@@ -33,6 +33,8 @@ class EwaldCalculator(Calculator):
     :param full_neighbor_list: If set to :py:obj:`True`, a "full" neighbor list is
         expected as input. This means that each atom pair appears twice. If set to
         :py:obj:`False`, a "half" neighbor list is expected.
+    :param prefactor: electrostatics prefactor; see :ref:`prefactors` for details and
+        common values.
 
     To tune the ``smearing`` and  ``lr_wavelength`` for a system you can use the
     :py:func:`tune_pme` function.
@@ -45,10 +47,12 @@ class EwaldCalculator(Calculator):
         potential: Potential,
         lr_wavelength: float,
         full_neighbor_list: bool = False,
+        prefactor: float = 1.0,
     ):
         super().__init__(
             potential=potential,
             full_neighbor_list=full_neighbor_list,
+            prefactor=prefactor,
         )
         if potential.smearing is None:
             raise ValueError(
