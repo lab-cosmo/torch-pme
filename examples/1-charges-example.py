@@ -62,7 +62,9 @@ neighbor_indices = torch.stack([i, j], dim=1)
 # *1* for electrostatic interactions between the two atoms. This calculator
 # will be used to *compute* the potential energy of the system.
 
-calculator = torchpme.PMECalculator(torchpme.lib.CoulombPotential(smearing=1.0))
+calculator = torchpme.PMECalculator(
+    torchpme.lib.CoulombPotential(smearing=1.0), mesh_spacing=1.0 / 8
+)
 
 # %%
 # Single Charge Channel

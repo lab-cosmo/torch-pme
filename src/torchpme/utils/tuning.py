@@ -52,7 +52,7 @@ def tune_ewald(
 ) -> tuple[float, dict[str, float], float]:
     r"""Find the optimal parameters for a single system for the ewald method.
 
-    For the error formulas are given `elsewhere <https://www2.icp.uni-stuttgart.de/~icp/mediawiki/images/4/4d/Script_Longrange_Interactions.pdf>`_.
+    For the error formulas are given `here <https://www2.icp.uni-stuttgart.de/~icp/mediawiki/images/4/4d/Script_Longrange_Interactions.pdf>`_.
     Note the difference notation between the parameters in the reference and ours:
 
     .. math::
@@ -63,22 +63,13 @@ def tune_ewald(
 
         r_c &= \mathrm{cutoff}
 
-    If you are doing a training exercise, you can only run the tuning
-    procedure for the largest system in your dataset.
-
     :param sum_squared_charges: single tensor of shape (``number_of_systems)``.
     :param cell: single tensor of shape (3, 3), describing the bounding
     :param positions: single tensor of shape (``len(charges), 3``) containing the
         Cartesian positions of all point charges in the system.
     :param exponent: exponent :math:`p` in :math:`1/r^p` potentials
-    :param accuracy: Mode used to determine the optimal parameters. Recomended values for fast...
-        ``"fast"``, ``"medium"`` or ``"accurate"``. For ``"fast"`` the parameters are
-        set based on the number of atoms in the system to achieve a scaling of
-        :math:`\mathcal{O}(N^{3/2})`. For ``"medium"`` or ``"accurate"``, the parameters
-        are optimized using gradient descent until an estimated error of :math:`10^{-3}`
-        or :math:`10^{-6}` is reached.
-        Instead of ``"fast"``, ``"medium"`` or ``"accurate"``, you can give a float
-        value for the accuracy.
+    :param accuracy: Recomended values for a balance between the accuracy and speed is
+        :math:`10^{-3}`. For more accurate results, use :math:`10^{-6}`.
     :param max_steps: maximum number of gradient descent steps
     :param learning_rate: learning rate for gradient descent
     :param verbose: whether to print the progress of gradient descent
@@ -130,7 +121,7 @@ def tune_ewald(
     min_dimension = float(torch.min(cell_dimensions))
     half_cell = float(torch.min(cell_dimensions) / 2)
 
-    smearing_init = estimate_smearing(cell)
+    smearing_init = _estimate_smearing(cell)
     prefac = 2 * sum_squared_charges / math.sqrt(len(positions))
     volume = torch.abs(cell.det())
 
@@ -181,11 +172,11 @@ def tune_ewald(
         verbose,
     )
 
-    return {
-        "smearing": float(smearing),
-        "lr_wavelength": float(smooth_lr_wavelength(lr_wavelength)),
-        "cutoff": float(cutoff)
-    }
+    return (
+        float(smearing),
+        {"lr_wavelength": float(smooth_lr_wavelength(lr_wavelength))},
+        float(cutoff),
+    )
 
 
 def tune_pme(
@@ -201,15 +192,12 @@ def tune_pme(
 ):
     r"""Find the optimal parameters for a single system for the PME method.
 
-    For the error formulas are given `elsewhere <TODO>`_.
+    For the error formulas are given `elsewhere <https://doi.org/10.1063/1.470043>`_.
     Note the difference notation between the parameters in the reference and ours:
 
     .. math::
 
         \alpha &= \left( \sqrt{2}\,\mathrm{smearing} \right)^{-1}
-
-    If you are doing a training exercise, you can only run the tuning
-    procedure for the largest system in your dataset.
 
     :param sum_squared_charges: single tensor of shape (``number_of_systems)``.
     :param cell: single tensor of shape (3, 3), describing the bounding
@@ -221,11 +209,8 @@ def tune_pme(
         polynomials of degree ``n - 1`` (e.g. ``n = 4`` for cubic interpolation). Only
         the values ``3, 4, 5, 6, 7`` are supported.
     :param exponent: exponent :math:`p` in :math:`1/r^p` potentials
-    :param accuracy: Mode used to determine the optimal parameters. Possible values are
-        ``"medium"`` or ``"accurate"``. For ``"medium"`` or ``"accurate"``, the
-        parameters are optimized using gradient descent until an estimated error of
-        :math:`10^{-3}` or :math:`10^{-6}` is reached. Instead of ``"medium"`` or
-        ``"accurate"``, you can give a float value for the accuracy.
+    :param accuracy: Recomended values for a balance between the accuracy and speed is
+        :math:`10^{-3}`. For more accurate results, use :math:`10^{-6}`.
     :param max_steps: maximum number of gradient descent steps
     :param learning_rate: learning rate for gradient descent
     :param verbose: whether to print the progress of gradient descent
@@ -279,7 +264,7 @@ def tune_pme(
     min_dimension = float(torch.min(cell_dimensions))
     half_cell = float(torch.min(cell_dimensions) / 2)
 
-    smearing_init = estimate_smearing(cell)
+    smearing_init = _estimate_smearing(cell)
     prefac = 2 * sum_squared_charges / math.sqrt(len(positions))
     volume = torch.abs(cell.det())
 
@@ -295,7 +280,7 @@ def tune_pme(
 
         def RMS_phi(ns_mesh):
             return torch.linalg.norm(
-                compute_RMS_phi(cell, interpolation_nodes, ns_mesh, positions)
+                _compute_RMS_phi(cell, interpolation_nodes, ns_mesh, positions)
             )
 
         def log_factorial(x):
@@ -304,7 +289,7 @@ def tune_pme(
         def factorial(x):
             return torch.exp(log_factorial(x))
 
-        ns_mesh = get_ns_mesh_differentiable(cell, mesh_spacing)
+        ns_mesh = _get_ns_mesh_differentiable(cell, mesh_spacing)
 
         return (
             prefac
@@ -363,7 +348,7 @@ def tune_pme(
     )
 
 
-def estimate_smearing(
+def _estimate_smearing(
     cell: torch.Tensor,
 ) -> float:
     """
@@ -444,8 +429,7 @@ def _validate_compute_parameters(
         )
 
 
-
-def compute_RMS_phi(
+def _compute_RMS_phi(
     cell: torch.Tensor,
     interpolation_nodes: torch.Tensor,
     ns_mesh: torch.Tensor,
@@ -492,7 +476,7 @@ def compute_RMS_phi(
     )
 
 
-def get_ns_mesh_differentiable(cell: torch.Tensor, mesh_spacing: float):
+def _get_ns_mesh_differentiable(cell: torch.Tensor, mesh_spacing: float):
     """
     The same as :py:func:`get_ns_mesh`, but differentiable, thus suitable for parameter
     optimization. This function is only for a compatibility with `TorchScript`.

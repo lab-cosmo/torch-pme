@@ -1,5 +1,3 @@
-from typing import Optional
-
 import torch
 from torch import profiler
 
@@ -21,7 +19,8 @@ class PMECalculator(Calculator):
     :func:`torchpme.utils.tune_pme`, which will also find a reasonable ``cutoff`` for
     the  **neighborlist**.
 
-    For a training exercise it is recommended...
+    For a training exercise it is recommended only run the tuning
+    procedure for the largest system in your dataset.
 
     :param potential: A :py:class:`Potential` object that implements the evaluation
         of short and long-range potential terms. The ``smearing`` parameter
@@ -63,8 +62,6 @@ class PMECalculator(Calculator):
                 "Must specify range radius to use a potential with EwaldCalculator"
             )
 
-        if mesh_spacing is None:
-            mesh_spacing = potential.smearing / 8.0
         self.mesh_spacing: float = mesh_spacing
 
         if interpolation_nodes not in [3, 4, 5, 6, 7]:

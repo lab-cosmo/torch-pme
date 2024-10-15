@@ -2,7 +2,12 @@ import pytest
 import torch
 from torch.testing import assert_close
 
-from torchpme.lib import generate_kvectors_for_ewald, generate_kvectors_for_mesh
+from torchpme.lib import (
+    generate_kvectors_for_ewald,
+    generate_kvectors_for_mesh,
+    get_ns_mesh,
+)
+from torchpme.utils.tuning import _get_ns_mesh_differentiable
 
 # Generate random cells and mesh parameters
 cells = []
@@ -126,3 +131,10 @@ def test_different_devices_mesh_values_cell(generate_kvectors):
     match = "`ns` and `cell` are not on the same device, got cpu and meta"
     with pytest.raises(ValueError, match=match):
         generate_kvectors(ns, cell)
+
+
+@pytest.mark.parametrize("cell", cells)
+def test_conformance_of_ns_mesh(cell):
+    assert torch.all(
+        get_ns_mesh(cell, 0.1) == _get_ns_mesh_differentiable(cell, 0.1).int()
+    )

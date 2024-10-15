@@ -1,5 +1,3 @@
-from typing import Optional
-
 import torch
 
 from ..lib import Potential, generate_kvectors_for_ewald
@@ -13,7 +11,12 @@ class EwaldCalculator(Calculator):
     Scaling as :math:`\mathcal{O}(N^2)` with respect to the number of particles
     :math:`N`.
 
-    TODO: Copy from EWALD.
+    For getting reasonable values for a given accuracy you should use
+    :func:`torchpme.utils.tune_ewald`, which will also find a reasonable ``cutoff`` for
+    the  **neighborlist**.
+
+    For a training exercise it is recommended only run the tuning
+    procedure for the largest system in your dataset.
 
     :param potential: the two-body potential that should be computed, implemented
         as a :py:class:`torchpme.lib.Potential` object. The ``smearing`` parameter
@@ -51,7 +54,7 @@ class EwaldCalculator(Calculator):
             raise ValueError(
                 "Must specify range radius to use a potential with EwaldCalculator"
             )
-        self.lr_wavelength: float = lr_wavelength or potential.smearing * 0.5
+        self.lr_wavelength: float = lr_wavelength
 
     def _compute_kspace(
         self,

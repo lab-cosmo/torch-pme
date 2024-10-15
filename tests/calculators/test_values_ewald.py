@@ -324,7 +324,8 @@ def test_madelung(crystal_name, scaling_factor, calc_name):
             InversePowerLawPotential(
                 exponent=1.0,
                 smearing=smearing,
-            )
+            ),
+            mesh_spacing=smearing / 8,
         )
         rtol = 9e-4
 
@@ -402,7 +403,8 @@ def test_wigner(crystal_name, scaling_factor):
             InversePowerLawPotential(
                 exponent=1.0,
                 smearing=smeareff,
-            )
+            ),
+            lr_wavelength=smeareff / 2,
         )
         calc.to(dtype=DTYPE)
         potentials = calc.forward(
@@ -489,6 +491,7 @@ def test_random_structure(
                 exponent=1.0,
                 smearing=smearing,
             ),
+            mesh_spacing=smearing / 8,
             full_neighbor_list=full_neighbor_list,
         )
         rtol_e = 4.5e-3
