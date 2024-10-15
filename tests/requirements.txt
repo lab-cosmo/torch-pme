@@ -2,4 +2,5 @@ ase >= 3.23
 coverage[toml]
 pytest
 pytest-cov
+scipy
 vesin-torch >= 0.2.0
