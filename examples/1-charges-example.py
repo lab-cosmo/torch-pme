@@ -157,7 +157,7 @@ print(charge_Na * potential_one_hot[0] + charge_Cl * potential_one_hot[1])
 
 calculator_metatensor = torchpme.metatensor.PMECalculator(
     torchpme.lib.CoulombPotential(smearing=1.0),
-    mesh_spacing = 1.0 / 8,
+    mesh_spacing=1.0 / 8,
 )
 
 # %%
