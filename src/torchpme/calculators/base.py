@@ -28,7 +28,7 @@ class Calculator(torch.nn.Module):
         self,
         potential: Potential,
         full_neighbor_list: bool = False,
-        units: str = "Gaussian",
+        prefactor: float = 1.0,
     ):
         super().__init__()
         # TorchScript requires to initialize all attributes in __init__
@@ -39,18 +39,7 @@ class Calculator(torch.nn.Module):
 
         self.full_neighbor_list = full_neighbor_list
 
-        unit_dict = {
-            "Gaussian": 1.0,
-            "eV": 14.399645478425667,
-            "kcal/mol": 332.0637132991921,
-            "kJ/mol": 1389.3545764438197,
-        }
-        if units not in unit_dict:
-            raise ValueError(
-                f"Units {units} not recognized, choose from {unit_dict.keys()}"
-            )
-
-        self.unit_conversion = unit_dict[units]
+        self.prefactor = prefactor
 
     def _compute_rspace(
         self,
@@ -168,7 +157,7 @@ class Calculator(torch.nn.Module):
         )
 
         # Compute short-range (SR) part using a real space sum
-        potential_sr = self.unit_conversion * self._compute_rspace(
+        potential_sr = self.prefactor * self._compute_rspace(
             charges=charges,
             neighbor_indices=neighbor_indices,
             neighbor_distances=neighbor_distances,
@@ -177,7 +166,7 @@ class Calculator(torch.nn.Module):
         if self.potential.smearing is None:
             return potential_sr
         # Compute long-range (LR) part using a Fourier / reciprocal space sum
-        potential_lr = self.unit_conversion * self._compute_kspace(
+        potential_lr = self.prefactor * self._compute_kspace(
             charges=charges,
             cell=cell,
             positions=positions,
