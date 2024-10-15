@@ -18,6 +18,20 @@ class EwaldCalculator(Calculator):
     For a training exercise it is recommended only run the tuning
     procedure for the largest system in your dataset.
 
+    For a :math:`\mathcal{O}(N^1.5)` scaling, one can set the parameters as following:
+
+    .. math::
+
+        smearing &= 1.3 * N^{1 / 6} / \sqrt{2}
+
+        lr_wavelengthK &= 2 * \pi * smearing / 2.2
+
+        r_c &= 2.2 * smearing
+
+    The magic numbers :math:`1.3` and :math:`2.2` above result from tests on a CsCl
+    system, whose unit cell is repeated 16 times in each direction, resulting in a
+    system of 8192 atoms.
+
     :param potential: the two-body potential that should be computed, implemented
         as a :py:class:`torchpme.lib.Potential` object. The ``smearing`` parameter
         of the potential determines the split between real and k-space regions.
