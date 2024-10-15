@@ -145,3 +145,12 @@ class TestWorkflow:
             torch.jit.save(scripted, buffer)
             buffer.seek(0)
             torch.jit.load(buffer)
+
+    def test_prefactor(self, CalculatorClass, params):
+        """Test if the prefactor is applied correctly."""
+        prefactor = 2.0
+        calculator1 = CalculatorClass(**params)
+        calculator2 = CalculatorClass(**params, prefactor=prefactor)
+        potentials1 = calculator1.forward(*self.cscl_system())
+        potentials2 = calculator2.forward(*self.cscl_system())
+        assert torch.allclose(potentials1 * prefactor, potentials2)

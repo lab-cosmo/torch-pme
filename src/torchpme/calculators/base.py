@@ -22,12 +22,15 @@ class Calculator(torch.nn.Module):
         well as the parameters that determine the behavior of the potential itself.
     :param full_neighbor_list: parameter indicating whether the neighbor information
         will come from a full (True) or half (False, default) neighbor list.
+    :param prefactor: electrostatics prefactor; see :ref:`prefactors` for details and
+        common values.
     """
 
     def __init__(
         self,
         potential: Potential,
         full_neighbor_list: bool = False,
+        prefactor: float = 1.0,
     ):
         super().__init__()
         # TorchScript requires to initialize all attributes in __init__
@@ -37,6 +40,8 @@ class Calculator(torch.nn.Module):
         self.potential = potential
 
         self.full_neighbor_list = full_neighbor_list
+
+        self.prefactor = prefactor
 
     def _compute_rspace(
         self,
@@ -161,7 +166,7 @@ class Calculator(torch.nn.Module):
         )
 
         if self.potential.smearing is None:
-            return potential_sr
+            return self.prefactor * potential_sr
         # Compute long-range (LR) part using a Fourier / reciprocal space sum
         potential_lr = self._compute_kspace(
             charges=charges,
@@ -169,7 +174,7 @@ class Calculator(torch.nn.Module):
             positions=positions,
         )
 
-        return potential_sr + potential_lr
+        return self.prefactor * (potential_sr + potential_lr)
 
     @staticmethod
     def _validate_compute_parameters(
