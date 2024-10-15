@@ -159,22 +159,22 @@ class Calculator(torch.nn.Module):
         )
 
         # Compute short-range (SR) part using a real space sum
-        potential_sr = self.prefactor * self._compute_rspace(
+        potential_sr = self._compute_rspace(
             charges=charges,
             neighbor_indices=neighbor_indices,
             neighbor_distances=neighbor_distances,
         )
 
         if self.potential.smearing is None:
-            return potential_sr
+            return self.prefactor * potential_sr
         # Compute long-range (LR) part using a Fourier / reciprocal space sum
-        potential_lr = self.prefactor * self._compute_kspace(
+        potential_lr = self._compute_kspace(
             charges=charges,
             cell=cell,
             positions=positions,
         )
 
-        return potential_sr + potential_lr
+        return self.prefactor * (potential_sr + potential_lr)
 
     @staticmethod
     def _validate_compute_parameters(
