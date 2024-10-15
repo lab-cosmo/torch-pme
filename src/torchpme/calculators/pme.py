@@ -46,7 +46,7 @@ class PMECalculator(Calculator):
         is expected as input. This means that each atom pair appears twice. If
         set to :py:obj:`False`, a "half" neighbor list is expected.
     :param prefactor: electrostatics prefactor; see :ref:`prefactors` for details and
-        common values
+        common values.
 
 
     For an **example** on the usage for any calculator refer to :ref:`userdoc-how-to`.

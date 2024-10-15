@@ -1,7 +1,0 @@
-from torchpme.utils import prefactors
-
-from scipy import constants
-
-def test_units():
-    ...
-    #assert units.eV_A == constants.XXX

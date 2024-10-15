@@ -22,6 +22,8 @@ class Calculator(torch.nn.Module):
         well as the parameters that determine the behavior of the potential itself.
     :param full_neighbor_list: parameter indicating whether the neighbor information
         will come from a full (True) or half (False, default) neighbor list.
+    :param prefactor: electrostatics prefactor; see :ref:`prefactors` for details and
+        common values.
     """
 
     def __init__(
