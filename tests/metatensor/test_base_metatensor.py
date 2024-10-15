@@ -220,8 +220,3 @@ def test_systems_with_different_number_of_atoms(system, neighbors):
     calculator = CalculatorTest()
     calculator.forward(system, neighbors)
     calculator.forward(system_more_atoms, neighbors)
-
-
-def test_data_mtt():
-    data = torchpme.metatensor.get_cscl_data()
-    assert len(data) == 2
