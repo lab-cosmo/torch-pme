@@ -26,6 +26,7 @@ manipulating atomic structures.
 """
 
 # %%
+
 import torch
 import vesin.torch
 from metatensor.torch import Labels, TensorBlock
@@ -34,17 +35,35 @@ from metatensor.torch.atomistic import System
 import torchpme
 
 # %%
-# Define a global constant for the cutoff of the neighbor list calculations.
-cutoff = 1.0
-
-# %%
+#
 # Create the properties CsCl unit cell
+
 symbols = ("Cs", "Cl")
 types = torch.tensor([55, 17])
 positions = torch.tensor([(0, 0, 0), (0.5, 0.5, 0.5)], dtype=torch.float64)
 cell = torch.eye(3, dtype=torch.float64)
 
+
 # %%
+#
+# Based on our system we will first *tune* the PME parameters for an accurate computation.
+# The ``sum_squared_charges`` is equal to ``2.0`` becaue each atom either has a charge
+# of 1 or -1 in units of elementary charges.
+
+smearing, pme_params, cutoff = torchpme.utils.tune_pme(
+    sum_squared_charges=2.0, cell=cell, positions=positions
+)
+
+# %%
+#
+# The tuning found the following best values for our system.
+
+print("smearing:", smearing)
+print("PME parameters:", pme_params)
+print("cutoff:", cutoff)
+
+# %%
+#
 # Based on the system we compute the corresponding half neighbor list using `vesin
 # <https://luthaf.fr/vesin>`_ and rearrange the results to be suitable for the
 # calculations below.
@@ -58,21 +77,27 @@ i, j, S, D, neighbor_distances = nl.compute(
 neighbor_indices = torch.stack([i, j], dim=1)
 
 # %%
+#
 # Next, we initialize the :py:class:`PMECalculator` calculator with an ``exponent`` of
 # *1* for electrostatic interactions between the two atoms. This calculator
 # will be used to *compute* the potential energy of the system.
 
-calculator = torchpme.PMECalculator(torchpme.lib.CoulombPotential(smearing=1.0))
+calculator = torchpme.PMECalculator(
+    torchpme.lib.CoulombPotential(smearing=smearing), **pme_params
+)
 
 # %%
+#
 # Single Charge Channel
-# #####################
+# #####################\
+#
 # As a first application of multiple charge channels, we start simply by using the
 # classic definition of one charge channel per atom.
 
 charges = torch.tensor([[1.0], [-1.0]], dtype=torch.float64)
 
 # %%
+#
 # Any input the meshLODE calculators has to be a 2D array where the *rows* describe the
 # number of atoms (here ``(2)``) and the *columns* the number of atomic charge channels
 # (here ``(1)``).
@@ -80,6 +105,7 @@ charges = torch.tensor([[1.0], [-1.0]], dtype=torch.float64)
 print(charges.shape)
 
 # %%
+#
 # Calculate the potential using the PMECalculator calculator
 
 potential = calculator(
@@ -91,14 +117,17 @@ potential = calculator(
 )
 
 # %%
+#
 # We find a potential that is close to the Madelung constant of a CsCl crystal which is
 # :math:`2 \cdot 1.76267 / \sqrt{3} \approx 2.0354`.
 
 print(charges.T @ potential)
 
 # %%
+#
 # Species-wise One-Hot Encoded Charges
 # ####################################
+#
 # Now we will compute the potential with multiple channels for the charges. We will use
 # one channel per species and set the charges to *1* if the atomic ``symbol`` fits the
 # correct channel. This is called one-hot encoding for each species.
@@ -116,6 +145,7 @@ print(charges.T @ potential)
 charges_one_hot = torch.tensor([[1.0, 0.0], [0.0, 1.0]], dtype=torch.float64)
 
 # %%
+#
 # While in ``charges`` there was only one row, ``charges_one_hot`` contains two rows
 # where the first one corresponds to the Na channel and the second one to the Cl
 # channel. Consequently, the charge of the Na atom in the Cl channel at index ``(0,1)``
@@ -134,12 +164,14 @@ potential_one_hot = calculator(
 )
 
 # %%
+#
 # Note that the potential has the same shape as the input charges, but there is a finite
 # potential on the position of the Cl in the Na channel.
 
 print(potential_one_hot)
 
 # %%
+#
 # From the potential we can recover the Madelung as above by summing the charge channel
 # contribution multiplying by the actual partial charge of the atoms.
 
@@ -148,16 +180,18 @@ charge_Cl = -1.0
 print(charge_Na * potential_one_hot[0] + charge_Cl * potential_one_hot[1])
 
 # %%
+#
 # Metatensor Version
 # ------------------
 # Next, we will perform the same exercise with the Metatensor interface. This involves
 # creating a new calculator with the metatensor interface.
 
 calculator_metatensor = torchpme.metatensor.PMECalculator(
-    torchpme.lib.CoulombPotential(smearing=1.0)
+    torchpme.lib.CoulombPotential(smearing=smearing), **pme_params
 )
 
 # %%
+#
 # Computation with metatensor involves using Metatensor's :py:class:`System
 # <metatensor.torch.atomistic.System>` class. The ``System`` stores atomic ``types``,
 # ``positions``, and ``cell`` dimensions.
@@ -171,6 +205,7 @@ calculator_metatensor = torchpme.metatensor.PMECalculator(
 system = System(types=types, positions=positions, cell=cell)
 
 # %%
+#
 # We first add the neighbor list to the ``system``. This requires creating a
 # ``NeighborList`` object to store the *neighbor indices*, *distances*, and *shifts*.
 
@@ -191,10 +226,12 @@ properties = Labels(names=["distance"], values=torch.tensor([[0]]))
 neighbors = TensorBlock(D.reshape(-1, 3, 1), samples, [components], properties)
 
 # %%
+#
 # Now the ``system`` is ready to be used inside the calculators
 #
 # Single Charge Channel
 # #####################
+#
 # For the metatensor branch, charges of the atoms are defined in a tensor format and
 # attached to the system as a :py:class:`TensorBlock <metatensor.torch.TensorBlock>`.
 
@@ -207,28 +244,33 @@ data = TensorBlock(
 )
 
 # %%
+#
 # Add the charges data to the system
 
 system.add_data(name="charges", data=data)
 
 # %%
+#
 # We now calculate the potential using the MetaPMECalculator calculator
 
 potential_metatensor = calculator_metatensor.forward(system, neighbors)
 
 # %%
+#
 # The calculated potential is wrapped inside a :py:class:`TensorMap
 # <metatensor.torch.TensorMap>` and annotated with metadata of the computation.
 
 print(potential_metatensor)
 
 # %%
+#
 # The tensorMap has *1* :py:class:`TensorBlock <metatensor.torch.TensorBlock>` and the
 # values of the potential are stored in the ``values`` property.
 
 print(potential_metatensor[0].values)
 
 # %%
+#
 # The ``values`` are the same results as for the torch interface shown above
 # The metadata associated with the ``TensorBlock`` tells us that we have 2 ``samples``
 # which are our two atoms and 1 property which corresponds to one charge channel.
@@ -236,6 +278,7 @@ print(potential_metatensor[0].values)
 print(potential_metatensor[0])
 
 # %%
+#
 # If you want to inspect the metadata in more detail, you can access the
 # :py:class:`Labels <metatensor.torch.Labels>` using the
 # ``potential_metatensor[0].properties`` and ``potential_metatensor[0].samples``
@@ -243,6 +286,7 @@ print(potential_metatensor[0])
 #
 # Species-wise One-Hot Encoded Charges
 # ####################################
+#
 # We now create new charges data based on the species-wise ``charges_one_hot`` and
 # overwrite the ``system``'s charges data using ``override=True`` when applying the
 # :py:meth:`add_data <metatensor.torch.atomistic.System.add_data>` method.
@@ -258,10 +302,12 @@ data_one_hot = TensorBlock(
 system.add_data(name="charges", data=data_one_hot, override=True)
 
 # %%
+#
 # Finally, we calculate the potential using ``calculator_metatensor``
 potential = calculator_metatensor.forward(system, neighbors)
 
 # %%
+#
 # And as above, the values of the potential are the same.
 
 print(potential[0].values)

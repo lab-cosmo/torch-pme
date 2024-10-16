@@ -10,9 +10,11 @@ def get_ns_mesh(cell: torch.Tensor, mesh_spacing: float):
         Tensor specifying the real space unit cell of a structure, where ``cell[i]`` is
         the i-th basis vector
     :param mesh_spacing: float
+    :param differentiable: boll
 
     :return: torch.tensor of length 3 containing the mesh size
     """
+
     basis_norms = torch.linalg.norm(cell, dim=1)
     ns_approx = basis_norms / mesh_spacing
     ns_actual_approx = 2 * ns_approx + 1  # actual number of mesh points

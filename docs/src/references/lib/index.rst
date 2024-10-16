@@ -1,4 +1,4 @@
-General Library functions
+General library functions
 #########################
 
 General Library functions and classes of meshLODE mathematical helper functions, which
