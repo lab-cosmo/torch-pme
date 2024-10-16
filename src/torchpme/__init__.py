@@ -1,5 +1,6 @@
 import contextlib
 
+from . import utils  # noqa
 from .calculators.base import Calculator
 from .calculators.ewald import EwaldCalculator
 from .calculators.pme import PMECalculator

@@ -1,7 +1,8 @@
+import sys
+from pathlib import Path
+
 import pytest
 import torch
-from test_values_ewald import define_crystal
-from utils import neighbor_list_torch
 
 from torchpme import (
     CoulombPotential,
@@ -9,6 +10,9 @@ from torchpme import (
     PMECalculator,
 )
 from torchpme.utils.tuning import tune_ewald, tune_pme
+
+sys.path.append(str(Path(__file__).parents[1]))
+from helpers import define_crystal, neighbor_list_torch
 
 
 @pytest.mark.parametrize(

@@ -43,8 +43,7 @@ import torch
 import vesin
 import vesin.torch
 
-from torchpme import PMECalculator
-from torchpme.lib import CoulombPotential
+import torchpme
 
 # %%
 #
@@ -81,13 +80,39 @@ chemiscope.show(
 
 # %%
 #
+# Tune paramaters
+# ---------------
+#
+# Based on our system we will first *tune* the PME parameters for an accurate
+# computation. we first convert the ``positions``, ``charges`` and the ``cell`` from
+# NumPy arrays into torch tensors and compute the summed squared charges.
+
+positions = torch.from_numpy(atoms.positions)
+charges = torch.from_numpy(charges).unsqueeze(1)
+cell = torch.from_numpy(atoms.cell.array)
+
+sum_squared_charges = torch.sum(charges**2, dim=0)
+
+smearing, pme_params, cutoff = torchpme.utils.tune_pme(
+    sum_squared_charges=sum_squared_charges, cell=cell, positions=positions
+)
+
+# %%
+# The tuning found the following best values for our system.
+
+print("smearing:", smearing)
+print("PME parameters:", pme_params)
+print("cutoff:", cutoff)
+
+# %%
+#
 # Generic Neighborlist
 # --------------------
 #
 # One usual workflow is to compute the distance vectors using default tools like the
 # the default (NumPy) version of the vesin neighbor list.
 
-nl = vesin.NeighborList(cutoff=1.0, full_list=False)
+nl = vesin.NeighborList(cutoff=cutoff, full_list=False)
 i, j, S = nl.compute(
     points=atoms.positions, box=atoms.cell.array, periodic=True, quantities="ijS"
 )
@@ -126,13 +151,9 @@ def distances(
 
 # %%
 #
-# To use this function, we first convert the ``positions``, ``charges`` and the ``cell``
-# from NumPu arrays into torch tensors and enable the tracking of operations by setting
+# To use this function we now the tracking of operations by setting
 # the :py:attr:`requires_grad <torch.Tensor.requires_grad>` property to :py:obj:`True`.
 
-positions = torch.from_numpy(atoms.positions)
-charges = torch.from_numpy(charges).unsqueeze(1)
-cell = torch.from_numpy(atoms.cell.array)
 
 positions.requires_grad = True
 
@@ -157,7 +178,9 @@ neighbor_distances = distances(
 #
 # and initialize a PME instance to compute the potential.
 
-pme = PMECalculator(potential=CoulombPotential(smearing=1.5), mesh_spacing=1.5 / 8)
+pme = torchpme.PMECalculator(
+    potential=torchpme.CoulombPotential(smearing=smearing), **pme_params
+)
 potential = pme(
     charges=charges,
     cell=cell,

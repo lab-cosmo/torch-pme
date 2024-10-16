@@ -1,10 +1,14 @@
 import math
+import sys
+from pathlib import Path
 
 import pytest
 import torch
-from utils import neighbor_list_torch
 
 from torchpme import Calculator, CoulombPotential
+
+sys.path.append(str(Path(__file__).parents[1]))
+from helpers import neighbor_list_torch
 
 DTYPE = torch.float64
 

@@ -63,7 +63,7 @@ def tune_ewald(
 
         r_c &= \mathrm{cutoff}
 
-    :param sum_squared_charges: single tensor of shape (``number_of_systems)``.
+    :param sum_squared_charges: single tensor of accumulated summed charges
     :param cell: single tensor of shape (3, 3), describing the bounding
     :param positions: single tensor of shape (``len(charges), 3``) containing the
         Cartesian positions of all point charges in the system.
@@ -109,9 +109,6 @@ def tune_ewald(
     if exponent != 1:
         raise NotImplementedError("Only exponent = 1 is supported")
 
-    dtype = positions.dtype
-    device = positions.device
-
     _validate_compute_parameters(sum_squared_charges, cell, positions)
 
     if not isinstance(accuracy, float):
@@ -153,6 +150,9 @@ def tune_ewald(
         )
 
     # initial guess
+    dtype = positions.dtype
+    device = positions.device
+
     smearing = torch.tensor(
         smearing_init, device=device, dtype=dtype, requires_grad=True
     )
@@ -197,9 +197,9 @@ def tune_pme(
 
     .. math::
 
-        \alpha &= \left( \sqrt{2}\,\mathrm{smearing} \right)^{-1}
+        \alpha = \left(\sqrt{2}\,\mathrm{smearing} \right)^{-1}
 
-    :param sum_squared_charges: single tensor of shape (``number_of_systems)``.
+    :param sum_squared_charges: single tensor of accumulated summed charges
     :param cell: single tensor of shape (3, 3), describing the bounding
     :param positions: single tensor of shape (``len(charges), 3``) containing the
         Cartesian positions of all point charges in the system.
@@ -251,8 +251,6 @@ def tune_pme(
 
     if exponent != 1:
         raise NotImplementedError("Only exponent = 1 is supported")
-    dtype = positions.dtype
-    device = positions.device
 
     _validate_compute_parameters(sum_squared_charges, cell, positions)
 
@@ -318,15 +316,20 @@ def tune_pme(
         )
 
     # initial guess
+    dtype = positions.dtype
+    device = positions.device
+
     smearing = torch.tensor(
         smearing_init, device=device, dtype=dtype, requires_grad=True
     )
+
+    # smooth_mesh_spacing(mesh_spacing) = smearing / 8, is the standard initial guess
     mesh_spacing = torch.tensor(
         -math.log(min_dimension * 8 / smearing_init - 1),
         device=device,
         dtype=dtype,
         requires_grad=True,
-    )  # smooth_mesh_spacing(mesh_spacing) = smearing / 8, which is the standard initial guess
+    )
     cutoff = torch.tensor(half_cell / 5, device=device, dtype=dtype, requires_grad=True)
 
     _optimize_parameters(
@@ -477,18 +480,7 @@ def _compute_RMS_phi(
 
 
 def _get_ns_mesh_differentiable(cell: torch.Tensor, mesh_spacing: float):
-    """
-    The same as :py:func:`get_ns_mesh`, but differentiable, thus suitable for parameter
-    optimization. This function is only for a compatibility with `TorchScript`.
-
-    :param cell: torch.tensor of shape ``(3, 3)``
-        Tensor specifying the real space unit cell of a structure, where ``cell[i]`` is
-        the i-th basis vector
-    :param mesh_spacing: float
-    :param differentiable: boll
-
-    :return: torch.tensor of length 3 containing the mesh size
-    """
+    """differentiable version of :py:func:`get_ns_mesh`"""
 
     basis_norms = torch.linalg.norm(cell, dim=1)
     ns_approx = basis_norms / mesh_spacing
@@ -498,7 +490,7 @@ def _get_ns_mesh_differentiable(cell: torch.Tensor, mesh_spacing: float):
 
 
 class _Ceil(torch.autograd.Function):
-    """To implement a ceil function with non-zero gradient"""
+    """ceil function with non-zero gradient"""
 
     @staticmethod
     def forward(ctx, input):
@@ -508,12 +500,11 @@ class _Ceil(torch.autograd.Function):
 
     @staticmethod
     def backward(ctx, grad_output):
-        (result,) = ctx.saved_tensors
         return grad_output
 
 
 class _Floor(torch.autograd.Function):
-    """To implement a floor function with non-zero gradient"""
+    """floor function with non-zero gradient"""
 
     @staticmethod
     def forward(ctx, input):
@@ -523,12 +514,11 @@ class _Floor(torch.autograd.Function):
 
     @staticmethod
     def backward(ctx, grad_output):
-        (result,) = ctx.saved_tensors
         return grad_output
 
 
 class _Round(torch.autograd.Function):
-    """To implement a round function with non-zero gradient"""
+    """round function with non-zero gradient"""
 
     @staticmethod
     def forward(ctx, input):
@@ -538,5 +528,4 @@ class _Round(torch.autograd.Function):
 
     @staticmethod
     def backward(ctx, grad_output):
-        (result,) = ctx.saved_tensors
         return grad_output
