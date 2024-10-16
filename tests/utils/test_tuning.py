@@ -20,6 +20,7 @@ CHARGES_1 = torch.ones((4, 1), dtype=DTYPE, device=DEVICE)
 POSITIONS_1 = 0.3 * torch.arange(12, dtype=DTYPE, device=DEVICE).reshape((4, 3))
 CELL_1 = torch.eye(3, dtype=DTYPE, device=DEVICE)
 
+
 @pytest.mark.parametrize(
     ("calculator", "tune", "param_length"),
     [
@@ -138,7 +139,7 @@ def test_invalid_shape_positions(tune):
     )
     with pytest.raises(ValueError, match=match):
         tune(
-            sum_squared_charges=1.,
+            sum_squared_charges=1.0,
             positions=torch.ones((4, 5), dtype=DTYPE, device=DEVICE),
             cell=CELL_1,
         )
@@ -153,7 +154,7 @@ def test_invalid_shape_cell(tune):
     )
     with pytest.raises(ValueError, match=match):
         tune(
-            sum_squared_charges=1.,
+            sum_squared_charges=1.0,
             positions=POSITIONS_1,
             cell=torch.ones([2, 2], dtype=DTYPE, device=DEVICE),
         )
@@ -167,7 +168,7 @@ def test_invalid_dtype_cell(tune):
     )
     with pytest.raises(ValueError, match=match):
         tune(
-            sum_squared_charges=1.,
+            sum_squared_charges=1.0,
             positions=POSITIONS_1,
             cell=torch.ones([3, 3], dtype=torch.float64, device=DEVICE),
         )
@@ -181,7 +182,7 @@ def test_invalid_device_cell(tune):
     )
     with pytest.raises(ValueError, match=match):
         tune(
-            sum_squared_charges=1.,
+            sum_squared_charges=1.0,
             positions=POSITIONS_1,
             cell=torch.ones([3, 3], dtype=DTYPE, device="meta"),
         )
