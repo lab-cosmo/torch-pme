@@ -23,6 +23,18 @@ class KSpaceKernel(torch.nn.Module):
     def __init__(self):
         super().__init__()
 
+    def kernel_from_k(self, k: torch.Tensor) -> torch.Tensor:
+        r"""
+        Computes the reciprocal-space kernel on a grid of k points given a
+        tensor containing :math:`|\mathbf{k}|`.
+
+        :param k: torch.tensor containing the k vector moduli at which the kernel
+            is to be evaluated.
+        """
+        raise NotImplementedError(
+            f"kernel_from_k is not implemented for '{self.__class__.__name__}'"
+        )
+
     def kernel_from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
         r"""
         Computes the reciprocal-space kernel on a grid of k points given a
@@ -210,3 +222,16 @@ class KSpaceFilter(torch.nn.Module):
             # well-defined
             s=mesh_values.shape[-3:],
         )
+
+
+class P3MKSpaceFilter(KSpaceFilter):
+    @torch.jit.export
+    def update_filter(self):
+        r"""
+        Applies one or more scalar filter functions to the squared norms of the
+        reciprocal space mesh grids, storing it so it can be applied multiple times.
+        Uses the :py:func:`KSpaceKernel.from_k_sq` method of the
+        :py:class:`KSpaceKernel`-derived object provided upon initialization
+        to compute the kernel values over the grid points.
+        """
+        self._kfilter = self._kernel.kernel_from_k(self._kvectors)
