@@ -63,7 +63,7 @@ def tune_ewald(
 
         r_c &= \mathrm{cutoff}
 
-    :param sum_squared_charges: single tensor of accumulated summed charges
+    :param sum_squared_charges: float of accumulated summed charges
     :param cell: single tensor of shape (3, 3), describing the bounding
     :param positions: single tensor of shape (``len(charges), 3``) containing the
         Cartesian positions of all point charges in the system.
@@ -196,7 +196,7 @@ def tune_pme(
 
         \alpha = \left(\sqrt{2}\,\mathrm{smearing} \right)^{-1}
 
-    :param sum_squared_charges: single tensor of accumulated summed charges
+    :param sum_squared_charges: float of accumulated summed charges
     :param cell: single tensor of shape (3, 3), describing the bounding
     :param positions: single tensor of shape (``len(charges), 3``) containing the
         Cartesian positions of all point charges in the system.
