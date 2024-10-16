@@ -106,7 +106,7 @@ def tune_ewald(
     parameters that are optimal for the system.
     """
 
-    _validate_compute_parameters(cell, positions, exponent)
+    _validate_parameters(cell, positions, exponent)
 
     if not isinstance(accuracy, float):
         raise ValueError(f"'{accuracy}' is not a float.")
@@ -246,7 +246,7 @@ def tune_pme(
     parameters that are optimal for the system.
     """
 
-    _validate_compute_parameters(cell, positions, exponent)
+    _validate_parameters(cell, positions, exponent)
 
     if not isinstance(accuracy, float):
         raise ValueError(f"'{accuracy}' is not a float.")
@@ -366,7 +366,7 @@ def _estimate_smearing(
     return max_cutoff.item() / 5.0
 
 
-def _validate_compute_parameters(
+def _validate_parameters(
     cell: torch.Tensor, positions: torch.Tensor, exponent: int
 ):
     dtype = positions.dtype
