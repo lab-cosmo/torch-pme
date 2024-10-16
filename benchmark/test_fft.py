@@ -49,11 +49,7 @@ def parse_args():
 def run_benchmark(n_mesh:int, n_runs:int, device:torch.device, dtype:torch.dtype, backward:bool=False, jit:bool=False):
 
     mesh, kernel = allocate_grids(n=n_mesh, device=device, dtype=dtype, requires_grad=backward)
-    
-    filter_mesh = run_fftn(mesh, kernel)
-    if device=="cuda":
-        torch.cuda.synchronize()
-
+        
     def run(mesh, kernel, backward:bool):
         filter_mesh = run_fftn(mesh, kernel)
         if backward:
@@ -65,6 +61,10 @@ def run_benchmark(n_mesh:int, n_runs:int, device:torch.device, dtype:torch.dtype
     
     if jit:
         run = torch.jit.script(run)
+
+    filter_mesh = run(mesh, kernel, backward)
+    if device=="cuda":
+        torch.cuda.synchronize()
 
     timings = []
     for i in range(n_runs):

@@ -1,7 +1,7 @@
 import torch
 
 
-class MeshInterpolator:
+class MeshInterpolator(torch.nn.Module):
     """
     Class for handling all steps related to interpolations in the context of a mesh
     based Ewald summation.

@@ -18,11 +18,6 @@ def allocate_grids(n:int, dtype:torch.dtype=torch.float32, device:torch.device=t
                     )
     return mesh, filter
 
-def run_fftn(mesh_values:torch.Tensor, kernel:KSpaceFilter):
-
-    filter_mesh = kernel.compute(mesh_values)
-
-    return filter_mesh
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Parser for mesh and run configurations.")
@@ -47,29 +42,35 @@ def parse_args():
 def run_benchmark(n_mesh:int, n_runs:int, device:torch.device, dtype:torch.dtype, backward:bool=False, jit:bool=False):
 
     mesh, kernel = allocate_grids(n=n_mesh, device=device, dtype=dtype, requires_grad=backward)
+        
+    class RunModule(torch.nn.Module):
+        def __init__(self, filter: KSpaceFilter):
+            super().__init__()
+            self.kernel:KSpaceFilter = filter
     
-    filter_mesh = run_fftn(mesh, kernel)
+        def forward(self, mesh:torch.Tensor, backward:bool):
+            filter_mesh = self.kernel.compute(mesh)
+            if backward:
+                mesh_sum = filter_mesh.sum()
+                mesh_sum.backward()
+            else:
+                mesh_sum = torch.tensor(0.0)
+            return filter_mesh, mesh_sum
+    
+    run_module = RunModule(kernel)
+    if jit:
+        run_module = torch.jit.script(run_module)
+
+    filter_mesh = run_module(mesh, backward)
     if device=="cuda":
         torch.cuda.synchronize()
-
-    def run(mesh:torch.Tensor, kernel:KSpaceKernel, backward:bool):
-        filter_mesh = run_fftn(mesh, kernel)
-        if backward:
-            mesh_sum = filter_mesh.sum()
-            mesh_sum.backward()
-        else:
-            mesh_sum = torch.tensor(0.0)
-        return filter_mesh, mesh_sum
-    
-    if jit:
-        run = torch.jit.script(run)
 
     timings = []
     for i in range(n_runs):
         if backward:
             mesh.grad.zero_()
         start = time()
-        run(mesh, kernel, backward)
+        run_module(mesh, backward)
         if device==torch.device("cuda"):
             torch.cuda.synchronize()
         end = time()
