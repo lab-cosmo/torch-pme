@@ -5,32 +5,34 @@ from .base import Calculator
 
 
 class EwaldCalculator(Calculator):
-    r"""
-    Potential computed using the Ewald sum.
+    r"""Potential computed using the Ewald sum.
 
     Scaling as :math:`\mathcal{O}(N^2)` with respect to the number of particles
     :math:`N`.
 
-    For getting reasonable values for a given accuracy you should use
-    :func:`torchpme.utils.tune_ewald`, which will also find a reasonable ``cutoff`` for
-    the  **neighborlist**.
+    For getting reasonable values for the ``smaring`` of the potential class and  the
+    ``lr_wavelength`` based on a given accuracy for a specific structure you should use
+    :func:`torchpme.utils.tuning.tune_ewald`. This function will also find the optimal
+    ``cutoff`` for the  **neighborlist**.
 
-    For a training exercise it is recommended only run the tuning
-    procedure for the largest system in your dataset.
+    .. hint::
+
+        For a training exercise it is recommended only run a tuning procedure with
+        :func:`torchpme.utils.tuning.tune_ewald` for the largest system in your dataset.
 
     For a :math:`\mathcal{O}(N^1.5)` scaling, one can set the parameters as following:
 
     .. math::
 
-        smearing &= 1.3 * N^{1 / 6} / \sqrt{2}
+        \mathrm{smearing} &= 1.3 \cdot N^{1 / 6} / \sqrt{2}
 
-        lr_wavelengthK &= 2 * \pi * smearing / 2.2
+        \mathrm{lr\_wavelength} &= 2 \pi \cdot \mathrm{smearing} / 2.2
 
-        r_c &= 2.2 * smearing
+        \mathrm{r_c} &= 2.2 \cdot \mathrm{smearing}
 
-    The magic numbers :math:`1.3` and :math:`2.2` above result from tests on a CsCl
-    system, whose unit cell is repeated 16 times in each direction, resulting in a
-    system of 8192 atoms.
+    where :math:`N` is the number of particles. The magic numbers :math:`1.3` and
+    :math:`2.2` above result from tests on a CsCl system, whose unit cell is repeated 16
+    times in each direction, resulting in a system of 8192 atoms.
 
     :param potential: the two-body potential that should be computed, implemented
         as a :py:class:`torchpme.lib.Potential` object. The ``smearing`` parameter
@@ -49,9 +51,6 @@ class EwaldCalculator(Calculator):
         :py:obj:`False`, a "half" neighbor list is expected.
     :param prefactor: electrostatics prefactor; see :ref:`prefactors` for details and
         common values.
-
-    To tune the ``smearing`` and  ``lr_wavelength`` for a system you can use the
-    :py:func:`tune_pme` function.
 
     For an **example** on the usage for any calculator refer to :ref:`userdoc-how-to`.
     """

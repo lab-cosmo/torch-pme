@@ -9,18 +9,20 @@ from .base import Calculator
 
 
 class PMECalculator(Calculator):
-    r"""
-    Potential using a particle mesh-based Ewald (PME).
+    r"""Potential using a particle mesh-based Ewald (PME).
 
     Scaling as :math:`\mathcal{O}(NlogN)` with respect to the number of particles
     :math:`N` used as a reference to test faster implementations.
 
-    For getting reasonable values for a given accuracy you should use
-    :func:`torchpme.utils.tune_pme`, which will also find a reasonable ``cutoff`` for
-    the  **neighborlist**.
+    For getting reasonable values for the ``smaring`` of the potential class and  the
+    ``mesh_spacing`` based on a given accuracy for a specific structure you should use
+    :func:`torchpme.utils.tuning.tune_pme`. This function will also find the optimal
+    ``cutoff`` for the  **neighborlist**.
 
-    For a training exercise it is recommended only run the tuning
-    procedure for the largest system in your dataset.
+    .. hint::
+
+        For a training exercise it is recommended only run a tuning procedure with
+        :func:`torchpme.utils.tuning.tune_pme` for the largest system in your dataset.
 
     :param potential: A :py:class:`Potential` object that implements the evaluation
         of short and long-range potential terms. The ``smearing`` parameter
@@ -42,7 +44,6 @@ class PMECalculator(Calculator):
         set to :py:obj:`False`, a "half" neighbor list is expected.
     :param prefactor: electrostatics prefactor; see :ref:`prefactors` for details and
         common values.
-
 
     For an **example** on the usage for any calculator refer to :ref:`userdoc-how-to`.
     """

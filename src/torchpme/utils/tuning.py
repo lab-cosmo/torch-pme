@@ -50,9 +50,10 @@ def tune_ewald(
     learning_rate: float = 5e-2,
     verbose: bool = False,
 ) -> tuple[float, dict[str, float], float]:
-    r"""Find the optimal parameters for a single system for the ewald method.
+    r"""
+    Find the optimal parameters for :class:`torchpme.calculators.ewald.EwaldCalculator`.
 
-    For the error formulas are given `here <https://www2.icp.uni-stuttgart.de/~icp/mediawiki/images/4/4d/Script_Longrange_Interactions.pdf>`_.
+    The error formulas are given `online <https://www2.icp.uni-stuttgart.de/~icp/mediawiki/images/4/4d/Script_Longrange_Interactions.pdf>`_.
     Note the difference notation between the parameters in the reference and ours:
 
     .. math::
@@ -63,7 +64,7 @@ def tune_ewald(
 
         r_c &= \mathrm{cutoff}
 
-    :param sum_squared_charges: float of accumulated summed charges
+    :param sum_squared_charges: accumulated squared charges
     :param cell: single tensor of shape (3, 3), describing the bounding
     :param positions: single tensor of shape (``len(charges), 3``) containing the
         Cartesian positions of all point charges in the system.
@@ -101,9 +102,6 @@ def tune_ewald(
 
     >>> print(cutoff)
     0.5961240167485603
-
-    Which can be used to initilize an :py:class:`EwaldCalculator` instance with
-    parameters that are optimal for the system.
     """
 
     _validate_parameters(cell, positions, exponent)
@@ -187,7 +185,7 @@ def tune_pme(
     learning_rate: float = 5e-3,
     verbose: bool = False,
 ):
-    r"""Find the optimal parameters for a single system for the PME method.
+    r"""Find the optimal parameters for :class:`torchpme.calculators.pme.PMECalculator`.
 
     For the error formulas are given `elsewhere <https://doi.org/10.1063/1.470043>`_.
     Note the difference notation between the parameters in the reference and ours:
@@ -196,7 +194,7 @@ def tune_pme(
 
         \alpha = \left(\sqrt{2}\,\mathrm{smearing} \right)^{-1}
 
-    :param sum_squared_charges: float of accumulated summed charges
+    :param sum_squared_charges: accumulated squared charges
     :param cell: single tensor of shape (3, 3), describing the bounding
     :param positions: single tensor of shape (``len(charges), 3``) containing the
         Cartesian positions of all point charges in the system.
@@ -241,9 +239,6 @@ def tune_pme(
 
     >>> print(cutoff)
     0.15078003506282253
-
-    Which can be used to initilize an :py:class:`PMECalculator` instance with
-    parameters that are optimal for the system.
     """
 
     _validate_parameters(cell, positions, exponent)
