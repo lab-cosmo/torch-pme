@@ -41,7 +41,7 @@ def _optimize_parameters(
 
 
 def tune_ewald(
-    sum_squared_charges: torch.Tensor,
+    sum_squared_charges: float,
     cell: torch.Tensor,
     positions: torch.Tensor,
     exponent: int = 1,
@@ -177,7 +177,7 @@ def tune_ewald(
 
 
 def tune_pme(
-    sum_squared_charges: torch.Tensor,
+    sum_squared_charges: float,
     cell: torch.Tensor,
     positions: torch.Tensor,
     interpolation_nodes: int = 4,
@@ -366,9 +366,7 @@ def _estimate_smearing(
     return max_cutoff.item() / 5.0
 
 
-def _validate_parameters(
-    cell: torch.Tensor, positions: torch.Tensor, exponent: int
-):
+def _validate_parameters(cell: torch.Tensor, positions: torch.Tensor, exponent: int):
     dtype = positions.dtype
     device = positions.device
     if exponent != 1:
