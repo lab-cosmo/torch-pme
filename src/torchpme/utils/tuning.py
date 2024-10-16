@@ -106,10 +106,7 @@ def tune_ewald(
     parameters that are optimal for the system.
     """
 
-    if exponent != 1:
-        raise NotImplementedError("Only exponent = 1 is supported")
-
-    _validate_compute_parameters(sum_squared_charges, cell, positions)
+    _validate_compute_parameters(cell, positions, exponent)
 
     if not isinstance(accuracy, float):
         raise ValueError(f"'{accuracy}' is not a float.")
@@ -249,10 +246,7 @@ def tune_pme(
     parameters that are optimal for the system.
     """
 
-    if exponent != 1:
-        raise NotImplementedError("Only exponent = 1 is supported")
-
-    _validate_compute_parameters(sum_squared_charges, cell, positions)
+    _validate_compute_parameters(cell, positions, exponent)
 
     if not isinstance(accuracy, float):
         raise ValueError(f"'{accuracy}' is not a float.")
@@ -373,10 +367,13 @@ def _estimate_smearing(
 
 
 def _validate_compute_parameters(
-    sum_squared_charges: torch.Tensor, cell: torch.Tensor, positions: torch.Tensor
+    cell: torch.Tensor, positions: torch.Tensor, exponent: int
 ):
     dtype = positions.dtype
     device = positions.device
+    if exponent != 1:
+        raise NotImplementedError("Only exponent = 1 is supported")
+
     if list(positions.shape) != [len(positions), 3]:
         raise ValueError(
             "each `positions` must be a tensor with shape [n_atoms, 3], got at "
@@ -402,33 +399,6 @@ def _validate_compute_parameters(
             f"each `cell` must be on the same device {device} as "
             "`positions`, got at least one tensor with device "
             f"{cell.device}"
-        )
-
-    # check shape, dtype & device of `charges`
-    if sum_squared_charges.dim() != 1:
-        raise ValueError(
-            "each `sum_squared_charges` needs to be a 1-dimensional tensor, got at least "
-            f"one tensor with {sum_squared_charges.dim()} dimension(s) and shape "
-            f"{list(sum_squared_charges.shape)}"
-        )
-
-    if len(sum_squared_charges) > 1:
-        raise NotImplementedError(
-            f"Found {len(sum_squared_charges)} charge channels, but only one is supported"
-        )
-
-    if sum_squared_charges.dtype != dtype:
-        raise ValueError(
-            f"each `sum_squared_charges` must have the same type {dtype} as "
-            "`positions`, got at least one tensor of type "
-            f"{sum_squared_charges.dtype}"
-        )
-
-    if sum_squared_charges.device != device:
-        raise ValueError(
-            f"each `sum_squared_charges` must be on the same device {device} as "
-            f"`positions`, got at least one tensor with device "
-            f"{sum_squared_charges.device}"
         )
 
 
