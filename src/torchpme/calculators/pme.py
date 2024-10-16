@@ -1,5 +1,3 @@
-from typing import Optional
-
 import torch
 from torch import profiler
 
@@ -11,21 +9,20 @@ from .base import Calculator
 
 
 class PMECalculator(Calculator):
-    r"""
-    Potential using a particle mesh-based Ewald (PME).
+    r"""Potential using a particle mesh-based Ewald (PME).
 
     Scaling as :math:`\mathcal{O}(NlogN)` with respect to the number of particles
     :math:`N` used as a reference to test faster implementations.
 
-    For computing a **neighborlist** a reasonable ``cutoff`` is half the length of
-    the shortest cell vector, which can be for example computed according as
+    For getting reasonable values for the ``smaring`` of the potential class and  the
+    ``mesh_spacing`` based on a given accuracy for a specific structure you should use
+    :func:`torchpme.utils.tuning.tune_pme`. This function will also find the optimal
+    ``cutoff`` for the  **neighborlist**.
 
-    .. code-block:: python
+    .. hint::
 
-        cell_dimensions = torch.linalg.norm(cell, dim=1)
-        cutoff = torch.min(cell_dimensions) / 2 - 1e-6
-
-    This ensures a accuracy of the short range part of ``1e-5``.
+        For a training exercise it is recommended only run a tuning procedure with
+        :func:`torchpme.utils.tuning.tune_pme` for the largest system in your dataset.
 
     :param potential: A :py:class:`Potential` object that implements the evaluation
         of short and long-range potential terms. The ``smearing`` parameter
@@ -48,14 +45,13 @@ class PMECalculator(Calculator):
     :param prefactor: electrostatics prefactor; see :ref:`prefactors` for details and
         common values.
 
-
     For an **example** on the usage for any calculator refer to :ref:`userdoc-how-to`.
     """
 
     def __init__(
         self,
         potential: Potential,
-        mesh_spacing: Optional[float] = None,
+        mesh_spacing: float,
         interpolation_nodes: int = 4,
         full_neighbor_list: bool = False,
         prefactor: float = 1.0,
@@ -71,8 +67,6 @@ class PMECalculator(Calculator):
                 "Must specify range radius to use a potential with EwaldCalculator"
             )
 
-        if mesh_spacing is None:
-            mesh_spacing = potential.smearing / 8.0
         self.mesh_spacing: float = mesh_spacing
 
         if interpolation_nodes not in [3, 4, 5, 6, 7]:

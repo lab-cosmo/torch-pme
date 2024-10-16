@@ -1,15 +1,17 @@
 import math
 import os
+import sys
+from pathlib import Path
 
 import numpy as np
 import pytest
 import torch
-
-# Imports for random structure
 from ase.io import read
-from utils import neighbor_list_torch
 
 from torchpme import EwaldCalculator, InversePowerLawPotential, PMECalculator
+
+sys.path.append(str(Path(__file__).parents[1]))
+from helpers import define_crystal, neighbor_list_torch
 
 DTYPE = torch.float64
 
@@ -47,230 +49,6 @@ def generate_orthogonal_transformations():
         torch.testing.assert_close(id, id_2, atol=1e-15, rtol=1e-15)
 
     return transformations
-
-
-def define_crystal(crystal_name="CsCl"):
-    # Define all relevant parameters (atom positions, charges, cell) of the reference
-    # crystal structures for which the Madelung constants obtained from the Ewald sums
-    # are compared with reference values.
-    # see https://www.sciencedirect.com/science/article/pii/B9780128143698000078#s0015
-    # More detailed values can be found in https://pubs.acs.org/doi/10.1021/ic2023852
-
-    # Caesium-Chloride (CsCl) structure:
-    # - Cubic unit cell
-    # - 1 atom pair in the unit cell
-    # - Cation-Anion ratio of 1:1
-    if crystal_name == "CsCl":
-        positions = torch.tensor([[0, 0, 0], [0.5, 0.5, 0.5]], dtype=DTYPE)
-        charges = torch.tensor([-1.0, 1.0], dtype=DTYPE)
-        cell = torch.eye(3, dtype=DTYPE)
-        madelung_ref = 2.035361
-        num_formula_units = 1
-
-    # Sodium-Chloride (NaCl) structure using a primitive unit cell
-    # - non-cubic unit cell (fcc)
-    # - 1 atom pair in the unit cell
-    # - Cation-Anion ratio of 1:1
-    elif crystal_name == "NaCl_primitive":
-        positions = torch.tensor([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]], dtype=DTYPE)
-        charges = torch.tensor([1.0, -1.0], dtype=DTYPE)
-        cell = torch.tensor([[0, 1.0, 1], [1, 0, 1], [1, 1, 0]], dtype=DTYPE)  # fcc
-        madelung_ref = 1.74756
-        num_formula_units = 1
-
-    # Sodium-Chloride (NaCl) structure using a cubic unit cell
-    # - cubic unit cell
-    # - 4 atom pairs in the unit cell
-    # - Cation-Anion ratio of 1:1
-    elif crystal_name == "NaCl_cubic":
-        positions = torch.tensor(
-            [
-                [0.0, 0, 0],
-                [1, 0, 0],
-                [0, 1, 0],
-                [0, 0, 1],
-                [1, 1, 0],
-                [1, 0, 1],
-                [0, 1, 1],
-                [1, 1, 1],
-            ],
-            dtype=DTYPE,
-        )
-        charges = torch.tensor([+1.0, -1, -1, -1, +1, +1, +1, -1], dtype=DTYPE)
-        cell = 2 * torch.eye(3, dtype=DTYPE)
-        madelung_ref = 1.747565
-        num_formula_units = 4
-
-    # ZnS (zincblende) structure
-    # - non-cubic unit cell (fcc)
-    # - 1 atom pair in the unit cell
-    # - Cation-Anion ratio of 1:1
-    # Remarks: we use a primitive unit cell which makes the lattice parameter of the
-    # cubic cell equal to 2.
-    elif crystal_name == "zincblende":
-        positions = torch.tensor([[0, 0, 0], [0.5, 0.5, 0.5]], dtype=DTYPE)
-        charges = torch.tensor([1.0, -1], dtype=DTYPE)
-        cell = torch.tensor([[0, 1, 1], [1, 0, 1], [1, 1, 0]], dtype=DTYPE)
-        madelung_ref = 2 * 1.63806 / np.sqrt(3)
-        num_formula_units = 1
-
-    # Wurtzite structure
-    # - non-cubic unit cell (triclinic)
-    # - 2 atom pairs in the unit cell
-    # - Cation-Anion ratio of 1:1
-    elif crystal_name == "wurtzite":
-        u = 3 / 8
-        c = np.sqrt(1 / u)
-        positions = torch.tensor(
-            [
-                [0.5, 0.5 / np.sqrt(3), 0.0],
-                [0.5, 0.5 / np.sqrt(3), u * c],
-                [0.5, -0.5 / np.sqrt(3), 0.5 * c],
-                [0.5, -0.5 / np.sqrt(3), (0.5 + u) * c],
-            ],
-            dtype=DTYPE,
-        )
-        charges = torch.tensor([1.0, -1, 1, -1], dtype=DTYPE)
-        cell = torch.tensor(
-            [[0.5, -0.5 * np.sqrt(3), 0], [0.5, 0.5 * np.sqrt(3), 0], [0, 0, c]],
-            dtype=DTYPE,
-        )
-        madelung_ref = 1.64132 / (u * c)
-        num_formula_units = 2
-
-    # Fluorite structure (e.g. CaF2 with Ca2+ and F-)
-    # - non-cubic (fcc) unit cell
-    # - 1 neutral molecule per unit cell
-    # - Cation-Anion ratio of 1:2
-    elif crystal_name == "fluorite":
-        a = 5.463
-        a = 1.0
-        positions = a * torch.tensor(
-            [[1 / 4, 1 / 4, 1 / 4], [3 / 4, 3 / 4, 3 / 4], [0, 0, 0]], dtype=DTYPE
-        )
-        charges = torch.tensor([-1, -1, 2], dtype=DTYPE)
-        cell = torch.tensor([[a, a, 0], [a, 0, a], [0, a, a]], dtype=DTYPE) / 2.0
-        madelung_ref = 11.636575
-        num_formula_units = 1
-
-    # Copper(I)-Oxide structure (e.g. Cu2O with Cu+ and O2-)
-    # - cubic unit cell
-    # - 2 neutral molecules per unit cell
-    # - Cation-Anion ratio of 2:1
-    elif crystal_name == "cu2o":
-        a = 1.0
-        positions = a * torch.tensor(
-            [
-                [0, 0, 0],
-                [1 / 2, 1 / 2, 1 / 2],
-                [1 / 4, 1 / 4, 1 / 4],
-                [1 / 4, 3 / 4, 3 / 4],
-                [3 / 4, 1 / 4, 3 / 4],
-                [3 / 4, 3 / 4, 1 / 4],
-            ],
-            dtype=DTYPE,
-        )
-        charges = torch.tensor([-2, -2, 1, 1, 1, 1], dtype=DTYPE)
-        cell = a * torch.eye(3, dtype=DTYPE)
-        madelung_ref = 10.2594570330750
-        num_formula_units = 2
-
-    # Wigner crystal in simple cubic structure.
-    # Wigner crystals are equivalent to the Jellium or uniform electron gas models.
-    # For the purpose of this test, we define them to be structures in which the ion
-    # cores form a perfect lattice, while the electrons are uniformly distributed over
-    # the cell. In some sources, the role of the positive and negative charges are
-    # flipped. These structures are used to test the code for cases in which the total
-    # charge of the particles is not zero.
-    # Wigner crystal energies are taken from "Zero-Point Energy of an Electron Lattice"
-    # by Rosemary A., Coldwell‐Horsfall and Alexei A. Maradudin (1960), eq. (A21).
-    elif crystal_name == "wigner_sc":
-        positions = torch.tensor([[0, 0, 0]], dtype=DTYPE)
-        charges = torch.tensor([1.0], dtype=DTYPE)
-        cell = torch.tensor([[1.0, 0, 0], [0, 1, 0], [0, 0, 1]], dtype=DTYPE)
-
-        # Reference value is expressed in terms of the Wigner-Seiz radius, and needs to
-        # be rescaled to the case in which the lattice parameter = 1.
-        madelung_wigner_seiz = 1.7601188
-        wigner_seiz_radius = (3 / (4 * np.pi)) ** (1 / 3)
-        madelung_ref = madelung_wigner_seiz / wigner_seiz_radius  # 2.83730
-        num_formula_units = 1
-
-    # Wigner crystal in bcc structure (note: this is the most stable structure).
-    # See description of "wigner_sc" for a general explanation on Wigner crystals.
-    # Used to test the code for cases in which the unit cell has a nonzero net charge.
-    elif crystal_name == "wigner_bcc":
-        positions = torch.tensor([[0, 0, 0]], dtype=DTYPE)
-        charges = torch.tensor([1.0], dtype=DTYPE)
-        cell = torch.tensor(
-            [[1.0, 0, 0], [0, 1, 0], [1 / 2, 1 / 2, 1 / 2]], dtype=DTYPE
-        )
-
-        # Reference value is expressed in terms of the Wigner-Seiz radius, and needs to
-        # be rescaled to the case in which the lattice parameter = 1.
-        madelung_wigner_seiz = 1.791860
-        wigner_seiz_radius = (3 / (4 * np.pi * 2)) ** (
-            1 / 3
-        )  # 2 atoms per cubic unit cell
-        madelung_ref = madelung_wigner_seiz / wigner_seiz_radius  # 3.63924
-        num_formula_units = 1
-
-    # Same as above, but now using a cubic unit cell rather than the primitive bcc cell
-    elif crystal_name == "wigner_bcc_cubiccell":
-        positions = torch.tensor([[0, 0, 0], [1 / 2, 1 / 2, 1 / 2]], dtype=DTYPE)
-        charges = torch.tensor([1.0, 1.0], dtype=DTYPE)
-        cell = torch.tensor([[1.0, 0, 0], [0, 1, 0], [0, 0, 1]], dtype=DTYPE)
-
-        # Reference value is expressed in terms of the Wigner-Seiz radius, and needs to
-        # be rescaled to the case in which the lattice parameter = 1.
-        madelung_wigner_seiz = 1.791860
-        wigner_seiz_radius = (3 / (4 * np.pi * 2)) ** (
-            1 / 3
-        )  # 2 atoms per cubic unit cell
-        madelung_ref = madelung_wigner_seiz / wigner_seiz_radius  # 3.63924
-        num_formula_units = 2
-
-    # Wigner crystal in fcc structure
-    # See description of "wigner_sc" for a general explanation on Wigner crystals.
-    # Used to test the code for cases in which the unit cell has a nonzero net charge.
-    elif crystal_name == "wigner_fcc":
-        positions = torch.tensor([[0, 0, 0]], dtype=DTYPE)
-        charges = torch.tensor([1.0], dtype=DTYPE)
-        cell = torch.tensor([[1, 0, 1], [0, 1, 1], [1, 1, 0]], dtype=DTYPE) / 2
-
-        # Reference value is expressed in terms of the Wigner-Seiz radius, and needs to
-        # be rescaled to the case in which the lattice parameter = 1.
-        madelung_wigner_seiz = 1.791753
-        wigner_seiz_radius = (3 / (4 * np.pi * 4)) ** (
-            1 / 3
-        )  # 4 atoms per cubic unit cell
-        madelung_ref = madelung_wigner_seiz / wigner_seiz_radius  # 4.58488
-        num_formula_units = 1
-
-    # Same as above, but now using a cubic unit cell rather than the primitive fcc cell
-    elif crystal_name == "wigner_fcc_cubiccell":
-        positions = 0.5 * torch.tensor(
-            [[0.0, 0, 0], [1, 0, 1], [1, 1, 0], [0, 1, 1]], dtype=DTYPE
-        )
-        charges = torch.tensor([1.0, 1, 1, 1], dtype=DTYPE)
-        cell = torch.eye(3, dtype=DTYPE)
-
-        # Reference value is expressed in terms of the Wigner-Seiz radius, and needs to
-        # be rescaled to the case in which the lattice parameter = 1.
-        madelung_wigner_seiz = 1.791753
-        wigner_seiz_radius = (3 / (4 * np.pi * 4)) ** (
-            1 / 3
-        )  # 4 atoms per cubic unit cell
-        madelung_ref = madelung_wigner_seiz / wigner_seiz_radius  # 4.58488
-        num_formula_units = 4
-
-    else:
-        raise ValueError(f"crystal_name = {crystal_name} is not supported!")
-
-    madelung_ref = torch.tensor(madelung_ref, dtype=DTYPE)
-    charges = charges.reshape((-1, 1))
-
-    return positions, charges, cell, madelung_ref, num_formula_units
 
 
 @pytest.mark.parametrize("calc_name", ["ewald", "pme"])
@@ -324,7 +102,8 @@ def test_madelung(crystal_name, scaling_factor, calc_name):
             InversePowerLawPotential(
                 exponent=1.0,
                 smearing=smearing,
-            )
+            ),
+            mesh_spacing=smearing / 8,
         )
         rtol = 9e-4
 
@@ -402,7 +181,8 @@ def test_wigner(crystal_name, scaling_factor):
             InversePowerLawPotential(
                 exponent=1.0,
                 smearing=smeareff,
-            )
+            ),
+            lr_wavelength=smeareff / 2,
         )
         calc.to(dtype=DTYPE)
         potentials = calc.forward(
@@ -489,6 +269,7 @@ def test_random_structure(
                 exponent=1.0,
                 smearing=smearing,
             ),
+            mesh_spacing=smearing / 8,
             full_neighbor_list=full_neighbor_list,
         )
         rtol_e = 4.5e-3

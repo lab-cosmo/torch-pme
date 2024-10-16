@@ -1,8 +1,9 @@
 import pytest
 import torch
 
-from torchpme.calculators import Calculator, estimate_smearing, get_cscl_data
+from torchpme.calculators import Calculator, get_cscl_data
 from torchpme.lib.potentials import CoulombPotential
+from torchpme.utils.tuning import _estimate_smearing
 
 # Define some example parameters
 DTYPE = torch.float32
@@ -257,4 +258,4 @@ def test_no_cell():
         "periodic calculation"
     )
     with pytest.raises(ValueError, match=match):
-        estimate_smearing(cell=torch.zeros(3, 3))
+        _estimate_smearing(cell=torch.zeros(3, 3))
