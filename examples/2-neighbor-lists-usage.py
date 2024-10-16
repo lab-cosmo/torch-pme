@@ -91,7 +91,7 @@ positions = torch.from_numpy(atoms.positions)
 charges = torch.from_numpy(charges).unsqueeze(1)
 cell = torch.from_numpy(atoms.cell.array)
 
-sum_squared_charges = torch.sum(charges**2, dim=0)
+sum_squared_charges = float(torch.sum(charges**2))
 
 smearing, pme_params, cutoff = torchpme.utils.tune_pme(
     sum_squared_charges=sum_squared_charges, cell=cell, positions=positions

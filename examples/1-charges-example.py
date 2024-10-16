@@ -50,7 +50,7 @@ cell = torch.eye(3, dtype=torch.float64)
 # The ``sum_squared_charges`` is equal to ``2.0`` becaue each atom either has a charge
 # of 1 or -1 in units of elementary charges.
 
-sum_squared_charges = torch.tensor([2.0], dtype=torch.float64)
+sum_squared_charges = 2.0
 
 smearing, pme_params, cutoff = torchpme.utils.tune_pme(
     sum_squared_charges=sum_squared_charges, cell=cell, positions=positions

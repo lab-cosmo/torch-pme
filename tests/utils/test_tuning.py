@@ -45,7 +45,7 @@ def test_parameter_choose(calculator, tune, param_length, accuracy, rtol):
     pos, charges, cell, madelung_ref, num_units = define_crystal()
 
     smearing, params, sr_cutoff = tune(
-        torch.sum(charges**2, dim=0), cell, pos, accuracy=accuracy
+        float(torch.sum(charges**2)), cell, pos, accuracy=accuracy
     )
 
     assert len(params) == param_length
@@ -77,7 +77,7 @@ def test_odd_interpolation_nodes():
     pos, charges, cell, madelung_ref, num_units = define_crystal()
 
     smearing, params, sr_cutoff = tune_pme(
-        torch.sum(charges**2, dim=0), cell, pos, interpolation_nodes=5
+        float(torch.sum(charges**2)), cell, pos, interpolation_nodes=5
     )
 
     neighbor_indices, neighbor_distances = neighbor_list_torch(
@@ -107,7 +107,7 @@ def test_accuracy_error(tune):
 
     match = "'foo' is not a float."
     with pytest.raises(ValueError, match=match):
-        tune(torch.sum(charges**2, dim=0), cell, pos, accuracy="foo")
+        tune(float(torch.sum(charges**2)), cell, pos, accuracy="foo")
 
 
 @pytest.mark.parametrize("tune", [tune_ewald, tune_pme])
@@ -119,7 +119,7 @@ def test_loss_is_nan_error(tune):
         "consider using a smaller learning rate."
     )
     with pytest.raises(ValueError, match=match):
-        tune(torch.sum(charges**2, dim=0), cell, pos, learning_rate=1e2)
+        tune(float(torch.sum(charges**2)), cell, pos, learning_rate=1e2)
 
 
 @pytest.mark.parametrize("tune", [tune_ewald, tune_pme])
@@ -128,7 +128,7 @@ def test_exponent_not_1_error(tune):
 
     match = "Only exponent = 1 is supported"
     with pytest.raises(NotImplementedError, match=match):
-        tune(torch.sum(charges**2, dim=0), cell, pos, exponent=2)
+        tune(float(torch.sum(charges**2)), cell, pos, exponent=2)
 
 
 @pytest.mark.parametrize("tune", [tune_ewald, tune_pme])
