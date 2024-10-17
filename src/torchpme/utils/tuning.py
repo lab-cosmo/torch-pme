@@ -32,7 +32,10 @@ def _optimize_parameters(
             break
 
     if max_steps == 0:
-        warnings.warn("Skip optimization, return the initial guess.")
+        warnings.warn(
+            "Skip optimization, return the initial guess.",
+            stacklevel=2,
+        )
     elif loss_value > accuracy:
         warnings.warn(
             "The searching for the parameters is ended, but the error is "
