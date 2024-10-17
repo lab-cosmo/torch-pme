@@ -31,7 +31,9 @@ def _optimize_parameters(
         if loss_value <= accuracy:
             break
 
-    if loss_value > accuracy:
+    if max_steps == 0:
+        warnings.warn("Skip optimization, return the initial guess.")
+    elif loss_value > accuracy:
         warnings.warn(
             "The searching for the parameters is ended, but the error is "
             f"{float(loss_value):.3e}, larger than the given accuracy {accuracy}. "
