@@ -32,7 +32,7 @@ CELL_1 = torch.eye(3, dtype=DTYPE, device=DEVICE)
     ("accuracy", "rtol"),
     [
         (1e-3, 1e-3),
-        (1e-3, 2e-6),
+        (1e-6, 2e-6),
         (1e-1, 1e-1),
     ],
 )

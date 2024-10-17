@@ -95,13 +95,13 @@ def tune_ewald(
     You can check the values of the parameters
 
     >>> print(smearing)
-    0.20517140875115344
+    0.14999979983727296
 
     >>> print(parameter)
-    {'lr_wavelength': 0.2879512643188817}
+    {'lr_wavelength': 0.047677734917968666}
 
     >>> print(cutoff)
-    0.5961240167485603
+    0.5485209762493759
     """
 
     _validate_parameters(cell, positions, exponent)
@@ -152,11 +152,12 @@ def tune_ewald(
         smearing_init, device=device, dtype=dtype, requires_grad=True
     )
     lr_wavelength = torch.tensor(
-        half_cell, device=device, dtype=dtype, requires_grad=True
+        -math.log(10 * min_dimension / half_cell - 1),
+        device=device,
+        dtype=dtype,
+        requires_grad=True,
     )
-    cutoff = torch.tensor(
-        half_cell / 10, device=device, dtype=dtype, requires_grad=True
-    )
+    cutoff = torch.tensor(half_cell, device=device, dtype=dtype, requires_grad=True)
 
     _optimize_parameters(
         [smearing, lr_wavelength, cutoff],
