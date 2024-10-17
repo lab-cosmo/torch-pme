@@ -57,17 +57,30 @@ class P3MCoulombPotential(CoulombPotential):
                 "Cannot compute long-range kernel without specifying `smearing`."
             )
 
+        k = k.double()
         diff_operator = self._diff_operator(k)
         charge_assignment = (
             self._charge_assignment(torch.unsqueeze(k, -2) + self._k_vectors)
             / self._volume
         ) ** 2
-        print(charge_assignment.shape)
         reference_force = self._reference_force(
             torch.unsqueeze(k, -2) + self._k_vectors
         )
-        print(reference_force.shape)
         diff_operator_sq = torch.linalg.norm(diff_operator, dim=-1) ** 2
+        print(diff_operator)
+        print(torch.squeeze(
+                torch.unsqueeze(diff_operator, dim=-2)  # (nx, ny, nz, 1, 3)
+                @ torch.unsqueeze(
+                    torch.sum(
+                        torch.unsqueeze(charge_assignment, -1)
+                        * reference_force,  # (nx, ny, nz, 7, 3)
+                        dim=-2,
+                    ),  # (nx, ny, nz, 3)
+                    dim=-1,
+                ),  # (nx, ny, nz, 3, 1) -> (nx, ny, nz, 1, 1)
+                dim=[-2, -1],
+            )  # (nx, ny, nz)
+            / diff_operator_sq)
 
         return (
             torch.squeeze(
@@ -96,7 +109,7 @@ class P3MCoulombPotential(CoulombPotential):
         From shape (nx, ny, nz, 7, 3) to shape (nx, ny, nz, 7)"""
         return torch.prod(
             self.mesh_spacing
-            * (torch.sin(k * self.mesh_spacing / 2) / (k * self.mesh_spacing / 2))
+            * torch.sinc(k * self.mesh_spacing / 2 / torch.pi)
             ** self.interpolation_nodes,
             dim=-1,
         )
@@ -104,4 +117,11 @@ class P3MCoulombPotential(CoulombPotential):
     def _reference_force(self, k: torch.Tensor) -> torch.Tensor:
         """
         From shape (nx, ny, nz, 7, 3) to shape (nx, ny, nz, 7, 3)"""
-        return -1j * k * 4 * torch.pi / k**2 * torch.exp(-0.5 * self.smearing**2 * k**2)
+
+        k_sq = torch.linalg.norm(k, dim=-1) ** 2
+
+        return k * torch.where(
+            k_sq == 0,
+            0.0j,
+            -1j * 4 * torch.pi * torch.exp(-0.5 * self.smearing**2 * k_sq) / k_sq,
+        )[..., torch.newaxis]
