@@ -156,7 +156,7 @@ def tune_ewald(
         device=device,
         dtype=dtype,
         requires_grad=True,
-    )
+    )  # sigmoid(lr_wavelength) == half_cell / 10
     cutoff = torch.tensor(half_cell, device=device, dtype=dtype, requires_grad=True)
 
     _optimize_parameters(
