@@ -89,7 +89,7 @@ def test_madelung(crystal_name, scaling_factor, calc_name):
         lr_wavelength = 0.5 * smearing
         calc = EwaldCalculator(
             InversePowerLawPotential(
-                exponent=1.0,
+                exponent=1,
                 smearing=smearing,
             ),
             lr_wavelength=lr_wavelength,
@@ -100,7 +100,7 @@ def test_madelung(crystal_name, scaling_factor, calc_name):
         smearing = sr_cutoff / 5.0
         calc = PMECalculator(
             InversePowerLawPotential(
-                exponent=1.0,
+                exponent=1,
                 smearing=smearing,
             ),
             mesh_spacing=smearing / 8,
@@ -179,7 +179,7 @@ def test_wigner(crystal_name, scaling_factor):
         # Compute potential and compare against reference
         calc = EwaldCalculator(
             InversePowerLawPotential(
-                exponent=1.0,
+                exponent=1,
                 smearing=smeareff,
             ),
             lr_wavelength=smeareff / 2,
@@ -255,7 +255,7 @@ def test_random_structure(
         lr_wavelength = 0.5 * smearing
         calc = EwaldCalculator(
             InversePowerLawPotential(
-                exponent=1.0,
+                exponent=1,
                 smearing=smearing,
             ),
             lr_wavelength=lr_wavelength,
@@ -266,7 +266,7 @@ def test_random_structure(
     elif calc_name == "pme":
         calc = PMECalculator(
             InversePowerLawPotential(
-                exponent=1.0,
+                exponent=1,
                 smearing=smearing,
             ),
             mesh_spacing=smearing / 8,

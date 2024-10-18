@@ -295,6 +295,22 @@ class CoulombPotential(Potential):
         return torch.pi * self.smearing**2
 
 
+# Auxilary function for stable Fourier transform implementation
+def gammainc_upper_over_powerlaw(exponent, zz):
+    if exponent==1:
+        return torch.exp(-zz) / zz
+    elif exponent==2:
+        return torch.sqrt(torch.pi/zz) * torch.erfc(torch.sqrt(zz))
+    elif exponent==3:
+        return -torch.expi(-zz)
+    elif exponent==4:
+        return 2*(torch.exp(-zz) - torch.sqrt(torch.pi*zz)*torch.erfc(torch.sqrt(zz)))
+    elif exponent==5:
+        return torch.exp(-zz) + zz*torch.expi(-zz)
+    elif exponent==6:
+        return ((2-4*zz)*torch.exp(-zz) + 4*torch.sqrt(torch.pi)*zz**1.5*torch.erfc(torch.sqrt(zz)))/3
+
+
 class InversePowerLawPotential(Potential):
     """
     Inverse power-law potentials of the form :math:`1/r^p`.
@@ -322,7 +338,7 @@ class InversePowerLawPotential(Potential):
 
     def __init__(
         self,
-        exponent: float,
+        exponent: int,
         smearing: Optional[float] = None,
         exclusion_radius: Optional[float] = None,
         dtype: Optional[torch.dtype] = None,
@@ -334,8 +350,8 @@ class InversePowerLawPotential(Potential):
         if device is None:
             device = torch.device("cpu")
 
-        if exponent <= 0 or exponent > 3:
-            raise ValueError(f"`exponent` p={exponent} has to satisfy 0 < p <= 3")
+        if exponent <= 0 or exponent > 6:
+            raise ValueError(f"`exponent` p={exponent} has to satisfy 0 < p <= 6")
         self.register_buffer(
             "exponent", torch.tensor(exponent, dtype=dtype, device=device)
         )
@@ -419,7 +435,7 @@ class InversePowerLawPotential(Potential):
         return torch.where(
             k_sq == 0,
             0.0,
-            prefac * gammaincc(peff, x) / x**peff * gamma(peff),
+            prefac * gammainc_upper_over_powerlaw(exponent, x),
         )
 
     def self_contribution(self) -> torch.Tensor:

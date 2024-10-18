@@ -15,18 +15,11 @@ def gamma(x):
 # Define precision of floating point variables
 dtype = torch.float64
 
-# Define range of exponents covering relevant special values and more general
-# floating point values beyond this range. The last four of which are inspired by:
-# von Klitzing constant R_K = 2.5812... * 1e4 Ohm
-# Josephson constant K_J = 4.8359... * 1e9 Hz/V
-# Gravitational constant G = 6.6743... * 1e-11 m3/kgs2
-# Electron mass m_e = 9.1094 * 1e-31 kg
-# TODO: for the moment, InversePowerLawPotential only works for exponent 0<p<3
-# ps = [1.0, 2.0, 3.0, 6.0] + [0.12345, 0.54321, 2.581304, 4.835909, 6.674311, 9.109431]
-ps = [1.0, 2.0, 3.0] + [0.12345, 0.54321, 2.581304]
+# Define range of exponents covering relevant special values
+ps = [1, 2, 3, 4, 5, 6]
 
 # Define range of smearing parameters covering relevant values
-smearinges = [0.1, 0.5, 1.0, 1.56]
+smearings = [0.1, 0.5, 1.0, 1.56]
 
 # Define realistic range of distances on which the potentials will be evaluated
 dist_min = 1.41e-2
@@ -51,7 +44,7 @@ SQRT2 = torch.sqrt(torch.tensor(2.0, dtype=dtype))
 PI = torch.tensor(torch.pi, dtype=dtype)
 
 
-@pytest.mark.parametrize("smearing", smearinges)
+@pytest.mark.parametrize("smearing", smearings)
 @pytest.mark.parametrize("exponent", ps)
 def test_sr_lr_split(exponent, smearing):
     """
@@ -77,8 +70,8 @@ def test_sr_lr_split(exponent, smearing):
     assert_close(potential_from_dist, potential_from_sum, rtol=rtol, atol=atol)
 
 
-@pytest.mark.parametrize("exponent", [1.0, 2.0, 3.0])
-@pytest.mark.parametrize("smearing", smearinges)
+@pytest.mark.parametrize("exponent", [1, 2, 3])
+@pytest.mark.parametrize("smearing", smearings)
 def test_exact_sr(exponent, smearing):
     """
     Test that the implemented formula which works for general interaction exponents p
@@ -98,11 +91,11 @@ def test_exact_sr(exponent, smearing):
     # Compute exact analytical expression obtained for relevant exponents
     potential_1 = erfc(dists / SQRT2 / smearing) / dists
     potential_2 = torch.exp(-0.5 * dists_sq / smearing**2) / dists_sq
-    if exponent == 1.0:
+    if exponent == 1:
         potential_exact = potential_1
-    elif exponent == 2.0:
+    elif exponent == 2:
         potential_exact = potential_2
-    elif exponent == 3.0:
+    elif exponent == 3:
         prefac = SQRT2 / torch.sqrt(PI) / smearing
         potential_exact = potential_1 / dists_sq + prefac * potential_2
 
@@ -112,8 +105,8 @@ def test_exact_sr(exponent, smearing):
     assert_close(potential_sr_from_dist, potential_exact, rtol=rtol, atol=atol)
 
 
-@pytest.mark.parametrize("exponent", [1.0, 2.0, 3.0])
-@pytest.mark.parametrize("smearing", smearinges)
+@pytest.mark.parametrize("exponent", [1, 2, 3])
+@pytest.mark.parametrize("smearing", smearings)
 def test_exact_lr(exponent, smearing):
     """
     Test that the implemented formula which works for general interaction exponents p
@@ -133,11 +126,11 @@ def test_exact_lr(exponent, smearing):
     # Compute exact analytical expression obtained for relevant exponents
     potential_1 = erf(dists / SQRT2 / smearing) / dists
     potential_2 = torch.exp(-0.5 * dists_sq / smearing**2) / dists_sq
-    if exponent == 1.0:
+    if exponent == 1:
         potential_exact = potential_1
-    elif exponent == 2.0:
+    elif exponent == 2:
         potential_exact = 1 / dists_sq - potential_2
-    elif exponent == 3.0:
+    elif exponent == 3:
         prefac = SQRT2 / torch.sqrt(PI) / smearing
         potential_exact = potential_1 / dists_sq - prefac * potential_2
 
@@ -147,8 +140,8 @@ def test_exact_lr(exponent, smearing):
     assert_close(potential_lr_from_dist, potential_exact, rtol=rtol, atol=atol)
 
 
-@pytest.mark.parametrize("exponent", [1.0, 2.0])
-@pytest.mark.parametrize("smearing", smearinges)
+@pytest.mark.parametrize("exponent", [1, 2])
+@pytest.mark.parametrize("smearing", smearings)
 def test_exact_fourier(exponent, smearing):
     """
     Test that the implemented formula which works for general interaction exponents p
@@ -166,11 +159,11 @@ def test_exact_fourier(exponent, smearing):
     fourier_from_class = ipl.lr_from_k_sq(ks_sq)
 
     # Compute exact analytical expression obtained for relevant exponents
-    if exponent == 1.0:
+    if exponent == 1:
         fourier_exact = 4 * PI / ks_sq * torch.exp(-0.5 * smearing**2 * ks_sq)
-    elif exponent == 2.0:
+    elif exponent == 2:
         fourier_exact = 2 * PI**2 / ks * erfc(smearing * ks / SQRT2)
-    elif exponent == 3.0:
+    elif exponent == 3:
         fourier_exact = -2 * PI * expi(-0.5 * smearing**2 * ks_sq)
 
     # Compare results. Large tolerance due to singular division
@@ -179,8 +172,8 @@ def test_exact_fourier(exponent, smearing):
     assert_close(fourier_from_class, fourier_exact, rtol=rtol, atol=atol)
 
 
-@pytest.mark.parametrize("smearing", smearinges)
-@pytest.mark.parametrize("exponent", ps[:-1])  # for p=9.11, the results are unstable
+@pytest.mark.parametrize("smearing", smearings)
+@pytest.mark.parametrize("exponent", ps)
 def test_lr_value_at_zero(exponent, smearing):
     """
     The LR part of the potential should no longer have a singularity as r-->0. Instead,
@@ -248,7 +241,7 @@ def test_f_cutoff(exclusion_radius):
     torch.allclose(fcut, 0.5 * (1.0 + torch.cos(torch.pi * dist / exclusion_radius)))
 
 
-@pytest.mark.parametrize("smearing", smearinges)
+@pytest.mark.parametrize("smearing", smearings)
 def test_inverserp_coulomb(smearing):
     """Check that an explicit Coulomb potential
     matches the 1/r^p implementation with p=1."""
