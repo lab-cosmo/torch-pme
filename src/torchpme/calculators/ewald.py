@@ -118,17 +118,13 @@ class EwaldCalculator(Calculator):
             sum_idx = 1
 
         # Actual computation of trigonometric factors
+        # Actual computation of trigonometric factors
         cos_all = torch.cos(trig_args)
         sin_all = torch.sin(trig_args)
-        cos_summed = torch.sum(cos_all * charges_reshaped, dim=sum_idx)
-        sin_summed = torch.sum(sin_all * charges_reshaped, dim=sum_idx)
+        cos_summed_G = torch.sum(cos_all * charges_reshaped, dim=sum_idx) * G
+        sin_summed_G = torch.sum(sin_all * charges_reshaped, dim=sum_idx) * G
 
-        # Add up the contributions to compute the potential
-        energy = torch.zeros_like(charges)
-        for i in range(num_atoms):
-            energy[i] += torch.sum(
-                G * cos_all[:, i] * cos_summed, dim=sum_idx - 1
-            ) + torch.sum(G * sin_all[:, i] * sin_summed, dim=sum_idx - 1)
+        energy = (cos_summed_G @ cos_all + sin_summed_G @ sin_all).T
         energy /= torch.abs(cell.det())
 
         # Remove the self-contribution: Using the Coulomb potential as an
