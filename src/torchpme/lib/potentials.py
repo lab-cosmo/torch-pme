@@ -3,6 +3,7 @@ from typing import Optional
 
 import torch
 from torch.special import gammainc, gammaincc, gammaln
+from .splines import CubicSpline, CubicSplineLongRange
 
 
 class Potential(torch.nn.Module):
@@ -186,7 +187,7 @@ class CoulombPotential(Potential):
     """
     Smoothed electrostatic Coulomb potential :math:`1/r`.
 
-    Herem :math:`r` is the inter-particle distance
+    Here :math:`r` is the inter-particle distance
 
     It can be used to compute:
 
@@ -295,11 +296,17 @@ class CoulombPotential(Potential):
         return torch.pi * self.smearing**2
 
 
+# since pytorch has implemented the incomplete Gamma functions, but not the much more
+# commonly used (complete) Gamma function, we define it in a custom way to make autograd
+# work as in https://discuss.pytorch.org/t/is-there-a-gamma-function-in-pytorch/17122
+def gamma(x: torch.Tensor) -> torch.Tensor:
+    return torch.exp(gammaln(x))
+
 class InversePowerLawPotential(Potential):
     """
     Inverse power-law potentials of the form :math:`1/r^p`.
 
-    Herem :math:`r` is a distance parameter and :math:`p` an exponent.
+    Here :math:`r` is a distance parameter and :math:`p` an exponent.
 
     It can be used to compute:
 
@@ -444,9 +451,252 @@ class InversePowerLawPotential(Potential):
     self_contribution.__doc__ = Potential.self_contribution.__doc__
     background_correction.__doc__ = Potential.background_correction.__doc__
 
+class SplinePotential(Potential):
+    """
+    Potential defined through a spline. The reciprocal-space part is computed numerically
+    at initialization. Assumes the infinite-separation value of the potential to be zero.
 
-# since pytorch has implemented the incomplete Gamma functions, but not the much more
-# commonly used (complete) Gamma function, we define it in a custom way to make autograd
-# work as in https://discuss.pytorch.org/t/is-there-a-gamma-function-in-pytorch/17122
-def gamma(x: torch.Tensor) -> torch.Tensor:
-    return torch.exp(gammaln(x))
+    Here :math:`r` is the inter-particle distance
+
+    """
+
+    def __init__(
+        self,
+        r_grid_sr: torch.Tensor,
+        r_grid_lr: torch.Tensor,
+        y_grid_sr: Optional[torch.Tensor] = None,
+        y_grid_lr: Optional[torch.Tensor] = None,
+        dtype: Optional[torch.dtype] = None,
+        device: Optional[torch.device] = None,
+    ):
+        super().__init__(dtype, device)
+        if dtype is None:
+            dtype = torch.get_default_dtype()
+        if device is None:
+            device = torch.device("cpu")
+
+        # constants used in the forwward
+        self.register_buffer(
+            "_rsqrt2",
+            torch.rsqrt(torch.tensor(2.0, dtype=dtype, device=device)),
+        )
+        self.register_buffer(
+            "_sqrt_2_on_pi",
+            torch.sqrt(torch.tensor(2.0 / torch.pi, dtype=dtype, device=device)),
+        )
+
+    def from_dist(self, dist: torch.Tensor) -> torch.Tensor:
+        """
+        Full :math:`1/r` potential as a function of :math:`r`.
+
+        :param dist: torch.tensor containing the distances at which the potential is to
+            be evaluated.
+        """
+        return 1.0 / dist
+
+    def lr_from_dist(self, dist: torch.Tensor) -> torch.Tensor:
+        """
+        LR part of the range-separated :math:`1/r` potential.
+
+        Used to subtract out the interior contributions after computing the LR part in
+        reciprocal (Fourier) space.
+
+        :param dist: torch.tensor containing the distances at which the potential is to
+            be evaluated.
+        """
+
+        if self.smearing is None:
+            raise ValueError(
+                "Cannot compute long-range contribution without specifying `smearing`."
+            )
+
+        return torch.erf(dist * (self._rsqrt2 / self.smearing)) / dist
+
+    def lr_from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
+        """
+        Fourier transform of the LR part potential in terms of :math:`k^2`.
+
+        :param k_sq: torch.tensor containing the squared lengths (2-norms) of the wave
+            vectors k at which the Fourier-transformed potential is to be evaluated
+        """
+
+        # The k=0 term often needs to be set separately since for exponents p<=3
+        # dimension, there is a divergence to +infinity. Setting this value manually
+        # to zero physically corresponds to the addition of a uniform background charge
+        # to make the system charge-neutral. For p>3, on the other hand, the
+        # Fourier-transformed LR potential does not diverge as k->0, and one
+        # could instead assign the correct limit. This is not implemented for now
+        # for consistency reasons.
+        if self.smearing is None:
+            raise ValueError(
+                "Cannot compute long-range kernel without specifying `smearing`."
+            )
+
+        return torch.where(
+            k_sq == 0,
+            0.0,
+            4 * torch.pi * torch.exp(-0.5 * self.smearing**2 * k_sq) / k_sq,
+        )
+
+    def self_contribution(self) -> torch.Tensor:
+        # self-correction for 1/r potential
+        if self.smearing is None:
+            raise ValueError(
+                "Cannot compute self contribution without specifying `smearing`."
+            )
+        return self._sqrt_2_on_pi / self.smearing
+
+    def background_correction(self) -> torch.Tensor:
+        # "charge neutrality" correction for 1/r potential
+        if self.smearing is None:
+            raise ValueError(
+                "Cannot compute background correction without specifying `smearing`."
+            )
+        return torch.pi * self.smearing**2
+
+
+class SplinePotential(Potential):
+    """
+    Potential built from a spline interpolation.
+
+    Here :math:`r` is a distance parameter and :math:`p` an exponent.
+
+    The short and long-range parts of the potential are computed based on a cubic
+    spline built at initialization time. The reciprocal-space kernel is computed
+    numerically as a spline, too.
+    
+    :param exponent: the exponent :math:`p` in :math:`1/r^p` potentials
+    :param smearing: float or torch.Tensor containing the parameter often called "sigma"
+        in publications, which determines the length-scale at which the short-range and
+        long-range parts of the naive :math:`1/r^p` potential are separated. For the
+        Coulomb potential (:math:`p=1`), this potential can be interpreted as the
+        effective potential generated by a Gaussian charge density, in which case this
+        smearing parameter corresponds to the "width" of the Gaussian.
+    :param: exclusion_radius: float or torch.Tensor containing the length scale
+        corresponding to a local environment. See also
+        :py:class:`Potential`.
+    """
+
+    def __init__(
+        self,
+        exponent: float,
+        smearing: Optional[float] = None,
+        exclusion_radius: Optional[float] = None,
+        dtype: Optional[torch.dtype] = None,
+        device: Optional[torch.device] = None,
+    ):
+        super().__init__(smearing, exclusion_radius, dtype, device)
+        if dtype is None:
+            dtype = torch.get_default_dtype()
+        if device is None:
+            device = torch.device("cpu")
+
+        if exponent <= 0 or exponent > 3:
+            raise ValueError(f"`exponent` p={exponent} has to satisfy 0 < p <= 3")
+        self.register_buffer(
+            "exponent", torch.tensor(exponent, dtype=dtype, device=device)
+        )
+
+    @torch.jit.export
+    def from_dist(self, dist: torch.Tensor) -> torch.Tensor:
+        """
+        Full :math:`1/r^p` potential as a function of :math:`r`.
+
+        :param dist: torch.tensor containing the distances at which the potential is to
+            be evaluated.
+        """
+        return torch.pow(dist, -self.exponent)
+
+    @torch.jit.export
+    def lr_from_dist(self, dist: torch.Tensor) -> torch.Tensor:
+        """
+        LR part of the range-separated :math:`1/r^p` potential.
+
+        Used to subtract out the interior contributions after computing the LR part in
+        reciprocal (Fourier) space.
+
+        For the Coulomb potential, this would return (note that the only change between
+        the SR and LR parts is the fact that erfc changes to erf)
+
+        .. code-block:: python
+
+            potential = erf(dist / sqrt(2) / smearing) / dist
+
+        :param dist: torch.tensor containing the distances at which the potential is to
+            be evaluated.
+        """
+
+        if self.smearing is None:
+            raise ValueError(
+                "Cannot compute long-range contribution without specifying `smearing`."
+            )
+
+        exponent = self.exponent
+        smearing = self.smearing
+
+        x = 0.5 * dist**2 / smearing**2
+        peff = exponent / 2
+        prefac = 1.0 / (2 * smearing**2) ** peff
+        return prefac * gammainc(peff, x) / x**peff
+
+    @torch.jit.export
+    def lr_from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
+        """
+        Fourier transform of the LR part potential in terms of :math:`k^2`.
+
+        If only the Coulomb potential is needed, the last line can be
+        replaced by
+
+        .. code-block:: python
+
+            fourier = 4 * torch.pi * torch.exp(-0.5 * smearing**2 * k_sq) / k_sq
+
+        :param k_sq: torch.tensor containing the squared lengths (2-norms) of the wave
+            vectors k at which the Fourier-transformed potential is to be evaluated
+        """
+        if self.smearing is None:
+            raise ValueError(
+                "Cannot compute long-range kernel without specifying `smearing`."
+            )
+
+        exponent = self.exponent
+        smearing = self.smearing
+
+        peff = (3 - exponent) / 2
+        prefac = math.pi**1.5 / gamma(exponent / 2) * (2 * smearing**2) ** peff
+        x = 0.5 * smearing**2 * k_sq
+
+        # The k=0 term often needs to be set separately since for exponents p<=3
+        # dimension, there is a divergence to +infinity. Setting this value manually
+        # to zero physically corresponds to the addition of a uniform background charge
+        # to make the system charge-neutral. For p>3, on the other hand, the
+        # Fourier-transformed LR potential does not diverge as k->0, and one
+        # could instead assign the correct limit. This is not implemented for now
+        # for consistency reasons.
+        return torch.where(
+            k_sq == 0,
+            0.0,
+            prefac * gammaincc(peff, x) / x**peff * gamma(peff),
+        )
+
+    def self_contribution(self) -> torch.Tensor:
+        # self-correction for 1/r^p potential
+        if self.smearing is None:
+            raise ValueError(
+                "Cannot compute self contribution without specifying `smearing`."
+            )
+        phalf = self.exponent / 2
+        return 1 / gamma(phalf + 1) / (2 * self.smearing**2) ** phalf
+
+    def background_correction(self) -> torch.Tensor:
+        # "charge neutrality" correction for 1/r^p potential
+        if self.smearing is None:
+            raise ValueError(
+                "Cannot compute background correction without specifying `smearing`."
+            )
+        prefac = torch.pi**1.5 * (2 * self.smearing**2) ** ((3 - self.exponent) / 2)
+        prefac /= (3 - self.exponent) * gamma(self.exponent / 2)
+        return prefac
+
+    self_contribution.__doc__ = Potential.self_contribution.__doc__
+    background_correction.__doc__ = Potential.background_correction.__doc__
