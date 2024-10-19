@@ -3,7 +3,6 @@ from typing import Optional
 
 import torch
 from torch.special import gammainc, gammaincc, gammaln
-from .splines import CubicSpline, CubicSplineLongRange
 
 
 class Potential(torch.nn.Module):
@@ -302,6 +301,7 @@ class CoulombPotential(Potential):
 def gamma(x: torch.Tensor) -> torch.Tensor:
     return torch.exp(gammaln(x))
 
+
 class InversePowerLawPotential(Potential):
     """
     Inverse power-law potentials of the form :math:`1/r^p`.
@@ -451,6 +451,7 @@ class InversePowerLawPotential(Potential):
     self_contribution.__doc__ = Potential.self_contribution.__doc__
     background_correction.__doc__ = Potential.background_correction.__doc__
 
+
 class SplinePotential(Potential):
     """
     Potential defined through a spline. The reciprocal-space part is computed numerically
@@ -564,7 +565,7 @@ class SplinePotential(Potential):
     The short and long-range parts of the potential are computed based on a cubic
     spline built at initialization time. The reciprocal-space kernel is computed
     numerically as a spline, too.
-    
+
     :param exponent: the exponent :math:`p` in :math:`1/r^p` potentials
     :param smearing: float or torch.Tensor containing the parameter often called "sigma"
         in publications, which determines the length-scale at which the short-range and
