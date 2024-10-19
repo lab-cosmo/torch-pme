@@ -1,5 +1,5 @@
 import math
-from typing import Optional
+from typing import Optional, List
 
 import torch
 from torch.special import gammainc, gammaincc, gammaln
@@ -444,6 +444,131 @@ class InversePowerLawPotential(Potential):
     self_contribution.__doc__ = Potential.self_contribution.__doc__
     background_correction.__doc__ = Potential.background_correction.__doc__
 
+
+class CombinedPotential(Potential):
+    """
+    TODO: Write documentation
+    """
+
+    def __init__(
+        self,
+        exponents: List[float],
+        smearing: Optional[float] = None,
+        exclusion_radius: Optional[float] = None,
+        dtype: Optional[torch.dtype] = None,
+        device: Optional[torch.device] = None,
+    ):
+        super().__init__(smearing=smearing, exclusion_radius=exclusion_radius, dtype=dtype, device=device)
+        if dtype is None:
+            dtype = torch.get_default_dtype()
+        if device is None:
+            device = torch.device("cpu")
+        for i, exponent in enumerate(exponents):
+                if exponent <= 0 or exponent > 3:
+                    raise ValueError(f"`exponent` number {i} : p={exponent} has to satisfy 0 < p <= 3")
+        self.register_buffer(
+            "exponents", torch.tensor(exponents, dtype=dtype, device=device)
+        )
+        self.weights = torch.nn.Parameter(torch.ones_like(self.exponents, dtype=dtype, device=device))
+
+    def from_dist(self, dist: torch.Tensor) -> torch.Tensor:
+        """
+        Full :math:`\sum_i learnable_weights[i] / r^{exponents[i]}` potential as a function of :math:`r`.
+
+        :param dist: torch.tensor containing the distances at which the potential is to
+        """
+        return torch.dot(self.weights, dist**-self.exponents)
+    
+    def lr_from_dist(self, dist: torch.Tensor) -> torch.Tensor:
+        """
+        LR part of the range-separated :math:`\sum_i learnable_weights[i] / r^{exponents[i]}` potential.
+
+        Used to subtract out the interior contributions after computing the LR part in
+        reciprocal (Fourier) space.
+
+        :param dist: torch.tensor containing the distances at which the potential is to
+            be evaluated.
+        """
+
+        if self.smearing is None:
+            raise ValueError(
+                "Cannot compute long-range contribution without specifying `smearing`."
+            )
+
+        exponents = self.exponents
+        weights = self.weights
+        smearing = self.smearing
+        x = 0.5 * dist**2 / smearing**2
+        potentials = []
+        for exponent in exponents:
+            peff = exponent / 2
+            prefac = 1.0 / (2 * smearing**2) ** peff
+            potential = prefac * gammainc(peff, x) / x**peff
+            potentials.append(potential)
+        potentials = torch.stack(potentials, dim=-1)
+        return torch.inner(weights , potentials)
+        
+
+    def lr_from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
+        """
+        Fourier transform of the LR part potential in terms of :math:`k^2`.
+
+        :param k_sq: torch.tensor containing the squared lengths (2-norms) of the wave
+            vectors k at which the Fourier-transformed potential is to be evaluated
+        """
+        if self.smearing is None:
+            raise ValueError(
+                "Cannot compute long-range kernel without specifying `smearing`."
+            )
+
+        exponents = self.exponents
+        weights = self.weights
+        smearing = self.smearing
+        potentials = []
+        for exponent in exponents:
+            peff = (3 - exponent) / 2
+            prefac = math.pi**1.5 / gamma(exponent / 2) * (2 * smearing**2) ** peff
+            x = 0.5 * smearing**2 * k_sq
+            potential = torch.where(
+                k_sq == 0,
+                0.0,
+                prefac * gammaincc(peff, x) / x**peff * gamma(peff),
+            )
+            potentials.append(potential)
+        potentials = torch.stack(potentials, dim=-1)
+        return torch.inner(weights, potentials)
+
+    def self_contribution(self) -> torch.Tensor:
+        # self-correction for 1/r^p potential
+        if self.smearing is None:
+            raise ValueError(
+                "Cannot compute self contribution without specifying `smearing`."
+            )
+        weights = self.weights
+        exponents = self.exponents
+        self_contributions = []
+        for exponent in exponents:
+            phalf = exponent / 2
+            self_contribution = 1 / gamma(phalf + 1) / (2 * self.smearing**2) ** phalf
+            self_contributions.append(self_contribution)
+        self_contributions = torch.stack(self_contributions, dim=-1)
+        return torch.inner(weights , self_contributions)
+
+    def background_correction(self) -> torch.Tensor:
+        # "charge neutrality" correction for 1/r^p potential
+        if self.smearing is None:
+            raise ValueError(
+                "Cannot compute background correction without specifying `smearing`."
+            )
+        weights = self.weights
+        exponents = self.exponents
+        prefacs = []
+        for exponent in exponents:
+            prefac = torch.pi**1.5 * (2 * self.smearing**2) ** ((3 - exponent) / 2)
+            prefac /= (3 - exponent) * gamma(exponent / 2)
+            prefacs.append(prefac)
+        prefacs = torch.stack(prefacs, dim=-1)
+        return torch.inner(weights , prefacs)
 
 # since pytorch has implemented the incomplete Gamma functions, but not the much more
 # commonly used (complete) Gamma function, we define it in a custom way to make autograd
