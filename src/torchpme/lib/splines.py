@@ -35,11 +35,9 @@ class CubicSpline(torch.nn.Module):
         a = (self.x_points[i + 1] - x) / h
         b = (x - self.x_points[i]) / h
         h2over6 = self._h2over6[i]
-        interpolated = a * (
+        return a * (
             self.y_points[i] + (a * a - 1) * self.d2y_points[i] * h2over6
         ) + b * (self.y_points[i + 1] + (b * b - 1) * self.d2y_points[i + 1] * h2over6)
-
-        return interpolated
 
 
 class CubicSplineLongRange(CubicSpline):
@@ -58,14 +56,14 @@ class CubicSplineLongRange(CubicSpline):
         ix_points = torch.cat(
             [
                 torch.zeros((1,), dtype=x_points.dtype, device=x_points.device),
-                torch.reciprocal(x_points[::-1]),
+                torch.reciprocal(torch.flip(x_points, dims=[0])),
             ],
             dim=0,
         )
         iy_points = torch.cat(
             [
                 torch.zeros((1,), dtype=x_points.dtype, device=x_points.device),
-                y_points[::-1],
+                torch.flip(y_points, dims=[0]),
             ],
             dim=0,
         )
