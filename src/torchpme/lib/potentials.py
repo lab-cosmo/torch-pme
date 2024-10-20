@@ -4,7 +4,7 @@ from typing import Optional
 import torch
 from torch.special import gammainc, gammaincc, gammaln
 
-from .splines import CubicSpline, CubicSplineLongRange, compute_spline_ft
+from .splines import CubicSpline, CubicSplineLongRange, compute_spline_ft, compute_second_derivatives
 
 
 class Potential(torch.nn.Module):
@@ -487,7 +487,7 @@ class SplinePotential(Potential):
             r_grid_lr = r_grid
 
         if k_grid is None:  # defaults to 1/lr_grid_points
-            k_grid = torch.reciprocal(r_grid_lr)
+            k_grid = torch.reciprocal(r_grid_lr).flip(dims=[0])
 
         if y_grid is None:
             self._spline = None
@@ -503,11 +503,9 @@ class SplinePotential(Potential):
             # computes automatically!
             krn_grid = compute_spline_ft(
                 k_grid,
-                self._lr_spline.x_points,
-                self._lr_spline.y_points,
-                self._lr_spline.d2y_points,
+                r_grid_lr, y_grid_lr, compute_second_derivatives(r_grid_lr, y_grid_lr)
             )
-            print(k_grid, krn_grid)
+            print("computed kernel grid ", k_grid, krn_grid)
 
         if krn_grid is None:
             self._krn_spline = None

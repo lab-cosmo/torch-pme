@@ -67,4 +67,5 @@ def test_spline_potential():
     k_grid2 = torch.logspace(-2, 2, 500) ** 2
     krn_coul = coulomb.kernel_from_k_sq(k_grid2)
     krn_spline = spline.kernel_from_k_sq(k_grid2)
-    # assert_close(krn_coul, krn_spline, atol=1e-5, rtol=0)
+    print("kernel values", krn_coul, krn_spline)
+    assert_close(krn_coul, krn_spline, atol=1e-5, rtol=0)

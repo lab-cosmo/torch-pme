@@ -164,49 +164,24 @@ def compute_spline_ft(
     # in float32 for small k. for instance, the first term contains the difference
     # of two cosines, but is computed with a trigonometric identity
     # (see the definition of dcoskx) to avoid the 1-k^2 form of the bare cosines
-    spline_integrals = 24 * dcoskx * dd2y + 6 * k * (
-        dsinkx * (3 * d2yi * dr + dd2y * (4 * dr + ri))
-        - 4 * dd2y * dr * sinkx
-        + k
-        * (
-            6 * coskx * dr * (3 * d2yi * dr + dd2y * (2 * dr + ri))
-            - 2
-            * dcoskx
-            * (6 * dy + dr * ((6 * d2yi + 5 * dd2y) * dr + 3 * (d2yi + dd2y) * ri))
-            + k
-            * (
-                dr
-                * (
-                    12 * dy
-                    + 3 * d2yi * dr * (dr + 2 * ri)
-                    + dd2y * dr * (2 * dr + 3 * ri)
-                )
-                * sinkx
-                + dsinkx
-                * (
-                    -6 * dy * ri
-                    - 3 * d2yi * dr**2 * (dr + ri)
-                    - 2 * dd2y * dr**2 * (dr + ri)
-                    - 6 * dr * (2 * dy + yi)
-                )
-                + k
-                * (
-                    6 * dcoskx * dr * (dr + ri) * (dy + yi)
-                    + coskx * (6 * dr * ri * yi - 6 * dr * (dr + ri) * (dy + yi))
-                )
-            )
-        )
-    )
+    res = 24*dcoskx*dd2y + k*(6*dsinkx*(3*d2yi*dr + dd2y*(4*dr + ri)) - 24*dd2y*dr*sinkx + 
+        k*(6*coskx*dr*(3*d2yi*dr + dd2y*(2*dr + ri)) - 
+        2*dcoskx*(6*dy + dr*((6*d2yi + 5*dd2y)*dr + 3*(d2yi + dd2y)*ri)) + 
+        k*(dr*(12*dy + 3*d2yi*dr*(dr + 2*ri) + dd2y*dr*(2*dr + 3*ri))*sinkx + 
+        dsinkx*(-6*dy*ri - 3*d2yi*dr**2*(dr + ri) - 2*dd2y*dr**2*(dr + ri) - 
+        6*dr*(2*dy + yi)) + k*
+        (6*dcoskx*dr*(dr + ri)*(dy + yi) + coskx*(6*dr*ri*yi - 6*dr*(dr + ri)*(dy + yi))))))
 
     # especially for Coulomb-like integrals, no matter how far we push the splining
     # in real space, the tail matters, so we compute it separately. to do this
     # stably and acurately, we build the tail as a spline in 1/r (using the last two)
     # points of the spline) and use an analytical expression for the resulting
     # integral from the last point to infinity
+
     tail_d2y = compute_second_derivatives(
-        torch.tensor([0, 1 / x_points[-1], 1 / x_points[-2]]),
-        torch.tensor([0, y_points[-1], y_points[-2]]),
-    )
+        torch.tensor([0, 1/x_points[-1], 1/x_points[-2]]),
+        torch.tensor([0, y_points[-1], y_points[-2]])
+        )
 
     r0 = x_points[-1]
     y0 = y_points[-1]
@@ -219,21 +194,10 @@ def compute_spline_ft(
         raise ImportError(
             "Computing the Fourier-domain kernel based on a spline requires scipy"
         )
-    tail = (
-        -2
-        * torch.pi
-        * (
-            (d2y0 - 6 * r0**2 * y0) * torch.cos(k * r0)
-            + d2y0 * k * r0 * (k * r0 * sici(k * r0)[1] - torch.sin(k * r0))
-        )
-    ) / (3.0 * k**2 * r0)
+    
+    tail = (-2*torch.pi*((d2y0 - 6*r0**2*y0)*torch.cos(k*r0) + 
+                         d2y0*k*r0*(k*r0*sici(k*r0)[1] - torch.sin(k*r0))))/(3.*k**2*r0)
 
-    ft = (
-        2
-        * torch.pi
-        / 3
-        * torch.sum(spline_integrals / dr, axis=1).reshape(-1, 1)
-        / k**6
-        + tail
-    )
+    ft = 2*torch.pi/3*torch.sum(res/dr,axis=1).reshape(-1,1)/k**6+tail
+    
     return ft.reshape(k_points.shape)
