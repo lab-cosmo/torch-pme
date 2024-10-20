@@ -1,3 +1,5 @@
+from typing import Optional
+
 import torch
 
 
@@ -73,24 +75,83 @@ class CubicSplineLongRange(CubicSpline):
         return super().forward(torch.reciprocal(x))
 
 
-def compute_second_derivatives(x_points: torch.Tensor, y_points: torch.Tensor):
+def _solve_tridiagonal(a, b, c, d):
+    """
+    Helper function to solve a tri-diagonal problem
+    """
+
+    n = len(d)
+    # Create copies to avoid modifying the original arrays
+    c_prime = torch.zeros(n)
+    d_prime = torch.zeros(n)
+
+    # Initial coefficients
+    c_prime[0] = c[0] / b[0]
+    d_prime[0] = d[0] / b[0]
+
+    # Forward sweep
+    for i in range(1, n):
+        denom = b[i] - a[i] * c_prime[i - 1]
+        c_prime[i] = c[i] / denom if i < n - 1 else 0
+        d_prime[i] = (d[i] - a[i] * d_prime[i - 1]) / denom
+
+    # Backward substitution
+    x = torch.zeros(n)
+    x[-1] = d_prime[-1]
+    for i in reversed(range(n - 1)):
+        x[i] = d_prime[i] - c_prime[i] * x[i + 1]
+    return x
+
+
+def compute_second_derivatives(
+    x_points: torch.Tensor, y_points: torch.Tensor, high_accuracy: Optional[bool] = True
+):
     """
     Computes second derivatives given the grid points of a cubic spline.
 
     :param x_points:  Abscissas of the splining points for the real-space function
     :param y_points:  Ordinates of the splining points for the real-space function
+    :param high_accuracy: bool, perform calculation in double precision
 
     :return:  The second derivatives for the spline points
     """
+
+    # Do the calculation in float64 if required
+    x = x_points
+    y = y_points
+    if high_accuracy:
+        x = x.to(dtype=torch.float64)
+        y = y.to(dtype=torch.float64)
+
     # Calculate intervals
-    intervals = x_points[1:] - x_points[:-1]
-    dy = (y_points[1:] - y_points[:-1]) / intervals
+    intervals = x[1:] - x[:-1]
+    dy = (y[1:] - y[:-1]) / intervals
 
     # Create zero boundary conditions (natural spline)
-    d2y = torch.zeros_like(x_points)
+    d2y = torch.zeros_like(x, dtype=torch.float64)
 
+    n = len(x)
+    a = torch.zeros(n)  # Sub-diagonal (a[1..n-1])
+    b = torch.zeros(n)  # Main diagonal (b[0..n-1])
+    c = torch.zeros(n)  # Super-diagonal (c[0..n-2])
+    d = torch.zeros(n)  # Right-hand side (d[0..n-1])
+
+    # Natural spline boundary conditions
+    b[0] = 1
+    d[0] = 0  # Second derivative at the first point is zero
+    b[-1] = 1
+    d[-1] = 0  # Second derivative at the last point is zero
+
+    # Fill the diagonals and right-hand side
+    for i in range(1, n - 1):
+        a[i] = intervals[i - 1] / 6
+        b[i] = (intervals[i - 1] + intervals[i]) / 3
+        c[i] = intervals[i] / 6
+        d[i] = dy[i] - dy[i - 1]
+
+    """
     # Create matrix A and vector B for solving the system A * d2y = B
-    n = len(x_points)
+    n = len(x)
     A = torch.zeros((n, n))
     B = torch.zeros(n)
 
@@ -105,8 +166,11 @@ def compute_second_derivatives(x_points: torch.Tensor, y_points: torch.Tensor):
 
     # Solve the system to find the second derivatives
     d2y = torch.linalg.solve(A, B)
+    """
+    d2y = _solve_tridiagonal(a, b, c, d)
 
-    return d2y
+    # Converts back to the original dtype
+    return d2y.to(x_points.dtype)
 
 
 def compute_spline_ft(
@@ -114,6 +178,7 @@ def compute_spline_ft(
     x_points: torch.Tensor,
     y_points: torch.Tensor,
     d2y_points: torch.Tensor,
+    high_precision: Optional[bool] = True,
 ):
     r"""
     Computes the Fourier transform of a splined radial function.
@@ -134,22 +199,28 @@ def compute_spline_ft(
     :param x_points:  Abscissas of the splining points for the real-space function
     :param y_points:  Ordinates of the splining points for the real-space function
     :param d2y_points:  Second derivatives for the spline points
+    :param high_accuracy: bool, perform calculation in double precision
 
     :return: The radial Fourier transform :math:`\hat{f}(k)` computed
         at the ``k_points`` provided.
     """
 
+    # chooses precision for the FT evaluation
+    dtype = x_points.dtype
+    if high_precision:
+        dtype = torch.float64
+
     # broadcast to compute at once on all k values.
     # all these are terms that enter the analytical integral.
     # might be possible to write this in a more concise way, but
     # this works and is reasonably numerically stable, so it will do
-    k = k_points.reshape(-1, 1)
-    ri = x_points[torch.newaxis, :-1]
-    yi = y_points[torch.newaxis, :-1]
-    d2yi = d2y_points[torch.newaxis, :-1]
-    dr = x_points[torch.newaxis, 1:] - x_points[torch.newaxis, :-1]
-    dy = y_points[torch.newaxis, 1:] - y_points[torch.newaxis, :-1]
-    dd2y = d2y_points[torch.newaxis, 1:] - d2y_points[torch.newaxis, :-1]
+    k = k_points.reshape(-1, 1).to(dtype)
+    ri = x_points[torch.newaxis, :-1].to(dtype)
+    yi = y_points[torch.newaxis, :-1].to(dtype)
+    d2yi = d2y_points[torch.newaxis, :-1].to(dtype)
+    dr = (x_points[torch.newaxis, 1:] - x_points[torch.newaxis, :-1]).to(dtype)
+    dy = (y_points[torch.newaxis, 1:] - y_points[torch.newaxis, :-1]).to(dtype)
+    dd2y = (d2y_points[torch.newaxis, 1:] - d2y_points[torch.newaxis, :-1]).to(dtype)
     coskx = torch.cos(k * ri)
     sinkx = torch.sin(k * ri)
     # cos r+dr - cos r
@@ -164,13 +235,39 @@ def compute_spline_ft(
     # in float32 for small k. for instance, the first term contains the difference
     # of two cosines, but is computed with a trigonometric identity
     # (see the definition of dcoskx) to avoid the 1-k^2 form of the bare cosines
-    res = 24*dcoskx*dd2y + k*(6*dsinkx*(3*d2yi*dr + dd2y*(4*dr + ri)) - 24*dd2y*dr*sinkx + 
-        k*(6*coskx*dr*(3*d2yi*dr + dd2y*(2*dr + ri)) - 
-        2*dcoskx*(6*dy + dr*((6*d2yi + 5*dd2y)*dr + 3*(d2yi + dd2y)*ri)) + 
-        k*(dr*(12*dy + 3*d2yi*dr*(dr + 2*ri) + dd2y*dr*(2*dr + 3*ri))*sinkx + 
-        dsinkx*(-6*dy*ri - 3*d2yi*dr**2*(dr + ri) - 2*dd2y*dr**2*(dr + ri) - 
-        6*dr*(2*dy + yi)) + k*
-        (6*dcoskx*dr*(dr + ri)*(dy + yi) + coskx*(6*dr*ri*yi - 6*dr*(dr + ri)*(dy + yi))))))
+    ft_interval = 24 * dcoskx * dd2y + k * (
+        6 * dsinkx * (3 * d2yi * dr + dd2y * (4 * dr + ri))
+        - 24 * dd2y * dr * sinkx
+        + k
+        * (
+            6 * coskx * dr * (3 * d2yi * dr + dd2y * (2 * dr + ri))
+            - 2
+            * dcoskx
+            * (6 * dy + dr * ((6 * d2yi + 5 * dd2y) * dr + 3 * (d2yi + dd2y) * ri))
+            + k
+            * (
+                dr
+                * (
+                    12 * dy
+                    + 3 * d2yi * dr * (dr + 2 * ri)
+                    + dd2y * dr * (2 * dr + 3 * ri)
+                )
+                * sinkx
+                + dsinkx
+                * (
+                    -6 * dy * ri
+                    - 3 * d2yi * dr**2 * (dr + ri)
+                    - 2 * dd2y * dr**2 * (dr + ri)
+                    - 6 * dr * (2 * dy + yi)
+                )
+                + k
+                * (
+                    6 * dcoskx * dr * (dr + ri) * (dy + yi)
+                    + coskx * (6 * dr * ri * yi - 6 * dr * (dr + ri) * (dy + yi))
+                )
+            )
+        )
+    )
 
     # especially for Coulomb-like integrals, no matter how far we push the splining
     # in real space, the tail matters, so we compute it separately. to do this
@@ -179,9 +276,9 @@ def compute_spline_ft(
     # integral from the last point to infinity
 
     tail_d2y = compute_second_derivatives(
-        torch.tensor([0, 1/x_points[-1], 1/x_points[-2]]),
-        torch.tensor([0, y_points[-1], y_points[-2]])
-        )
+        torch.tensor([0, 1 / x_points[-1], 1 / x_points[-2]]),
+        torch.tensor([0, y_points[-1], y_points[-2]]),
+    )
 
     r0 = x_points[-1]
     y0 = y_points[-1]
@@ -194,10 +291,19 @@ def compute_spline_ft(
         raise ImportError(
             "Computing the Fourier-domain kernel based on a spline requires scipy"
         )
-    
-    tail = (-2*torch.pi*((d2y0 - 6*r0**2*y0)*torch.cos(k*r0) + 
-                         d2y0*k*r0*(k*r0*sici(k*r0)[1] - torch.sin(k*r0))))/(3.*k**2*r0)
 
-    ft = 2*torch.pi/3*torch.sum(res/dr,axis=1).reshape(-1,1)/k**6+tail
-    
-    return ft.reshape(k_points.shape)
+    tail = (
+        -2
+        * torch.pi
+        * (
+            (d2y0 - 6 * r0**2 * y0) * torch.cos(k * r0)
+            + d2y0 * k * r0 * (k * r0 * sici(k * r0)[1] - torch.sin(k * r0))
+        )
+    ) / (3.0 * k**2 * r0)
+
+    ft_full = (
+        2 * torch.pi / 3 * torch.sum(ft_interval / dr, axis=1).reshape(-1, 1) / k**6
+        + tail
+    )
+
+    return ft_full.reshape(k_points.shape).to(k_points.dtype)

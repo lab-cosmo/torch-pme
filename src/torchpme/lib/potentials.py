@@ -4,7 +4,12 @@ from typing import Optional
 import torch
 from torch.special import gammainc, gammaincc, gammaln
 
-from .splines import CubicSpline, CubicSplineLongRange, compute_spline_ft, compute_second_derivatives
+from .splines import (
+    CubicSpline,
+    CubicSplineLongRange,
+    compute_second_derivatives,
+    compute_spline_ft,
+)
 
 
 class Potential(torch.nn.Module):
@@ -503,9 +508,10 @@ class SplinePotential(Potential):
             # computes automatically!
             krn_grid = compute_spline_ft(
                 k_grid,
-                r_grid_lr, y_grid_lr, compute_second_derivatives(r_grid_lr, y_grid_lr)
+                r_grid_lr,
+                y_grid_lr,
+                compute_second_derivatives(r_grid_lr, y_grid_lr),
             )
-            print("computed kernel grid ", k_grid, krn_grid)
 
         if krn_grid is None:
             self._krn_spline = None
