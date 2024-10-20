@@ -1,5 +1,5 @@
 import math
-from typing import Optional, List
+from typing import Optional
 
 import torch
 from torch.special import gammainc, gammaincc, gammaln
@@ -452,7 +452,7 @@ class CombinedPotential(Potential):
 
     def __init__(
         self,
-        exponents: List[float],
+        exponents: list[float],
         smearing: Optional[float] = None,
         exclusion_radius: Optional[float] = None,
         dtype: Optional[torch.dtype] = None,
@@ -486,7 +486,11 @@ class CombinedPotential(Potential):
 
         :param dist: torch.tensor containing the distances at which the potential is to
         """
-        return torch.dot(self.weights, dist**-self.exponents)
+        potentials = []
+        for exponent in self.exponents:
+            potentials.append(torch.pow(dist, -exponent))
+        potentials = torch.stack(potentials, dim=-1)
+        return torch.inner(self.weights, potentials)
 
     def lr_from_dist(self, dist: torch.Tensor) -> torch.Tensor:
         """

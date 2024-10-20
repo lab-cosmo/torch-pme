@@ -129,7 +129,7 @@ class PMECalculator(Calculator):
             # subtracted since it depends on the smearing parameter, which is purely a
             # convergence parameter.
             fill_value = self.potential.self_contribution()
-            #self_contrib = torch.full([], fill_value, device=self._device)
+            # self_contrib = torch.full([], fill_value, device=self._device)
             self_contrib = fill_value
             interpolated_potential -= charges * self_contrib
 

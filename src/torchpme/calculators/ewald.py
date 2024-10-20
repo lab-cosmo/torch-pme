@@ -120,7 +120,7 @@ class EwaldCalculator(Calculator):
         # This contribution always should be subtracted since it depends on the smearing
         # parameter, which is purely a convergence parameter.
         fill_value = self.potential.self_contribution()
-        #self_contrib = torch.full([], fill_value)
+        # self_contrib = torch.full([], fill_value)
         self_contrib = fill_value
         energy -= charges * self_contrib
 
