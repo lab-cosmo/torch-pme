@@ -23,24 +23,97 @@ from matplotlib import pyplot as plt
 from scipy.special import sici
 
 import torchpme
+from torchpme.lib.potentials import CoulombPotential, SplinePotential
 
 device = "cpu"
 dtype = torch.float64
 matplotlib.use("widget")
 
 # %%
+# Demonstrate spline potential class
 
-x_grid = torch.concatenate([torch.logspace(-3, 0, 400), torch.linspace(1.2, 1e1, 400)])
-print(x_grid)
-y_grid = torch.exp(-(x_grid**2) / 2)
+# generate reference real-space data for a pure Coulomb potential
+coulomb = CoulombPotential(smearing=1.0)
+x_grid = torch.logspace(-3, 2, 2000)
+y_grid = coulomb.lr_from_dist(x_grid)
 
-myspline = torchpme.lib.splines.CubicSpline(x_grid, y_grid)
+# create a spline potential for both the SR and LR parts
+spline = SplinePotential(r_grid=x_grid, y_grid=y_grid, y_grid_lr=y_grid)
+
+# %%
+# The real-space part of the potential matches the reference
+t_grid = torch.logspace(-torch.pi, torch.pi, 100)
+z_coul = coulomb.lr_from_dist(t_grid)
+z_spline = spline.lr_from_dist(t_grid)
 
 fig, ax = plt.subplots(
     1, 1, figsize=(6, 4), sharey=True, sharex=True, constrained_layout=True
 )
-ax.plot(x_grid, myspline(x_grid), "b-")
-ax.plot(x_grid, y_grid, "r:")
+ax.plot(t_grid, z_coul, "b-")
+ax.plot(t_grid, z_spline, "r--")
+ax.set_xlabel(r"$r$ / Å")
+ax.set_ylabel(r"$V$ / a.u.")
+ax.set_xlim(0, 100)
+
+# %%
+# Fourier-domain part (note it gets noisy)
+
+k_grid2 = torch.logspace(-2.1, 2.1, 301)
+krn_coul = coulomb.kernel_from_k_sq(k_grid2)
+krn_spline = spline.kernel_from_k_sq(k_grid2)
+
+fig, ax = plt.subplots(
+    1, 1, figsize=(6, 4), sharey=True, sharex=True, constrained_layout=True
+)
+ax.loglog(torch.sqrt(k_grid2), krn_coul, "b-")
+ax.loglog(torch.sqrt(k_grid2), krn_spline, "r--")
+ax.set_xlabel(r"$k$ / Å$^{-1}$")
+ax.set_ylabel(r"$V$ / a.u.")
+ax.set_xlim(1e-1, 10)
+ax.set_ylim(1e-8, 1e3)
+
+# %%
+# Now shows a cutoffed version
+
+coulomb = CoulombPotential(smearing=1.0, exclusion_radius=3.0)
+x_grid = torch.logspace(-3, 2, 2000)
+y_grid = coulomb.lr_from_dist(x_grid) + coulomb.sr_from_dist(x_grid)
+
+# create a spline potential for both the SR and LR parts
+spline = SplinePotential(r_grid=x_grid, y_grid=y_grid, y_grid_lr=y_grid)
+
+# %%
+# The real-space part of the potential matches the reference
+t_grid = torch.logspace(-torch.pi, torch.pi, 100)
+z_coul = coulomb.lr_from_dist(t_grid) + coulomb.sr_from_dist(t_grid)
+z_spline = spline.lr_from_dist(t_grid)
+
+fig, ax = plt.subplots(
+    1, 1, figsize=(6, 4), sharey=True, sharex=True, constrained_layout=True
+)
+ax.plot(t_grid, z_coul, "b-")
+ax.plot(t_grid, z_spline, "r--")
+ax.set_xlabel(r"$r$ / Å")
+ax.set_ylabel(r"$V$ / a.u.")
+ax.set_xlim(0, 10)
+ax.set_ylim(0, 0.5)
+
+# %%
+# Fourier-domain part (note it gets noisy)
+
+k_grid2 = torch.logspace(-2.1, 2.1, 301)
+krn_coul = coulomb.kernel_from_k_sq(k_grid2)
+krn_spline = spline.kernel_from_k_sq(k_grid2)
+
+fig, ax = plt.subplots(
+    1, 1, figsize=(6, 4), sharey=True, sharex=True, constrained_layout=True
+)
+ax.semilogx(torch.sqrt(k_grid2), krn_coul, "b-")
+ax.semilogx(torch.sqrt(k_grid2), krn_spline, "r--")
+ax.set_xlabel(r"$k$ / Å$^{-1}$")
+ax.set_ylabel(r"$V$ / a.u.")
+ax.set_xlim(1e-1, 10)
+ax.set_ylim(-10, 1e2)
 
 # %%
 
@@ -213,7 +286,7 @@ test.shape
 from torchpme.lib.potentials import CoulombPotential, SplinePotential
 
 coulomb = CoulombPotential(smearing=1.0)
-x_grid = torch.logspace(-2, 2, 400)
+x_grid = torch.logspace(-3, 3, 2000)
 y_grid = coulomb.lr_from_dist(x_grid)
 
 spline = SplinePotential(r_grid=x_grid, y_grid_lr=y_grid)
@@ -221,13 +294,18 @@ t_grid = torch.logspace(-torch.pi, torch.pi, 100)
 z_coul = coulomb.lr_from_dist(t_grid)
 z_spline = spline.lr_from_dist(t_grid)
 
-k_grid2 = torch.logspace(-1, 1, 400) ** 2
+k_grid2 = torch.logspace(-2.1, 2.1, 101) ** 2
 krn_coul = coulomb.kernel_from_k_sq(k_grid2)
 krn_spline = spline.kernel_from_k_sq(k_grid2)
 
 manual = compute_spline_ft32(
     torch.sqrt(k_grid2), x_grid, y_grid, compute_second_derivatives(x_grid, y_grid)
 )
+fig, ax = plt.subplots(
+    1, 1, figsize=(4, 3), sharey=True, sharex=True, constrained_layout=True
+)
+ax.loglog(k_grid2, krn_coul, "r--")
+ax.loglog(k_grid2, krn_spline, "b.")
 
 # %%
 

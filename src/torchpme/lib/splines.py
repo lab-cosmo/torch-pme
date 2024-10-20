@@ -287,17 +287,22 @@ def compute_spline_ft(
     # is only available in scipy
     try:
         from scipy.special import sici
-    except ImportError:
+    except ImportError as err:
         raise ImportError(
             "Computing the Fourier-domain kernel based on a spline requires scipy"
-        )
+        ) from err
+
+    # to numpy and back again
+    cosint = torch.from_numpy(sici((k * r0).detach().cpu().numpy())[1]).to(
+        dtype=dr.dtype, device=dr.device
+    )
 
     tail = (
         -2
         * torch.pi
         * (
             (d2y0 - 6 * r0**2 * y0) * torch.cos(k * r0)
-            + d2y0 * k * r0 * (k * r0 * sici(k * r0)[1] - torch.sin(k * r0))
+            + d2y0 * k * r0 * (k * r0 * cosint - torch.sin(k * r0))
         )
     ) / (3.0 * k**2 * r0)
 

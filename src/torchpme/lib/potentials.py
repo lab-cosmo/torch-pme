@@ -492,7 +492,7 @@ class SplinePotential(Potential):
             r_grid_lr = r_grid
 
         if k_grid is None:  # defaults to 1/lr_grid_points
-            k_grid = torch.reciprocal(r_grid_lr).flip(dims=[0])
+            k_grid = torch.pi * 2 * torch.reciprocal(r_grid_lr).flip(dims=[0])
 
         if y_grid is None:
             self._spline = None
@@ -530,6 +530,16 @@ class SplinePotential(Potential):
         if self._spline is None:
             return self.lr_from_dist(dist)
         return self._spline(dist)
+
+    def sr_from_dist(self, dist: torch.Tensor) -> torch.Tensor:
+        """
+        LR part of the range-separated potential.
+
+        :param dist: torch.tensor containing the distances at which the potential is to
+            be evaluated.
+        """
+
+        return self.from_dist(dist) - self.lr_from_dist(dist)
 
     def lr_from_dist(self, dist: torch.Tensor) -> torch.Tensor:
         """
