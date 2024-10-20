@@ -458,30 +458,39 @@ class CombinedPotential(Potential):
         dtype: Optional[torch.dtype] = None,
         device: Optional[torch.device] = None,
     ):
-        super().__init__(smearing=smearing, exclusion_radius=exclusion_radius, dtype=dtype, device=device)
+        super().__init__(
+            smearing=smearing,
+            exclusion_radius=exclusion_radius,
+            dtype=dtype,
+            device=device,
+        )
         if dtype is None:
             dtype = torch.get_default_dtype()
         if device is None:
             device = torch.device("cpu")
         for i, exponent in enumerate(exponents):
-                if exponent <= 0 or exponent > 3:
-                    raise ValueError(f"`exponent` number {i} : p={exponent} has to satisfy 0 < p <= 3")
+            if exponent <= 0 or exponent > 3:
+                raise ValueError(
+                    f"`exponent` number {i} : p={exponent} has to satisfy 0 < p <= 3"
+                )
         self.register_buffer(
             "exponents", torch.tensor(exponents, dtype=dtype, device=device)
         )
-        self.weights = torch.nn.Parameter(torch.ones_like(self.exponents, dtype=dtype, device=device))
+        self.weights = torch.nn.Parameter(
+            torch.ones_like(self.exponents, dtype=dtype, device=device)
+        )
 
     def from_dist(self, dist: torch.Tensor) -> torch.Tensor:
         """
-        Full :math:`\sum_i learnable_weights[i] / r^{exponents[i]}` potential as a function of :math:`r`.
+        Full :math:`sum learnable_weights[i] / r^{exponents[i]}` potential as a function of :math:`r`.
 
         :param dist: torch.tensor containing the distances at which the potential is to
         """
         return torch.dot(self.weights, dist**-self.exponents)
-    
+
     def lr_from_dist(self, dist: torch.Tensor) -> torch.Tensor:
         """
-        LR part of the range-separated :math:`\sum_i learnable_weights[i] / r^{exponents[i]}` potential.
+        LR part of the range-separated :math:`sum learnable_weights[i] / r^{exponents[i]}` potential.
 
         Used to subtract out the interior contributions after computing the LR part in
         reciprocal (Fourier) space.
@@ -506,8 +515,7 @@ class CombinedPotential(Potential):
             potential = prefac * gammainc(peff, x) / x**peff
             potentials.append(potential)
         potentials = torch.stack(potentials, dim=-1)
-        return torch.inner(weights , potentials)
-        
+        return torch.inner(weights, potentials)
 
     def lr_from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
         """
@@ -552,7 +560,7 @@ class CombinedPotential(Potential):
             self_contribution = 1 / gamma(phalf + 1) / (2 * self.smearing**2) ** phalf
             self_contributions.append(self_contribution)
         self_contributions = torch.stack(self_contributions, dim=-1)
-        return torch.inner(weights , self_contributions)
+        return torch.inner(weights, self_contributions)
 
     def background_correction(self) -> torch.Tensor:
         # "charge neutrality" correction for 1/r^p potential
@@ -568,7 +576,8 @@ class CombinedPotential(Potential):
             prefac /= (3 - exponent) * gamma(exponent / 2)
             prefacs.append(prefac)
         prefacs = torch.stack(prefacs, dim=-1)
-        return torch.inner(weights , prefacs)
+        return torch.inner(weights, prefacs)
+
 
 # since pytorch has implemented the incomplete Gamma functions, but not the much more
 # commonly used (complete) Gamma function, we define it in a custom way to make autograd
