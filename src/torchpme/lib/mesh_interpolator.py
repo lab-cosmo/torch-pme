@@ -1,7 +1,7 @@
 import torch
 
 
-class MeshInterpolator:
+class MeshInterpolator(torch.nn.Module):
     """
     Class for handling all steps related to interpolations in the context of a mesh
     based Ewald summation.
@@ -42,6 +42,7 @@ class MeshInterpolator:
         interpolation_nodes: int,
         method: str = "P3M",
     ):
+        super().__init__()
         # Check that the provided parameters match the specifications
         if cell.shape != (3, 3):
             raise ValueError(
@@ -60,22 +61,10 @@ class MeshInterpolator:
                 f"method '{method}' is not supported. Choose from 'Lagrange' or 'P3M'"
             )
 
-        self.cell = cell
-        self.inverse_cell = cell.clone()
         self.method = method
-
-        if self.cell.is_cuda:
-            # use function that does not synchronize with the CPU
-            self.inverse_cell = torch.linalg.inv_ex(cell)[0]
-        else:
-            self.inverse_cell = torch.linalg.inv(cell)
-
-        self.ns_mesh = ns_mesh
         self.interpolation_nodes = interpolation_nodes
-
-        self._dtype = cell.dtype
-        self._device = cell.device
-
+        self.update_mesh(cell, ns_mesh)
+        
         # TorchScript requires to initialize all attributes in __init__
         self.interpolation_weights: torch.Tensor = torch.zeros(
             1, device=self._device, dtype=self._dtype
@@ -86,6 +75,33 @@ class MeshInterpolator:
         self.x_indices: torch.Tensor = torch.zeros(1, device=self._device)
         self.y_indices: torch.Tensor = torch.zeros(1, device=self._device)
         self.z_indices: torch.Tensor = torch.zeros(1, device=self._device)
+
+    def update_mesh(self, cell: torch.Tensor, ns_mesh: torch.Tensor):
+        """
+        Updates the mesh parameters.
+
+        Call this to reuse a MeshInterpolator object when the cell parameters
+        or the mesh resolution change.
+
+        :param cell: torch.tensor of shape ``(3, 3)``, where ``cell[i]`` is the i-th basis
+            vector of the unit cell
+        :param ns_mesh: toch.tensor of shape ``(3,)``
+            Number of mesh points to use along each of the three axes
+        """
+
+        self.cell = cell
+        self.inverse_cell = cell.clone()        
+
+        if self.cell.is_cuda:
+            # use function that does not synchronize with the CPU
+            self.inverse_cell = torch.linalg.inv_ex(cell)[0]
+        else:
+            self.inverse_cell = torch.linalg.inv(cell)
+
+        self.ns_mesh = ns_mesh
+
+        self._dtype = cell.dtype
+        self._device = cell.device
 
     def get_mesh_xyz(self) -> torch.Tensor:
         """
