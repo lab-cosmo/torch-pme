@@ -13,7 +13,8 @@ to compute long-distance equivariant features, cf. GRISAFI PAPER
 # %%
 
 import ase
-import matplotlib
+
+# import matplotlib
 import numpy as np
 import torch
 from matplotlib import pyplot as plt
