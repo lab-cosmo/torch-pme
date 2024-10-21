@@ -31,7 +31,12 @@ def _optimize_parameters(
         if loss_value <= accuracy:
             break
 
-    if loss_value > accuracy:
+    if max_steps == 0:
+        warnings.warn(
+            "Skip optimization, return the initial guess.",
+            stacklevel=2,
+        )
+    elif loss_value > accuracy:
         warnings.warn(
             "The searching for the parameters is ended, but the error is "
             f"{float(loss_value):.3e}, larger than the given accuracy {accuracy}. "
@@ -53,7 +58,8 @@ def tune_ewald(
     r"""
     Find the optimal parameters for :class:`torchpme.calculators.ewald.EwaldCalculator`.
 
-    The error formulas are given `online <https://www2.icp.uni-stuttgart.de/~icp/mediawiki/images/4/4d/Script_Longrange_Interactions.pdf>`_.
+    The error formulas are given `online
+    <https://www2.icp.uni-stuttgart.de/~icp/mediawiki/images/4/4d/Script_Longrange_Interactions.pdf>`_.
     Note the difference notation between the parameters in the reference and ours:
 
     .. math::
@@ -63,6 +69,13 @@ def tune_ewald(
         K &= \frac{2 \pi}{\mathrm{lr\_wavelength}}
 
         r_c &= \mathrm{cutoff}
+
+    .. hint::
+
+        Tuning uses an initial guess for the optimization, which can be applied by
+        setting ``max_steps = 0``. This can be useful if fast tuning is required. These
+        values typically result in accuracies around :math:`10^{-7}`.
+
 
     :param sum_squared_charges: accumulated squared charges
     :param cell: single tensor of shape (3, 3), describing the bounding
@@ -76,7 +89,8 @@ def tune_ewald(
     :param verbose: whether to print the progress of gradient descent
 
     :return: Tuple containing a float of the optimal smearing for the :py:class:
-        `CoulombPotential`, a dictionary with the parameters for :py:class:`EwaldCalculator` and a float of the optimal cutoff value for the
+        `CoulombPotential`, a dictionary with the parameters for
+        :py:class:`EwaldCalculator` and a float of the optimal cutoff value for the
         neighborlist computation.
 
     Example
@@ -95,13 +109,13 @@ def tune_ewald(
     You can check the values of the parameters
 
     >>> print(smearing)
-    0.20517140875115344
+    0.14999979983727296
 
     >>> print(parameter)
-    {'lr_wavelength': 0.2879512643188817}
+    {'lr_wavelength': 0.047677734917968666}
 
     >>> print(cutoff)
-    0.5961240167485603
+    0.5485209762493759
     """
 
     _validate_parameters(cell, positions, exponent)
@@ -152,11 +166,12 @@ def tune_ewald(
         smearing_init, device=device, dtype=dtype, requires_grad=True
     )
     lr_wavelength = torch.tensor(
-        half_cell, device=device, dtype=dtype, requires_grad=True
-    )
-    cutoff = torch.tensor(
-        half_cell / 10, device=device, dtype=dtype, requires_grad=True
-    )
+        -math.log(10 * min_dimension / half_cell - 1),
+        device=device,
+        dtype=dtype,
+        requires_grad=True,
+    )  # sigmoid(lr_wavelength) == half_cell / 10
+    cutoff = torch.tensor(half_cell, device=device, dtype=dtype, requires_grad=True)
 
     _optimize_parameters(
         [smearing, lr_wavelength, cutoff],
@@ -193,6 +208,12 @@ def tune_pme(
     .. math::
 
         \alpha = \left(\sqrt{2}\,\mathrm{smearing} \right)^{-1}
+
+    .. hint::
+
+        Tuning uses an initial guess for the optimization, which can be applied by
+        setting ``max_steps = 0``. This can be useful if fast tuning is required. These
+        values typically result in accuracies around :math:`10^{-2}`.
 
     :param sum_squared_charges: accumulated squared charges
     :param cell: single tensor of shape (3, 3), describing the bounding

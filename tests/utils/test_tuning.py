@@ -9,7 +9,7 @@ from torchpme import (
     EwaldCalculator,
     PMECalculator,
 )
-from torchpme.utils.tuning import tune_ewald, tune_pme
+from torchpme.utils.tuning import _estimate_smearing, tune_ewald, tune_pme
 
 sys.path.append(str(Path(__file__).parents[1]))
 from helpers import define_crystal, neighbor_list_torch
@@ -32,7 +32,7 @@ CELL_1 = torch.eye(3, dtype=DTYPE, device=DEVICE)
     ("accuracy", "rtol"),
     [
         (1e-3, 1e-3),
-        (1e-3, 2e-6),
+        (1e-6, 2e-6),
         (1e-1, 1e-1),
     ],
 )
@@ -99,6 +99,25 @@ def test_odd_interpolation_nodes():
     madelung = -torch.sum(energies) / num_units
 
     torch.testing.assert_close(madelung, madelung_ref, atol=0, rtol=1e-3)
+
+
+@pytest.mark.parametrize("tune", [tune_ewald, tune_pme])
+def test_skip_optimization(tune):
+    pos, charges, cell, _, _ = define_crystal()
+    match = "Skip optimization, return the initial guess."
+    with pytest.warns(UserWarning, match=match):
+        smearing, params, sr_cutoff = tune(
+            float(torch.sum(charges**2)), cell, pos, max_steps=0
+        )
+        cell_dimensions = torch.linalg.norm(cell, dim=1)
+        half_cell = float(torch.min(cell_dimensions) / 2)
+        pytest.approx(_estimate_smearing(cell), smearing)
+        if tune is tune_ewald:
+            pytest.approx(half_cell / 10, list(params.values())[0])
+            pytest.approx(half_cell, sr_cutoff)
+        elif tune is tune_pme:
+            pytest.approx(smearing / 8, list(params.values())[0])
+            pytest.approx(half_cell / 5, sr_cutoff)
 
 
 @pytest.mark.parametrize("tune", [tune_ewald, tune_pme])
