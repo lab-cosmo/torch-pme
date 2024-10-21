@@ -107,8 +107,8 @@ class MeshInterpolator(torch.nn.Module):
 
         self.ns_mesh = ns_mesh
 
-        # self._dtype = cell.dtype
-        # self._device = cell.device
+        self._dtype = cell.dtype
+        self._device = cell.device
 
     def get_mesh_xyz(self) -> torch.Tensor:
         """
