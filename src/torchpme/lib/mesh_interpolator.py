@@ -43,6 +43,7 @@ class MeshInterpolator(torch.nn.Module):
         method: str = "P3M",
     ):
         super().__init__()
+
         # Check that the provided parameters match the specifications
         if cell.shape != (3, 3):
             raise ValueError(
@@ -61,9 +62,15 @@ class MeshInterpolator(torch.nn.Module):
                 f"method '{method}' is not supported. Choose from 'Lagrange' or 'P3M'"
             )
 
-        self.method = method
-        self.interpolation_nodes = interpolation_nodes
-        self.update_mesh(cell, ns_mesh)
+        self.method: str = method
+        self.interpolation_nodes: int = interpolation_nodes
+
+        self.cell: torch.Tensor = cell
+        self.inverse_cell: torch.Tensor = torch.linalg.inv(cell)
+        self.ns_mesh: torch.Tensor = ns_mesh
+
+        self._dtype = cell.dtype
+        self._device = cell.device
 
         # TorchScript requires to initialize all attributes in __init__
         self.interpolation_weights: torch.Tensor = torch.zeros(
@@ -100,8 +107,8 @@ class MeshInterpolator(torch.nn.Module):
 
         self.ns_mesh = ns_mesh
 
-        self._dtype = cell.dtype
-        self._device = cell.device
+        # self._dtype = cell.dtype
+        # self._device = cell.device
 
     def get_mesh_xyz(self) -> torch.Tensor:
         """

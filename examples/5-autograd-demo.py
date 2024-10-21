@@ -359,16 +359,15 @@ class KSpaceModule(torch.nn.Module):
         # use a helper function to get the mesh size given resolution
         ns_mesh = torchpme.lib.get_ns_mesh(cell, self._mesh_spacing)
         ns_mesh = torch.tensor([4, 4, 4])
-        self._interpolator = torchpme.lib.MeshInterpolator(
-            cell=cell, ns_mesh=ns_mesh, interpolation_nodes=3
-        )
-        self._interpolator.compute_weights(positions)
-        mesh = self._interpolator.points_to_mesh(charges)
+
+        self._MI.update_mesh(cell=cell, ns_mesh=ns_mesh)
+        self._MI.compute_weights(positions)
+        mesh = self._MI.points_to_mesh(charges)
 
         self._KF.update_mesh(cell, ns_mesh)
         self._KF.update_filter()
         mesh = self._KF.compute(mesh)
-        pot = self._interpolator.mesh_to_points(mesh)
+        pot = self._MI.mesh_to_points(mesh)
 
         x = torch.hstack([charges, pot])
         for layer in self._layers:
