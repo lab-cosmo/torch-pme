@@ -6,7 +6,7 @@ from torch.special import gammainc, gammaincc, gammaln
 
 from .splines import (
     CubicSpline,
-    CubicSplineLongRange,
+    CubicSplineReciprocal,
     compute_second_derivatives,
     compute_spline_ft,
 )
@@ -474,12 +474,11 @@ class SplinePotential(Potential):
     def __init__(
         self,
         r_grid: torch.Tensor,
-        y_grid: Optional[torch.Tensor] = None,
-        r_grid_lr: Optional[torch.Tensor] = None,
-        y_grid_lr: Optional[torch.Tensor] = None,
+        y_grid: torch.Tensor,
         k_grid: Optional[torch.Tensor] = None,
-        krn_grid: Optional[torch.Tensor] = None,
+        ky_grid: Optional[torch.Tensor] = None,
         smearing: Optional[float] = None,
+        reciprocal: Optional[bool] = False,
         dtype: Optional[torch.dtype] = None,
         device: Optional[torch.device] = None,
     ):
@@ -489,35 +488,34 @@ class SplinePotential(Potential):
         if device is None:
             device = torch.device("cpu")
 
-        if r_grid_lr is None:
-            r_grid_lr = r_grid
+        if len(y_grid) != len(r_grid):
+            raise ValueError("Length of radial grid and value array mismatch.")
 
-        if k_grid is None:  # defaults to 1/lr_grid_points
-            k_grid = torch.pi * 2 * torch.reciprocal(r_grid_lr).flip(dims=[0])
-
-        if y_grid is None:
-            self._spline = None
+        if reciprocal:
+            if torch.min(r_grid) <= 0.0:
+                raise ValueError(
+                    "Positive-valued radial grid is needed for reciprocal axis spline."
+                )
+            self._spline = CubicSplineReciprocal(r_grid, y_grid)
         else:
             self._spline = CubicSpline(r_grid, y_grid)
 
-        if y_grid_lr is None:
-            self._lr_spline = None
-        else:
-            self._lr_spline = CubicSplineLongRange(r_grid_lr, y_grid_lr)
+        if k_grid is None:
+            # defaults to 2pi/r_grid_points if reciprocal, to r_grid if not
+            if reciprocal:
+                k_grid = torch.pi * 2 * torch.reciprocal(r_grid).flip(dims=[0])
+            else:
+                k_grid = r_grid.clone()
 
-        if krn_grid is None and y_grid_lr is not None:
+        if ky_grid is None:
             # computes automatically!
-            krn_grid = compute_spline_ft(
+            ky_grid = compute_spline_ft(
                 k_grid,
-                r_grid_lr,
-                y_grid_lr,
-                compute_second_derivatives(r_grid_lr, y_grid_lr),
+                r_grid,
+                y_grid,
+                compute_second_derivatives(r_grid, y_grid),
             )
-
-        if krn_grid is None:
-            self._krn_spline = None
-        else:
-            self._krn_spline = CubicSpline(k_grid**2, krn_grid)
+        self._krn_spline = CubicSpline(k_grid**2, ky_grid)
 
     def from_dist(self, dist: torch.Tensor) -> torch.Tensor:
         """
@@ -528,9 +526,7 @@ class SplinePotential(Potential):
         """
 
         # if the full spline is not given, falls back on the lr part
-        if self._spline is None:
-            return self.lr_from_dist(dist)
-        return self._spline(dist)
+        return self.lr_from_dist(dist)
 
     def sr_from_dist(self, dist: torch.Tensor) -> torch.Tensor:
         """
@@ -540,7 +536,7 @@ class SplinePotential(Potential):
             be evaluated.
         """
 
-        return self.from_dist(dist) - self.lr_from_dist(dist)
+        return 0.0 * dist
 
     def lr_from_dist(self, dist: torch.Tensor) -> torch.Tensor:
         """
@@ -550,9 +546,7 @@ class SplinePotential(Potential):
             be evaluated.
         """
 
-        if self._lr_spline is None:
-            return 0.0 * dist
-        return self._lr_spline(dist)
+        return self._spline(dist)
 
     def lr_from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
         """
@@ -562,8 +556,6 @@ class SplinePotential(Potential):
             vectors k at which the Fourier-transformed potential is to be evaluated
         """
 
-        if self._krn_spline is None:
-            return k_sq * 0.0
         return self._krn_spline(k_sq)
 
     def self_contribution(self) -> torch.Tensor:

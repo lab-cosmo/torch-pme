@@ -42,9 +42,9 @@ class CubicSpline(torch.nn.Module):
         ) + b * (self.y_points[i + 1] + (b * b - 1) * self.d2y_points[i + 1] * h2over6)
 
 
-class CubicSplineLongRange(CubicSpline):
+class CubicSplineReciprocal(CubicSpline):
     r"""
-    Inverse-axis cubic spline calculator.
+    Reciprocal-axis cubic spline calculator.
 
     Computes a spline on a :math:`1/x` grid, "extending" it so that
     it converges smoothly to zero as :math:`x\rightarrow\infty`.

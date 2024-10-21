@@ -35,8 +35,8 @@ coulomb = CoulombPotential(smearing=1.0)
 x_grid = torch.logspace(-3, 2, 2000)
 y_grid = coulomb.lr_from_dist(x_grid)
 
-# create a spline potential for both the SR and LR parts
-spline = SplinePotential(r_grid=x_grid, y_grid=y_grid, y_grid_lr=y_grid)
+# create a spline potential
+spline = SplinePotential(r_grid=x_grid, y_grid=y_grid, reciprocal=True)
 
 # %%
 # The real-space part of the potential matches the reference
@@ -83,7 +83,7 @@ x_grid = torch.logspace(-3, 2, 2000)
 y_grid = coulomb.lr_from_dist(x_grid) + coulomb.sr_from_dist(x_grid)
 
 # create a spline potential for both the SR and LR parts
-spline = SplinePotential(r_grid=x_grid, y_grid=y_grid, y_grid_lr=y_grid, smearing=1.0)
+spline = SplinePotential(r_grid=x_grid, y_grid=y_grid, smearing=1.0, reciprocal=True)
 
 # %%
 # The real-space part of the potential matches the reference
@@ -202,3 +202,5 @@ cf = ax.imshow(
     origin="lower",
     interpolation="bilinear",
 )
+
+# %%

@@ -5,7 +5,7 @@ from torch.testing import assert_close
 from torchpme.lib.potentials import CoulombPotential, SplinePotential
 from torchpme.lib.splines import (
     CubicSpline,
-    CubicSplineLongRange,
+    CubicSplineReciprocal,
     compute_second_derivatives,
     compute_spline_ft,
 )
@@ -36,7 +36,7 @@ def test_inverse_spline(function):
     y_grid = function(x_grid)
 
     spline_test = CubicSpline(x_grid, y_grid)
-    lr_spline_test = CubicSplineLongRange(x_grid, y_grid)
+    lr_spline_test = CubicSplineReciprocal(x_grid, y_grid)
     z_grid = spline_test(x_grid)
     lr_grid = lr_spline_test(x_grid)
 
@@ -85,6 +85,35 @@ def test_ft_accuracy(high_accuracy):
             assert_close(krn, krn_ref, atol=3e-7, rtol=0)
 
 
+def test_spline_potential_cases():
+    x_grid = torch.linspace(0, 20, 100)
+    y_grid = torch.exp(-(x_grid**2) * 0.5)
+
+    x_grid_2 = torch.logspace(-2, 2, 80)
+    y_grid_2 = torch.reciprocal(-(x_grid_2**2) * 0.01)
+
+    spline = None
+    with pytest.raises(
+        ValueError, match="Length of radial grid and value array mismatch."
+    ):
+        spline = SplinePotential(r_grid=x_grid, y_grid=y_grid_2)
+
+    with pytest.raises(
+        ValueError,
+        match="Positive-valued radial grid is needed for reciprocal axis spline.",
+    ):
+        spline = SplinePotential(r_grid=x_grid, y_grid=y_grid, reciprocal=True)
+
+    spline = SplinePotential(r_grid=x_grid, y_grid=y_grid, reciprocal=False)
+    assert_close(spline.from_dist(x_grid), y_grid)
+
+    spline = SplinePotential(r_grid=x_grid_2, y_grid=y_grid_2, reciprocal=True)
+    assert_close(spline.from_dist(x_grid_2), y_grid_2)
+
+    assert_close(spline.from_dist(x_grid_2), spline.lr_from_dist(x_grid_2))
+    assert_close(x_grid_2 * 0.0, spline.sr_from_dist(x_grid_2))
+
+
 def test_spline_potential_vs_coulomb():
     # the approximation is not super-accurate
 
@@ -92,7 +121,7 @@ def test_spline_potential_vs_coulomb():
     x_grid = torch.logspace(-3.0, 3.0, 3000)
     y_grid = coulomb.lr_from_dist(x_grid)
 
-    spline = SplinePotential(r_grid=x_grid, y_grid_lr=y_grid)
+    spline = SplinePotential(r_grid=x_grid, y_grid=y_grid, reciprocal=True)
     t_grid = torch.logspace(-torch.pi / 2, torch.pi / 2, 100)
     z_coul = coulomb.lr_from_dist(t_grid)
     z_spline = spline.lr_from_dist(t_grid)
