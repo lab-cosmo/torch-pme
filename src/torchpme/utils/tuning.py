@@ -58,7 +58,8 @@ def tune_ewald(
     r"""
     Find the optimal parameters for :class:`torchpme.calculators.ewald.EwaldCalculator`.
 
-    The error formulas are given `online <https://www2.icp.uni-stuttgart.de/~icp/mediawiki/images/4/4d/Script_Longrange_Interactions.pdf>`_.
+    The error formulas are given `online
+    <https://www2.icp.uni-stuttgart.de/~icp/mediawiki/images/4/4d/Script_Longrange_Interactions.pdf>`_.
     Note the difference notation between the parameters in the reference and ours:
 
     .. math::
@@ -68,6 +69,13 @@ def tune_ewald(
         K &= \frac{2 \pi}{\mathrm{lr\_wavelength}}
 
         r_c &= \mathrm{cutoff}
+
+    .. hint::
+
+        Tuning uses an initial guess for the optimization, which can be applied by
+        setting ``max_steps = 0``. This can be useful if fast tuning is required. These
+        values typically result in accuracies around :math:`10^{-7}`.
+
 
     :param sum_squared_charges: accumulated squared charges
     :param cell: single tensor of shape (3, 3), describing the bounding
@@ -81,7 +89,8 @@ def tune_ewald(
     :param verbose: whether to print the progress of gradient descent
 
     :return: Tuple containing a float of the optimal smearing for the :py:class:
-        `CoulombPotential`, a dictionary with the parameters for :py:class:`EwaldCalculator` and a float of the optimal cutoff value for the
+        `CoulombPotential`, a dictionary with the parameters for
+        :py:class:`EwaldCalculator` and a float of the optimal cutoff value for the
         neighborlist computation.
 
     Example
@@ -199,6 +208,12 @@ def tune_pme(
     .. math::
 
         \alpha = \left(\sqrt{2}\,\mathrm{smearing} \right)^{-1}
+
+    .. hint::
+
+        Tuning uses an initial guess for the optimization, which can be applied by
+        setting ``max_steps = 0``. This can be useful if fast tuning is required. These
+        values typically result in accuracies around :math:`10^{-2}`.
 
     :param sum_squared_charges: accumulated squared charges
     :param cell: single tensor of shape (3, 3), describing the bounding
