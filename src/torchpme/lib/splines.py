@@ -109,7 +109,9 @@ def _solve_tridiagonal(a, b, c, d):
 
 
 def compute_second_derivatives(
-    x_points: torch.Tensor, y_points: torch.Tensor, high_accuracy: Optional[bool] = True
+    x_points: torch.Tensor,
+    y_points: torch.Tensor,
+    high_precision: Optional[bool] = True,
 ):
     """
     Computes second derivatives given the grid points of a cubic spline.
@@ -124,7 +126,7 @@ def compute_second_derivatives(
     # Do the calculation in float64 if required
     x = x_points
     y = y_points
-    if high_accuracy:
+    if high_precision:
         x = x.to(dtype=torch.float64)
         y = y.to(dtype=torch.float64)
 
@@ -154,24 +156,6 @@ def compute_second_derivatives(
         c[i] = intervals[i] / 6
         d[i] = dy[i] - dy[i - 1]
 
-    """
-    # Create matrix A and vector B for solving the system A * d2y = B
-    n = len(x)
-    A = torch.zeros((n, n))
-    B = torch.zeros(n)
-
-    A[0, 0] = 1  # Natural spline condition at the first point
-    A[-1, -1] = 1  # Natural spline condition at the last point
-
-    for i in range(1, n - 1):
-        A[i, i - 1] = intervals[i - 1] / 6
-        A[i, i] = (intervals[i - 1] + intervals[i]) / 3
-        A[i, i + 1] = intervals[i] / 6
-        B[i] = dy[i] - dy[i - 1]
-
-    # Solve the system to find the second derivatives
-    d2y = torch.linalg.solve(A, B)
-    """
     d2y = _solve_tridiagonal(a, b, c, d)
 
     # Converts back to the original dtype
@@ -302,6 +286,7 @@ def compute_spline_ft(
         dtype=dr.dtype, device=dr.device
     )
 
+    # this is the tail contribution multiplied by k**2 to remove the singularity
     tail = (
         -2
         * torch.pi
@@ -309,11 +294,35 @@ def compute_spline_ft(
             (d2y0 - 6 * r0**2 * y0) * torch.cos(k * r0)
             + d2y0 * k * r0 * (k * r0 * cosint - torch.sin(k * r0))
         )
-    ) / (3.0 * k**2 * r0)
+    ) / (3.0 * r0)
 
-    ft_full = (
-        2 * torch.pi / 3 * torch.sum(ft_interval / dr, axis=1).reshape(-1, 1) / k**6
-        + tail
+    ft_sum = torch.pi * 2 / 3 * torch.sum(ft_interval / dr, axis=1).reshape(-1, 1)
+    # k-> 0 limit, analytical expression
+    ft_limit = torch.sum(
+        -(
+            dr
+            * torch.pi
+            * (
+                3 * d2yi * dr**2 * (3 * dr**2 + 10 * dr * ri + 10 * ri**2)
+                + dd2y * dr**2 * (5 * dr**2 + 16 * dr * ri + 15 * ri**2)
+                - 30
+                * (
+                    6 * ri**2 * (dy + 2 * yi)
+                    + 4 * dr * ri * (2 * dy + 3 * yi)
+                    + dr**2 * (3 * dy + 4 * yi)
+                )
+            )
+        )
+        / 90,
+        axis=1,
     )
 
-    return ft_full.reshape(k_points.shape).to(k_points.dtype)
+    return (
+        torch.where(
+            k == 0,
+            ft_limit,
+            ft_sum / k**6 + tail / k**2,
+        )
+        .reshape(k_points.shape)
+        .to(k_points.dtype)
+    )
