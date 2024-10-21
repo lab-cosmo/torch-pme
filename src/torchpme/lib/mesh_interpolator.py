@@ -64,7 +64,7 @@ class MeshInterpolator(torch.nn.Module):
         self.method = method
         self.interpolation_nodes = interpolation_nodes
         self.update_mesh(cell, ns_mesh)
-        
+
         # TorchScript requires to initialize all attributes in __init__
         self.interpolation_weights: torch.Tensor = torch.zeros(
             1, device=self._device, dtype=self._dtype
@@ -90,7 +90,7 @@ class MeshInterpolator(torch.nn.Module):
         """
 
         self.cell = cell
-        self.inverse_cell = cell.clone()        
+        self.inverse_cell = cell.clone()
 
         if self.cell.is_cuda:
             # use function that does not synchronize with the CPU

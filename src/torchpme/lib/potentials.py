@@ -479,10 +479,11 @@ class SplinePotential(Potential):
         y_grid_lr: Optional[torch.Tensor] = None,
         k_grid: Optional[torch.Tensor] = None,
         krn_grid: Optional[torch.Tensor] = None,
+        smearing: Optional[float] = None,
         dtype: Optional[torch.dtype] = None,
         device: Optional[torch.device] = None,
     ):
-        super().__init__(dtype, device)
+        super().__init__(smearing=smearing, dtype=dtype, device=device)
         if dtype is None:
             dtype = torch.get_default_dtype()
         if device is None:
@@ -549,6 +550,8 @@ class SplinePotential(Potential):
             be evaluated.
         """
 
+        if self._lr_spline is None:
+            return 0.0 * dist
         return self._lr_spline(dist)
 
     def lr_from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:

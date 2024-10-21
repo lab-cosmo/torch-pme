@@ -77,7 +77,12 @@ class CubicSplineLongRange(CubicSpline):
 
 def _solve_tridiagonal(a, b, c, d):
     """
-    Helper function to solve a tri-diagonal problem
+    Helper function to solve a tri-diagonal linear problem.
+
+    a = torch.zeros(n)  # Sub-diagonal (a[1..n-1])
+    b = torch.zeros(n)  # Main diagonal (b[0..n-1])
+    c = torch.zeros(n)  # Super-diagonal (c[0..n-2])
+    d = torch.zeros(n)  # Right-hand side (d[0..n-1])
     """
 
     n = len(d)
