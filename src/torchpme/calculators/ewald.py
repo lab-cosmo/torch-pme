@@ -105,34 +105,14 @@ class EwaldCalculator(Calculator):
         # follows directly from the Poisson summation formula.
         # For this, we precompute trigonometric factors for optimization, which leads
         # to N^2 rather than N^3 scaling.
-        trig_args = kvectors @ (positions.T)  # shape num_k x num_atoms
+        trig_args = kvectors @ (positions.T)  # [k, i]
 
-        # Reshape charges into suitable form for array/tensor broadcasting
-        num_atoms = len(positions)
-        if charges.dim() > 1:
-            num_channels = charges.shape[1]
-            charges_reshaped = (charges.T).reshape(num_channels, 1, num_atoms)
-            sum_idx = 2
-        else:
-            charges_reshaped = charges
-            sum_idx = 1
-
-        # Actual computation of trigonometric factors
-
-        sincos_all = torch.stack([torch.cos(trig_args), torch.sin(trig_args)])
-        sincos_summed_G = torch.sum(sincos_all * charges_reshaped, dim=sum_idx) * G
-        energy = sincos_summed_G.reshape(1, -1) @ sincos_all.reshape(
-            -1, sincos_all.shape[-1]
-        )
-        energy = energy.T / torch.abs(cell.det())
-
-        # cos_all = torch.cos(trig_args)
-        # sin_all = torch.sin(trig_args)
-        # cos_summed_G = torch.sum(cos_all * charges_reshaped, dim=sum_idx) * G
-        # sin_summed_G = torch.sum(sin_all * charges_reshaped, dim=sum_idx) * G
-
-        # energy = (cos_summed_G @ cos_all + sin_summed_G @ sin_all).T
-        # energy /= torch.abs(cell.det())
+        c = torch.cos(trig_args) # [k, i]
+        s = torch.sin(trig_args) # [k, i]
+        sc = torch.stack([c, s], dim=0) # [2 "f", k, i]
+        sc_summed_G = torch.einsum("fki,ic, k->fkc", sc, charges, G)
+        energy = torch.einsum("fkc,fki->ic", sc_summed_G, sc)
+        energy /= torch.abs(cell.det())
 
         # Remove the self-contribution: Using the Coulomb potential as an
         # example, this is the potential generated at the origin by the fictituous
