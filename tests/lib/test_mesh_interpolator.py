@@ -379,6 +379,18 @@ def test_interpolation_nodes_not_allowed_private():
     with pytest.raises(ValueError, match=match):
         interpolator._compute_1d_weights(torch.tensor([0]))
 
+    interpolator.method = "PPPPMMMM"
+    match = "Only `method` `Lagrange` and `P3M` are allowed"
+    with pytest.raises(ValueError, match=match):
+        interpolator._compute_1d_weights(torch.tensor([0]))
+
+    interpolator.method = "Lagrange"
+    for interpolation_nodes in [1, 8]:  # not allowed
+        interpolator.interpolation_nodes = interpolation_nodes
+        match = "Only `interpolation_nodes` from 3 to 7 are allowed"
+        with pytest.raises(ValueError, match=match):
+            interpolator._compute_1d_weights(torch.tensor([0]))
+
 
 @pytest.mark.parametrize("method", ["P3M", "Lagrange"])
 def test_different_devices_cell_ns_mesh(method):
