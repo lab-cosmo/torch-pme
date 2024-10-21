@@ -277,7 +277,7 @@ class MeshInterpolator(torch.nn.Module):
                     1 / 720 * (12 * x + 4 * x2 - 15 * x3 - 5 * x4 + 3 * x5 + x6),
                 ]
             )
-        raise ValueError("Only `interpolation_nodes` from 2 to 6 are allowed")
+        raise ValueError("Only `interpolation_nodes` from 3 to 7 are allowed")
 
     def compute_weights(self, positions: torch.Tensor):
         """

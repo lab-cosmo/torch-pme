@@ -463,12 +463,26 @@ class SplinePotential(Potential):
     """
     Potential built from a spline interpolation.
 
-    Here :math:`r` is a distance parameter and :math:`p` an exponent.
-
-    The short and long-range parts of the potential are computed based on a cubic
-    spline built at initialization time. The reciprocal-space kernel is computed
-    numerically as a spline, too.  Assumes the infinite-separation value of the
+    The potential is assumed to have only a long-range part, but one can also
+    add a short-range part if needed.
+    The real-space potential is computed based on a cubic spline built at
+    initialization time. The Fourier-domain kernel is computed numerically
+    as a spline, too.  Assumes the infinite-separation value of the
     potential to be zero.
+
+    :param r_grid: radial grid for the real-space evaluation
+    :param y_grid: potential values for the real-space evaluation
+    :param k_grid: radial grid for the k-space evaluation;
+        computed automatically from ``r_grid`` if absent.
+    :param ky_grid: potential values for the k-space evaluation;
+        computed automatically from ``y_grid`` if absent.
+    :param reciprocal: flag that determines if the splining should
+        be performed on a :math:`1/r` axis; suitable to describe
+        long-range potentials. ``r_grid`` should contain only
+        stricty positive values.
+    :param: smearing: a length scale for switching between real and
+        k-space evaluation. Not used internally, only provided as a
+        hint for calculators using this.
     """
 
     def __init__(
@@ -477,8 +491,8 @@ class SplinePotential(Potential):
         y_grid: torch.Tensor,
         k_grid: Optional[torch.Tensor] = None,
         ky_grid: Optional[torch.Tensor] = None,
-        smearing: Optional[float] = None,
         reciprocal: Optional[bool] = False,
+        smearing: Optional[float] = None,
         dtype: Optional[torch.dtype] = None,
         device: Optional[torch.device] = None,
     ):

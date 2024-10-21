@@ -356,9 +356,16 @@ def test_interpolation_nodes_not_allowed():
     match = "Only `interpolation_nodes` from 1 to 5 are allowed"
 
     with pytest.raises(ValueError, match=match):
-        MeshInterpolator(cell, ns_mesh, interpolation_nodes)._compute_1d_weights(
-            torch.tensor([0])
-        )
+        MeshInterpolator(
+            cell, ns_mesh, interpolation_nodes, method="P3M"
+        )._compute_1d_weights(torch.tensor([0]))
+
+    for interpolation_nodes in [1, 8]:  # not allowed
+        match = "Only `interpolation_nodes` from 3 to 7 are allowed"
+        with pytest.raises(ValueError, match=match):
+            MeshInterpolator(
+                cell, ns_mesh, interpolation_nodes, method="Lagrange"
+            )._compute_1d_weights(torch.tensor([0]))
 
 
 def test_interpolation_nodes_not_allowed_private():
