@@ -531,7 +531,10 @@ class SplinePotential(Potential):
             )
 
         # the function is defined for k**2, so we define the grid accordingly
-        self._krn_spline = CubicSpline(k_grid**2, ky_grid)
+        if reciprocal:
+            self._krn_spline = CubicSplineReciprocal(k_grid**2, ky_grid)
+        else:
+            self._krn_spline = CubicSpline(k_grid**2, ky_grid)
 
     def from_dist(self, dist: torch.Tensor) -> torch.Tensor:
         """

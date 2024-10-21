@@ -51,9 +51,15 @@ class CubicSplineReciprocal(CubicSpline):
 
     :param x_points:  Abscissas of the splining points for the real-space function
     :param y_points:  Ordinates of the splining points for the real-space function
+    :param y_at_zero:  Value to be returned when called for an argument of zero
     """
 
-    def __init__(self, x_points: torch.Tensor, y_points: torch.Tensor):
+    def __init__(
+        self,
+        x_points: torch.Tensor,
+        y_points: torch.Tensor,
+        y_at_zero: Optional[torch.Tensor] = None,
+    ):
         # compute on a inverse grid
         ix_points = torch.cat(
             [
@@ -70,9 +76,16 @@ class CubicSplineReciprocal(CubicSpline):
             dim=0,
         )
         super().__init__(ix_points, iy_points)
+        if y_at_zero is None:
+            y_at_zero = torch.tensor(
+                [0.0], dtype=x_points.dtype, device=x_points.device
+            )
+        self._y_at_zero = y_at_zero
 
     def forward(self, x: torch.Tensor):
-        return super().forward(torch.reciprocal(x))
+        return torch.where(
+            x == 0.0, self._y_at_zero, super().forward(torch.reciprocal(x))
+        )
 
 
 def _solve_tridiagonal(a, b, c, d):
