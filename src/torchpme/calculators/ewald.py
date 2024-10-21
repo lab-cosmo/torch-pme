@@ -118,14 +118,21 @@ class EwaldCalculator(Calculator):
             sum_idx = 1
 
         # Actual computation of trigonometric factors
-        # Actual computation of trigonometric factors
-        cos_all = torch.cos(trig_args)
-        sin_all = torch.sin(trig_args)
-        cos_summed_G = torch.sum(cos_all * charges_reshaped, dim=sum_idx) * G
-        sin_summed_G = torch.sum(sin_all * charges_reshaped, dim=sum_idx) * G
 
-        energy = (cos_summed_G @ cos_all + sin_summed_G @ sin_all).T
-        energy /= torch.abs(cell.det())
+        sincos_all = torch.stack([torch.cos(trig_args), torch.sin(trig_args)])
+        sincos_summed_G = torch.sum(sincos_all * charges_reshaped, dim=sum_idx) * G
+        energy = sincos_summed_G.reshape(1, -1) @ sincos_all.reshape(
+            -1, sincos_all.shape[-1]
+        )
+        energy = energy.T / torch.abs(cell.det())
+
+        # cos_all = torch.cos(trig_args)
+        # sin_all = torch.sin(trig_args)
+        # cos_summed_G = torch.sum(cos_all * charges_reshaped, dim=sum_idx) * G
+        # sin_summed_G = torch.sum(sin_all * charges_reshaped, dim=sum_idx) * G
+
+        # energy = (cos_summed_G @ cos_all + sin_summed_G @ sin_all).T
+        # energy /= torch.abs(cell.det())
 
         # Remove the self-contribution: Using the Coulomb potential as an
         # example, this is the potential generated at the origin by the fictituous
