@@ -4,7 +4,7 @@ from scipy.special import expi
 from torch.special import erf, erfc
 from torch.testing import assert_close
 
-from torchpme.lib import CoulombPotential, InversePowerLawPotential
+from torchpme.lib import CoulombPotential, InversePowerLawPotential, Potential
 
 
 def gamma(x):
@@ -237,6 +237,40 @@ def test_range_none(potential):
         _ = pot.self_contribution()
     with pytest.raises(ValueError, match=match):
         _ = pot.background_correction()
+
+
+def test_no_impl():
+    class NoImplPotential(Potential):
+        pass
+
+    mypot = NoImplPotential()
+    with pytest.raises(
+        NotImplementedError, match="from_dist is not implemented for NoImplPotential"
+    ):
+        mypot.from_dist(torch.tensor([1, 2.0, 3.0]))
+    with pytest.raises(
+        NotImplementedError, match="lr_from_dist is not implemented for NoImplPotential"
+    ):
+        mypot.lr_from_dist(torch.tensor([1, 2.0, 3.0]))
+    with pytest.raises(
+        NotImplementedError, match="lr_from_k_sq is not implemented for NoImplPotential"
+    ):
+        mypot.lr_from_k_sq(torch.tensor([1, 2.0, 3.0]))
+    with pytest.raises(
+        NotImplementedError,
+        match="self_contribution is not implemented for NoImplPotential",
+    ):
+        mypot.self_contribution()
+    with pytest.raises(
+        NotImplementedError,
+        match="background_correction is not implemented for NoImplPotential",
+    ):
+        mypot.background_correction()
+    with pytest.raises(
+        ValueError,
+        match="Cannot compute cutoff function when `exclusion_radius` is not set",
+    ):
+        mypot.f_cutoff(torch.tensor([1, 2.0, 3.0]))
 
 
 @pytest.mark.parametrize("exclusion_radius", [0.5, 1.0, 2.0])
