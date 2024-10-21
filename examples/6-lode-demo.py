@@ -25,7 +25,7 @@ device = "cpu"
 dtype = torch.float64
 rng = torch.Generator()
 rng.manual_seed(42)
-matplotlib.use("widget")
+# matplotlib.use("widget")
 
 # %%
 # Demonstrate spline potential class
