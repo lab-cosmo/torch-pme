@@ -107,9 +107,9 @@ class EwaldCalculator(Calculator):
         # to N^2 rather than N^3 scaling.
         trig_args = kvectors @ (positions.T)  # [k, i]
 
-        c = torch.cos(trig_args) # [k, i]
-        s = torch.sin(trig_args) # [k, i]
-        sc = torch.stack([c, s], dim=0) # [2 "f", k, i]
+        c = torch.cos(trig_args)  # [k, i]
+        s = torch.sin(trig_args)  # [k, i]
+        sc = torch.stack([c, s], dim=0)  # [2 "f", k, i]
         sc_summed_G = torch.einsum("fki,ic, k->fkc", sc, charges, G)
         energy = torch.einsum("fkc,fki->ic", sc_summed_G, sc)
         energy /= torch.abs(cell.det())
