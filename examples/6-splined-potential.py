@@ -1,5 +1,5 @@
 """
-.. _example-lode-demo:
+.. _example-splined-potential:
 
 Splined potentials
 ==================
