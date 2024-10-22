@@ -453,6 +453,8 @@ class CombinedPotential(Potential):
     def __init__(
         self,
         exponents: list[float],
+        initial_weights: Optional[torch.Tensor] = None,
+        learnable_weights: Optional[bool] = True,
         smearing: Optional[float] = None,
         exclusion_radius: Optional[float] = None,
         dtype: Optional[torch.dtype] = None,
@@ -476,9 +478,18 @@ class CombinedPotential(Potential):
         self.register_buffer(
             "exponents", torch.tensor(exponents, dtype=dtype, device=device)
         )
-        self.weights = torch.nn.Parameter(
-            torch.ones_like(self.exponents, dtype=dtype, device=device)
-        )
+        if initial_weights is not None:
+            if len(initial_weights) != len(exponents):
+                raise ValueError(
+                    "The number of initial weights must match the number of exponents"
+                )
+        else:
+            initial_weights = torch.ones(len(exponents), dtype=dtype, device=device)
+
+        if learnable_weights:
+            self.weights = torch.nn.Parameter(initial_weights)
+        else:
+            self.register_buffer("weights", initial_weights)
 
     def from_dist(self, dist: torch.Tensor) -> torch.Tensor:
         """

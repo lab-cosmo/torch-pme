@@ -4,7 +4,7 @@ from scipy.special import expi
 from torch.special import erf, erfc
 from torch.testing import assert_close
 
-from torchpme.lib import CoulombPotential, InversePowerLawPotential
+from torchpme.lib import CombinedPotential, CoulombPotential, InversePowerLawPotential
 
 
 def gamma(x):
@@ -284,3 +284,79 @@ def test_inverserp_coulomb(smearing):
     assert_close(ipl_fourier, coul_fourier, rtol=rtol, atol=atol)
     assert_close(ipl_self, coul_self, rtol=rtol, atol=atol)
     assert_close(ipl_bg, coul_bg, rtol=rtol, atol=atol)
+
+
+@pytest.mark.parametrize("smearing", smearinges)
+def test_combined_potential(smearing):
+    """"""
+    ipl_1 = InversePowerLawPotential(exponent=1.0, smearing=smearing, dtype=dtype)
+    ipl_2 = InversePowerLawPotential(exponent=2.0, smearing=smearing, dtype=dtype)
+
+    ipl_1_from_dist = ipl_1.from_dist(dists)
+    ipl_1_sr_from_dist = ipl_1.sr_from_dist(dists)
+    ipl_1_lr_from_dist = ipl_1.lr_from_dist(dists_sq)
+    ipl_1_fourier = ipl_1.lr_from_k_sq(ks_sq)
+    ipl_1_self = ipl_1.self_contribution()
+    ipl_1_bg = ipl_1.background_correction()
+
+    ipl_2_from_dist = ipl_2.from_dist(dists)
+    ipl_2_sr_from_dist = ipl_2.sr_from_dist(dists)
+    ipl_2_lr_from_dist = ipl_2.lr_from_dist(dists_sq)
+    ipl_2_fourier = ipl_2.lr_from_k_sq(ks_sq)
+    ipl_2_self = ipl_2.self_contribution()
+    ipl_2_bg = ipl_2.background_correction()
+
+    weights = torch.randn(2, dtype=dtype)
+    combined = CombinedPotential(
+        exponents=[1.0, 2.0],
+        initial_weights=weights,
+        learnable_weights=False,
+        smearing=smearing,
+        dtype=dtype,
+    )
+    combined_from_dist = combined.from_dist(dists)
+    combined_sr_from_dist = combined.sr_from_dist(dists)
+    combined_lr_from_dist = combined.lr_from_dist(dists_sq)
+    combined_fourier = combined.lr_from_k_sq(ks_sq)
+    combined_self = combined.self_contribution()
+    combined_bg = combined.background_correction()
+
+    # Test agreement between generic and specialized implementations
+    atol = 3e-16
+    rtol = 2 * machine_epsilon
+    assert_close(
+        weights[0] * ipl_1_from_dist + weights[1] * ipl_2_from_dist,
+        combined_from_dist,
+        rtol=rtol,
+        atol=atol,
+    )
+
+    atol = 3e-8
+    rtol = 2 * machine_epsilon
+    assert_close(
+        weights[0] * ipl_1_sr_from_dist + weights[1] * ipl_2_sr_from_dist,
+        combined_sr_from_dist,
+        rtol=rtol,
+        atol=atol,
+    )
+    assert_close(
+        weights[0] * ipl_1_lr_from_dist + weights[1] * ipl_2_lr_from_dist,
+        combined_lr_from_dist,
+        rtol=rtol,
+        atol=atol,
+    )
+    assert_close(
+        weights[0] * ipl_1_fourier + weights[1] * ipl_2_fourier,
+        combined_fourier,
+        rtol=rtol,
+        atol=atol,
+    )
+    assert_close(
+        weights[0] * ipl_1_self + weights[1] * ipl_2_self,
+        combined_self,
+        rtol=rtol,
+        atol=atol,
+    )
+    assert_close(
+        weights[0] * ipl_1_bg + weights[1] * ipl_2_bg, combined_bg, rtol=rtol, atol=atol
+    )
