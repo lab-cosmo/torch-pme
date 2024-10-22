@@ -12,8 +12,11 @@ to compute long-distance equivariant features, cf. GRISAFI PAPER
 
 # %%
 
+from typing import Optional
+
 import ase
 import chemiscope
+import matplotlib
 import numpy as np
 import scipy
 import torch
@@ -27,7 +30,6 @@ dtype = torch.float64
 rng = torch.Generator()
 rng.manual_seed(42)
 
-# import matplotlib
 # matplotlib.use("widget")
 
 # %%
@@ -337,5 +339,156 @@ fz = xyz[:, 2]
 (w * fz * fz).sum() / (w * f0).sum()
 # %%
 
+
 # %%
 # now defines a LODE calculator
+class SmoothCutoffCoulomb(SplinePotential):
+    def __init__(
+        self, smearing: float, exclusion_radius: float, n_points: Optional[int] = 1000
+    ):
+        coulomb = CoulombPotential(smearing=smearing, exclusion_radius=exclusion_radius)
+        x_grid = torch.logspace(-3, 3, n_points)
+        y_grid = coulomb.lr_from_dist(x_grid) + coulomb.sr_from_dist(x_grid)
+        super().__init__(
+            r_grid=x_grid,
+            y_grid=y_grid,
+            smearing=smearing,
+            exclusion_radius=exclusion_radius,
+            reciprocal=True,
+        )
+
+
+class LODECalculator(torchpme.Calculator):
+    """
+    Compute expansions of the local potential in an atom-centered basis.
+    """
+
+    def __init__(self, potential: torchpme.lib.Potential, n_grid: int = 3):
+        super().__init__(potential=potential)
+
+        assert self.potential.exclusion_radius is not None
+        assert self.potential.smearing is not None
+
+        cell = torch.eye(3)
+        ns = torch.tensor([2, 2, 2])
+        self._MI = torchpme.lib.MeshInterpolator(
+            cell=cell, ns_mesh=ns, interpolation_nodes=3
+        )
+        self._KF = torchpme.lib.KSpaceFilter(
+            cell=cell,
+            ns_mesh=ns,
+            kernel=self.potential,
+            fft_norm="backward",
+            ifft_norm="forward",
+        )
+
+        nodes, weights = get_full_grid(n_grid, potential.exclusion_radius.item())
+
+        # these are the "stencils" used to project the potential
+        # on an atom-centered basis. NB: weights might also be incorporated
+        # in here saving multiplications later on
+        stencils = [
+            (nodes[:, 0] * 0.0 + 1.0) / torch.sqrt((weights).sum()),  # constant
+            (nodes[:, 0]) / torch.sqrt((weights * nodes[:, 1] ** 2).sum()),  # x
+            (nodes[:, 1]) / torch.sqrt((weights * nodes[:, 1] ** 2).sum()),  # y
+            (nodes[:, 2]) / torch.sqrt((weights * nodes[:, 1] ** 2).sum()),  # z
+        ]
+        self._basis = torch.stack(stencils)
+        self._nodes = nodes
+        self._weights = weights
+
+    def forward(
+        self,
+        charges: torch.Tensor,
+        cell: torch.Tensor,
+        positions: torch.Tensor,
+        neighbor_indices: Optional[torch.Tensor] = None,
+        neighbor_distances: Optional[torch.Tensor] = None,
+    ) -> torch.Tensor:
+        # Update meshes
+        assert self.potential.smearing is not None  # mypy is stoopid
+        ns = torchpme.lib.kvectors.get_ns_mesh(cell, self.potential.smearing / 2)
+        self._MI.update_mesh(cell, ns)
+        self._KF.update_mesh(cell, ns)
+
+        # Compute potential
+        self._MI.compute_weights(positions)
+        rho_mesh = self._MI.points_to_mesh(particle_weights=charges)
+        ivolume = torch.abs(cell.det()).pow(-1)
+        potential_mesh = self._KF.compute(rho_mesh) * ivolume
+
+        # Create integration grids around each atom
+        all_points = torch.stack([self._nodes + pos for pos in positions]).reshape(
+            -1, 3
+        )
+
+        # Evaluate the potential on the grid
+        self._MI.compute_weights(all_points)
+        all_potentials = self._MI.mesh_to_points(potential_mesh).reshape(
+            len(positions), len(self._nodes), -1
+        )
+
+        # Compute lode as an integral
+        return torch.einsum("ijq,bj,j->ibq", all_potentials, self._basis, self._weights)
+
+
+# %%
+#
+my_pot = SmoothCutoffCoulomb(smearing=smearing, exclusion_radius=cutoff)
+my_lode = LODECalculator(potential=my_pot, n_grid=4)
+
+
+# %%
+
+values = my_lode.forward(charges=charges, cell=cell, positions=positions).squeeze()
+
+
+# %%
+def value_to_seismic(value, vrange=0.3):
+    """
+    Maps a value within [vmin, vmax] to an RGB color string using the 'seismic' colormap.
+    """
+
+    vmin, vmax = -vrange, vrange
+    # Ensure the value is within the specified range
+    clipped_value = np.clip(value, vmin, vmax)
+    norm = (clipped_value - vmin) / (vmax - vmin)
+
+    rgba = matplotlib.cm.get_cmap("seismic")(norm)
+    rgb = tuple(int(255 * c) for c in rgba[:3])
+    return "#{:02x}{:02x}{:02x}".format(*rgb)
+
+
+chemiscope.show(
+    frames=[structure],
+    shapes={
+        "lode": {
+            "kind": "arrow",
+            "parameters": {
+                "global": {
+                    "baseRadius": 0.2,
+                    "headRadius": 0.3,
+                    "headLength": 0.5,
+                },
+                "atom": [
+                    {
+                        "vector": (10 * values[i, 1:]).tolist(),
+                        "color": value_to_seismic(values[i, 0], 0.3),
+                    }
+                    for i in range(len(values))
+                ],
+            },
+        }
+    },
+    mode="structure",
+    settings=chemiscope.quick_settings(
+        structure_settings={
+            "unitCell": True,
+            "bonds": False,
+            "environments": {"activated": False},
+            "shape": ["lode"],
+        }
+    ),
+    environments=chemiscope.all_atomic_environments([structure]),
+)
+# %%

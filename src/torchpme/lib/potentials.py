@@ -493,10 +493,16 @@ class SplinePotential(Potential):
         ky_grid: Optional[torch.Tensor] = None,
         reciprocal: Optional[bool] = False,
         smearing: Optional[float] = None,
+        exclusion_radius: Optional[float] = None,
         dtype: Optional[torch.dtype] = None,
         device: Optional[torch.device] = None,
     ):
-        super().__init__(smearing=smearing, dtype=dtype, device=device)
+        super().__init__(
+            smearing=smearing,
+            exclusion_radius=exclusion_radius,
+            dtype=dtype,
+            device=device,
+        )
         if dtype is None:
             dtype = torch.get_default_dtype()
         if device is None:
