@@ -3,7 +3,7 @@ import torch
 from torch.testing import assert_close
 
 from torchpme.lib.potentials import CoulombPotential, SplinePotential
-from torchpme.lib.splines import (
+from torchpme.utils.splines import (
     CubicSpline,
     CubicSplineReciprocal,
     compute_second_derivatives,
@@ -117,13 +117,13 @@ def test_spline_potential_cases():
         r_grid=x_grid,
         y_grid=y_grid,
         k_grid=x_grid_2,
-        ky_grid=y_grid_2,
+        yhat_grid=y_grid_2,
         reciprocal=False,
     )
     assert_close(spline.lr_from_k_sq(x_grid_2**2), y_grid_2)
 
     assert_close(spline.background_correction(), torch.tensor([0.0]))
-    assert_close(spline.self_contribution(), torch.tensor([0.0]))
+    assert_close(spline.self_contribution(), spline.lr_from_dist(torch.tensor([0.0])))
 
 
 def test_spline_potential_vs_coulomb():

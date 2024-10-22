@@ -4,7 +4,7 @@ from typing import Optional
 import torch
 from torch.special import gammainc, gammaincc, gammaln
 
-from .splines import (
+from ..utils.splines import (
     CubicSpline,
     CubicSplineReciprocal,
     compute_second_derivatives,
@@ -243,7 +243,7 @@ class CoulombPotential(Potential):
 
     def lr_from_dist(self, dist: torch.Tensor) -> torch.Tensor:
         """
-        LR part of the range-separated :math:`1/r` potential.
+        Long range of the range-separated :math:`1/r` potential.
 
         Used to subtract out the interior contributions after computing the LR part in
         reciprocal (Fourier) space.
@@ -367,7 +367,7 @@ class InversePowerLawPotential(Potential):
     @torch.jit.export
     def lr_from_dist(self, dist: torch.Tensor) -> torch.Tensor:
         """
-        LR part of the range-separated :math:`1/r^p` potential.
+        Long range of the range-separated :math:`1/r^p` potential.
 
         Used to subtract out the interior contributions after computing the LR part in
         reciprocal (Fourier) space.
@@ -464,7 +464,8 @@ class SplinePotential(Potential):
     Potential built from a spline interpolation.
 
     The potential is assumed to have only a long-range part, but one can also
-    add a short-range part if needed.
+    add a short-range part if needed, by inheriting and redefining
+    ``sr_from_dist``.
     The real-space potential is computed based on a cubic spline built at
     initialization time. The Fourier-domain kernel is computed numerically
     as a spline, too.  Assumes the infinite-separation value of the
@@ -474,7 +475,7 @@ class SplinePotential(Potential):
     :param y_grid: potential values for the real-space evaluation
     :param k_grid: radial grid for the k-space evaluation;
         computed automatically from ``r_grid`` if absent.
-    :param ky_grid: potential values for the k-space evaluation;
+    :param yhat_grid: potential values for the k-space evaluation;
         computed automatically from ``y_grid`` if absent.
     :param reciprocal: flag that determines if the splining should
         be performed on a :math:`1/r` axis; suitable to describe
@@ -490,8 +491,10 @@ class SplinePotential(Potential):
         r_grid: torch.Tensor,
         y_grid: torch.Tensor,
         k_grid: Optional[torch.Tensor] = None,
-        ky_grid: Optional[torch.Tensor] = None,
+        yhat_grid: Optional[torch.Tensor] = None,
         reciprocal: Optional[bool] = False,
+        y_at_zero: Optional[float] = None,
+        yhat_at_zero: Optional[float] = None,
         smearing: Optional[float] = None,
         exclusion_radius: Optional[float] = None,
         dtype: Optional[torch.dtype] = None,
@@ -516,7 +519,7 @@ class SplinePotential(Potential):
                 raise ValueError(
                     "Positive-valued radial grid is needed for reciprocal axis spline."
                 )
-            self._spline = CubicSplineReciprocal(r_grid, y_grid)
+            self._spline = CubicSplineReciprocal(r_grid, y_grid, y_at_zero=y_at_zero)
         else:
             self._spline = CubicSpline(r_grid, y_grid)
 
@@ -527,9 +530,9 @@ class SplinePotential(Potential):
             else:
                 k_grid = r_grid.clone()
 
-        if ky_grid is None:
+        if yhat_grid is None:
             # computes automatically!
-            ky_grid = compute_spline_ft(
+            yhat_grid = compute_spline_ft(
                 k_grid,
                 r_grid,
                 y_grid,
@@ -538,9 +541,21 @@ class SplinePotential(Potential):
 
         # the function is defined for k**2, so we define the grid accordingly
         if reciprocal:
-            self._krn_spline = CubicSplineReciprocal(k_grid**2, ky_grid)
+            self._krn_spline = CubicSplineReciprocal(
+                k_grid**2, yhat_grid, y_at_zero=yhat_at_zero
+            )
         else:
-            self._krn_spline = CubicSpline(k_grid**2, ky_grid)
+            self._krn_spline = CubicSpline(k_grid**2, yhat_grid)
+
+        if y_at_zero is None:
+            self._y_at_zero = self._spline(torch.tensor([0.0]))
+        else:
+            self._y_at_zero = y_at_zero
+
+        if yhat_at_zero is None:
+            self._yhat_at_zero = self._krn_spline(torch.tensor([0.0]))
+        else:
+            self._yhat_at_zero = yhat_at_zero
 
     def from_dist(self, dist: torch.Tensor) -> torch.Tensor:
         """
@@ -551,11 +566,11 @@ class SplinePotential(Potential):
         """
 
         # if the full spline is not given, falls back on the lr part
-        return self.lr_from_dist(dist)
+        return self.lr_from_dist(dist) + self.sr_from_dist(dist)
 
     def sr_from_dist(self, dist: torch.Tensor) -> torch.Tensor:
         """
-        LR part of the range-separated potential.
+        Short-range part of the range-separated potential.
 
         :param dist: torch.tensor containing the distances at which the potential is to
             be evaluated.
@@ -565,7 +580,7 @@ class SplinePotential(Potential):
 
     def lr_from_dist(self, dist: torch.Tensor) -> torch.Tensor:
         """
-        LR part of the range-separated potential.
+        Long-range part of the range-separated potential.
 
         :param dist: torch.tensor containing the distances at which the potential is to
             be evaluated.
@@ -586,7 +601,7 @@ class SplinePotential(Potential):
     def self_contribution(self) -> torch.Tensor:
         # self-correction for 1/r potential
 
-        return torch.tensor([0.0])
+        return self._y_at_zero
 
     def background_correction(self) -> torch.Tensor:
         # "charge neutrality" correction for 1/r potential

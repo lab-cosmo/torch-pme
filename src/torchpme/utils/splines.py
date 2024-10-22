@@ -48,10 +48,17 @@ class CubicSplineReciprocal(CubicSpline):
 
     Computes a spline on a :math:`1/x` grid, "extending" it so that
     it converges smoothly to zero as :math:`x\rightarrow\infty`.
+    The function parameters are still provided as (x,y) points, but the
+    interpolation is performed internally using :math:`1/x`, so the radial grid
+    should only contain strictly-positive values.
 
-    :param x_points:  Abscissas of the splining points for the real-space function
+    :param x_points:  Abscissas of the splining points for the real-space function.
+        Must be strictly larger than zero. It is recommended for the smaller value
+        to be much smaller than the minimum expected distance between atoms.
     :param y_points:  Ordinates of the splining points for the real-space function
-    :param y_at_zero:  Value to be returned when called for an argument of zero
+    :param y_at_zero:  Value to be returned when called for an argument of zero.
+        Also uses a direct interpolation to "fill in the blanks". Defaults to the
+        value of ``y_points[0]``.
     """
 
     def __init__(
@@ -76,15 +83,21 @@ class CubicSplineReciprocal(CubicSpline):
             dim=0,
         )
         super().__init__(ix_points, iy_points)
+
+        # defaults to the lowest value in the input
         if y_at_zero is None:
-            y_at_zero = torch.tensor(
-                [0.0], dtype=x_points.dtype, device=x_points.device
-            )
+            y_at_zero = y_points[0]
         self._y_at_zero = y_at_zero
+        self._zero_spline = CubicSpline(
+            torch.tensor([0.0, x_points[0], x_points[1]]),
+            torch.tensor([self._y_at_zero, y_points[0], y_points[1]]),
+        )
 
     def forward(self, x: torch.Tensor):
         return torch.where(
-            x == 0.0, self._y_at_zero, super().forward(torch.reciprocal(x))
+            x < self._zero_spline.x_points[1],
+            self._zero_spline(x),
+            super().forward(torch.reciprocal(x)),
         )
 
 
@@ -188,6 +201,7 @@ def compute_spline_ft(
     Evaluates the integral
 
     .. math::
+
         \hat{f}(k) =4\pi\int \mathrm{d}r \frac{\sin k r}{k} r f(r)
 
     where :math:`f(r)` is expressed as a cubic spline. The function
@@ -216,15 +230,18 @@ def compute_spline_ft(
     # all these are terms that enter the analytical integral.
     # might be possible to write this in a more concise way, but
     # this works and is reasonably numerically stable, so it will do
-    k = k_points.reshape(-1, 1).to(dtype)
-    ri = x_points[torch.newaxis, :-1].to(dtype)
-    yi = y_points[torch.newaxis, :-1].to(dtype)
-    d2yi = d2y_points[torch.newaxis, :-1].to(dtype)
+    k = k_points.reshape(-1, 1).to(dtype)  # target k's
+    ri = x_points[torch.newaxis, :-1].to(dtype)  # radial grid points
+    yi = y_points[torch.newaxis, :-1].to(dtype)  # radial grid values
+    d2yi = d2y_points[torch.newaxis, :-1].to(dtype)  # radial spline second derivatives
+    # corresponding increments
     dr = (x_points[torch.newaxis, 1:] - x_points[torch.newaxis, :-1]).to(dtype)
     dy = (y_points[torch.newaxis, 1:] - y_points[torch.newaxis, :-1]).to(dtype)
     dd2y = (d2y_points[torch.newaxis, 1:] - d2y_points[torch.newaxis, :-1]).to(dtype)
+    # trig functions at grid points
     coskx = torch.cos(k * ri)
     sinkx = torch.sin(k * ri)
+    # trig function increments, computed with trig identities for stability
     # cos r+dr - cos r
     dcoskx = 2 * torch.sin(k * dr / 2) * torch.sin(k * (dr / 2 + ri))
     # sin r+dr - cos r
@@ -235,7 +252,7 @@ def compute_spline_ft(
     # the expression here is also cast in a Horner form, and uses a few
     # tricks to make it stabler, as a naive implementation is very noisy
     # in float32 for small k. for instance, the first term contains the difference
-    # of two cosines, but is computed with a trigonometric identity
+    # of two cosines (at i and i+1), but is computed with a trigonometric identity
     # (see the definition of dcoskx) to avoid the 1-k^2 form of the bare cosines
     ft_interval = 24 * dcoskx * dd2y + k * (
         6 * dsinkx * (3 * d2yi * dr + dd2y * (4 * dr + ri))
@@ -276,7 +293,6 @@ def compute_spline_ft(
     # stably and acurately, we build the tail as a spline in 1/r (using the last two)
     # points of the spline) and use an analytical expression for the resulting
     # integral from the last point to infinity
-
     tail_d2y = compute_second_derivatives(
         torch.tensor([0, 1 / x_points[-1], 1 / x_points[-2]]),
         torch.tensor([0, y_points[-1], y_points[-2]]),
@@ -310,7 +326,7 @@ def compute_spline_ft(
     ) / (3.0 * r0)
 
     ft_sum = torch.pi * 2 / 3 * torch.sum(ft_interval / dr, axis=1).reshape(-1, 1)
-    # k-> 0 limit, analytical expression
+    # for the interval integrals, there is a finite k-> 0 limit (i.e. the k^-6 divergence cancels)
     ft_limit = torch.sum(
         -(
             dr

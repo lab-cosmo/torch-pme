@@ -6,8 +6,9 @@ Computing LODE descriptors
 
 :Authors: Michele Ceriotti `@ceriottm <https://github.com/ceriottm/>`_
 
-This notebook demonstrates the use of some advanced features of ``torch-pme``
-to compute long-distance equivariant features, cf. GRISAFI PAPER
+This notebook demonstrates the use of some advanced features of
+``torch-pme`` to compute long-distance equivariants (LODE) features
+as in `Grisafi and Ceriotti, J. Chem. Phys. (2019) <http://doi.org/10.1063/1.5128375>`_
 """
 
 # %%
@@ -23,7 +24,7 @@ import torch
 from matplotlib import pyplot as plt
 
 import torchpme
-from torchpme.lib.potentials import CoulombPotential, SplinePotential
+from torchpme.lib.potentials import CoulombPotential, Potential, SplinePotential
 
 device = "cpu"
 dtype = torch.float64
@@ -33,7 +34,10 @@ rng.manual_seed(42)
 # matplotlib.use("widget")
 
 # %%
-# Demonstrate spline potential class
+# Spline potentials
+# -----------------
+#
+#
 
 # generate reference real-space data for a pure Coulomb potential
 coulomb = CoulombPotential(smearing=1.0)
@@ -277,7 +281,6 @@ xyz, w = get_full_grid(3, 2.5)
 # %%
 
 points = positions[3] + xyz
-
 MI.compute_weights(points)
 # %%
 
@@ -363,7 +366,7 @@ class LODECalculator(torchpme.Calculator):
     Compute expansions of the local potential in an atom-centered basis.
     """
 
-    def __init__(self, potential: torchpme.lib.Potential, n_grid: int = 3):
+    def __init__(self, potential: Potential, n_grid: int = 3):
         super().__init__(potential=potential)
 
         assert self.potential.exclusion_radius is not None
@@ -389,9 +392,9 @@ class LODECalculator(torchpme.Calculator):
         # in here saving multiplications later on
         stencils = [
             (nodes[:, 0] * 0.0 + 1.0) / torch.sqrt((weights).sum()),  # constant
-            (nodes[:, 0]) / torch.sqrt((weights * nodes[:, 1] ** 2).sum()),  # x
+            (nodes[:, 0]) / torch.sqrt((weights * nodes[:, 0] ** 2).sum()),  # x
             (nodes[:, 1]) / torch.sqrt((weights * nodes[:, 1] ** 2).sum()),  # y
-            (nodes[:, 2]) / torch.sqrt((weights * nodes[:, 1] ** 2).sum()),  # z
+            (nodes[:, 2]) / torch.sqrt((weights * nodes[:, 2] ** 2).sum()),  # z
         ]
         self._basis = torch.stack(stencils)
         self._nodes = nodes
@@ -491,4 +494,3 @@ chemiscope.show(
     ),
     environments=chemiscope.all_atomic_environments([structure]),
 )
-# %%
