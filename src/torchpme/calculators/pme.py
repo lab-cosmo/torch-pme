@@ -75,7 +75,7 @@ class PMECalculator(Calculator):
 
         # Initialize the filter module. Set dummy value for smearing to propper
         # initilize the `KSpaceFilter` below
-        self._KF: KSpaceFilter = KSpaceFilter(
+        self.kspace_filter: KSpaceFilter = KSpaceFilter(
             cell=torch.eye(3),
             ns_mesh=torch.ones(3, dtype=int),
             kernel=self.potential,
@@ -83,7 +83,7 @@ class PMECalculator(Calculator):
             ifft_norm="forward",
         )
 
-        self._MI: MeshInterpolator = MeshInterpolator(
+        self.mesh_interpolator: MeshInterpolator = MeshInterpolator(
             cell=torch.eye(3),
             ns_mesh=torch.ones(3, dtype=int),
             interpolation_nodes=self.interpolation_nodes,
@@ -106,21 +106,23 @@ class PMECalculator(Calculator):
             ns = get_ns_mesh(cell, self.mesh_spacing)
 
         with profiler.record_function("init 1: update mesh interpolator"):
-            self._MI.update_mesh(cell, ns)
+            self.mesh_interpolator.update_mesh(cell, ns)
 
         with profiler.record_function("update the mesh for the k-space filter"):
-            self._KF.update_mesh(cell, ns)
+            self.kspace_filter.update_mesh(cell, ns)
 
         with profiler.record_function("step 1: compute density interpolation"):
-            self._MI.compute_weights(positions)
-            rho_mesh = self._MI.points_to_mesh(particle_weights=charges)
+            self.mesh_interpolator.compute_weights(positions)
+            rho_mesh = self.mesh_interpolator.points_to_mesh(particle_weights=charges)
 
         with profiler.record_function("step 2: perform actual convolution using FFT"):
-            potential_mesh = self._KF.compute(rho_mesh)
+            potential_mesh = self.kspace_filter.compute(rho_mesh)
 
         with profiler.record_function("step 3: back interpolation + volume scaling"):
             ivolume = torch.abs(cell.det()).pow(-1)
-            interpolated_potential = self._MI.mesh_to_points(potential_mesh) * ivolume
+            interpolated_potential = (
+                self.mesh_interpolator.mesh_to_points(potential_mesh) * ivolume
+            )
 
         with profiler.record_function("step 4: remove the self-contribution"):
             # Using the Coulomb potential as an example, this is the potential generated
