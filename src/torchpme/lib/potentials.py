@@ -190,8 +190,7 @@ class Potential(torch.nn.Module):
 
 
 class CoulombPotential(Potential):
-    """
-    Smoothed electrostatic Coulomb potential :math:`1/r`.
+    """Smoothed electrostatic Coulomb potential :math:`1/r`.
 
     Here :math:`r` is the inter-particle distance
 
@@ -313,8 +312,7 @@ def gamma(x: torch.Tensor) -> torch.Tensor:
 
 
 class InversePowerLawPotential(Potential):
-    """
-    Inverse power-law potentials of the form :math:`1/r^p`.
+    """Inverse power-law potentials of the form :math:`1/r^p`.
 
     Here :math:`r` is a distance parameter and :math:`p` an exponent.
 
@@ -401,8 +399,7 @@ class InversePowerLawPotential(Potential):
 
     @torch.jit.export
     def lr_from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
-        """
-        Fourier transform of the LR part potential in terms of :math:`k^2`.
+        """Fourier transform of the LR part potential in terms of :math:`k^2`.
 
         If only the Coulomb potential is needed, the last line can be
         replaced by
@@ -463,8 +460,7 @@ class InversePowerLawPotential(Potential):
 
 
 class SplinePotential(Potential):
-    r"""
-    Potential built from a spline interpolation.
+    r"""Potential built from a spline interpolation.
 
     The potential is assumed to have only a long-range part, but one can also
     add a short-range part if needed, by inheriting and redefining
@@ -571,8 +567,7 @@ class SplinePotential(Potential):
         return self.lr_from_dist(dist) + self.sr_from_dist(dist)
 
     def sr_from_dist(self, dist: torch.Tensor) -> torch.Tensor:
-        """
-        Short-range part of the range-separated potential.
+        """Short-range part of the range-separated potential.
 
         :param dist: torch.tensor containing the distances at which the potential is to
             be evaluated.

@@ -52,7 +52,7 @@ class MeshInterpolator(torch.nn.Module):
         self.method: str = method
         self.interpolation_nodes: int = interpolation_nodes
 
-        self.update_mesh(cell, ns_mesh)
+        self.update(cell, ns_mesh)
 
         # TorchScript requires to initialize all attributes in __init__
         self.interpolation_weights: torch.Tensor = torch.zeros(
@@ -65,17 +65,16 @@ class MeshInterpolator(torch.nn.Module):
         self.y_indices: torch.Tensor = torch.zeros(1, device=self._device)
         self.z_indices: torch.Tensor = torch.zeros(1, device=self._device)
 
-    def update_mesh(self, cell: torch.Tensor, ns_mesh: torch.Tensor):
-        """
-        Updates the mesh parameters.
+    def update(self, cell: torch.Tensor, ns_mesh: torch.Tensor):
+        """Update the buffers.
 
-        Call this to reuse a MeshInterpolator object when the cell parameters
-        or the mesh resolution change.
+        Call this to reuse a ``MeshInterpolator`` object when the ``cell`` parameters or
+        the mesh resolution change.
 
-        :param cell: torch.tensor of shape ``(3, 3)``, where ``cell[i]`` is the i-th basis
-            vector of the unit cell
-        :param ns_mesh: toch.tensor of shape ``(3,)``
-            Number of mesh points to use along each of the three axes
+        :param cell: torch.tensor of shape ``(3, 3)``, where ``cell[i]`` is the i-th
+            basis vector of the unit cell
+        :param ns_mesh: toch.tensor of shape ``(3,)`` Number of mesh points to use along
+            each of the three axes
         """
 
         # Check that the provided parameters match the specifications

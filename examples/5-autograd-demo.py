@@ -363,12 +363,11 @@ class KSpaceModule(torch.nn.Module):
         ns_mesh = torchpme.lib.get_ns_mesh(cell, self._mesh_spacing)
         ns_mesh = torch.tensor([4, 4, 4])
 
-        self._mesh_interpolator.update_mesh(cell=cell, ns_mesh=ns_mesh)
+        self._mesh_interpolator.update(cell=cell, ns_mesh=ns_mesh)
         self._mesh_interpolator.compute_weights(positions)
         mesh = self._mesh_interpolator.points_to_mesh(charges)
 
-        self._KF.update_mesh(cell, ns_mesh)
-        self._KF.update_filter()
+        self._KF.update(cell, ns_mesh)
         mesh = self._KF.compute(mesh)
         pot = self._mesh_interpolator.mesh_to_points(mesh)
 

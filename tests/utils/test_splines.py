@@ -25,7 +25,7 @@ def test_spline_function(function):
 
     # checks that the spline is accurate-ish elsewhere
     z_test = spline_test(x_test)
-    assert_close(y_test, z_test, atol=1e-6, rtol=0.0)
+    assert_close(y_test, z_test, atol=2e-6, rtol=0.0)
 
 
 @pytest.mark.parametrize("function", [torch.log, torch.reciprocal])

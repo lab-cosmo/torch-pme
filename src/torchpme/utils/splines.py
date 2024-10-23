@@ -4,13 +4,12 @@ import torch
 
 
 class CubicSpline(torch.nn.Module):
-    r"""
-    Cubic spline calculator.
+    r"""Cubic spline calculator.
 
     Class implementing a cubic spline for a real-valued function.
 
-    :param x_points:  Abscissas of the splining points for the real-space function
-    :param y_points:  Ordinates of the splining points for the real-space function
+    :param x_points: Abscissas of the splining points for the real-space function
+    :param y_points: Ordinates of the splining points for the real-space function
     """
 
     def __init__(self, x_points: torch.Tensor, y_points: torch.Tensor):
@@ -43,8 +42,7 @@ class CubicSpline(torch.nn.Module):
 
 
 class CubicSplineReciprocal(torch.nn.Module):
-    r"""
-    Reciprocal-axis cubic spline calculator.
+    r"""Reciprocal-axis cubic spline calculator.
 
     Computes a spline on a :math:`1/x` grid, "extending" it so that
     it converges smoothly to zero as :math:`x\rightarrow\infty`.
@@ -52,11 +50,11 @@ class CubicSplineReciprocal(torch.nn.Module):
     interpolation is performed internally using :math:`1/x`, so the radial grid
     should only contain strictly-positive values.
 
-    :param x_points:  Abscissas of the splining points for the real-space function.
+    :param x_points: Abscissas of the splining points for the real-space function.
         Must be strictly larger than zero. It is recommended for the smaller value
         to be much smaller than the minimum expected distance between atoms.
-    :param y_points:  Ordinates of the splining points for the real-space function
-    :param y_at_zero:  Value to be returned when called for an argument of zero.
+    :param y_points: Ordinates of the splining points for the real-space function
+    :param y_at_zero: Value to be returned when called for an argument of zero.
         Also uses a direct interpolation to "fill in the blanks". Defaults to the
         value of ``y_points[0]``.
     """
@@ -117,8 +115,7 @@ class CubicSplineReciprocal(torch.nn.Module):
 
 
 def _solve_tridiagonal(a, b, c, d):
-    """
-    Helper function to solve a tri-diagonal linear problem.
+    """Helper function to solve a tri-diagonal linear problem.
 
     a = torch.zeros(n)  # Sub-diagonal (a[1..n-1])
     b = torch.zeros(n)  # Main diagonal (b[0..n-1])
@@ -154,14 +151,13 @@ def compute_second_derivatives(
     y_points: torch.Tensor,
     high_precision: Optional[bool] = True,
 ):
-    """
-    Computes second derivatives given the grid points of a cubic spline.
+    """Computes second derivatives given the grid points of a cubic spline.
 
-    :param x_points:  Abscissas of the splining points for the real-space function
-    :param y_points:  Ordinates of the splining points for the real-space function
+    :param x_points: Abscissas of the splining points for the real-space function
+    :param y_points: Ordinates of the splining points for the real-space function
     :param high_accuracy: bool, perform calculation in double precision
 
-    :return:  The second derivatives for the spline points
+    :return: The second derivatives for the spline points
     """
 
     # Do the calculation in float64 if required
@@ -210,8 +206,7 @@ def compute_spline_ft(
     d2y_points: torch.Tensor,
     high_precision: Optional[bool] = True,
 ):
-    r"""
-    Computes the Fourier transform of a splined radial function.
+    r"""Computes the Fourier transform of a splined radial function.
 
     Evaluates the integral
 
@@ -227,8 +222,8 @@ def compute_spline_ft(
     :param k_points:  Points on which the Fourier kernel should be
         computed. It is a good idea to take them to be
         :math:`2\pi/x` based on the real-space ``x_points``
-    :param x_points:  Abscissas of the splining points for the real-space function
-    :param y_points:  Ordinates of the splining points for the real-space function
+    :param x_points: Abscissas of the splining points for the real-space function
+    :param y_points: Ordinates of the splining points for the real-space function
     :param d2y_points:  Second derivatives for the spline points
     :param high_accuracy: bool, perform calculation in double precision
 
@@ -334,9 +329,9 @@ def compute_spline_ft(
 
     # to numpy and back again. this function is only called at initialization
     # time, and so we can live with losing some time here
-    cosint = torch.from_numpy(scipy.special.sici((k * r0).detach().cpu().numpy())[1]).to(
-        dtype=dr.dtype, device=dr.device
-    )
+    cosint = torch.from_numpy(
+        scipy.special.sici((k * r0).detach().cpu().numpy())[1]
+    ).to(dtype=dr.dtype, device=dr.device)
 
     # this is the tail contribution multiplied by k**2 to remove the singularity
     tail = (

@@ -373,10 +373,10 @@ mesh_interpolator.compute_weights(positions)
 rho_mesh = mesh_interpolator.points_to_mesh(particle_weights=charges)
 ivolume = torch.abs(cell.det()).pow(-1)
 
-kernel_exclusion.update_mesh(cell, ns)
+kernel_exclusion.update(cell, ns)
 coulomb_mesh = kernel_exclusion.compute(rho_mesh) * ivolume
 
-kernel_spline.update_mesh(cell, ns)
+kernel_spline.update(cell, ns)
 spline_mesh = kernel_spline.compute(rho_mesh) * ivolume
 
 # %%

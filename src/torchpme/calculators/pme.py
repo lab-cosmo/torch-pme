@@ -104,10 +104,10 @@ class PMECalculator(Calculator):
             ns = get_ns_mesh(cell, self.mesh_spacing)
 
         with profiler.record_function("init 1: update mesh interpolator"):
-            self.mesh_interpolator.update_mesh(cell, ns)
+            self.mesh_interpolator.update(cell, ns)
 
         with profiler.record_function("update the mesh for the k-space filter"):
-            self.kspace_filter.update_mesh(cell, ns)
+            self.kspace_filter.update(cell, ns)
 
         with profiler.record_function("step 1: compute density interpolation"):
             self.mesh_interpolator.compute_weights(positions)
