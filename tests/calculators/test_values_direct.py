@@ -8,7 +8,7 @@ import torch
 from torchpme import Calculator, CoulombPotential
 
 sys.path.append(str(Path(__file__).parents[1]))
-from helpers import neighbor_list_torch
+from helpers import compute_distances, gradcheck, neighbor_list_torch
 
 DTYPE = torch.float64
 
@@ -202,3 +202,51 @@ def test_coulomb_exact(
     ref_potentials /= 2 * scaling_factor
 
     torch.testing.assert_close(potentials, ref_potentials, atol=2e-15, rtol=1e-14)
+
+
+@pytest.mark.parametrize("molecule", molecules)
+@pytest.mark.parametrize("molecule_charge", molecule_charges)
+@pytest.mark.parametrize("scaling_factor", scaling_factors)
+@pytest.mark.parametrize("orthogonal_transformation", orthogonal_transformations)
+@pytest.mark.parametrize("full_neighbor_list", full_neighbor_list)
+def test_coulomb_gradients(
+    molecule,
+    molecule_charge,
+    scaling_factor,
+    orthogonal_transformation,
+    full_neighbor_list,
+):
+    """
+    Check that derivatives match finite difference values.
+    """
+    direct = CalculatorTest(full_neighbor_list=full_neighbor_list)
+
+    molecule_name = molecule + molecule_charge
+    positions, charges, _ = define_molecule(molecule_name)
+    positions = scaling_factor * (positions @ orthogonal_transformation)
+
+    # Choose a large cutoff that covers all atoms
+    neighbor_indices, neighbor_distances = neighbor_list_torch(
+        positions=positions,
+        periodic=False,
+        cutoff=scaling_factor * 10,
+        full_neighbor_list=full_neighbor_list,
+    )
+
+    def energy(pos):
+        d = compute_distances(pos, neighbor_indices)
+        return (
+            charges
+            * direct(
+                charges=charges,
+                cell=torch.eye(3, dtype=DTYPE),  # ignored in actual calculations
+                positions=pos,
+                neighbor_indices=neighbor_indices,
+                neighbor_distances=d,
+            )
+        ).sum()
+
+    gradcheck(
+        energy,
+        positions,
+    )

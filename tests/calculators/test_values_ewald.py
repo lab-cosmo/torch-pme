@@ -11,7 +11,7 @@ from ase.io import read
 from torchpme import EwaldCalculator, InversePowerLawPotential, PMECalculator
 
 sys.path.append(str(Path(__file__).parents[1]))
-from helpers import define_crystal, neighbor_list_torch
+from helpers import compute_distances, define_crystal, gradcheck, neighbor_list_torch
 
 DTYPE = torch.float64
 
@@ -292,3 +292,84 @@ def test_random_structure(
     energy.backward()
     forces = -positions.grad
     torch.testing.assert_close(forces, forces_target @ ortho, atol=0.0, rtol=rtol_f)
+
+
+@pytest.mark.parametrize("sr_cutoff", [5.54])
+@pytest.mark.parametrize("frame_index", [0, 1])
+@pytest.mark.parametrize("scaling_factor", [0.4325])
+@pytest.mark.parametrize("calc_name", ["ewald", "pme"])
+@pytest.mark.parametrize("full_neighbor_list", [False])
+def test_random_structure_stress(
+    sr_cutoff, frame_index, scaling_factor, calc_name, full_neighbor_list
+):
+    """
+    Re-use test structures from above to check stress
+    """
+    struc_path = "tests/reference_structures/"
+    frame = read(os.path.join(struc_path, "coulomb_test_frames.xyz"), frame_index)
+
+    # Convert into input format suitable for torch-pme
+    positions = scaling_factor * torch.tensor(frame.positions, dtype=DTYPE)
+
+    cell = scaling_factor * torch.tensor(np.array(frame.cell), dtype=DTYPE)
+    charges = torch.tensor([1, 1, 1, 1, -1, -1, -1, -1], dtype=DTYPE).reshape((-1, 1))
+    sr_cutoff = scaling_factor * sr_cutoff
+    smearing = sr_cutoff / 6.0
+    if calc_name == "ewald":
+        lr_wavelength = 0.5 * smearing
+        calc = EwaldCalculator(
+            InversePowerLawPotential(
+                exponent=1.0,
+                smearing=smearing,
+            ),
+            lr_wavelength=lr_wavelength,
+            full_neighbor_list=full_neighbor_list,
+        )
+    elif calc_name == "pme":
+        calc = PMECalculator(
+            InversePowerLawPotential(
+                exponent=1.0,
+                smearing=smearing,
+            ),
+            mesh_spacing=smearing / 8,
+            full_neighbor_list=full_neighbor_list,
+        )
+
+    calc.to(dtype=DTYPE)
+
+    # Check that stress matches finite differences
+    neighbor_indices, neighbor_shifts = neighbor_list_torch(
+        positions=positions,
+        periodic=True,
+        box=cell,
+        cutoff=sr_cutoff,
+        full_neighbor_list=full_neighbor_list,
+        neighbor_shifts=True,
+    )
+
+    def energy_wrt_strain(strain):
+        strained_R = positions + torch.einsum("ab,ib->ia", strain, positions)
+        strained_cell = cell + torch.einsum("ab,Ab->Aa", strain, cell)
+
+        d = compute_distances(
+            strained_R,
+            neighbor_indices,
+            cell=strained_cell,
+            neighbor_shifts=neighbor_shifts,
+        )
+        return (
+            charges
+            * calc(
+                charges=charges,
+                cell=strained_cell,
+                positions=strained_R,
+                neighbor_indices=neighbor_indices,
+                neighbor_distances=d,
+            )
+        ).sum()
+
+    strain = torch.eye(3, dtype=DTYPE) * 0.0
+    gradcheck(
+        energy_wrt_strain,
+        strain,
+    )
