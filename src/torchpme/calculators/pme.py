@@ -69,10 +69,6 @@ class PMECalculator(Calculator):
 
         self.mesh_spacing: float = mesh_spacing
 
-        if interpolation_nodes not in [3, 4, 5, 6, 7]:
-            raise ValueError("Only `interpolation_nodes` from 3 to 7 are allowed")
-        self.interpolation_nodes: int = interpolation_nodes
-
         # Initialize the filter module. Set dummy value for smearing to propper
         # initilize the `KSpaceFilter` below
         self.kspace_filter: KSpaceFilter = KSpaceFilter(
@@ -82,6 +78,8 @@ class PMECalculator(Calculator):
             fft_norm="backward",
             ifft_norm="forward",
         )
+
+        self.interpolation_nodes: int = interpolation_nodes
 
         self.mesh_interpolator: MeshInterpolator = MeshInterpolator(
             cell=torch.eye(3),
