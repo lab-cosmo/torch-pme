@@ -40,23 +40,10 @@ class MeshInterpolator(torch.nn.Module):
         cell: torch.Tensor,
         ns_mesh: torch.Tensor,
         interpolation_nodes: int,
-        method: str = "P3M",
+        method: str,
     ):
         super().__init__()
 
-        # Check that the provided parameters match the specifications
-        if cell.shape != (3, 3):
-            raise ValueError(
-                f"cell of shape {list(cell.shape)} should be of shape (3, 3)"
-            )
-        if ns_mesh.shape != (3,):
-            raise ValueError(f"shape {list(ns_mesh.shape)} of `ns_mesh` has to be (3,)")
-
-        if cell.device != ns_mesh.device:
-            raise ValueError(
-                "`cell` and `ns_mesh` are on different devices, got "
-                f"{cell.device} and {ns_mesh.device}"
-            )
         if method not in ["Lagrange", "P3M"]:
             raise ValueError(
                 f"method '{method}' is not supported. Choose from 'Lagrange' or 'P3M'"
@@ -65,12 +52,7 @@ class MeshInterpolator(torch.nn.Module):
         self.method: str = method
         self.interpolation_nodes: int = interpolation_nodes
 
-        self.cell: torch.Tensor = cell
-        self.inverse_cell: torch.Tensor = torch.linalg.inv(cell)
-        self.ns_mesh: torch.Tensor = ns_mesh
-
-        self._dtype = cell.dtype
-        self._device = cell.device
+        self.update_mesh(cell, ns_mesh)
 
         # TorchScript requires to initialize all attributes in __init__
         self.interpolation_weights: torch.Tensor = torch.zeros(
@@ -95,6 +77,20 @@ class MeshInterpolator(torch.nn.Module):
         :param ns_mesh: toch.tensor of shape ``(3,)``
             Number of mesh points to use along each of the three axes
         """
+
+        # Check that the provided parameters match the specifications
+        if cell.shape != (3, 3):
+            raise ValueError(
+                f"cell of shape {list(cell.shape)} should be of shape (3, 3)"
+            )
+        if ns_mesh.shape != (3,):
+            raise ValueError(f"shape {list(ns_mesh.shape)} of `ns_mesh` has to be (3,)")
+
+        if cell.device != ns_mesh.device:
+            raise ValueError(
+                "`cell` and `ns_mesh` are on different devices, got "
+                f"{cell.device} and {ns_mesh.device}"
+            )
 
         self.cell = cell
         self.inverse_cell = cell.clone()

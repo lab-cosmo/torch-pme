@@ -351,7 +351,7 @@ cell = torch.from_numpy(structure.cell.array).to(device=device, dtype=dtype)
 
 ns = torchpme.lib.kvectors.get_ns_mesh(cell, smearing * 0.5)
 mesh_interpolator = torchpme.lib.MeshInterpolator(
-    cell=cell, ns_mesh=ns, interpolation_nodes=3
+    cell=cell, ns_mesh=ns, interpolation_nodes=3, method="P3M"
 )
 kernel_exclusion = torchpme.lib.KSpaceFilter(
     cell=cell,

@@ -85,7 +85,7 @@ cell.requires_grad_(True)
 
 ns = torch.tensor([5, 5, 5])
 interpolator = torchpme.lib.MeshInterpolator(
-    cell=cell, ns_mesh=ns, interpolation_nodes=3
+    cell=cell, ns_mesh=ns, interpolation_nodes=3, method="Lagrange"
 )
 interpolator.compute_weights(positions)
 mesh = interpolator.points_to_mesh(charges)
@@ -241,7 +241,7 @@ a0.requires_grad_(True)
 # PME-like operation by evaluating the transformed mesh
 # at the atom positions
 
-interpolator = torchpme.lib.MeshInterpolator(cell, ns, 3)
+interpolator = torchpme.lib.MeshInterpolator(cell, ns, 3, method="Lagrange")
 interpolator.compute_weights(positions)
 mesh = interpolator.points_to_mesh(weights)
 
@@ -331,7 +331,10 @@ class KSpaceModule(torch.nn.Module):
 
         dummy_cell = torch.eye(3, dtype=dtype)
         self._MI = torchpme.lib.MeshInterpolator(
-            cell=dummy_cell, ns_mesh=torch.tensor([1, 1, 1]), interpolation_nodes=3
+            cell=dummy_cell,
+            ns_mesh=torch.tensor([1, 1, 1]),
+            interpolation_nodes=3,
+            method="Lagrange",
         )
         self._KF = torchpme.lib.KSpaceFilter(
             cell=dummy_cell,

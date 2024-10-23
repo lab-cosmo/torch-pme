@@ -88,10 +88,10 @@ cell = torch.from_numpy(structure.cell.array).to(device=device, dtype=dtype)
 # We demonstrate this by computing a projection on two grids with 3 and 7 mesh points.
 
 interpolator = torchpme.lib.MeshInterpolator(
-    cell=cell, ns_mesh=torch.tensor([3, 3, 3]), interpolation_nodes=3
+    cell=cell, ns_mesh=torch.tensor([3, 3, 3]), interpolation_nodes=3, method="P3M"
 )
 interpolator_fine = torchpme.lib.MeshInterpolator(
-    cell=cell, ns_mesh=torch.tensor([7, 7, 7]), interpolation_nodes=3
+    cell=cell, ns_mesh=torch.tensor([7, 7, 7]), interpolation_nodes=3, method="P3M"
 )
 interpolator.compute_weights(positions)
 interpolator_fine.compute_weights(positions)

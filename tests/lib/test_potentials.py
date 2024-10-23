@@ -4,7 +4,12 @@ from scipy.special import expi
 from torch.special import erf, erfc
 from torch.testing import assert_close
 
-from torchpme.lib import CoulombPotential, InversePowerLawPotential, Potential
+from torchpme.lib import (
+    CoulombPotential,
+    InversePowerLawPotential,
+    Potential,
+    SplinePotential,
+)
 
 
 def gamma(x):
@@ -318,3 +323,64 @@ def test_inverserp_coulomb(smearing):
     assert_close(ipl_fourier, coul_fourier, rtol=rtol, atol=atol)
     assert_close(ipl_self, coul_self, rtol=rtol, atol=atol)
     assert_close(ipl_bg, coul_bg, rtol=rtol, atol=atol)
+
+
+def test_spline_potential_cases():
+    x_grid = torch.linspace(0, 20, 100)
+    y_grid = torch.exp(-(x_grid**2) * 0.5)
+
+    x_grid_2 = torch.logspace(-2, 2, 80)
+    y_grid_2 = torch.reciprocal(-(x_grid_2**2) * 0.01)
+
+    spline = None
+    with pytest.raises(
+        ValueError, match="Length of radial grid and value array mismatch."
+    ):
+        spline = SplinePotential(r_grid=x_grid, y_grid=y_grid_2)
+
+    with pytest.raises(
+        ValueError,
+        match="Positive-valued radial grid is needed for reciprocal axis spline.",
+    ):
+        spline = SplinePotential(r_grid=x_grid, y_grid=y_grid, reciprocal=True)
+
+    spline = SplinePotential(r_grid=x_grid, y_grid=y_grid, reciprocal=False)
+    assert_close(spline.from_dist(x_grid), y_grid)
+
+    spline = SplinePotential(r_grid=x_grid_2, y_grid=y_grid_2, reciprocal=True)
+    assert_close(spline.from_dist(x_grid_2), y_grid_2)
+
+    assert_close(spline.from_dist(x_grid_2), spline.lr_from_dist(x_grid_2))
+    assert_close(x_grid_2 * 0.0, spline.sr_from_dist(x_grid_2))
+
+    spline = SplinePotential(
+        r_grid=x_grid,
+        y_grid=y_grid,
+        k_grid=x_grid_2,
+        yhat_grid=y_grid_2,
+        reciprocal=False,
+    )
+    assert_close(spline.lr_from_k_sq(x_grid_2**2), y_grid_2)
+
+    assert_close(spline.background_correction(), torch.tensor([0.0]))
+    assert_close(spline.self_contribution(), spline.lr_from_dist(torch.tensor([0.0])))
+
+
+def test_spline_potential_vs_coulomb():
+    # the approximation is not super-accurate
+
+    coulomb = CoulombPotential(smearing=1.0)
+    x_grid = torch.logspace(-3.0, 3.0, 3000)
+    y_grid = coulomb.lr_from_dist(x_grid)
+
+    spline = SplinePotential(r_grid=x_grid, y_grid=y_grid, reciprocal=True)
+    t_grid = torch.logspace(-torch.pi / 2, torch.pi / 2, 100)
+    z_coul = coulomb.lr_from_dist(t_grid)
+    z_spline = spline.lr_from_dist(t_grid)
+    assert_close(z_coul, z_spline, atol=1e-5, rtol=0)
+
+    k_grid2 = torch.logspace(-2, 1, 40)
+    krn_coul = coulomb.kernel_from_k_sq(k_grid2)
+    krn_spline = spline.kernel_from_k_sq(k_grid2)
+    assert_close(krn_coul[:30], krn_spline[:30], atol=0, rtol=1e-5)
+    assert_close(krn_coul[30:], krn_spline[30:], atol=2e-5, rtol=0)

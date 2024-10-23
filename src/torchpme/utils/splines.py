@@ -248,12 +248,19 @@ def compute_spline_ft(
     dsinkx = -2 * torch.sin(k * dr / 2) * torch.cos(k * (dr / 2 + ri))
 
     # this monstruous expression computes, for each interval in the spline,
-    # \int_{r_i}^{r_{i+1}} .... using the coefficients of the spline.
-    # the expression here is also cast in a Horner form, and uses a few
-    # tricks to make it stabler, as a naive implementation is very noisy
-    # in float32 for small k. for instance, the first term contains the difference
+    # \int_{r_i}^{r_{i+1}} spline_i(r) f(k,r) dr using the coefficients of
+    # the spline (f(k,r) is the radial FT coefficient, see the expresison in
+    # the docstring).
+    # the resulting integral (use a CAS to compute it!) can be written in terms
+    # of the spline point at i, the increments, and the trigonometric functions.
+    # it formally contains a 1/k^6 pole, that is however removable, because the
+    # numerator also goes to zero as k^6. this is addressed in several different
+    # ways. (1) the expression is made more stable for small k by casting it in a
+    # Horner form; (2) the first term contains the difference
     # of two cosines (at i and i+1), but is computed with a trigonometric identity
     # (see the definition of dcoskx) to avoid the 1-k^2 form of the bare cosines
+    # (3) the k->0 limit is computed analytically and used if one point is strictly
+    # zero  (4) division by k^6 is delayed, and done conditionally.
     ft_interval = 24 * dcoskx * dd2y + k * (
         6 * dsinkx * (3 * d2yi * dr + dd2y * (4 * dr + ri))
         - 24 * dd2y * dr * sinkx
@@ -301,6 +308,7 @@ def compute_spline_ft(
     r0 = x_points[-1]
     y0 = y_points[-1]
     d2y0 = tail_d2y[1]
+
     # the expression contains the cosine integral special function, that
     # is only available in scipy
     try:
@@ -310,7 +318,8 @@ def compute_spline_ft(
             "Computing the Fourier-domain kernel based on a spline requires scipy"
         ) from err
 
-    # to numpy and back again
+    # to numpy and back again. this function is only called at initialization
+    # time, and so we can live with losing some time here
     cosint = torch.from_numpy(sici((k * r0).detach().cpu().numpy())[1]).to(
         dtype=dr.dtype, device=dr.device
     )

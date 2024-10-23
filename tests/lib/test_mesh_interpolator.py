@@ -84,14 +84,14 @@ class TestMeshInterpolatorForward:
         ns_mesh = torch.randint(11, 18, size=(3,))
 
         # Run interpolation
-        inetrpolator = MeshInterpolator(
+        interpolator = MeshInterpolator(
             cell=cell,
             ns_mesh=ns_mesh,
             interpolation_nodes=interpolation_nodes,
             method=method,
         )
-        inetrpolator.compute_weights(positions)
-        mesh_values = inetrpolator.points_to_mesh(particle_weights)
+        interpolator.compute_weights(positions)
+        mesh_values = interpolator.points_to_mesh(particle_weights)
 
         # Compare total "weight (charge)" on the mesh with the sum of the particle
         # contributions
@@ -127,11 +127,14 @@ class TestMeshInterpolatorForward:
         ns_mesh = torch.tensor([n_mesh, n_mesh, n_mesh])
 
         # Perform interpolation
-        inetrpolator = MeshInterpolator(
-            cell=cell, ns_mesh=ns_mesh, interpolation_nodes=interpolation_nodes
+        interpolator = MeshInterpolator(
+            cell=cell,
+            ns_mesh=ns_mesh,
+            interpolation_nodes=interpolation_nodes,
+            method="P3M",
         )
-        inetrpolator.compute_weights(positions)
-        mesh_values = inetrpolator.points_to_mesh(particle_weights)
+        interpolator.compute_weights(positions)
+        mesh_values = interpolator.points_to_mesh(particle_weights)
 
         # Recover the interpolated values at the atomic positions
         indices_x = indices[0]
@@ -181,7 +184,7 @@ class TestMeshInterpolatorBackward:
         # Smear particles onto mesh and interpolate back onto
         # their own positions.
         interpolator = MeshInterpolator(
-            cell=cell, ns_mesh=ns_mesh, interpolation_nodes=1
+            cell=cell, ns_mesh=ns_mesh, interpolation_nodes=1, method="P3M"
         )
         interpolator.compute_weights(positions)
         mesh_values = interpolator.points_to_mesh(particle_weights)
@@ -220,7 +223,7 @@ class TestMeshInterpolatorBackward:
         # Smear particles onto mesh and interpolate back onto
         # their own positions.
         interpolator = MeshInterpolator(
-            cell=cell, ns_mesh=ns_mesh, interpolation_nodes=2
+            cell=cell, ns_mesh=ns_mesh, interpolation_nodes=2, method="P3M"
         )
         interpolator.compute_weights(positions)
         mesh_values = interpolator.points_to_mesh(particle_weights)
@@ -268,7 +271,10 @@ class TestMeshInterpolatorBackward:
 
         # Generate mesh with random values and interpolate
         interpolator = MeshInterpolator(
-            cell=cell, ns_mesh=ns_mesh, interpolation_nodes=interpolation_nodes
+            cell=cell,
+            ns_mesh=ns_mesh,
+            interpolation_nodes=interpolation_nodes,
+            method="P3M",
         )
         interpolator.compute_weights(positions)
         mesh_values = torch.randn(size=(n_channels, nx, ny, nz)) * 3.0 + 9.3
@@ -306,7 +312,10 @@ class TestMeshInterpolatorBackward:
         positions.requires_grad_(True)
 
         interpolator = MeshInterpolator(
-            cell=cell, ns_mesh=ns_mesh, interpolation_nodes=interpolation_nodes
+            cell=cell,
+            ns_mesh=ns_mesh,
+            interpolation_nodes=interpolation_nodes,
+            method="P3M",
         )
 
         interpolator.compute_weights(positions)
@@ -372,7 +381,7 @@ def test_interpolation_nodes_not_allowed_private():
     cell = torch.eye(3)
     ns_mesh = torch.tensor([2, 2, 2])
 
-    interpolator = MeshInterpolator(cell, ns_mesh, interpolation_nodes=5)
+    interpolator = MeshInterpolator(cell, ns_mesh, interpolation_nodes=5, method="P3M")
     interpolator.interpolation_nodes = 6  # not allowed
     match = "Only `interpolation_nodes` from 1 to 5 are allowed"
 
