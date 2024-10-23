@@ -301,6 +301,9 @@ class CoulombPotential(Potential):
             )
         return torch.pi * self.smearing**2
 
+    self_contribution.__doc__ = Potential.self_contribution.__doc__
+    background_correction.__doc__ = Potential.background_correction.__doc__
+
 
 # since pytorch has implemented the incomplete Gamma functions, but not the much more
 # commonly used (complete) Gamma function, we define it in a custom way to make autograd
@@ -460,7 +463,7 @@ class InversePowerLawPotential(Potential):
 
 
 class SplinePotential(Potential):
-    """
+    r"""
     Potential built from a spline interpolation.
 
     The potential is assumed to have only a long-range part, but one can also
@@ -481,9 +484,15 @@ class SplinePotential(Potential):
         be performed on a :math:`1/r` axis; suitable to describe
         long-range potentials. ``r_grid`` should contain only
         stricty positive values.
+    :param y_at_zero: value to be used for :math:`r\rightarrow 0`
+        when using a reciprocal spline
+    :param yhat_at_zero: value to be used for :math:`k\rightarrow 0`
+        in the k-space kernel
     :param: smearing: a length scale for switching between real and
         k-space evaluation. Not used internally, only provided as a
-        hint for calculators using this.
+        hint for calculators using this potential
+    :param: exclusion_radius: Not used internally, only provided as a
+        hint for calculators using this potential
     """
 
     def __init__(
@@ -558,13 +567,6 @@ class SplinePotential(Potential):
             self._yhat_at_zero = yhat_at_zero
 
     def from_dist(self, dist: torch.Tensor) -> torch.Tensor:
-        """
-        Full potential as a function of :math:`r`.
-
-        :param dist: torch.tensor containing the distances at which the potential is to
-            be evaluated.
-        """
-
         # if the full spline is not given, falls back on the lr part
         return self.lr_from_dist(dist) + self.sr_from_dist(dist)
 
@@ -579,30 +581,19 @@ class SplinePotential(Potential):
         return 0.0 * dist
 
     def lr_from_dist(self, dist: torch.Tensor) -> torch.Tensor:
-        """
-        Long-range part of the range-separated potential.
-
-        :param dist: torch.tensor containing the distances at which the potential is to
-            be evaluated.
-        """
-
         return self._spline(dist)
 
     def lr_from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
-        """
-        Fourier transform of the LR part potential in terms of :math:`k^2`.
-
-        :param k_sq: torch.tensor containing the squared lengths (2-norms) of the wave
-            vectors k at which the Fourier-transformed potential is to be evaluated
-        """
-
         return self._krn_spline(k_sq)
 
     def self_contribution(self) -> torch.Tensor:
-        # self-correction for 1/r potential
-
         return self._y_at_zero
 
     def background_correction(self) -> torch.Tensor:
-        # "charge neutrality" correction for 1/r potential
         return torch.tensor([0.0])
+
+    from_dist.__doc__ = Potential.from_dist.__doc__
+    lr_from_dist.__doc__ = Potential.lr_from_dist.__doc__
+    lr_from_k_sq.__doc__ = Potential.lr_from_k_sq.__doc__
+    self_contribution.__doc__ = Potential.self_contribution.__doc__
+    background_correction.__doc__ = Potential.background_correction.__doc__
