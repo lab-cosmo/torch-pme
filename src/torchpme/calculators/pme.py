@@ -64,23 +64,28 @@ class PMECalculator(Calculator):
 
         if potential.smearing is None:
             raise ValueError(
-                "Must specify range radius to use a potential with EwaldCalculator"
+                "Must specify smearing to use a potential with EwaldCalculator"
             )
 
         self.mesh_spacing: float = mesh_spacing
 
-        if interpolation_nodes not in [3, 4, 5, 6, 7]:
-            raise ValueError("Only `interpolation_nodes` from 3 to 7 are allowed")
-        self.interpolation_nodes: int = interpolation_nodes
-
         # Initialize the filter module. Set dummy value for smearing to propper
         # initilize the `KSpaceFilter` below
-        self._KF: KSpaceFilter = KSpaceFilter(
+        self.kspace_filter: KSpaceFilter = KSpaceFilter(
             cell=torch.eye(3),
             ns_mesh=torch.ones(3, dtype=int),
             kernel=self.potential,
             fft_norm="backward",
             ifft_norm="forward",
+        )
+
+        self.interpolation_nodes: int = interpolation_nodes
+
+        self.mesh_interpolator: MeshInterpolator = MeshInterpolator(
+            cell=torch.eye(3),
+            ns_mesh=torch.ones(3, dtype=int),
+            interpolation_nodes=self.interpolation_nodes,
+            method="Lagrange",  # convention for classic PME
         )
 
     def _compute_kspace(
@@ -98,28 +103,23 @@ class PMECalculator(Calculator):
             # scaled until the cutoff is reached
             ns = get_ns_mesh(cell, self.mesh_spacing)
 
-        with profiler.record_function("init 1: initialize mesh interpolator"):
-            interpolator = MeshInterpolator(
-                cell,
-                ns,
-                interpolation_nodes=self.interpolation_nodes,
-                method="Lagrange",  # convention for classic PME
-            )
+        with profiler.record_function("init 1: update mesh interpolator"):
+            self.mesh_interpolator.update(cell, ns)
 
         with profiler.record_function("update the mesh for the k-space filter"):
-            self._KF.update_mesh(cell, ns)
+            self.kspace_filter.update(cell, ns)
 
         with profiler.record_function("step 1: compute density interpolation"):
-            interpolator.compute_weights(positions)
-            rho_mesh = interpolator.points_to_mesh(particle_weights=charges)
+            self.mesh_interpolator.compute_weights(positions)
+            rho_mesh = self.mesh_interpolator.points_to_mesh(particle_weights=charges)
 
         with profiler.record_function("step 2: perform actual convolution using FFT"):
-            potential_mesh = self._KF.compute(rho_mesh)
+            potential_mesh = self.kspace_filter.compute(rho_mesh)
 
         with profiler.record_function("step 3: back interpolation + volume scaling"):
             ivolume = torch.abs(cell.det()).pow(-1)
             interpolated_potential = (
-                interpolator.mesh_to_points(potential_mesh) * ivolume
+                self.mesh_interpolator.mesh_to_points(potential_mesh) * ivolume
             )
 
         with profiler.record_function("step 4: remove the self-contribution"):

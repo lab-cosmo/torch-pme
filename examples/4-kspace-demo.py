@@ -39,7 +39,9 @@ dtype = torch.float64
 
 cell = torch.eye(3, dtype=dtype, device=device) * 6.0
 ns_mesh = torch.tensor([9, 9, 9])
-interpolator = torchpme.lib.MeshInterpolator(cell, ns_mesh, interpolation_nodes=2)
+interpolator = torchpme.lib.MeshInterpolator(
+    cell, ns_mesh, interpolation_nodes=2, method="P3M"
+)
 xyz_mesh = interpolator.get_mesh_xyz()
 
 mesh_value = (
@@ -211,12 +213,10 @@ multi_KF = torchpme.lib.KSpaceFilter(cell, ns_mesh, kernel=multi_kernel)
 multi_filtered = multi_KF.compute(multi_mesh)
 
 # %%
-# When the parameters of the kernel are modified, it is sufficient
-# to call :py:func:`KSpaceFilter.update_filter` before applying the
-# filter
+# When the parameters of the kernel are modified,
 
 multi_kernel._sigma = torch.tensor([1.0, 0.5, 0.25])
-multi_KF.update_filter()
+multi_KF.update(cell=cell, ns_mesh=ns_mesh)
 multi_filtered_2 = multi_KF.compute(multi_mesh)
 
 # NB: when one needs to perform a full update, including the

@@ -1,7 +1,7 @@
 import torch
 
 
-class MeshInterpolator:
+class MeshInterpolator(torch.nn.Module):
     """
     Class for handling all steps related to interpolations in the context of a mesh
     based Ewald summation.
@@ -40,8 +40,43 @@ class MeshInterpolator:
         cell: torch.Tensor,
         ns_mesh: torch.Tensor,
         interpolation_nodes: int,
-        method: str = "P3M",
+        method: str,
     ):
+        super().__init__()
+
+        if method not in ["Lagrange", "P3M"]:
+            raise ValueError(
+                f"method '{method}' is not supported. Choose from 'Lagrange' or 'P3M'"
+            )
+
+        self.method: str = method
+        self.interpolation_nodes: int = interpolation_nodes
+
+        self.update(cell, ns_mesh)
+
+        # TorchScript requires to initialize all attributes in __init__
+        self.interpolation_weights: torch.Tensor = torch.zeros(
+            1, device=self._device, dtype=self._dtype
+        )
+        self.x_shifts: torch.Tensor = torch.zeros(1, device=self._device)
+        self.y_shifts: torch.Tensor = torch.zeros(1, device=self._device)
+        self.z_shifts: torch.Tensor = torch.zeros(1, device=self._device)
+        self.x_indices: torch.Tensor = torch.zeros(1, device=self._device)
+        self.y_indices: torch.Tensor = torch.zeros(1, device=self._device)
+        self.z_indices: torch.Tensor = torch.zeros(1, device=self._device)
+
+    def update(self, cell: torch.Tensor, ns_mesh: torch.Tensor):
+        """Update the buffers.
+
+        Call this to reuse a ``MeshInterpolator`` object when the ``cell`` parameters or
+        the mesh resolution change.
+
+        :param cell: torch.tensor of shape ``(3, 3)``, where ``cell[i]`` is the i-th
+            basis vector of the unit cell
+        :param ns_mesh: toch.tensor of shape ``(3,)`` Number of mesh points to use along
+            each of the three axes
+        """
+
         # Check that the provided parameters match the specifications
         if cell.shape != (3, 3):
             raise ValueError(
@@ -55,14 +90,9 @@ class MeshInterpolator:
                 "`cell` and `ns_mesh` are on different devices, got "
                 f"{cell.device} and {ns_mesh.device}"
             )
-        if method not in ["Lagrange", "P3M"]:
-            raise ValueError(
-                f"method '{method}' is not supported. Choose from 'Lagrange' or 'P3M'"
-            )
 
         self.cell = cell
         self.inverse_cell = cell.clone()
-        self.method = method
 
         if self.cell.is_cuda:
             # use function that does not synchronize with the CPU
@@ -71,21 +101,9 @@ class MeshInterpolator:
             self.inverse_cell = torch.linalg.inv(cell)
 
         self.ns_mesh = ns_mesh
-        self.interpolation_nodes = interpolation_nodes
 
         self._dtype = cell.dtype
         self._device = cell.device
-
-        # TorchScript requires to initialize all attributes in __init__
-        self.interpolation_weights: torch.Tensor = torch.zeros(
-            1, device=self._device, dtype=self._dtype
-        )
-        self.x_shifts: torch.Tensor = torch.zeros(1, device=self._device)
-        self.y_shifts: torch.Tensor = torch.zeros(1, device=self._device)
-        self.z_shifts: torch.Tensor = torch.zeros(1, device=self._device)
-        self.x_indices: torch.Tensor = torch.zeros(1, device=self._device)
-        self.y_indices: torch.Tensor = torch.zeros(1, device=self._device)
-        self.z_indices: torch.Tensor = torch.zeros(1, device=self._device)
 
     def get_mesh_xyz(self) -> torch.Tensor:
         """
@@ -261,7 +279,7 @@ class MeshInterpolator:
                     1 / 720 * (12 * x + 4 * x2 - 15 * x3 - 5 * x4 + 3 * x5 + x6),
                 ]
             )
-        raise ValueError("Only `interpolation_nodes` from 2 to 6 are allowed")
+        raise ValueError("Only `interpolation_nodes` from 3 to 7 are allowed")
 
     def compute_weights(self, positions: torch.Tensor):
         """

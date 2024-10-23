@@ -94,23 +94,11 @@ class KSpaceFilter(torch.nn.Module):
             )
 
         self._kernel = kernel
-        self.update_mesh(cell, ns_mesh)
+        self.update(cell, ns_mesh)
 
     @torch.jit.export
-    def update_filter(self):
-        r"""
-        Applies one or more scalar filter functions to the squared norms of the
-        reciprocal space mesh grids, storing it so it can be applied multiple times.
-        Uses the :py:func:`KSpaceKernel.from_k_sq` method of the
-        :py:class:`KSpaceKernel`-derived object provided upon initialization
-        to compute the kernel values over the grid points.
-        """
-        self._kfilter = self._kernel.kernel_from_k_sq(self._knorm_sq)
-
-    @torch.jit.export
-    def update_mesh(self, cell: torch.Tensor, ns_mesh: torch.Tensor):
-        """
-        Update the k-space mesh vectors.
+    def update(self, cell: torch.Tensor, ns_mesh: torch.Tensor):
+        """Update the k-space mesh vectors.
 
         Should have a size consistent with that of the mesh used to
         store the real-space functions that will be filtered.
@@ -137,8 +125,8 @@ class KSpaceFilter(torch.nn.Module):
         self._ns_mesh = ns_mesh
         self._kvectors = generate_kvectors_for_mesh(ns=ns_mesh, cell=cell)
         self._knorm_sq = torch.linalg.norm(self._kvectors, dim=3) ** 2
-        # also updates filter to reduce the risk it'd go out of sync
-        self.update_filter()
+        # also updates kfilter to reduce the risk it'd go out of sync
+        self._kfilter = self._kernel.kernel_from_k_sq(self._knorm_sq)
 
     @torch.jit.export
     def compute(
@@ -149,7 +137,7 @@ class KSpaceFilter(torch.nn.Module):
         Applies the k-space filter by Fourier transforming the given
         ``mesh_values`` tensor, multiplying the result by the filter array
         (that should have been previously computed with a call to
-        :py:func:`update_filter`) and Fourier-transforming back
+        :py:func:`update`) and Fourier-transforming back
         to real space.
 
         :param mesh_values: torch.tensor of shape ``(n_channels, nx, ny, nz)``
@@ -214,6 +202,6 @@ class KSpaceFilter(torch.nn.Module):
         The size of the mesh is inferred from the input mesh
         size.
         """
-        self.update_mesh(cell, torch.tensor(mesh.shape[-3:]))
+        self.update(cell, torch.tensor(mesh.shape[-3:]))
 
         return self.compute(mesh)
