@@ -492,7 +492,7 @@ def value_to_seismic(value, vrange=0.1):
     clipped_value = np.clip(value, vmin, vmax)
     norm = (clipped_value - vmin) / (vmax - vmin)
 
-    rgba = matplotlib.cm.get_cmap("seismic")(norm)
+    rgba = matplotlib.colormaps["seismic"](norm)
     rgb = tuple(int(255 * c) for c in rgba[:3])
     return "#{:02x}{:02x}{:02x}".format(*rgb)
 
@@ -535,3 +535,5 @@ chemiscope.show(
     ),
     environments=chemiscope.all_atomic_environments([structure]),
 )
+
+# %%
