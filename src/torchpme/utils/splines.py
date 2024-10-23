@@ -42,7 +42,7 @@ class CubicSpline(torch.nn.Module):
         ) + b * (self.y_points[i + 1] + (b * b - 1) * self.d2y_points[i + 1] * h2over6)
 
 
-class CubicSplineReciprocal(CubicSpline):
+class CubicSplineReciprocal(torch.nn.Module):
     r"""
     Reciprocal-axis cubic spline calculator.
 
@@ -67,6 +67,8 @@ class CubicSplineReciprocal(CubicSpline):
         y_points: torch.Tensor,
         y_at_zero: Optional[torch.Tensor] = None,
     ):
+        super().__init__()
+
         # compute on a inverse grid
         ix_points = torch.cat(
             [
@@ -82,22 +84,35 @@ class CubicSplineReciprocal(CubicSpline):
             ],
             dim=0,
         )
-        super().__init__(ix_points, iy_points)
+        self._rev_spline = CubicSpline(ix_points, iy_points)
 
         # defaults to the lowest value in the input
         if y_at_zero is None:
             y_at_zero = y_points[0]
         self._y_at_zero = y_at_zero
+        # direct mini-spline to fill the gap between the lowest grid point and zero
         self._zero_spline = CubicSpline(
-            torch.tensor([0.0, x_points[0], x_points[1]]),
-            torch.tensor([self._y_at_zero, y_points[0], y_points[1]]),
+            torch.tensor(
+                [0.0, x_points[0], x_points[1]],
+                dtype=x_points.dtype,
+                device=x_points.device,
+            ),
+            torch.tensor(
+                [self._y_at_zero, y_points[0], y_points[1]],
+                dtype=x_points.dtype,
+                device=x_points.device,
+            ),
         )
 
     def forward(self, x: torch.Tensor):
+        """Computes by reversing the inputs, checking for safety."""
+        safe_x = torch.where(
+            x < self._zero_spline.x_points[1], self._zero_spline.x_points[1], x
+        )
         return torch.where(
             x < self._zero_spline.x_points[1],
             self._zero_spline(x),
-            super().forward(torch.reciprocal(x)),
+            self._rev_spline(torch.reciprocal(safe_x)),
         )
 
 
@@ -355,11 +370,12 @@ def compute_spline_ft(
         axis=1,
     )
 
+    safe_k = torch.where(k == 0, 1.0, k)
     return (
         torch.where(
             k == 0,
             ft_limit,
-            ft_sum / k**6 + tail / k**2,
+            ft_sum / safe_k**6 + tail / safe_k**2,
         )
         .reshape(k_points.shape)
         .to(k_points.dtype)

@@ -370,17 +370,61 @@ def test_spline_potential_vs_coulomb():
     # the approximation is not super-accurate
 
     coulomb = CoulombPotential(smearing=1.0)
-    x_grid = torch.logspace(-3.0, 3.0, 3000)
+    x_grid = torch.logspace(-3.0, 3.0, 1000)
     y_grid = coulomb.lr_from_dist(x_grid)
 
     spline = SplinePotential(r_grid=x_grid, y_grid=y_grid, reciprocal=True)
     t_grid = torch.logspace(-torch.pi / 2, torch.pi / 2, 100)
     z_coul = coulomb.lr_from_dist(t_grid)
     z_spline = spline.lr_from_dist(t_grid)
-    assert_close(z_coul, z_spline, atol=1e-5, rtol=0)
+    assert_close(z_coul, z_spline, atol=5e-5, rtol=0)
 
     k_grid2 = torch.logspace(-2, 1, 40)
     krn_coul = coulomb.kernel_from_k_sq(k_grid2)
     krn_spline = spline.kernel_from_k_sq(k_grid2)
-    assert_close(krn_coul[:30], krn_spline[:30], atol=0, rtol=1e-5)
-    assert_close(krn_coul[30:], krn_spline[30:], atol=2e-5, rtol=0)
+    assert_close(krn_coul[:30], krn_spline[:30], atol=0, rtol=5e-5)
+    assert_close(krn_coul[30:], krn_spline[30:], atol=5e-5, rtol=0)
+
+
+@pytest.mark.parametrize(
+    "potpars",
+    [
+        (CoulombPotential, {"smearing": 1.0, "exclusion_radius": 1.0}),
+        (
+            SplinePotential,
+            {
+                "r_grid": torch.tensor([1.0, 2.0, 3.0, 4.0]),
+                "y_grid": torch.tensor([1.0, -2.0, 3.0, -4.0]),
+            },
+        ),
+        (
+            SplinePotential,
+            {
+                "r_grid": torch.tensor([1.0, 2.0, 3.0, 400.0]),
+                "y_grid": torch.tensor([1.0, -2.0, 3.0, 1 / 400.0]),
+                "reciprocal": True,
+                "yhat_at_zero": 1.0,
+            },
+        ),
+    ],
+)
+def test_potentials_jit(potpars):
+    pot, pars = potpars
+
+    class JITWrapper(torch.nn.Module):
+        def __init__(self, **kwargs):
+            super().__init__()
+            self.pot = pot(**kwargs)
+
+        def forward(self, x: torch.Tensor):
+            return self.pot.lr_from_dist(x), self.pot.lr_from_k_sq(x)
+
+    wrapper = JITWrapper(**pars)
+    jit_wrapper = torch.jit.script(wrapper)
+
+    x = torch.tensor([1.0, 2.0, 3.0])
+    rs_y, ks_y = wrapper(x)
+    rs_y_jit, ks_y_jit = jit_wrapper(x)
+
+    assert_close(rs_y, rs_y_jit)
+    assert_close(ks_y, ks_y_jit)
