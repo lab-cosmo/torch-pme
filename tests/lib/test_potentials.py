@@ -391,6 +391,10 @@ def test_spline_potential_vs_coulomb():
     [
         (CoulombPotential, {"smearing": 1.0, "exclusion_radius": 1.0}),
         (
+            InversePowerLawPotential,
+            {"exponent": 2, "smearing": 1.0, "exclusion_radius": 1.0},
+        ),
+        (
             SplinePotential,
             {
                 "r_grid": torch.tensor([1.0, 2.0, 3.0, 4.0]),
