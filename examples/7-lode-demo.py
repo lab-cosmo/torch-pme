@@ -160,7 +160,9 @@ fig.show()
 
 # Determines grid resolution and initialize utility classes
 ns = torchpme.lib.kvectors.get_ns_mesh(cell, smearing * 0.5)
-MI = torchpme.lib.MeshInterpolator(cell=cell, ns_mesh=ns, interpolation_nodes=3)
+MI = torchpme.lib.MeshInterpolator(
+    cell=cell, ns_mesh=ns, interpolation_nodes=3, method="P3M"
+)
 KF = torchpme.lib.KSpaceFilter(
     cell=cell,
     ns_mesh=ns,
@@ -401,7 +403,7 @@ class LODECalculator(torchpme.Calculator):
         cell = torch.eye(3)
         ns = torch.tensor([2, 2, 2])
         self._MI = torchpme.lib.MeshInterpolator(
-            cell=cell, ns_mesh=ns, interpolation_nodes=3
+            cell=cell, ns_mesh=ns, interpolation_nodes=3, method="P3M"
         )
         self._KF = torchpme.lib.KSpaceFilter(
             cell=cell,
@@ -438,8 +440,8 @@ class LODECalculator(torchpme.Calculator):
         # Update meshes
         assert self.potential.smearing is not None  # otherwise mypy complains
         ns = torchpme.lib.kvectors.get_ns_mesh(cell, self.potential.smearing / 2)
-        self._MI.update_mesh(cell, ns)
-        self._KF.update_mesh(cell, ns)
+        self._MI.update(cell, ns)
+        self._KF.update(cell, ns)
 
         # Compute potential
         self._MI.compute_weights(positions)
