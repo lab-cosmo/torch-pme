@@ -235,6 +235,14 @@ def compute_spline_ft(
     :return: The radial Fourier transform :math:`\hat{f}(k)` computed
         at the ``k_points`` provided.
     """
+    # the expression contains the cosine integral special function, that
+    # is only available in scipy
+    try:
+        import scipy.special
+    except ImportError as err:
+        raise ImportError(
+            "Computing the Fourier-domain kernel based on a spline requires scipy"
+        ) from err
 
     # chooses precision for the FT evaluation
     dtype = x_points.dtype
@@ -324,18 +332,9 @@ def compute_spline_ft(
     y0 = y_points[-1]
     d2y0 = tail_d2y[1]
 
-    # the expression contains the cosine integral special function, that
-    # is only available in scipy
-    try:
-        from scipy.special import sici
-    except ImportError as err:
-        raise ImportError(
-            "Computing the Fourier-domain kernel based on a spline requires scipy"
-        ) from err
-
     # to numpy and back again. this function is only called at initialization
     # time, and so we can live with losing some time here
-    cosint = torch.from_numpy(sici((k * r0).detach().cpu().numpy())[1]).to(
+    cosint = torch.from_numpy(scipy.special.sici((k * r0).detach().cpu().numpy())[1]).to(
         dtype=dr.dtype, device=dr.device
     )
 
