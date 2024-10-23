@@ -403,6 +403,7 @@ def test_spline_potential_vs_coulomb():
                 "r_grid": torch.tensor([1.0, 2.0, 3.0, 400.0]),
                 "y_grid": torch.tensor([1.0, -2.0, 3.0, 1 / 400.0]),
                 "reciprocal": True,
+                "y_at_zero": 1.0,
                 "yhat_at_zero": 1.0,
             },
         ),
