@@ -500,9 +500,21 @@ def value_to_seismic(value, vrange=0.1):
 chemiscope.show(
     frames=[structure],
     properties={
-        "potential": {
+        "lode[1]": {
             "target": "atom",
             "values": np.concatenate([lode_features[:, 0].flatten().numpy()]),
+        },
+        "lode[x]": {
+            "target": "atom",
+            "values": np.concatenate([lode_features[:, 1].flatten().numpy()]),
+        },
+        "lode[y]": {
+            "target": "atom",
+            "values": np.concatenate([lode_features[:, 2].flatten().numpy()]),
+        },
+        "lode[z]": {
+            "target": "atom",
+            "values": np.concatenate([lode_features[:, 3].flatten().numpy()]),
         },
     },
     shapes={
@@ -535,5 +547,3 @@ chemiscope.show(
     ),
     environments=chemiscope.all_atomic_environments([structure]),
 )
-
-# %%
