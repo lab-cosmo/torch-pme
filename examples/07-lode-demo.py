@@ -33,43 +33,42 @@ device = "cpu"
 dtype = torch.float64
 rng = torch.Generator()
 rng.manual_seed(42)
-matplotlib.use('widget')
 
 # %%
-# Long-distance equivariant descriptors 
+# Long-distance equivariant descriptors
 # -------------------------------------
 #
 # .. figure:: ../../static/images/long-range.jpg
-# 
+#
 #     A schematic view of the process of evaluating LODE features.
 #     Rather than computing an expansion of the neighbor density (the
 #     operation that underlies short-range models, from SOAP to NICE)
 #     one first transforms the density in the Fourier domain, then back
 #     to obtain a real-space "potential field" that is then expanded on
 #     an atom-centered basis.
-#  
+#
 # The basic idea behind the LODE framework is to evaluate a
 # "potential field", convoluting the neighbor density with a suitable
 # kernel
-# 
+#
 # .. math::
-# 
-#     V(\mathbf{x})=\int \mathrm{d}\mathbf{x}' 
+#
+#     V(\mathbf{x})=\int \mathrm{d}\mathbf{x}'
 #     \rho(\mathbf{x}') K(|\mathbf{x}-\mathbf{x}'|)
-#        
-# and then expand it on an atom-centered basis, so as to obtain a 
+#
+# and then expand it on an atom-centered basis, so as to obtain a
 # set of features that describe the environment of each atom.
 #
 # .. math::
-# 
-#     \langle<nlm|V_i\rangle =\int \mathrm{d}\mathbf{x} 
-#     V(\mathbf{x}) R_{nl}(x) T_m^l(\hat{\mathbf{x}})
-#  
+#
+#     \langle nlm|V_i\rangle =\int \mathrm{d}\mathbf{x}\,
+#     V(\mathbf{x}) R_{nl}(x) Y_l^m(\hat{\mathbf{x}})
+#
 # By choosing a slowly-decaying kernel that emphasizes long-range correlations, and that
 # and that is consistent with the asymptotic behavior of e.g. electrostatic
 # interactions, one achieves a description of the long-range interaction,
 # rather than of the immediate vicinity of each atom. By choosing a basis of
-# spherical harmonics for the angular part, one achieves descriptors that 
+# spherical harmonics for the angular part, one achieves descriptors that
 # transform as irreducible representations of the rotation group.
 
 
@@ -93,7 +92,7 @@ structure = ase.Atoms(
     cell=[6, 6, 6],
     symbols="NaClClNaClNaNaCl",
 )
-structure = structure.repeat([3, 3, 1])
+structure = structure.repeat([3, 3, 3])
 
 displacement = torch.normal(
     mean=0.0, std=2.5e-1, size=(len(structure), 3), generator=rng
@@ -101,7 +100,8 @@ displacement = torch.normal(
 structure.positions += displacement.numpy()
 
 charges = torch.tensor(
-    [[1.0], [-1.0], [-1.0], [1.0], [-1.0], [1.0], [1.0], [-1.0]] * 9,
+    [[1.0], [-1.0], [-1.0], [1.0], [-1.0], [1.0], [1.0], [-1.0]]
+    * (len(structure) // 8),
     dtype=dtype,
     device=device,
 ).reshape(-1, 1)
@@ -112,8 +112,12 @@ cell = torch.from_numpy(structure.cell.array).to(device=device, dtype=dtype)
 # %%
 # An "excluded-range" smooth Coulomb potential
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# 
-# We use `SplinePotential <torchpme.lib.SplinePotential>`_ 
+#
+# We use :py:class:`SplinePotential <torchpme.lib.SplinePotential>` to
+# compute a smooth Coulomb potential with the "short-range" part cut out.
+# This is important as otherwise the potential carries information on the
+# local atomic arrangement, which is redundant (as it is usually described
+# by another part of the model).
 
 smearing = 0.5
 exclusion_radius = 8.0
@@ -147,6 +151,14 @@ fig.show()
 
 
 # %%
+# Compute the potential on a mesh
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+# We use :py:class:`MeshInterpolator <torchpme.lib.MeshInterpolator>`
+# and :py:class:`KSpaceFilter <torchpme.lib.KSpaceFilter>`
+# to compute the potential on a grid.
+
+# Determines grid resolution and initialize utility classes
 ns = torchpme.lib.kvectors.get_ns_mesh(cell, smearing * 0.5)
 MI = torchpme.lib.MeshInterpolator(cell=cell, ns_mesh=ns, interpolation_nodes=3)
 KF = torchpme.lib.KSpaceFilter(
@@ -157,16 +169,20 @@ KF = torchpme.lib.KSpaceFilter(
     ifft_norm="forward",
 )
 
+# Computes particle density on the grid (weighted by the "charges")
 MI.compute_weights(positions)
 rho_mesh = MI.points_to_mesh(particle_weights=charges)
+
+# Computes the potential using the Fourier filter
 ivolume = torch.abs(cell.det()).pow(-1)
-KF.update_mesh(cell, ns)
 potential_mesh = KF.compute(rho_mesh) * ivolume
 
 # %%
+# Plotting a slice of the potential demonstrates the smoothness of the
+# potential, as the "core" region is damped out.
 
 fig, ax = plt.subplots(
-    1, 1, figsize=(4, 4), sharey=True, sharex=True, constrained_layout=True
+    1, 1, figsize=(4, 3), sharey=True, sharex=True, constrained_layout=True
 )
 mesh_extent = [
     0,
@@ -182,14 +198,16 @@ z_plot = np.hstack(
 )  # Add first column at the right
 
 z_min, z_max = (z_plot.min(), z_plot.max())
+z_range = max(abs(z_min), abs(z_max))
 
 cf = ax.imshow(
     z_plot,
     extent=mesh_extent,
-    vmin=z_min,
-    vmax=z_max,
+    vmin=-z_range,
+    vmax=z_range,
     origin="lower",
     interpolation="bilinear",
+    cmap="seismic",
 )
 
 ax.set_xlabel(r"$x$ / Å")
@@ -198,8 +216,13 @@ fig.colorbar(cf, label=r"potential / a.u.")
 fig.show()
 
 # %%
-# quadrature
+# Atom-centered grids
+# ~~~~~~~~~~~~~~~~~~~
 #
+# To evaluate LODE features, we have to now project the potential
+# within an atom-centered region. To do this, we define an atom-centered
+# grid. Note that the quadrature here is not especially smart, and
+# is only used for demonstrative purposes.
 
 
 def get_theta_phi_quadrature(L):
@@ -224,13 +247,9 @@ def get_radial_quadrature(order, R):
     Generates Gauss-Legendre quadrature nodes and weights for radial integration
     in spherical coordinates over the interval [0, R].
     """
-    # Step 1: Obtain Gauss-Legendre nodes and weights on [-1, 1]
+
     gl_nodes, gl_weights = np.polynomial.legendre.leggauss(order)
-
-    # Step 2: Map nodes from [-1, 1] to [0, R]
     nodes = (R / 2) * (gl_nodes + 1)
-
-    # Step 3: Adjust weights to account for the transformation and r^2 weighting
     weights = (R / 2) ** 3 * gl_weights * (gl_nodes + 1) ** 2
 
     return torch.from_numpy(nodes), torch.from_numpy(weights)
@@ -259,26 +278,33 @@ def get_full_grid(n, R):
     return xyz_nodes, full_weights
 
 
-# %%
-xyz, w = get_full_grid(3, 2.5)
-# %%
-
-points = positions[3] + xyz
-MI.compute_weights(points)
-# %%
-
-pots = MI.mesh_to_points(potential_mesh).squeeze()
+xyz, weights = get_full_grid(3, exclusion_radius / 4)
 
 # %%
+# The grid can then be centered on each atom, and the
+# back-interpolation of ``MeshInterpolator`` be used to
+# evaluate the potential values
 
-dummy = ase.Atoms(positions=points.numpy(), symbols="H" * len(points))
+grid_i = positions[3] + xyz
+MI.compute_weights(grid_i)
+pots_i = MI.mesh_to_points(potential_mesh).squeeze()
+
+# %%
+# The grid can be shown in the context of the atomic structure
+#
+
+dummy = ase.Atoms(positions=grid_i.numpy(), symbols="H" * len(grid_i))
 chemiscope.show(
     frames=[structure + dummy],
     properties={
         "potential": {
             "target": "atom",
-            "values": np.concatenate([[0] * len(positions), pots.flatten().numpy()]),
-        }
+            "values": np.concatenate([[0] * len(positions), pots_i.flatten().numpy()]),
+        },
+        "grid weights": {
+            "target": "atom",
+            "values": np.concatenate([[0] * len(positions), weights.flatten().numpy()]),
+        },
     },
     mode="structure",
     settings=chemiscope.quick_settings(
@@ -288,8 +314,8 @@ chemiscope.show(
             "environments": {"activated": False},
             "color": {
                 "property": "potential",
-                "min": -0.5,
-                "max": 0.5,
+                "min": -0.15,
+                "max": 0.15,
                 "transform": "linear",
                 "palette": "seismic",
             },
@@ -299,35 +325,46 @@ chemiscope.show(
 )
 
 # %%
-# stencils for integration
+# Computing the projection
+# ~~~~~~~~~~~~~~~~~~~~~~~~
+# In order to compute the LODE coefficients, we simply have to evaluate
+# the basis on the same atom-centered grid. Here for example we just use
+# :math:`(1,x,y,z)` as basis
+
+# define the basis
 
 f0 = torch.ones(len(xyz))
-
 fx = xyz[:, 0]
 fy = xyz[:, 1]
 fz = xyz[:, 2]
 
-# %%
-(w * f0 * pots).sum() / (w * f0).sum()
+# normalize the basis
+
+f0 = f0 / torch.sqrt((weights * f0**2).sum())
+fx = fx / torch.sqrt((weights * fx**2).sum())
+fy = fy / torch.sqrt((weights * fy**2).sum())
+fz = fz / torch.sqrt((weights * fz**2).sum())
+
+# compute
+lode_i = torch.tensor(
+    [
+        (weights * f0 * pots_i).sum(),
+        (weights * fx * pots_i).sum(),
+        (weights * fy * pots_i).sum(),
+        (weights * fz * pots_i).sum(),
+    ]
+).squeeze()
+
+print(f"LODE features: {lode_i}")
 
 # %%
-(w * fx * pots).sum() / (w * f0).sum()
-
-# %%
-(w * fy * pots).sum() / (w * f0).sum()
-
-# %%
-(w * fz * pots).sum() / (w * f0).sum()
-
-# %%
-
-# %%
-(w * fz * fz).sum() / (w * f0).sum()
-# %%
+# Defines a LODE calculator
+# -------------------------
+#
+# All these pieces can be combined in a relatively concise :py:class:`Calculator`
+# class that computes LODE features.
 
 
-# %%
-# now defines a LODE calculator
 class SmoothCutoffCoulomb(SplinePotential):
     def __init__(
         self, smearing: float, exclusion_radius: float, n_points: Optional[int] = 1000
@@ -341,13 +378,18 @@ class SmoothCutoffCoulomb(SplinePotential):
             smearing=smearing,
             exclusion_radius=exclusion_radius,
             reciprocal=True,
-            yhat_at_zero=0.0
+            yhat_at_zero=0.0,
         )
 
 
 class LODECalculator(torchpme.Calculator):
     """
     Compute expansions of the local potential in an atom-centered basis.
+
+    :param potential: A :py:class:`Potential` implementing the convolution
+        kernel. Real-space components are not used.
+    :param n_grid: Atom-centered grid size; this is the number of nodes per
+        dimension, so the overall number of points is ``n_grid**3``.
     """
 
     def __init__(self, potential: Potential, n_grid: int = 3):
@@ -369,7 +411,8 @@ class LODECalculator(torchpme.Calculator):
             ifft_norm="forward",
         )
 
-        nodes, weights = get_full_grid(n_grid, potential.exclusion_radius.item())
+        # assumes a smooth exclusion region so sets the integration cutoff to half that
+        nodes, weights = get_full_grid(n_grid, potential.exclusion_radius.item() / 2)
 
         # these are the "stencils" used to project the potential
         # on an atom-centered basis. NB: weights might also be incorporated
@@ -393,7 +436,7 @@ class LODECalculator(torchpme.Calculator):
         neighbor_distances: Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
         # Update meshes
-        assert self.potential.smearing is not None  # mypy is stoopid
+        assert self.potential.smearing is not None  # otherwise mypy complains
         ns = torchpme.lib.kvectors.get_ns_mesh(cell, self.potential.smearing / 2)
         self._MI.update_mesh(cell, ns)
         self._KF.update_mesh(cell, ns)
@@ -404,12 +447,12 @@ class LODECalculator(torchpme.Calculator):
         ivolume = torch.abs(cell.det()).pow(-1)
         potential_mesh = self._KF.compute(rho_mesh) * ivolume
 
-        # Create integration grids around each atom
+        # Places integration grids around each atom
         all_points = torch.stack([self._nodes + pos for pos in positions]).reshape(
             -1, 3
         )
 
-        # Evaluate the potential on the grid
+        # Evaluate the potential on the grids
         self._MI.compute_weights(all_points)
         all_potentials = self._MI.mesh_to_points(potential_mesh).reshape(
             len(positions), len(self._nodes), -1
@@ -420,23 +463,25 @@ class LODECalculator(torchpme.Calculator):
 
 
 # %%
-#
-my_pot = SmoothCutoffCoulomb(smearing=smearing, exclusion_radius=cutoff)
-my_lode = LODECalculator(potential=my_pot, n_grid=12)
+# Instantiates the calculator and evaluates it for the NaCl structure
+
+smearing = 0.5
+exclusion_radius = 8.0
+my_pot = SmoothCutoffCoulomb(smearing=smearing, exclusion_radius=exclusion_radius)
+my_lode = LODECalculator(potential=my_pot, n_grid=8)
+
+lode_features = my_lode.forward(
+    charges=charges, cell=cell, positions=positions
+).squeeze()
 
 
 # %%
-from time import time
-start = time()
-values = my_lode.forward(charges=charges, cell=cell, positions=positions).squeeze()
-print(time()-start)
+# The basis function hardcoded in the `LODECalculator` class have a scalar
+# (mean potential) and vectorial (roughly corresponding to the mean electric
+# field) nature, so we can plot it with color corresponding to the constant part,
+# and arrows proportional to the vectorial component.
 
 
-# %%
-
-values 
-
-# %%
 def value_to_seismic(value, vrange=0.1):
     """
     Maps a value within [vmin, vmax] to an RGB color string using the 'seismic' colormap.
@@ -454,6 +499,12 @@ def value_to_seismic(value, vrange=0.1):
 
 chemiscope.show(
     frames=[structure],
+    properties={
+        "potential": {
+            "target": "atom",
+            "values": np.concatenate([lode_features[:, 0].flatten().numpy()]),
+        },
+    },
     shapes={
         "lode": {
             "kind": "arrow",
@@ -465,10 +516,10 @@ chemiscope.show(
                 },
                 "atom": [
                     {
-                        "vector": (10 * values[i, 1:]).tolist(),
-                        "color": value_to_seismic(values[i, 0], 0.3),
+                        "vector": (4 * lode_features[i, 1:]).tolist(),
+                        "color": value_to_seismic(lode_features[i, 0], 0.6),
                     }
-                    for i in range(len(values))
+                    for i in range(len(lode_features))
                 ],
             },
         }
@@ -484,5 +535,3 @@ chemiscope.show(
     ),
     environments=chemiscope.all_atomic_environments([structure]),
 )
-
-# %%
