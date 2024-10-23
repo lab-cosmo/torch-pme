@@ -336,26 +336,63 @@ class TestMeshInterpolatorBackward:
         )
 
 
-@pytest.mark.parametrize("method", ["P3M", "Lagrange"])
-def test_cell_wrong_shape(method):
-    ns_mesh = torch.tensor([2, 2, 2])
-    cell = torch.randn(size=(2, 3))  # incorrect shape
-    interpolation_nodes = 3
-    match = "cell of shape \\[2, 3\\] should be of shape \\(3, 3\\)"
+def test_update_mesh():
+    cell = 2 * torch.eye(3, device="meta")
+    ns_mesh = torch.tensor([2, 2, 2], device="meta")
 
-    with pytest.raises(ValueError, match=match):
-        MeshInterpolator(cell, ns_mesh, interpolation_nodes, method=method)
+    mesh_interpolator = MeshInterpolator(
+        cell=cell, ns_mesh=ns_mesh, interpolation_nodes=3, method="Lagrange"
+    )
+
+    cell_update = torch.eye(3, device="cpu")
+    ns_mesh_update = torch.tensor([3, 3, 3], device="cpu")
+
+    mesh_interpolator.update_mesh(cell=cell_update, ns_mesh=ns_mesh_update)
+
+    assert torch.all(mesh_interpolator.cell == cell_update)
+    assert torch.all(mesh_interpolator.inverse_cell == torch.linalg.inv(cell_update))
+    assert torch.all(mesh_interpolator.ns_mesh == ns_mesh_update)
+    assert mesh_interpolator._dtype == cell_update.dtype
+    assert mesh_interpolator._device == cell_update.device
 
 
-@pytest.mark.parametrize("method", ["P3M", "Lagrange"])
-def test_ns_mesh_wrong_shape(method):
+def test_update_cell_wrong_shape():
     cell = torch.eye(3)
-    ns_mesh = torch.tensor([2, 2])  # incorrect shape
-    interpolation_nodes = 3
-    match = "shape \\[2\\] of `ns_mesh` has to be \\(3,\\)"
+    ns_mesh = torch.tensor([2, 2, 2])
 
+    mesh_interpolator = MeshInterpolator(
+        cell=cell, ns_mesh=ns_mesh, interpolation_nodes=3, method="Lagrange"
+    )
+
+    match = "cell of shape \\[2, 3\\] should be of shape \\(3, 3\\)"
     with pytest.raises(ValueError, match=match):
-        MeshInterpolator(cell, ns_mesh, interpolation_nodes, method=method)
+        mesh_interpolator.update_mesh(cell=torch.randn(size=(2, 3)), ns_mesh=ns_mesh)
+
+
+def test_update_ns_mesh_wrong_shape():
+    cell = torch.eye(3)
+    ns_mesh = torch.tensor([2, 2, 2])
+
+    mesh_interpolator = MeshInterpolator(
+        cell=cell, ns_mesh=ns_mesh, interpolation_nodes=3, method="Lagrange"
+    )
+
+    match = "shape \\[2\\] of `ns_mesh` has to be \\(3,\\)"
+    with pytest.raises(ValueError, match=match):
+        mesh_interpolator.update_mesh(cell=cell, ns_mesh=torch.tensor([2, 2]))
+
+
+def test_update_different_devices_cell_ns_mesh():
+    cell = torch.eye(3)
+    ns_mesh = torch.tensor([2, 2, 2])
+
+    mesh_interpolator = MeshInterpolator(
+        cell=cell, ns_mesh=ns_mesh, interpolation_nodes=3, method="Lagrange"
+    )
+
+    match = "`cell` and `ns_mesh` are on different devices, got cpu and meta"
+    with pytest.raises(ValueError, match=match):
+        mesh_interpolator.update_mesh(cell, ns_mesh.to(device="meta"))
 
 
 def test_interpolation_nodes_not_allowed():
@@ -399,17 +436,6 @@ def test_interpolation_nodes_not_allowed_private():
         match = "Only `interpolation_nodes` from 3 to 7 are allowed"
         with pytest.raises(ValueError, match=match):
             interpolator._compute_1d_weights(torch.tensor([0]))
-
-
-@pytest.mark.parametrize("method", ["P3M", "Lagrange"])
-def test_different_devices_cell_ns_mesh(method):
-    cell = torch.eye(3, device="cpu")
-    ns_mesh = torch.tensor([2, 2, 2], device="meta")  # different device
-    interpolation_nodes = 3
-    match = "`cell` and `ns_mesh` are on different devices, got cpu and meta"
-
-    with pytest.raises(ValueError, match=match):
-        MeshInterpolator(cell, ns_mesh, interpolation_nodes, method=method)
 
 
 @pytest.fixture
