@@ -28,7 +28,7 @@ def test_duality_of_kvectors_mesh(cell, ns):
     between them needs to satisfy a_j*b_l=2pi*delta_jl.
     """
     nx, ny, nz = ns
-    kvectors = generate_kvectors_for_mesh(ns=ns, cell=cell)
+    kvectors = generate_kvectors_for_mesh(cell=cell, ns=ns)
 
     # Define frequencies with the same convention as in FFT
     # This is essentially a manual implementation of torch.fft.fftfreq
@@ -55,7 +55,7 @@ def test_duality_of_kvectors_squeezed(cell, ns):
     between them needs to satisfy a_j*b_l=2pi*delta_jl.
     """
     nx, ny, nz = ns
-    kvectors = generate_kvectors_for_ewald(ns=ns, cell=cell)
+    kvectors = generate_kvectors_for_ewald(cell=cell, ns=ns)
 
     # Define frequencies with the same convention as in FFT
     # This is essentially a manual implementation of torch.fft.fftfreq
@@ -95,10 +95,10 @@ def test_lenghts_of_kvectors(cell, ns, kvec_type):
 
     # Compute the norms of all kvectors and check that they satisfy the bound
     if kvec_type == "fft":
-        kvectors = generate_kvectors_for_mesh(ns=ns, cell=cell)
+        kvectors = generate_kvectors_for_mesh(cell=cell, ns=ns)
         norms_all = torch.linalg.norm(kvectors, dim=3).flatten()
     elif kvec_type == "ewald":
-        kvectors = generate_kvectors_for_ewald(ns=ns, cell=cell)
+        kvectors = generate_kvectors_for_ewald(cell=cell, ns=ns)
         norms_all = torch.linalg.norm(kvectors, dim=1).flatten()
 
     assert torch.all(norms_all < norm_bound)
@@ -112,7 +112,7 @@ def test_ns_wrong_shape(generate_kvectors):
     cell = torch.tensor([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
     match = "ns of shape \\[2\\] should be of shape \\(3, \\)"
     with pytest.raises(ValueError, match=match):
-        generate_kvectors(ns, cell)
+        generate_kvectors(cell=cell, ns=ns)
 
 
 @pytest.mark.parametrize("generate_kvectors", kvec_generators)
@@ -121,7 +121,7 @@ def test_cell_wrong_shape(generate_kvectors):
     cell = torch.tensor([[1, 0, 0], [0, 1, 0]])
     match = "cell of shape \\[2, 3\\] should be of shape \\(3, 3\\)"
     with pytest.raises(ValueError, match=match):
-        generate_kvectors(ns, cell)
+        generate_kvectors(cell=cell, ns=ns)
 
 
 @pytest.mark.parametrize("generate_kvectors", kvec_generators)
@@ -130,7 +130,7 @@ def test_different_devices_mesh_values_cell(generate_kvectors):
     cell = torch.eye(3, device="meta")  # different device
     match = "`ns` and `cell` are not on the same device, got cpu and meta"
     with pytest.raises(ValueError, match=match):
-        generate_kvectors(ns, cell)
+        generate_kvectors(cell=cell, ns=ns)
 
 
 @pytest.mark.parametrize("cell", cells)

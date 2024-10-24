@@ -5,7 +5,12 @@ Tests for `kspace_filter` classes
 import pytest
 import torch
 
-from torchpme.lib import KSpaceFilter, KSpaceKernel, MeshInterpolator
+from torchpme.lib import (
+    KSpaceFilter,
+    KSpaceKernel,
+    MeshInterpolator,
+    generate_kvectors_for_mesh,
+)
 
 
 class TestKernel:
@@ -75,13 +80,13 @@ class TestFilter:
         mesh = self.mymesh1.points_to_mesh(self.weights)
         match = "The real-space mesh is inconsistent with the k-space grid."
         with pytest.raises(ValueError, match=match):
-            self.myfilter2.compute(mesh)
+            self.myfilter2.forward(mesh)
 
     def test_kernel_noop(self):
         # make sure that a filter of ones recovers the initial mesh
         self.mymesh1.compute_weights(self.points)
         mesh = self.mymesh1.points_to_mesh(self.weights)
-        mesh_transformed = self.myfilter_noop.compute(mesh)
+        mesh_transformed = self.myfilter_noop.forward(mesh)
 
         torch.allclose(mesh, mesh_transformed, atol=1e-6, rtol=0)
 
@@ -92,35 +97,78 @@ class TestFilter:
 
         mesh2 = torch.exp(mesh1)
 
-        tmesh1 = self.myfilter1.compute(mesh1)
-        tmesh2 = self.myfilter1.compute(mesh2)
-        tmesh12 = self.myfilter1.compute(mesh1 + 0.3 * mesh2)
+        tmesh1 = self.myfilter1.forward(mesh1)
+        tmesh2 = self.myfilter1.forward(mesh2)
+        tmesh12 = self.myfilter1.forward(mesh1 + 0.3 * mesh2)
 
         torch.allclose(tmesh12, tmesh1 + 0.3 * tmesh2)
 
 
-def test_different_devices_ns_cell():
-    ns = torch.tensor([2, 2, 2], device="cpu")
-    cell = torch.tensor([[1, 0, 0], [0, 1, 0], [0, 0, 1]], device="meta")
-    match = "`cell` and `ns_mesh` are on different devices, got meta and cpu"
-    with pytest.raises(ValueError, match=match):
-        KSpaceFilter(cell, ns, KSpaceKernel())
+@pytest.mark.parametrize("cell_update", [None, torch.eye(3)])
+@pytest.mark.parametrize("ns_mesh_update", [None, torch.tensor([3, 3, 3])])
+def test_update(cell_update, ns_mesh_update):
+    cell = 2 * torch.eye(3)
+    ns_mesh = torch.tensor([2, 2, 2])
+
+    kernel = TestKernel.DemoKernel(1.0)
+    kernel_filter = KSpaceFilter(cell=cell, ns_mesh=ns_mesh, kernel=kernel)
+
+    # update param of demo kernel and check if updates are consistent.
+    kernel.param = 2.0
+
+    kernel_filter.update(cell=cell_update, ns_mesh=ns_mesh_update)
+
+    if cell_update is not None:
+        assert torch.all(kernel_filter.cell == cell_update)
+
+    if ns_mesh_update is not None:
+        assert torch.all(kernel_filter.ns_mesh == ns_mesh_update)
+
+    if cell_update is not None and ns_mesh_update is not None:
+        kvectors = generate_kvectors_for_mesh(ns=ns_mesh_update, cell=cell_update)
+        k_sq = torch.linalg.norm(kvectors, dim=3) ** 2
+
+        torch.testing.assert_close(kernel_filter._k_sq, k_sq)
+
+    torch.testing.assert_close(
+        kernel_filter._kfilter, kernel.kernel_from_k_sq(kernel_filter._k_sq)
+    )
 
 
-def test_ns_wrong_shape():
-    ns = torch.tensor([2, 2])
-    cell = torch.tensor([[1.0, 0, 0], [0, 1, 0], [0, 0, 1]])
+def test_update_ns_wrong_shape():
+    kernel_filter = KSpaceFilter(
+        cell=torch.eye(3),
+        ns_mesh=torch.tensor([2, 2, 2]),
+        kernel=TestKernel.DemoKernel(1.0),
+    )
+
     match = "shape \\[2\\] of `ns_mesh` has to be \\(3,\\)"
     with pytest.raises(ValueError, match=match):
-        KSpaceFilter(cell, ns, KSpaceKernel())
+        kernel_filter.update(ns_mesh=torch.tensor([2, 2]))
 
 
-def test_cell_wrong_shape():
-    ns = torch.tensor([2, 2, 2])
-    cell = torch.tensor([[1.0, 0, 0], [0, 1, 0]])
+def test_update_cell_wrong_shape():
+    kernel_filter = KSpaceFilter(
+        cell=torch.eye(3),
+        ns_mesh=torch.tensor([2, 2, 2]),
+        kernel=TestKernel.DemoKernel(1.0),
+    )
+
     match = "cell of shape \\[2, 3\\] should be of shape \\(3, 3\\)"
     with pytest.raises(ValueError, match=match):
-        KSpaceFilter(cell, ns, KSpaceKernel())
+        kernel_filter.update(cell=torch.tensor([[1.0, 0, 0], [0, 1, 0]]))
+
+
+def test_update_devices_ns_cell():
+    kernel_filter = KSpaceFilter(
+        cell=torch.eye(3),
+        ns_mesh=torch.tensor([2, 2, 2]),
+        kernel=TestKernel.DemoKernel(1.0),
+    )
+
+    match = "`cell` and `ns_mesh` are on different devices, got meta and cpu"
+    with pytest.raises(ValueError, match=match):
+        kernel_filter.update(cell=torch.eye(3, device="meta"))
 
 
 def test_fft_modes():
