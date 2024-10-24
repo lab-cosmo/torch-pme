@@ -114,7 +114,7 @@ class PMECalculator(Calculator):
             rho_mesh = self.mesh_interpolator.points_to_mesh(particle_weights=charges)
 
         with profiler.record_function("step 2: perform actual convolution using FFT"):
-            potential_mesh = self.kspace_filter.compute(rho_mesh)
+            potential_mesh = self.kspace_filter.forward(rho_mesh)
 
         with profiler.record_function("step 3: back interpolation + volume scaling"):
             ivolume = torch.abs(cell.det()).pow(-1)

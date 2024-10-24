@@ -374,10 +374,10 @@ rho_mesh = mesh_interpolator.points_to_mesh(particle_weights=charges)
 ivolume = torch.abs(cell.det()).pow(-1)
 
 kernel_exclusion.update(cell, ns)
-coulomb_mesh = kernel_exclusion.compute(rho_mesh) * ivolume
+coulomb_mesh = kernel_exclusion.forward(rho_mesh) * ivolume
 
 kernel_spline.update(cell, ns)
-spline_mesh = kernel_spline.compute(rho_mesh) * ivolume
+spline_mesh = kernel_spline.forward(rho_mesh) * ivolume
 
 # %%
 # The potential computed using :py:class:`SplinePotential

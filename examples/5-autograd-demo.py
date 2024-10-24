@@ -246,9 +246,9 @@ interpolator.compute_weights(positions)
 mesh = interpolator.points_to_mesh(weights)
 
 kernel = ParametricKernel(sigma, a0)
-KF = torchpme.lib.KSpaceFilter(cell, ns, kernel=kernel)
+kernel_filter = torchpme.lib.KSpaceFilter(cell, ns, kernel=kernel)
 
-filtered = KF.compute(mesh)
+filtered = kernel_filter.forward(mesh)
 
 filtered_at_positions = interpolator.mesh_to_points(filtered)
 
@@ -336,7 +336,7 @@ class KSpaceModule(torch.nn.Module):
             interpolation_nodes=3,
             method="Lagrange",
         )
-        self._KF = torchpme.lib.KSpaceFilter(
+        self._kernel_filter = torchpme.lib.KSpaceFilter(
             cell=dummy_cell,
             ns_mesh=torch.tensor([1, 1, 1]),
             kernel=SmearedCoulomb(self._sigma2),
@@ -367,8 +367,8 @@ class KSpaceModule(torch.nn.Module):
         self._mesh_interpolator.compute_weights(positions)
         mesh = self._mesh_interpolator.points_to_mesh(charges)
 
-        self._KF.update(cell, ns_mesh)
-        mesh = self._KF.compute(mesh)
+        self._kernel_filter.update(cell, ns_mesh)
+        mesh = self._kernel_filter.forward(mesh)
         pot = self._mesh_interpolator.mesh_to_points(mesh)
 
         x = torch.hstack([charges, pot])

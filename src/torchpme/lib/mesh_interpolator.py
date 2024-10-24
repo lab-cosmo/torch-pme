@@ -1,3 +1,5 @@
+from typing import Optional
+
 import torch
 
 
@@ -65,11 +67,16 @@ class MeshInterpolator(torch.nn.Module):
         self.y_indices: torch.Tensor = torch.zeros(1, device=self._device)
         self.z_indices: torch.Tensor = torch.zeros(1, device=self._device)
 
-    def update(self, cell: torch.Tensor, ns_mesh: torch.Tensor):
-        """Update the buffers.
+    def update(
+        self,
+        cell: Optional[torch.Tensor] = None,
+        ns_mesh: Optional[torch.Tensor] = None,
+    ) -> None:
+        """Update buffers and derived attributes of the instance.
 
         Call this to reuse a ``MeshInterpolator`` object when the ``cell`` parameters or
-        the mesh resolution change.
+        the mesh resolution changes. If neither ``cell`` nor ``ns_mesh`` are passed
+        there is nothing to be done.
 
         :param cell: torch.tensor of shape ``(3, 3)``, where ``cell[i]`` is the i-th
             basis vector of the unit cell
@@ -77,33 +84,34 @@ class MeshInterpolator(torch.nn.Module):
             each of the three axes
         """
 
-        # Check that the provided parameters match the specifications
-        if cell.shape != (3, 3):
-            raise ValueError(
-                f"cell of shape {list(cell.shape)} should be of shape (3, 3)"
-            )
-        if ns_mesh.shape != (3,):
-            raise ValueError(f"shape {list(ns_mesh.shape)} of `ns_mesh` has to be (3,)")
+        if cell is not None:
+            if cell.shape != (3, 3):
+                raise ValueError(
+                    f"cell of shape {list(cell.shape)} should be of shape (3, 3)"
+                )
+            self.cell = cell
+            self.inverse_cell = cell.clone()
+            self._dtype = cell.dtype
+            self._device = cell.device
 
-        if cell.device != ns_mesh.device:
+            if self.cell.is_cuda:
+                # use function that does not synchronize with the CPU
+                self.inverse_cell = torch.linalg.inv_ex(cell)[0]
+            else:
+                self.inverse_cell = torch.linalg.inv(cell)
+
+        if ns_mesh is not None:
+            if ns_mesh.shape != (3,):
+                raise ValueError(
+                    f"shape {list(ns_mesh.shape)} of `ns_mesh` has to be (3,)"
+                )
+            self.ns_mesh = ns_mesh
+
+        if self.cell.device != self.ns_mesh.device:
             raise ValueError(
                 "`cell` and `ns_mesh` are on different devices, got "
-                f"{cell.device} and {ns_mesh.device}"
+                f"{self.cell.device} and {self.ns_mesh.device}"
             )
-
-        self.cell = cell
-        self.inverse_cell = cell.clone()
-
-        if self.cell.is_cuda:
-            # use function that does not synchronize with the CPU
-            self.inverse_cell = torch.linalg.inv_ex(cell)[0]
-        else:
-            self.inverse_cell = torch.linalg.inv(cell)
-
-        self.ns_mesh = ns_mesh
-
-        self._dtype = cell.dtype
-        self._device = cell.device
 
     def get_mesh_xyz(self) -> torch.Tensor:
         """
