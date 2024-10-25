@@ -2,7 +2,6 @@ import os
 
 from sphinx.application import Sphinx
 
-
 HERE = os.path.realpath(os.path.dirname(__file__))
 
 if __name__ == "__main__":

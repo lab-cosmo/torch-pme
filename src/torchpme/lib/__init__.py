@@ -6,11 +6,11 @@ from .kvectors import (
 )
 from .mesh_interpolator import MeshInterpolator
 from .potentials import (
+    CombinedPotential,
     CoulombPotential,
     InversePowerLawPotential,
     Potential,
     SplinePotential,
-    CombinedPotential,
 )
 
 __all__ = [

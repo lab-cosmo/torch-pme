@@ -1,8 +1,9 @@
 # Pseudo-sphinx configuration to run sphinx-gallery as a command line tool
 
 import os
-from sphinx_gallery.sorting import FileNameSortKey
+
 from chemiscope.sphinx import ChemiscopeScraper
+from sphinx_gallery.sorting import FileNameSortKey
 
 extensions = [
     "sphinx_gallery.gen_gallery",

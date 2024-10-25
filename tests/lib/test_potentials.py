@@ -5,11 +5,11 @@ from torch.special import erf, erfc
 from torch.testing import assert_close
 
 from torchpme.lib import (
+    CombinedPotential,
     CoulombPotential,
     InversePowerLawPotential,
     Potential,
     SplinePotential,
-    CombinedPotential,
 )
 
 
