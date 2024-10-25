@@ -184,7 +184,7 @@ rho_mesh = MI.points_to_mesh(particle_weights=charges)
 
 # Computes the potential using the Fourier filter
 ivolume = torch.abs(cell.det()).pow(-1)
-potential_mesh = KF.compute(rho_mesh) * ivolume
+potential_mesh = KF(rho_mesh) * ivolume
 
 # %%
 # Plotting a slice of the potential demonstrates the smoothness of the
@@ -454,7 +454,7 @@ class LODECalculator(torchpme.Calculator):
         self._MI.compute_weights(positions)
         rho_mesh = self._MI.points_to_mesh(particle_weights=charges)
         ivolume = torch.abs(cell.det()).pow(-1)
-        potential_mesh = self._KF.compute(rho_mesh) * ivolume
+        potential_mesh = self._KF(rho_mesh) * ivolume
 
         # Places integration grids around each atom
         all_points = torch.stack([self._nodes + pos for pos in positions]).reshape(
