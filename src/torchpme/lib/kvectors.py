@@ -23,15 +23,15 @@ def get_ns_mesh(cell: torch.Tensor, mesh_spacing: float):
 
 
 def _generate_kvectors(
-    ns: torch.Tensor, cell: torch.Tensor, for_ewald: bool
+    cell: torch.Tensor, ns: torch.Tensor, for_ewald: bool
 ) -> torch.Tensor:
     # Check that all provided parameters have the correct shapes and are consistent
     # with each other
-    if ns.shape != (3,):
-        raise ValueError(f"ns of shape {list(ns.shape)} should be of shape (3, )")
-
     if cell.shape != (3, 3):
         raise ValueError(f"cell of shape {list(cell.shape)} should be of shape (3, 3)")
+
+    if ns.shape != (3,):
+        raise ValueError(f"ns of shape {list(ns.shape)} should be of shape (3, )")
 
     if ns.device != cell.device:
         raise ValueError(
@@ -67,21 +67,22 @@ def _generate_kvectors(
     return kxs[:, None, None] + kys[None, :, None] + kzs[None, None, :]
 
 
-def generate_kvectors_for_mesh(ns: torch.Tensor, cell: torch.Tensor) -> torch.Tensor:
+def generate_kvectors_for_mesh(cell: torch.Tensor, ns: torch.Tensor) -> torch.Tensor:
     """
     Compute all reciprocal space vectors for Fourier space sums.
 
     This variant is used in combination with **mesh based calculators** using the fast
     fourier transform (FFT) algorithm.
 
+    :param cell: torch.tensor of shape ``(3, 3)``
+        Tensor specifying the real space unit cell of a structure, where ``cell[i]`` is
+        the i-th basis vector
     :param ns: torch.tensor of shape ``(3,)`` and dtype int
         ``ns = [nx, ny, nz]`` contains the number of mesh points in the x-, y- and
         z-direction, respectively. For faster performance during the Fast Fourier
         Transform (FFT) it is recommended to use values of nx, ny and nz that are
         powers of 2.
-    :param cell: torch.tensor of shape ``(3, 3)``
-        Tensor specifying the real space unit cell of a structure, where ``cell[i]`` is
-        the i-th basis vector
+
 
     :return: torch.tensor of shape ``(nx, ny, nz, 3)`` containing all reciprocal
         space vectors that will be used in the (FFT-based) mesh calculators.
@@ -92,10 +93,13 @@ def generate_kvectors_for_mesh(ns: torch.Tensor, cell: torch.Tensor) -> torch.Te
         :py:func:`generate_kvectors_for_ewald` for a function to be used for Ewald
         calculators.
     """
-    return _generate_kvectors(ns=ns, cell=cell, for_ewald=False)
+    return _generate_kvectors(cell=cell, ns=ns, for_ewald=False)
 
 
-def generate_kvectors_for_ewald(ns: torch.Tensor, cell: torch.Tensor) -> torch.Tensor:
+def generate_kvectors_for_ewald(
+    cell: torch.Tensor,
+    ns: torch.Tensor,
+) -> torch.Tensor:
     """
     Compute all reciprocal space vectors for Fourier space sums.
 
@@ -108,12 +112,12 @@ def generate_kvectors_for_ewald(ns: torch.Tensor, cell: torch.Tensor) -> torch.T
     reciprocal space vectors is returned, rather than the FFT-optimized set that roughly
     contains only half of the vectors.
 
-    :param ns: torch.tensor of shape ``(3,)`` and dtype int
-        ``ns = [nx, ny, nz]`` contains the number of mesh points in the x-, y- and
-        z-direction, respectively.
     :param cell: torch.tensor of shape ``(3, 3)``
         Tensor specifying the real space unit cell of a structure, where ``cell[i]`` is
         the i-th basis vector
+    :param ns: torch.tensor of shape ``(3,)`` and dtype int
+        ``ns = [nx, ny, nz]`` contains the number of mesh points in the x-, y- and
+        z-direction, respectively.
 
     :return: torch.tensor of shape ``(n, 3)`` containing all reciprocal
         space vectors that will be used in the Ewald calculator.
@@ -124,4 +128,4 @@ def generate_kvectors_for_ewald(ns: torch.Tensor, cell: torch.Tensor) -> torch.T
         :py:func:`generate_kvectors_for_mesh` for a function to be used with mmesh based
         calculators.
     """
-    return _generate_kvectors(ns=ns, cell=cell, for_ewald=True).reshape(-1, 3)
+    return _generate_kvectors(cell=cell, ns=ns, for_ewald=True).reshape(-1, 3)

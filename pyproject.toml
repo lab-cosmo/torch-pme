@@ -52,6 +52,7 @@ examples = [
     "ase >= 3.22.1",
     "chemiscope",
     "matplotlib",
+    "scipy",
     "vesin >= 0.2.0",
     "vesin-torch >= 0.2.0",
 ]

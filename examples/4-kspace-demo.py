@@ -39,7 +39,9 @@ dtype = torch.float64
 
 cell = torch.eye(3, dtype=dtype, device=device) * 6.0
 ns_mesh = torch.tensor([9, 9, 9])
-interpolator = torchpme.lib.MeshInterpolator(cell, ns_mesh, interpolation_nodes=2)
+interpolator = torchpme.lib.MeshInterpolator(
+    cell, ns_mesh, interpolation_nodes=2, method="P3M"
+)
 xyz_mesh = interpolator.get_mesh_xyz()
 
 mesh_value = (
@@ -65,10 +67,12 @@ class GaussianSmearingKernel(torchpme.lib.KSpaceKernel):
 
 
 # This is the filter
-KF = torchpme.lib.KSpaceFilter(cell, ns_mesh, kernel=GaussianSmearingKernel(sigma2=1.0))
+kernel_filter = torchpme.lib.KSpaceFilter(
+    cell, ns_mesh, kernel=GaussianSmearingKernel(sigma2=1.0)
+)
 
 # Apply the filter to the mesh
-mesh_filtered = KF.compute(mesh_value)
+mesh_filtered = kernel_filter.forward(mesh_value)
 
 # %%
 # Visualize the effect of the filter
@@ -207,23 +211,16 @@ class MultiKernel(torchpme.lib.KSpaceKernel):
 # This can be used just as a simple filter
 
 multi_kernel = MultiKernel(torch.tensor([0.25, 0.5, 1.0], dtype=dtype, device=device))
-multi_KF = torchpme.lib.KSpaceFilter(cell, ns_mesh, kernel=multi_kernel)
-multi_filtered = multi_KF.compute(multi_mesh)
+multi_kernel_filter = torchpme.lib.KSpaceFilter(cell, ns_mesh, kernel=multi_kernel)
+multi_filtered = multi_kernel_filter.forward(multi_mesh)
 
 # %%
-# When the parameters of the kernel are modified, it is sufficient
-# to call :py:func:`KSpaceFilter.update_filter` before applying the
-# filter
+# When the parameters of the kernel or the ``cell`` are modified, one has to call
+# :py:func:`KSpaceFilter.update` before applying the filter
 
 multi_kernel._sigma = torch.tensor([1.0, 0.5, 0.25])
-multi_KF.update_filter()
-multi_filtered_2 = multi_KF.compute(multi_mesh)
-
-# NB: when one needs to perform a full update, including the
-# cell, it is possible to call the ``forward`` function of the
-# class
-
-multi_filtered_3 = multi_KF(cell, multi_mesh)
+multi_kernel_filter.update(cell)
+multi_filtered_2 = multi_kernel_filter.forward(multi_mesh)
 
 # %%
 # Visualize the application of the filters
@@ -286,17 +283,17 @@ fig.colorbar(cfs[0], cax=cbar_ax, orientation="vertical")
 # The k-space filter can also be compiled to torch-script, for
 # faster execution (the impact is marginal for this very simple case)
 
-multi_filtered = multi_KF.compute(multi_mesh)
+multi_filtered = multi_kernel_filter.forward(multi_mesh)
 start = time()
 for _i in range(100):
-    multi_filtered = multi_KF.compute(multi_mesh)
+    multi_filtered = multi_kernel_filter.forward(multi_mesh)
 time_python = (time() - start) * 1e6 / 100
 
-jitted_KF = torch.jit.script(multi_KF)
-jit_filtered = jitted_KF.compute(multi_mesh)
+jitted_kernel_filter = torch.jit.script(multi_kernel_filter)
+jit_filtered = jitted_kernel_filter.forward(multi_mesh)
 start = time()
 for _i in range(100):
-    jit_filtered = jitted_KF.compute(multi_mesh)
+    jit_filtered = jitted_kernel_filter.forward(multi_mesh)
 time_jit = (time() - start) * 1e6 / 100
 
 print(f"Evaluation time:\nPytorch: {time_python}µs\nJitted:  {time_jit}µs")
