@@ -458,10 +458,9 @@ def test_combined_potential(smearing):
 
     weights = torch.randn(2, dtype=dtype)
     combined = CombinedPotential(
-        exponents=[1.0, 2.0],
+        potentials=[ipl_1, ipl_2],
         initial_weights=weights,
         learnable_weights=False,
-        smearing=smearing,
         dtype=dtype,
     )
     combined_from_dist = combined.from_dist(dists)

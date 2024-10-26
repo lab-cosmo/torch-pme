@@ -459,155 +459,6 @@ class InversePowerLawPotential(Potential):
     background_correction.__doc__ = Potential.background_correction.__doc__
 
 
-class CombinedPotential(Potential):
-    """
-    TODO: Write documentation
-    """
-
-    def __init__(
-        self,
-        exponents: list[float],
-        initial_weights: Optional[torch.Tensor] = None,
-        learnable_weights: Optional[bool] = True,
-        smearing: Optional[float] = None,
-        exclusion_radius: Optional[float] = None,
-        dtype: Optional[torch.dtype] = None,
-        device: Optional[torch.device] = None,
-    ):
-        super().__init__(
-            smearing=smearing,
-            exclusion_radius=exclusion_radius,
-            dtype=dtype,
-            device=device,
-        )
-        if dtype is None:
-            dtype = torch.get_default_dtype()
-        if device is None:
-            device = torch.device("cpu")
-        for i, exponent in enumerate(exponents):
-            if exponent <= 0 or exponent > 3:
-                raise ValueError(
-                    f"`exponent` number {i} : p={exponent} has to satisfy 0 < p <= 3"
-                )
-        self.register_buffer(
-            "exponents", torch.tensor(exponents, dtype=dtype, device=device)
-        )
-        if initial_weights is not None:
-            if len(initial_weights) != len(exponents):
-                raise ValueError(
-                    "The number of initial weights must match the number of exponents"
-                )
-        else:
-            initial_weights = torch.ones(len(exponents), dtype=dtype, device=device)
-
-        if learnable_weights:
-            self.weights = torch.nn.Parameter(initial_weights)
-        else:
-            self.register_buffer("weights", initial_weights)
-
-    def from_dist(self, dist: torch.Tensor) -> torch.Tensor:
-        """
-        Full :math:`sum learnable_weights[i] / r^{exponents[i]}` potential as a function of :math:`r`.
-
-        :param dist: torch.tensor containing the distances at which the potential is to
-        """
-        potentials = []
-        for exponent in self.exponents:
-            potentials.append(torch.pow(dist, -exponent))
-        potentials = torch.stack(potentials, dim=-1)
-        return torch.inner(self.weights, potentials)
-
-    def lr_from_dist(self, dist: torch.Tensor) -> torch.Tensor:
-        """
-        LR part of the range-separated :math:`sum learnable_weights[i] / r^{exponents[i]}` potential.
-
-        Used to subtract out the interior contributions after computing the LR part in
-        reciprocal (Fourier) space.
-
-        :param dist: torch.tensor containing the distances at which the potential is to
-            be evaluated.
-        """
-
-        if self.smearing is None:
-            raise ValueError(
-                "Cannot compute long-range contribution without specifying `smearing`."
-            )
-
-        exponents = self.exponents
-        weights = self.weights
-        smearing = self.smearing
-        x = 0.5 * dist**2 / smearing**2
-        potentials = []
-        for exponent in exponents:
-            peff = exponent / 2
-            prefac = 1.0 / (2 * smearing**2) ** peff
-            potential = prefac * gammainc(peff, x) / x**peff
-            potentials.append(potential)
-        potentials = torch.stack(potentials, dim=-1)
-        return torch.inner(weights, potentials)
-
-    def lr_from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
-        """
-        Fourier transform of the LR part potential in terms of :math:`k^2`.
-
-        :param k_sq: torch.tensor containing the squared lengths (2-norms) of the wave
-            vectors k at which the Fourier-transformed potential is to be evaluated
-        """
-        if self.smearing is None:
-            raise ValueError(
-                "Cannot compute long-range kernel without specifying `smearing`."
-            )
-
-        exponents = self.exponents
-        weights = self.weights
-        smearing = self.smearing
-        potentials = []
-        for exponent in exponents:
-            peff = (3 - exponent) / 2
-            prefac = math.pi**1.5 / gamma(exponent / 2) * (2 * smearing**2) ** peff
-            x = 0.5 * smearing**2 * k_sq
-            potential = torch.where(
-                k_sq == 0,
-                0.0,
-                prefac * gammaincc(peff, x) / x**peff * gamma(peff),
-            )
-            potentials.append(potential)
-        potentials = torch.stack(potentials, dim=-1)
-        return torch.inner(weights, potentials)
-
-    def self_contribution(self) -> torch.Tensor:
-        # self-correction for 1/r^p potential
-        if self.smearing is None:
-            raise ValueError(
-                "Cannot compute self contribution without specifying `smearing`."
-            )
-        weights = self.weights
-        exponents = self.exponents
-        self_contributions = []
-        for exponent in exponents:
-            phalf = exponent / 2
-            self_contribution = 1 / gamma(phalf + 1) / (2 * self.smearing**2) ** phalf
-            self_contributions.append(self_contribution)
-        self_contributions = torch.stack(self_contributions, dim=-1)
-        return torch.inner(weights, self_contributions)
-
-    def background_correction(self) -> torch.Tensor:
-        # "charge neutrality" correction for 1/r^p potential
-        if self.smearing is None:
-            raise ValueError(
-                "Cannot compute background correction without specifying `smearing`."
-            )
-        weights = self.weights
-        exponents = self.exponents
-        prefacs = []
-        for exponent in exponents:
-            prefac = torch.pi**1.5 * (2 * self.smearing**2) ** ((3 - exponent) / 2)
-            prefac /= (3 - exponent) * gamma(exponent / 2)
-            prefacs.append(prefac)
-        prefacs = torch.stack(prefacs, dim=-1)
-        return torch.inner(weights, prefacs)
-
-
 class SplinePotential(Potential):
     r"""Potential built from a spline interpolation.
 
@@ -735,6 +586,123 @@ class SplinePotential(Potential):
 
     def background_correction(self) -> torch.Tensor:
         return torch.tensor([0.0])
+
+    from_dist.__doc__ = Potential.from_dist.__doc__
+    lr_from_dist.__doc__ = Potential.lr_from_dist.__doc__
+    lr_from_k_sq.__doc__ = Potential.lr_from_k_sq.__doc__
+    self_contribution.__doc__ = Potential.self_contribution.__doc__
+    background_correction.__doc__ = Potential.background_correction.__doc__
+
+
+class CombinedPotential(torch.nn.Module):
+    """
+    A potential that is a linear combination of multiple potentials.
+
+    A class representing a combined potential that aggregates multiple individual
+    potentials with weights for use in long-range (LR) and short-range
+    (SR) interactions.
+
+    The `CombinedPotential` class allows for flexible combination of potential
+    functions with user-specified weights, which can be either fixed or trainable.
+
+    :param potentials : list[Potential]
+        List of potential objects, each implementing a compatible interface
+        with methods `from_dist`, `lr_from_dist`, `lr_from_k_sq`,
+        `self_contribution`, and `background_correction`.
+    :param initial_weights : Optional[torch.Tensor], default=None
+        Initial weights for combining the potentials. If provided, the length
+        must match the number of potentials. If `None`, weights are initialized
+        to ones.
+    :param learnable_weights : Optional[bool], default=True
+        If `True`, weights are trainable parameters, allowing optimization during
+        training. If `False`, weights are fixed.
+    :param dtype: Optional, the type used for the internal buffers and parameters
+    :param device: Optional, the device used for the internal buffers and parameters
+    """
+
+    def __init__(
+        self,
+        potentials: list[Potential],
+        initial_weights: Optional[torch.Tensor] = None,
+        learnable_weights: Optional[bool] = True,
+        dtype: Optional[torch.dtype] = None,
+        device: Optional[torch.device] = None,
+    ):
+        super().__init__()
+        if dtype is None:
+            dtype = torch.get_default_dtype()
+        if device is None:
+            device = torch.device("cpu")
+
+        if initial_weights is not None:
+            if len(initial_weights) != len(potentials):
+                raise ValueError(
+                    "The number of initial weights must match the number of exponents"
+                )
+        else:
+            initial_weights = torch.ones(len(potentials), dtype=dtype, device=device)
+        self.potentials = potentials
+        if learnable_weights:
+            self.weights = torch.nn.Parameter(initial_weights)
+        else:
+            self.register_buffer("weights", initial_weights)
+
+    def from_dist(self, dist: torch.Tensor) -> torch.Tensor:
+        """
+        Full potential as a function of :math:`r`.
+        """
+        potentials = []
+        for pot in self.potentials:
+            potentials.append(pot.from_dist(dist))
+        potentials = torch.stack(potentials, dim=-1)
+        return torch.inner(self.weights, potentials)
+
+    def sr_from_dist(self, dist: torch.Tensor) -> torch.Tensor:
+        """
+        SR part of the range-separated potential.
+        """
+        potentials = []
+        for pot in self.potentials:
+            potentials.append(pot.sr_from_dist(dist))
+        potentials = torch.stack(potentials, dim=-1)
+        return torch.inner(self.weights, potentials)
+
+    def lr_from_dist(self, dist: torch.Tensor) -> torch.Tensor:
+        """
+        LR part of the range-separated potential.
+        """
+
+        potentials = []
+        for pot in self.potentials:
+            potentials.append(pot.lr_from_dist(dist))
+        potentials = torch.stack(potentials, dim=-1)
+        return torch.inner(self.weights, potentials)
+
+    def lr_from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
+        """
+        Fourier transform of the LR part potential in terms of :math:`k^2`.
+        """
+        potentials = []
+        for pot in self.potentials:
+            potentials.append(pot.lr_from_k_sq(k_sq))
+        potentials = torch.stack(potentials, dim=-1)
+        return torch.inner(self.weights, potentials)
+
+    def self_contribution(self) -> torch.Tensor:
+        # self-correction for 1/r^p potential
+        potentials = []
+        for pot in self.potentials:
+            potentials.append(pot.self_contribution())
+        potentials = torch.stack(potentials, dim=-1)
+        return torch.inner(self.weights, potentials)
+
+    def background_correction(self) -> torch.Tensor:
+        # "charge neutrality" correction for 1/r^p potential
+        potentials = []
+        for pot in self.potentials:
+            potentials.append(pot.background_correction())
+        potentials = torch.stack(potentials, dim=-1)
+        return torch.inner(self.weights, potentials)
 
     from_dist.__doc__ = Potential.from_dist.__doc__
     lr_from_dist.__doc__ = Potential.lr_from_dist.__doc__
