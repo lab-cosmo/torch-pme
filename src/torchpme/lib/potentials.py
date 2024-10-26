@@ -595,8 +595,7 @@ class SplinePotential(Potential):
 
 
 class CombinedPotential(torch.nn.Module):
-    """
-    A potential that is a linear combination of multiple potentials.
+    """A potential that is a linear combination of multiple potentials.
 
     A class representing a combined potential that aggregates multiple individual
     potentials with weights for use in long-range (LR) and short-range
@@ -605,15 +604,15 @@ class CombinedPotential(torch.nn.Module):
     The `CombinedPotential` class allows for flexible combination of potential
     functions with user-specified weights, which can be either fixed or trainable.
 
-    :param potentials : list[Potential]
+    :param potentials: list[Potential]
         List of potential objects, each implementing a compatible interface
         with methods `from_dist`, `lr_from_dist`, `lr_from_k_sq`,
         `self_contribution`, and `background_correction`.
-    :param initial_weights : Optional[torch.Tensor], default=None
+    :param initial_weights: Optional[torch.Tensor], default=None
         Initial weights for combining the potentials. If provided, the length
         must match the number of potentials. If `None`, weights are initialized
         to ones.
-    :param learnable_weights : Optional[bool], default=True
+    :param learnable_weights: Optional[bool], default=True
         If `True`, weights are trainable parameters, allowing optimization during
         training. If `False`, weights are fixed.
     :param dtype: Optional, the type used for the internal buffers and parameters
@@ -704,8 +703,5 @@ class CombinedPotential(torch.nn.Module):
         potentials = torch.stack(potentials, dim=-1)
         return torch.inner(self.weights, potentials)
 
-    from_dist.__doc__ = Potential.from_dist.__doc__
-    lr_from_dist.__doc__ = Potential.lr_from_dist.__doc__
-    lr_from_k_sq.__doc__ = Potential.lr_from_k_sq.__doc__
     self_contribution.__doc__ = Potential.self_contribution.__doc__
     background_correction.__doc__ = Potential.background_correction.__doc__
