@@ -7,6 +7,7 @@ from .calculators.pme import PMECalculator
 from .lib.potentials import (
     CombinedPotential,
     CoulombPotential,
+    SplinePotential,
     InversePowerLawPotential,
 )
 
@@ -19,6 +20,7 @@ __all__ = [
     "PMECalculator",
     "CoulombPotential",
     "InversePowerLawPotential",
+    "SplinePotential",
     "CombinedPotential",
 ]
 __version__ = "0.0.0-dev"
