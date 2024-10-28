@@ -83,7 +83,7 @@ neighbor_indices = torch.stack([i, j], dim=1)
 # will be used to *compute* the potential energy of the system.
 
 calculator = torchpme.PMECalculator(
-    torchpme.lib.CoulombPotential(smearing=smearing), **pme_params
+    torchpme.CoulombPotential(smearing=smearing), **pme_params
 )
 
 # %%
@@ -187,7 +187,7 @@ print(charge_Na * potential_one_hot[0] + charge_Cl * potential_one_hot[1])
 # creating a new calculator with the metatensor interface.
 
 calculator_metatensor = torchpme.metatensor.PMECalculator(
-    torchpme.lib.CoulombPotential(smearing=smearing), **pme_params
+    torchpme.CoulombPotential(smearing=smearing), **pme_params
 )
 
 # %%

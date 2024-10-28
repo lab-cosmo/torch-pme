@@ -1,7 +1,8 @@
 import torch
 
-from ..lib import Potential, generate_kvectors_for_ewald
-from .base import Calculator
+from ..lib import generate_kvectors_for_ewald
+from ..potentials import Potential
+from .calculator import Calculator
 
 
 class EwaldCalculator(Calculator):
@@ -35,9 +36,9 @@ class EwaldCalculator(Calculator):
     times in each direction, resulting in a system of 8192 atoms.
 
     :param potential: the two-body potential that should be computed, implemented
-        as a :py:class:`torchpme.lib.Potential` object. The ``smearing`` parameter
+        as a :py:class:`torchpme.potentials.Potential` object. The ``smearing`` parameter
         of the potential determines the split between real and k-space regions.
-        For a :py:class:`torchpme.lib.CoulombPotential` it corresponds to the
+        For a :py:class:`torchpme.CoulombPotential` it corresponds to the
         width of the atom-centered Gaussian used to split the Coulomb potential
         into the short- and long-range parts. A reasonable value for
         most systems is to set it to ``1/5`` times the neighbor list cutoff.
@@ -52,7 +53,10 @@ class EwaldCalculator(Calculator):
     :param prefactor: electrostatics prefactor; see :ref:`prefactors` for details and
         common values.
 
-    For an **example** on the usage for any calculator refer to :ref:`userdoc-how-to`.
+    .. minigallery::
+        :add-heading:
+
+        torchpme.EwaldCalculator
     """
 
     def __init__(

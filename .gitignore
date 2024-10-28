@@ -12,4 +12,5 @@ sg_execution_times.rst
 .tox/
 build/
 dist/
+docs/src/backreferences
 docs/src/examples

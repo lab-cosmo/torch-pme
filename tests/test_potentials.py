@@ -4,7 +4,7 @@ from scipy.special import expi
 from torch.special import erf, erfc
 from torch.testing import assert_close
 
-from torchpme.lib import (
+from torchpme.potentials import (
     CoulombPotential,
     InversePowerLawPotential,
     Potential,

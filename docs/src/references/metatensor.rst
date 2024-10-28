@@ -16,6 +16,10 @@ For a plain :py:class:`torch.Tensor` refer to :ref:`calculators`.
 Implemented Calculators
 -----------------------
 
+.. automodule:: torchpme.metatensor.Calculator
+    :members:
+    :undoc-members:
+
 .. autoclass:: torchpme.metatensor.PMECalculator
     :members: forward
     :undoc-members:

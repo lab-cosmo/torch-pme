@@ -1,9 +1,9 @@
-from typing import Optional, Union
+from typing import Optional
 
 import torch
 
+# from ..potentials import Potential
 from .kvectors import generate_kvectors_for_mesh
-from .potentials import Potential
 
 
 class KSpaceKernel(torch.nn.Module):
@@ -76,7 +76,8 @@ class KSpaceFilter(torch.nn.Module):
         self,
         cell: torch.Tensor,
         ns_mesh: torch.Tensor,
-        kernel: Union[KSpaceKernel, Potential],
+        # kernel: Union[KSpaceKernel, Potential],
+        kernel: KSpaceKernel,
         fft_norm: str = "ortho",
         ifft_norm: str = "ortho",
     ):

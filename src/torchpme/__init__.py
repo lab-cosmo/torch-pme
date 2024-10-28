@@ -1,10 +1,13 @@
 import contextlib
 
-from . import utils  # noqa
-from .calculators.base import Calculator
-from .calculators.ewald import EwaldCalculator
-from .calculators.pme import PMECalculator
-from .lib.potentials import CoulombPotential, InversePowerLawPotential
+from . import (
+    calculators,  # noqa
+    lib,  # noqa
+    potentials,  # noqa
+    utils,  # noqa
+)
+from .calculators import Calculator, EwaldCalculator, PMECalculator
+from .potentials import CoulombPotential, InversePowerLawPotential
 
 with contextlib.suppress(ImportError):
     from . import metatensor  # noqa

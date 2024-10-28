@@ -1,11 +1,11 @@
 import torch
 from torch import profiler
 
-from ..lib import Potential
 from ..lib.kspace_filter import KSpaceFilter
 from ..lib.kvectors import get_ns_mesh
 from ..lib.mesh_interpolator import MeshInterpolator
-from .base import Calculator
+from ..potentials import Potential
+from .calculator import Calculator
 
 
 class PMECalculator(Calculator):
@@ -24,13 +24,13 @@ class PMECalculator(Calculator):
         For a training exercise it is recommended only run a tuning procedure with
         :func:`torchpme.utils.tuning.tune_pme` for the largest system in your dataset.
 
-    :param potential: A :py:class:`Potential` object that implements the evaluation
-        of short and long-range potential terms. The ``smearing`` parameter
-        of the potential determines the split between real and k-space regions.
-        For a :py:class:`torchpme.lib.CoulombPotential` it corresponds
-        to the smearing of the atom-centered Gaussian used to split the
-        Coulomb potential into the short- and long-range parts. A reasonable value for
-        most systems is to set it to ``1/5`` times the neighbor list cutoff.
+    :param potential: A :py:class:`torchpme.potentials.Potential` object that implements
+        the evaluation of short and long-range potential terms. The ``smearing``
+        parameter of the potential determines the split between real and k-space
+        regions. For a :py:class:`torchpme.CoulombPotential` it corresponds to the
+        smearing of the atom-centered Gaussian used to split the Coulomb potential into
+        the short- and long-range parts. A reasonable value for most systems is to set
+        it to ``1/5`` times the neighbor list cutoff.
     :param mesh_spacing: Value that determines the umber of Fourier-space grid points
         that will be used along each axis. If set to None, it will automatically be set
         to half of ``smearing``.
@@ -45,7 +45,11 @@ class PMECalculator(Calculator):
     :param prefactor: electrostatics prefactor; see :ref:`prefactors` for details and
         common values.
 
-    For an **example** on the usage for any calculator refer to :ref:`userdoc-how-to`.
+    .. minigallery::
+        :add-heading:
+
+        torchpme.PMECalculator
+
     """
 
     def __init__(

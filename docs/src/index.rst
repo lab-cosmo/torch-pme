@@ -18,6 +18,7 @@ torch-pme
 .. toctree::
    :hidden:
 
+   about
    installation
    examples/index
    references/index

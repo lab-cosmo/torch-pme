@@ -1,5 +1,5 @@
 from .. import calculators as torch_calculators
-from .base import Calculator
+from .calculator import Calculator
 
 
 class PMECalculator(Calculator):
@@ -11,5 +11,5 @@ class PMECalculator(Calculator):
     For an **example** on the usage for any calculator refer to :ref:`userdoc-how-to`.
     """
 
-    # see torchpme.metatensor.base
+    # see torchpme.metatensor.calculator
     _base_calculator = torch_calculators.PMECalculator

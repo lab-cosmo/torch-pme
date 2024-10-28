@@ -19,7 +19,7 @@ import torch
 from matplotlib import pyplot as plt
 
 import torchpme
-from torchpme.lib.potentials import CoulombPotential, SplinePotential
+from torchpme.potentials import CoulombPotential, SplinePotential
 
 device = "cpu"
 dtype = torch.float64
