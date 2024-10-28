@@ -4,10 +4,11 @@ from scipy.special import expi
 from torch.special import erf, erfc
 from torch.testing import assert_close
 
-from torchpme.lib import (
+from torchpme import (
     CombinedPotential,
     CoulombPotential,
     InversePowerLawPotential,
+    PMECalculator,
     Potential,
     SplinePotential,
 )
@@ -462,6 +463,7 @@ def test_combined_potential(smearing):
         initial_weights=weights,
         learnable_weights=False,
         dtype=dtype,
+        smearing=1.0,
     )
     combined_from_dist = combined.from_dist(dists)
     combined_sr_from_dist = combined.sr_from_dist(dists)
@@ -509,3 +511,30 @@ def test_combined_potential(smearing):
     assert_close(
         weights[0] * ipl_1_bg + weights[1] * ipl_2_bg, combined_bg, rtol=rtol, atol=atol
     )
+
+
+@pytest.mark.parametrize("smearing", smearinges)
+def test_combined_potentials_jit(smearing):
+    coulomb = CoulombPotential(smearing=smearing, dtype=dtype)
+    x_grid = torch.logspace(-2, 2, 100, dtype=dtype)
+    y_grid = coulomb.lr_from_dist(x_grid)
+
+    # create a spline potential
+    spline = SplinePotential(
+        r_grid=x_grid, y_grid=y_grid, reciprocal=True, dtype=dtype, smearing=1.0
+    )
+
+    combo = CombinedPotential(potentials=[spline, coulomb], dtype=dtype, smearing=1.0)
+    jitcombo = torch.jit.script(combo)
+    mypme = PMECalculator(jitcombo, mesh_spacing=1.0)
+    _ = torch.jit.script(mypme)
+
+
+def test_combined_potential_incompatability():
+    coulomb1 = CoulombPotential(smearing=1.0, dtype=dtype)
+    coulomb2 = CoulombPotential(dtype=dtype)
+    with pytest.raises(
+        ValueError,
+        match="Cannot combine potentials with and without smearing parameters.",
+    ):
+        _ = CombinedPotential(potentials=[coulomb1, coulomb2], dtype=dtype)

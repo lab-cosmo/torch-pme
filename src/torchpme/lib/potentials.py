@@ -594,7 +594,7 @@ class SplinePotential(Potential):
     background_correction.__doc__ = Potential.background_correction.__doc__
 
 
-class CombinedPotential(torch.nn.Module):
+class CombinedPotential(Potential):
     """A potential that is a linear combination of multiple potentials.
 
     A class representing a combined potential that aggregates multiple individual
@@ -624,14 +624,39 @@ class CombinedPotential(torch.nn.Module):
         potentials: list[Potential],
         initial_weights: Optional[torch.Tensor] = None,
         learnable_weights: Optional[bool] = True,
+        smearing: Optional[float] = None,
+        exclusion_radius: Optional[float] = None,
         dtype: Optional[torch.dtype] = None,
         device: Optional[torch.device] = None,
     ):
-        super().__init__()
+        super().__init__(
+            smearing=smearing,
+            exclusion_radius=exclusion_radius,
+            dtype=dtype,
+            device=device,
+        )
         if dtype is None:
             dtype = torch.get_default_dtype()
         if device is None:
             device = torch.device("cpu")
+        smearings = [pot.smearing for pot in potentials]
+        if not all(smearings) and any(smearings):
+            raise ValueError(
+                "Cannot combine potentials with and without smearing parameters."
+            )
+
+        if all(smearings) and not self.smearing:
+            # this is very misleading, but it is the way the original code works,
+            # otherwise mypy complains
+            raise ValueError(
+                "Cannot combine potentials with smearing parameters without specifying `smearing`."
+            )
+        if not any(smearings) and self.smearing:
+            # this is very misleading, but it is the way the original code works,
+            # otherwise mypy complai
+            raise ValueError(
+                "Cannot combine potentials without smearing parameters with specifying `smearing`."
+            )
 
         if initial_weights is not None:
             if len(initial_weights) != len(potentials):
@@ -640,7 +665,8 @@ class CombinedPotential(torch.nn.Module):
                 )
         else:
             initial_weights = torch.ones(len(potentials), dtype=dtype, device=device)
-        self.potentials = potentials
+        # for torchscript
+        self.potentials = torch.nn.ModuleList(potentials)
         if learnable_weights:
             self.weights = torch.nn.Parameter(initial_weights)
         else:
@@ -650,9 +676,7 @@ class CombinedPotential(torch.nn.Module):
         """
         Full potential as a function of :math:`r`.
         """
-        potentials = []
-        for pot in self.potentials:
-            potentials.append(pot.from_dist(dist))
+        potentials = [pot.from_dist(dist) for pot in self.potentials]
         potentials = torch.stack(potentials, dim=-1)
         return torch.inner(self.weights, potentials)
 
@@ -660,9 +684,7 @@ class CombinedPotential(torch.nn.Module):
         """
         SR part of the range-separated potential.
         """
-        potentials = []
-        for pot in self.potentials:
-            potentials.append(pot.sr_from_dist(dist))
+        potentials = [pot.sr_from_dist(dist) for pot in self.potentials]
         potentials = torch.stack(potentials, dim=-1)
         return torch.inner(self.weights, potentials)
 
@@ -671,9 +693,7 @@ class CombinedPotential(torch.nn.Module):
         LR part of the range-separated potential.
         """
 
-        potentials = []
-        for pot in self.potentials:
-            potentials.append(pot.lr_from_dist(dist))
+        potentials = [pot.lr_from_dist(dist) for pot in self.potentials]
         potentials = torch.stack(potentials, dim=-1)
         return torch.inner(self.weights, potentials)
 
@@ -681,25 +701,19 @@ class CombinedPotential(torch.nn.Module):
         """
         Fourier transform of the LR part potential in terms of :math:`k^2`.
         """
-        potentials = []
-        for pot in self.potentials:
-            potentials.append(pot.lr_from_k_sq(k_sq))
+        potentials = [pot.lr_from_k_sq(k_sq) for pot in self.potentials]
         potentials = torch.stack(potentials, dim=-1)
         return torch.inner(self.weights, potentials)
 
     def self_contribution(self) -> torch.Tensor:
         # self-correction for 1/r^p potential
-        potentials = []
-        for pot in self.potentials:
-            potentials.append(pot.self_contribution())
+        potentials = [pot.self_contribution() for pot in self.potentials]
         potentials = torch.stack(potentials, dim=-1)
         return torch.inner(self.weights, potentials)
 
     def background_correction(self) -> torch.Tensor:
         # "charge neutrality" correction for 1/r^p potential
-        potentials = []
-        for pot in self.potentials:
-            potentials.append(pot.background_correction())
+        potentials = [pot.background_correction() for pot in self.potentials]
         potentials = torch.stack(potentials, dim=-1)
         return torch.inner(self.weights, potentials)
 
