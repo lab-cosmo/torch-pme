@@ -132,7 +132,6 @@ l_neighbor_distances = []
 l_ref_energy = torch.zeros(len(frames))
 
 for i_atoms, atoms in enumerate(frames):
-
     positions = torch.from_numpy(atoms.positions)
     cell = torch.from_numpy(atoms.cell.array)
     charges = torch.from_numpy(atoms.get_initial_charges()).reshape(-1, 1)
@@ -186,7 +185,7 @@ def loss() -> torch.Tensor:
 # the :class:`torch.optim.Adam` optimizer and stop either after 1000 epochs or when the
 # loss is smaller than :math:`10^{-2}`.
 
-optimizer = torch.optim.Adam(calculator.parameters(), lr=0.01)
+optimizer = torch.optim.Adam(calculator.parameters(), lr=0.1)
 
 weights_timeseries = []
 loss_timeseries = []
@@ -201,7 +200,7 @@ for _ in range(1000):
     loss_timeseries.append(float(loss_value.detach().cpu()))
     weights_timeseries.append(calculator.potential.weights.detach().cpu().tolist())
 
-    if loss_value < 1e-2:
+    if loss_value < 1e-4:
         break
 
 # %%
