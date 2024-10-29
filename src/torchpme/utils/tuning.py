@@ -12,7 +12,7 @@ def _optimize_parameters(
     accuracy: float = 1e-6,
     learning_rate: float = 5e-3,
     verbose: bool = False,
-):
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     optimizer = torch.optim.Adam(params, lr=learning_rate)
 
     for step in range(max_steps):
@@ -43,6 +43,8 @@ def _optimize_parameters(
             "Consider increase max_step and",
             stacklevel=2,
         )
+
+    return params[0], params[1], params[2]
 
 
 def tune_ewald(
@@ -138,7 +140,20 @@ def tune_ewald(
     min_dimension = float(torch.min(cell_dimensions))
     half_cell = float(torch.min(cell_dimensions) / 2)
 
-    smearing_init = _estimate_smearing(cell)
+    def inverse_smooth_lr_wavelength(value=half_cell / 10):
+        """smooth_lr_wavelength(inverse_smooth_lr_wavelength(value)) == value"""
+        return -math.log(min_dimension / value - 1)
+
+    def estimate_cutoff():
+        return half_cell
+
+    smearing_init = _estimate_smearing(cell) if smearing is None else smearing
+    lr_wavelength_init = (
+        inverse_smooth_lr_wavelength()
+        if lr_wavelength is None
+        else inverse_smooth_lr_wavelength(lr_wavelength)
+    )
+    cutoff_init = estimate_cutoff() if cutoff is None else cutoff
     prefac = 2 * sum_squared_charges / math.sqrt(len(positions))
     volume = torch.abs(cell.det())
 
@@ -174,33 +189,23 @@ def tune_ewald(
     device = positions.device
     # If a parameter is not given, it is initialized with an initial guess and needs
     # to be optimized
-    if smearing is None:
-        smearing = torch.tensor(
-            smearing_init, device=device, dtype=dtype, requires_grad=True
-        )
-    else:
-        smearing = torch.tensor(smearing, device=device, dtype=dtype)
+    smearing = torch.tensor(
+        smearing_init,
+        device=device,
+        dtype=dtype,
+        requires_grad=(smearing is None),
+    )
+    lr_wavelength = torch.tensor(
+        lr_wavelength_init,
+        device=device,
+        dtype=dtype,
+        requires_grad=(lr_wavelength is None),
+    )
+    cutoff = torch.tensor(
+        cutoff_init, device=device, dtype=dtype, requires_grad=(cutoff is None)
+    )
 
-    if lr_wavelength is None:
-        lr_wavelength = torch.tensor(
-            -math.log(min_dimension * 10 / half_cell - 1),
-            device=device,
-            dtype=dtype,
-            requires_grad=True,
-        )  # sigmoid(lr_wavelength) == half_cell / 10
-    else:
-        lr_wavelength = torch.tensor(
-            -math.log(min_dimension / lr_wavelength - 1),
-            device=device,
-            dtype=dtype,
-        )  # sigmoid(lr_wavelength) == lr_wavelength (the given value)
-
-    if cutoff is None:
-        cutoff = torch.tensor(half_cell, device=device, dtype=dtype, requires_grad=True)
-    else:
-        cutoff = torch.tensor(cutoff, device=device, dtype=dtype)
-
-    _optimize_parameters(
+    smearing_opt, lr_wavelength_opt, cutoff_opt = _optimize_parameters(
         [smearing, lr_wavelength, cutoff],
         loss,
         max_steps,
@@ -210,12 +215,12 @@ def tune_ewald(
     )
 
     return (
-        float(smearing) if smearing is not None else 0.0,
+        float(smearing_opt),
         # The if-else is only for supressing mypy complaints: Argument 1 to "float" has
         #  incompatible type "float | None"; expected "str | Buffer | SupportsFloat |
         #  SupportsIndex"
-        {"lr_wavelength": float(smooth_lr_wavelength(lr_wavelength))},
-        float(cutoff) if cutoff is not None else 0.0,
+        {"lr_wavelength": float(smooth_lr_wavelength(lr_wavelength_opt))},
+        float(cutoff_opt),
     )
 
 
@@ -313,7 +318,18 @@ def tune_pme(
     min_dimension = float(torch.min(cell_dimensions))
     half_cell = float(torch.min(cell_dimensions) / 2)
 
-    smearing_init = _estimate_smearing(cell)
+    def inverse_smooth_mesh_spacing(value):
+        """smooth_mesh_spacing(inverse_smooth_mesh_spacing(value)) == value"""
+        return -math.log(min_dimension / value - 1)
+
+    smearing_init = _estimate_smearing(cell) if smearing is None else smearing
+    mesh_spacing_init = (
+        inverse_smooth_mesh_spacing(smearing_init / 8)
+        if mesh_spacing is None
+        else inverse_smooth_mesh_spacing(mesh_spacing)
+    )
+    cutoff_init = half_cell / 5 if cutoff is None else cutoff
+
     prefac = 2 * sum_squared_charges / math.sqrt(len(positions))
     volume = torch.abs(cell.det())
 
@@ -372,37 +388,20 @@ def tune_pme(
 
     # If a parameter is not given, it is initialized with an initial guess and needs
     # to be optimized
-    if smearing is None:
-        smearing = torch.tensor(
-            smearing_init, device=device, dtype=dtype, requires_grad=True
-        )
-    else:
-        smearing = torch.tensor(smearing, device=device, dtype=dtype)
+    smearing = torch.tensor(
+        smearing_init, device=device, dtype=dtype, requires_grad=(smearing is None)
+    )
+    mesh_spacing = torch.tensor(
+        mesh_spacing_init,
+        device=device,
+        dtype=dtype,
+        requires_grad=(mesh_spacing is None),
+    )
+    cutoff = torch.tensor(
+        cutoff_init, device=device, dtype=dtype, requires_grad=(cutoff is None)
+    )
 
-    if mesh_spacing is None:
-        # smooth_mesh_spacing(mesh_spacing) == smearing / 8,
-        # is the standard initial guess
-        mesh_spacing = torch.tensor(
-            -math.log(min_dimension * 8 / smearing_init - 1),
-            device=device,
-            dtype=dtype,
-            requires_grad=True,
-        )
-    else:
-        mesh_spacing = torch.tensor(
-            min_dimension / mesh_spacing - 1,
-            device=device,
-            dtype=dtype,
-        )  # smooth_mesh_spacing(mesh_spacing) == mesh_spacing (the given value)
-
-    if cutoff is None:
-        cutoff = torch.tensor(
-            half_cell / 5, device=device, dtype=dtype, requires_grad=True
-        )
-    else:
-        cutoff = torch.tensor(cutoff, device=device, dtype=dtype)
-
-    _optimize_parameters(
+    smearing_opt, mesh_spacing_opt, cutoff_opt = _optimize_parameters(
         [smearing, mesh_spacing, cutoff],
         loss,
         max_steps,
@@ -412,15 +411,15 @@ def tune_pme(
     )
 
     return (
-        float(smearing) if smearing is not None else 0.0,
+        float(smearing_opt),
         # The if-else is only for supressing mypy complaints: Argument 1 to "float" has
         #  incompatible type "float | None"; expected "str | Buffer | SupportsFloat |
         #  SupportsIndex"
         {
-            "mesh_spacing": float(smooth_mesh_spacing(mesh_spacing)),
+            "mesh_spacing": float(smooth_mesh_spacing(mesh_spacing_opt)),
             "interpolation_nodes": int(interpolation_nodes),
         },
-        float(cutoff) if cutoff is not None else 0.0,
+        float(cutoff_opt),
     )
 
 
