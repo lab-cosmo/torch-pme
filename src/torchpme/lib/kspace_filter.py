@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Optional, Union
 
 import torch
 
@@ -53,8 +53,8 @@ class KSpaceFilter(torch.nn.Module):
     :math:`f\rightarrow \hat{f} \rightarrow \hat{\tilde{f}}=
     \hat{f} \phi \rightarrow \tilde{f}`
 
-    See also the :ref:`example-kspace` for a demonstration of the
-    functionalities of this class.
+    See also the :ref:`example-kspace-demo` for a demonstration of the functionalities
+    of this class.
 
     :param cell: torch.tensor of shape ``(3, 3)``, where ``cell[i]`` is the i-th basis
         vector of the unit cell
@@ -93,64 +93,71 @@ class KSpaceFilter(torch.nn.Module):
                 f"Invalid option '{ifft_norm}' for the `ifft_norm` parameter."
             )
 
-        self._kernel = kernel
-        self.update_mesh(cell, ns_mesh)
+        self.kernel = kernel
+        self.update(cell, ns_mesh)
 
     @torch.jit.export
-    def update_filter(self):
-        r"""
-        Applies one or more scalar filter functions to the squared norms of the
-        reciprocal space mesh grids, storing it so it can be applied multiple times.
-        Uses the :py:func:`KSpaceKernel.from_k_sq` method of the
-        :py:class:`KSpaceKernel`-derived object provided upon initialization
-        to compute the kernel values over the grid points.
-        """
-        self._kfilter = self._kernel.kernel_from_k_sq(self._knorm_sq)
+    def update(
+        self,
+        cell: Optional[torch.Tensor] = None,
+        ns_mesh: Optional[torch.Tensor] = None,
+    ) -> None:
+        """Update buffers and derived attributes of the instance.
 
-    @torch.jit.export
-    def update_mesh(self, cell: torch.Tensor, ns_mesh: torch.Tensor):
-        """
-        Update the k-space mesh vectors.
-
-        Should have a size consistent with that of the mesh used to
-        store the real-space functions that will be filtered.
+        If neither ``cell`` nor ``ns_mesh`` are passed, only the filter is updated,
+        typically following a change in the underlying potential. If ``cell`` and/or
+        ``ns_mesh`` are given, the instance's attributes required by these will also be
+        updated accordingly.
 
         :param cell: torch.tensor of shape ``(3, 3)``, where `
             `cell[i]`` is the i-th basis vector of the unit cell
         :param ns_mesh: toch.tensor of shape ``(3,)``
             Number of mesh points to use along each of the three axes
         """
-        # Check that the provided parameters match the specifications
-        if cell.shape != (3, 3):
-            raise ValueError(
-                f"cell of shape {list(cell.shape)} should be of shape (3, 3)"
-            )
-        if ns_mesh.shape != (3,):
-            raise ValueError(f"shape {list(ns_mesh.shape)} of `ns_mesh` has to be (3,)")
-        if cell.device != ns_mesh.device:
+        if cell is not None:
+            if cell.shape != (3, 3):
+                raise ValueError(
+                    f"cell of shape {list(cell.shape)} should be of shape (3, 3)"
+                )
+            self.cell = cell
+
+        if ns_mesh is not None:
+            if ns_mesh.shape != (3,):
+                raise ValueError(
+                    f"shape {list(ns_mesh.shape)} of `ns_mesh` has to be (3,)"
+                )
+            self.ns_mesh = ns_mesh
+
+        if self.cell.device != self.ns_mesh.device:
             raise ValueError(
                 "`cell` and `ns_mesh` are on different devices, got "
-                f"{cell.device} and {ns_mesh.device}"
+                f"{self.cell.device} and {self.ns_mesh.device}"
             )
 
-        self._cell = cell
-        self._ns_mesh = ns_mesh
-        self._kvectors = generate_kvectors_for_mesh(ns=ns_mesh, cell=cell)
-        self._knorm_sq = torch.linalg.norm(self._kvectors, dim=3) ** 2
-        # also updates filter to reduce the risk it'd go out of sync
-        self.update_filter()
+        if cell is not None or ns_mesh is not None:
+            self._kvectors = generate_kvectors_for_mesh(ns=self.ns_mesh, cell=self.cell)
+            self._k_sq = torch.linalg.norm(self._kvectors, dim=3) ** 2
 
-    @torch.jit.export
-    def compute(
-        self,
-        mesh_values: torch.Tensor,
-    ) -> torch.Tensor:
+        # always update the kfilter to reduce the risk it'd go out of sync if the is an
+        # update in the underlaying potential
+        self._kfilter = self.kernel.kernel_from_k_sq(self._k_sq)
+
+    def forward(self, mesh_values: torch.Tensor) -> torch.Tensor:
         """
         Applies the k-space filter by Fourier transforming the given
         ``mesh_values`` tensor, multiplying the result by the filter array
         (that should have been previously computed with a call to
-        :py:func:`update_filter`) and Fourier-transforming back
+        :py:func:`update`) and Fourier-transforming back
         to real space.
+
+        If you update the ``cell``, the ``ns_mesh`` or anything inside the ``kernel``
+        object after you initlized the object, you have call :meth:`update` to update
+        the object calling this method.
+
+        .. code-block:: python
+
+            kernel_filter.update(cell)
+            kernel_filter.forward(mesh)
 
         :param mesh_values: torch.tensor of shape ``(n_channels, nx, ny, nz)``
             The values of the input function on a real-space mesh. Shape
@@ -201,19 +208,3 @@ class KSpaceFilter(torch.nn.Module):
             # well-defined
             s=mesh_values.shape[-3:],
         )
-
-    def forward(self, cell: torch.Tensor, mesh: torch.Tensor):
-        """
-        Performs a full k-space convolution step.
-
-        The default forward call for `KSpaceFilter` combines
-        the construction or update of the mesh (including the
-        calculation of the filter values) and the Fourier
-        convolution with a given grid.
-
-        The size of the mesh is inferred from the input mesh
-        size.
-        """
-        self.update_mesh(cell, torch.tensor(mesh.shape[-3:]))
-
-        return self.compute(mesh)

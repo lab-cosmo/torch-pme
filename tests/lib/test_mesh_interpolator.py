@@ -84,14 +84,14 @@ class TestMeshInterpolatorForward:
         ns_mesh = torch.randint(11, 18, size=(3,))
 
         # Run interpolation
-        inetrpolator = MeshInterpolator(
+        interpolator = MeshInterpolator(
             cell=cell,
             ns_mesh=ns_mesh,
             interpolation_nodes=interpolation_nodes,
             method=method,
         )
-        inetrpolator.compute_weights(positions)
-        mesh_values = inetrpolator.points_to_mesh(particle_weights)
+        interpolator.compute_weights(positions)
+        mesh_values = interpolator.points_to_mesh(particle_weights)
 
         # Compare total "weight (charge)" on the mesh with the sum of the particle
         # contributions
@@ -127,11 +127,14 @@ class TestMeshInterpolatorForward:
         ns_mesh = torch.tensor([n_mesh, n_mesh, n_mesh])
 
         # Perform interpolation
-        inetrpolator = MeshInterpolator(
-            cell=cell, ns_mesh=ns_mesh, interpolation_nodes=interpolation_nodes
+        interpolator = MeshInterpolator(
+            cell=cell,
+            ns_mesh=ns_mesh,
+            interpolation_nodes=interpolation_nodes,
+            method="P3M",
         )
-        inetrpolator.compute_weights(positions)
-        mesh_values = inetrpolator.points_to_mesh(particle_weights)
+        interpolator.compute_weights(positions)
+        mesh_values = interpolator.points_to_mesh(particle_weights)
 
         # Recover the interpolated values at the atomic positions
         indices_x = indices[0]
@@ -181,7 +184,7 @@ class TestMeshInterpolatorBackward:
         # Smear particles onto mesh and interpolate back onto
         # their own positions.
         interpolator = MeshInterpolator(
-            cell=cell, ns_mesh=ns_mesh, interpolation_nodes=1
+            cell=cell, ns_mesh=ns_mesh, interpolation_nodes=1, method="P3M"
         )
         interpolator.compute_weights(positions)
         mesh_values = interpolator.points_to_mesh(particle_weights)
@@ -220,7 +223,7 @@ class TestMeshInterpolatorBackward:
         # Smear particles onto mesh and interpolate back onto
         # their own positions.
         interpolator = MeshInterpolator(
-            cell=cell, ns_mesh=ns_mesh, interpolation_nodes=2
+            cell=cell, ns_mesh=ns_mesh, interpolation_nodes=2, method="P3M"
         )
         interpolator.compute_weights(positions)
         mesh_values = interpolator.points_to_mesh(particle_weights)
@@ -268,7 +271,10 @@ class TestMeshInterpolatorBackward:
 
         # Generate mesh with random values and interpolate
         interpolator = MeshInterpolator(
-            cell=cell, ns_mesh=ns_mesh, interpolation_nodes=interpolation_nodes
+            cell=cell,
+            ns_mesh=ns_mesh,
+            interpolation_nodes=interpolation_nodes,
+            method="P3M",
         )
         interpolator.compute_weights(positions)
         mesh_values = torch.randn(size=(n_channels, nx, ny, nz)) * 3.0 + 9.3
@@ -306,7 +312,10 @@ class TestMeshInterpolatorBackward:
         positions.requires_grad_(True)
 
         interpolator = MeshInterpolator(
-            cell=cell, ns_mesh=ns_mesh, interpolation_nodes=interpolation_nodes
+            cell=cell,
+            ns_mesh=ns_mesh,
+            interpolation_nodes=interpolation_nodes,
+            method="P3M",
         )
 
         interpolator.compute_weights(positions)
@@ -327,26 +336,80 @@ class TestMeshInterpolatorBackward:
         )
 
 
-@pytest.mark.parametrize("method", ["P3M", "Lagrange"])
-def test_cell_wrong_shape(method):
+@pytest.mark.parametrize("cell_update", [None, torch.eye(3)])
+@pytest.mark.parametrize("ns_mesh_update", [None, torch.tensor([3, 3, 3])])
+def test_update(cell_update, ns_mesh_update):
+    cell = 2 * torch.eye(3)
     ns_mesh = torch.tensor([2, 2, 2])
-    cell = torch.randn(size=(2, 3))  # incorrect shape
-    interpolation_nodes = 3
+
+    mesh_interpolator = MeshInterpolator(
+        cell=cell, ns_mesh=ns_mesh, interpolation_nodes=3, method="Lagrange"
+    )
+
+    mesh_interpolator.update(cell=cell_update, ns_mesh=ns_mesh_update)
+
+    if cell_update is not None:
+        assert torch.all(mesh_interpolator.cell == cell_update)
+        assert torch.all(
+            mesh_interpolator.inverse_cell == torch.linalg.inv(cell_update)
+        )
+
+    if ns_mesh_update is not None:
+        assert torch.all(mesh_interpolator.ns_mesh == ns_mesh_update)
+
+
+def test_update_devive():
+    cell = 2 * torch.eye(3)
+    ns_mesh = torch.tensor([2, 2, 2])
+
+    mesh_interpolator = MeshInterpolator(
+        cell=cell, ns_mesh=ns_mesh, interpolation_nodes=3, method="Lagrange"
+    )
+
+    cell_update = cell.to(device="meta")
+    mesh_interpolator.update(cell=cell_update, ns_mesh=ns_mesh.to(device="meta"))
+
+    assert mesh_interpolator._dtype == cell_update.dtype
+    assert mesh_interpolator._device == cell_update.device
+
+
+def test_update_cell_wrong_shape():
+    mesh_interpolator = MeshInterpolator(
+        cell=torch.eye(3),
+        ns_mesh=torch.tensor([2, 2, 2]),
+        interpolation_nodes=3,
+        method="Lagrange",
+    )
+
     match = "cell of shape \\[2, 3\\] should be of shape \\(3, 3\\)"
-
     with pytest.raises(ValueError, match=match):
-        MeshInterpolator(cell, ns_mesh, interpolation_nodes, method=method)
+        mesh_interpolator.update(cell=torch.randn(size=(2, 3)))
 
 
-@pytest.mark.parametrize("method", ["P3M", "Lagrange"])
-def test_ns_mesh_wrong_shape(method):
-    cell = torch.eye(3)
-    ns_mesh = torch.tensor([2, 2])  # incorrect shape
-    interpolation_nodes = 3
+def test_update_ns_mesh_wrong_shape():
+    mesh_interpolator = MeshInterpolator(
+        cell=torch.eye(3),
+        ns_mesh=torch.tensor([2, 2, 2]),
+        interpolation_nodes=3,
+        method="Lagrange",
+    )
+
     match = "shape \\[2\\] of `ns_mesh` has to be \\(3,\\)"
-
     with pytest.raises(ValueError, match=match):
-        MeshInterpolator(cell, ns_mesh, interpolation_nodes, method=method)
+        mesh_interpolator.update(ns_mesh=torch.tensor([2, 2]))
+
+
+def test_update_different_devices_cell_ns_mesh():
+    mesh_interpolator = MeshInterpolator(
+        cell=torch.eye(3),
+        ns_mesh=torch.tensor([2, 2, 2]),
+        interpolation_nodes=3,
+        method="Lagrange",
+    )
+
+    match = "`cell` and `ns_mesh` are on different devices, got meta and cpu"
+    with pytest.raises(ValueError, match=match):
+        mesh_interpolator.update(cell=torch.eye(3, device="meta"))
 
 
 def test_interpolation_nodes_not_allowed():
@@ -356,32 +419,40 @@ def test_interpolation_nodes_not_allowed():
     match = "Only `interpolation_nodes` from 1 to 5 are allowed"
 
     with pytest.raises(ValueError, match=match):
-        MeshInterpolator(cell, ns_mesh, interpolation_nodes)._compute_1d_weights(
-            torch.tensor([0])
-        )
+        MeshInterpolator(
+            cell, ns_mesh, interpolation_nodes, method="P3M"
+        )._compute_1d_weights(torch.tensor([0]))
+
+    for interpolation_nodes in [1, 8]:  # not allowed
+        match = "Only `interpolation_nodes` from 3 to 7 are allowed"
+        with pytest.raises(ValueError, match=match):
+            MeshInterpolator(
+                cell, ns_mesh, interpolation_nodes, method="Lagrange"
+            )._compute_1d_weights(torch.tensor([0]))
 
 
 def test_interpolation_nodes_not_allowed_private():
     cell = torch.eye(3)
     ns_mesh = torch.tensor([2, 2, 2])
 
-    interpolator = MeshInterpolator(cell, ns_mesh, interpolation_nodes=5)
+    interpolator = MeshInterpolator(cell, ns_mesh, interpolation_nodes=5, method="P3M")
     interpolator.interpolation_nodes = 6  # not allowed
     match = "Only `interpolation_nodes` from 1 to 5 are allowed"
 
     with pytest.raises(ValueError, match=match):
         interpolator._compute_1d_weights(torch.tensor([0]))
 
-
-@pytest.mark.parametrize("method", ["P3M", "Lagrange"])
-def test_different_devices_cell_ns_mesh(method):
-    cell = torch.eye(3, device="cpu")
-    ns_mesh = torch.tensor([2, 2, 2], device="meta")  # different device
-    interpolation_nodes = 3
-    match = "`cell` and `ns_mesh` are on different devices, got cpu and meta"
-
+    interpolator.method = "PPPPMMMM"
+    match = "Only `method` `Lagrange` and `P3M` are allowed"
     with pytest.raises(ValueError, match=match):
-        MeshInterpolator(cell, ns_mesh, interpolation_nodes, method=method)
+        interpolator._compute_1d_weights(torch.tensor([0]))
+
+    interpolator.method = "Lagrange"
+    for interpolation_nodes in [1, 8]:  # not allowed
+        interpolator.interpolation_nodes = interpolation_nodes
+        match = "Only `interpolation_nodes` from 3 to 7 are allowed"
+        with pytest.raises(ValueError, match=match):
+            interpolator._compute_1d_weights(torch.tensor([0]))
 
 
 @pytest.fixture

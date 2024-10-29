@@ -1,6 +1,7 @@
 """Test utilities wrap common functions in the tests"""
 
 import math
+from pathlib import Path
 from typing import Optional
 
 import torch
@@ -8,6 +9,10 @@ from vesin.torch import NeighborList
 
 DTYPE = torch.float64
 SQRT3 = math.sqrt(3)
+
+DIR_PATH = Path(__file__).parent
+EXAMPLES = DIR_PATH / ".." / "examples"
+COULOMB_TEST_FRAMES = EXAMPLES / "coulomb_test_frames.xyz"
 
 
 def define_crystal(crystal_name="CsCl"):

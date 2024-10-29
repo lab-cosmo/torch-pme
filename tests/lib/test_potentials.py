@@ -4,7 +4,14 @@ from scipy.special import expi
 from torch.special import erf, erfc
 from torch.testing import assert_close
 
-from torchpme.lib import CoulombPotential, InversePowerLawPotential
+from torchpme import (
+    CombinedPotential,
+    CoulombPotential,
+    InversePowerLawPotential,
+    PMECalculator,
+    Potential,
+    SplinePotential,
+)
 
 
 def gamma(x):
@@ -239,6 +246,40 @@ def test_range_none(potential):
         _ = pot.background_correction()
 
 
+def test_no_impl():
+    class NoImplPotential(Potential):
+        pass
+
+    mypot = NoImplPotential()
+    with pytest.raises(
+        NotImplementedError, match="from_dist is not implemented for NoImplPotential"
+    ):
+        mypot.from_dist(torch.tensor([1, 2.0, 3.0]))
+    with pytest.raises(
+        NotImplementedError, match="lr_from_dist is not implemented for NoImplPotential"
+    ):
+        mypot.lr_from_dist(torch.tensor([1, 2.0, 3.0]))
+    with pytest.raises(
+        NotImplementedError, match="lr_from_k_sq is not implemented for NoImplPotential"
+    ):
+        mypot.lr_from_k_sq(torch.tensor([1, 2.0, 3.0]))
+    with pytest.raises(
+        NotImplementedError,
+        match="self_contribution is not implemented for NoImplPotential",
+    ):
+        mypot.self_contribution()
+    with pytest.raises(
+        NotImplementedError,
+        match="background_correction is not implemented for NoImplPotential",
+    ):
+        mypot.background_correction()
+    with pytest.raises(
+        ValueError,
+        match="Cannot compute cutoff function when `exclusion_radius` is not set",
+    ):
+        mypot.f_cutoff(torch.tensor([1, 2.0, 3.0]))
+
+
 @pytest.mark.parametrize("exclusion_radius", [0.5, 1.0, 2.0])
 def test_f_cutoff(exclusion_radius):
     coul = CoulombPotential(exclusion_radius=exclusion_radius, dtype=dtype)
@@ -284,3 +325,252 @@ def test_inverserp_coulomb(smearing):
     assert_close(ipl_fourier, coul_fourier, rtol=rtol, atol=atol)
     assert_close(ipl_self, coul_self, rtol=rtol, atol=atol)
     assert_close(ipl_bg, coul_bg, rtol=rtol, atol=atol)
+
+
+def test_spline_potential_cases():
+    x_grid = torch.linspace(0, 20, 100)
+    y_grid = torch.exp(-(x_grid**2) * 0.5)
+
+    x_grid_2 = torch.logspace(-2, 2, 80)
+    y_grid_2 = torch.reciprocal(-(x_grid_2**2) * 0.01)
+
+    spline = None
+    with pytest.raises(
+        ValueError, match="Length of radial grid and value array mismatch."
+    ):
+        spline = SplinePotential(r_grid=x_grid, y_grid=y_grid_2)
+
+    with pytest.raises(
+        ValueError,
+        match="Positive-valued radial grid is needed for reciprocal axis spline.",
+    ):
+        spline = SplinePotential(r_grid=x_grid, y_grid=y_grid, reciprocal=True)
+
+    spline = SplinePotential(r_grid=x_grid, y_grid=y_grid, reciprocal=False)
+    assert_close(spline.from_dist(x_grid), y_grid)
+
+    spline = SplinePotential(r_grid=x_grid_2, y_grid=y_grid_2, reciprocal=True)
+    assert_close(spline.from_dist(x_grid_2), y_grid_2)
+
+    assert_close(spline.from_dist(x_grid_2), spline.lr_from_dist(x_grid_2))
+    assert_close(x_grid_2 * 0.0, spline.sr_from_dist(x_grid_2))
+
+    spline = SplinePotential(
+        r_grid=x_grid,
+        y_grid=y_grid,
+        k_grid=x_grid_2,
+        yhat_grid=y_grid_2,
+        reciprocal=False,
+    )
+    assert_close(spline.lr_from_k_sq(x_grid_2**2), y_grid_2)
+
+    assert_close(spline.background_correction(), torch.tensor([0.0]))
+    assert_close(spline.self_contribution(), spline.lr_from_dist(torch.tensor([0.0])))
+
+
+def test_spline_potential_vs_coulomb():
+    # the approximation is not super-accurate
+
+    coulomb = CoulombPotential(smearing=1.0)
+    x_grid = torch.logspace(-3.0, 3.0, 1000)
+    y_grid = coulomb.lr_from_dist(x_grid)
+
+    spline = SplinePotential(r_grid=x_grid, y_grid=y_grid, reciprocal=True)
+    t_grid = torch.logspace(-torch.pi / 2, torch.pi / 2, 100)
+    z_coul = coulomb.lr_from_dist(t_grid)
+    z_spline = spline.lr_from_dist(t_grid)
+    assert_close(z_coul, z_spline, atol=5e-5, rtol=0)
+
+    k_grid2 = torch.logspace(-2, 1, 40)
+    krn_coul = coulomb.kernel_from_k_sq(k_grid2)
+    krn_spline = spline.kernel_from_k_sq(k_grid2)
+    assert_close(krn_coul[:30], krn_spline[:30], atol=0, rtol=5e-5)
+    assert_close(krn_coul[30:], krn_spline[30:], atol=5e-5, rtol=0)
+
+
+@pytest.mark.parametrize(
+    "potpars",
+    [
+        (CoulombPotential, {"smearing": 1.0, "exclusion_radius": 1.0}),
+        (
+            InversePowerLawPotential,
+            {"exponent": 2, "smearing": 1.0, "exclusion_radius": 1.0},
+        ),
+        (
+            SplinePotential,
+            {
+                "r_grid": torch.tensor([1.0, 2.0, 3.0, 4.0]),
+                "y_grid": torch.tensor([1.0, -2.0, 3.0, -4.0]),
+            },
+        ),
+        (
+            SplinePotential,
+            {
+                "r_grid": torch.tensor([1.0, 2.0, 3.0, 400.0]),
+                "y_grid": torch.tensor([1.0, -2.0, 3.0, 1 / 400.0]),
+                "reciprocal": True,
+                "y_at_zero": 1.0,
+                "yhat_at_zero": 1.0,
+            },
+        ),
+    ],
+)
+def test_potentials_jit(potpars):
+    pot, pars = potpars
+
+    class JITWrapper(torch.nn.Module):
+        def __init__(self, **kwargs):
+            super().__init__()
+            self.pot = pot(**kwargs)
+
+        def forward(self, x: torch.Tensor):
+            return self.pot.lr_from_dist(x), self.pot.lr_from_k_sq(x)
+
+    wrapper = JITWrapper(**pars)
+    jit_wrapper = torch.jit.script(wrapper)
+
+    x = torch.tensor([1.0, 2.0, 3.0])
+    rs_y, ks_y = wrapper(x)
+    rs_y_jit, ks_y_jit = jit_wrapper(x)
+
+    assert_close(rs_y, rs_y_jit)
+    assert_close(ks_y, ks_y_jit)
+
+
+@pytest.mark.parametrize("smearing", smearinges)
+def test_combined_potential(smearing):
+    """"""
+    ipl_1 = InversePowerLawPotential(exponent=1.0, smearing=smearing, dtype=dtype)
+    ipl_2 = InversePowerLawPotential(exponent=2.0, smearing=smearing, dtype=dtype)
+
+    ipl_1_from_dist = ipl_1.from_dist(dists)
+    ipl_1_sr_from_dist = ipl_1.sr_from_dist(dists)
+    ipl_1_lr_from_dist = ipl_1.lr_from_dist(dists_sq)
+    ipl_1_fourier = ipl_1.lr_from_k_sq(ks_sq)
+    ipl_1_self = ipl_1.self_contribution()
+    ipl_1_bg = ipl_1.background_correction()
+
+    ipl_2_from_dist = ipl_2.from_dist(dists)
+    ipl_2_sr_from_dist = ipl_2.sr_from_dist(dists)
+    ipl_2_lr_from_dist = ipl_2.lr_from_dist(dists_sq)
+    ipl_2_fourier = ipl_2.lr_from_k_sq(ks_sq)
+    ipl_2_self = ipl_2.self_contribution()
+    ipl_2_bg = ipl_2.background_correction()
+
+    weights = torch.randn(2, dtype=dtype)
+    combined = CombinedPotential(
+        potentials=[ipl_1, ipl_2],
+        initial_weights=weights,
+        learnable_weights=False,
+        dtype=dtype,
+        smearing=1.0,
+    )
+    combined_from_dist = combined.from_dist(dists)
+    combined_sr_from_dist = combined.sr_from_dist(dists)
+    combined_lr_from_dist = combined.lr_from_dist(dists_sq)
+    combined_fourier = combined.lr_from_k_sq(ks_sq)
+    combined_self = combined.self_contribution()
+    combined_bg = combined.background_correction()
+
+    # Test agreement between generic and specialized implementations
+    atol = 3e-16
+    rtol = 2 * machine_epsilon
+    assert_close(
+        weights[0] * ipl_1_from_dist + weights[1] * ipl_2_from_dist,
+        combined_from_dist,
+        rtol=rtol,
+        atol=atol,
+    )
+
+    atol = 3e-8
+    rtol = 2 * machine_epsilon
+    assert_close(
+        weights[0] * ipl_1_sr_from_dist + weights[1] * ipl_2_sr_from_dist,
+        combined_sr_from_dist,
+        rtol=rtol,
+        atol=atol,
+    )
+    assert_close(
+        weights[0] * ipl_1_lr_from_dist + weights[1] * ipl_2_lr_from_dist,
+        combined_lr_from_dist,
+        rtol=rtol,
+        atol=atol,
+    )
+    assert_close(
+        weights[0] * ipl_1_fourier + weights[1] * ipl_2_fourier,
+        combined_fourier,
+        rtol=rtol,
+        atol=atol,
+    )
+    assert_close(
+        weights[0] * ipl_1_self + weights[1] * ipl_2_self,
+        combined_self,
+        rtol=rtol,
+        atol=atol,
+    )
+    assert_close(
+        weights[0] * ipl_1_bg + weights[1] * ipl_2_bg, combined_bg, rtol=rtol, atol=atol
+    )
+
+
+@pytest.mark.parametrize("smearing", smearinges)
+def test_combined_potentials_jit(smearing):
+    # make a separate test as pytest.mark.parametrize does not work with
+    # torch.jit.script for combined potentials
+    coulomb = CoulombPotential(smearing=smearing, dtype=dtype)
+    x_grid = torch.logspace(-2, 2, 100, dtype=dtype)
+    y_grid = coulomb.lr_from_dist(x_grid)
+
+    # create a spline potential
+    spline = SplinePotential(
+        r_grid=x_grid, y_grid=y_grid, reciprocal=True, dtype=dtype, smearing=1.0
+    )
+
+    combo = CombinedPotential(potentials=[spline, coulomb], dtype=dtype, smearing=1.0)
+    jitcombo = torch.jit.script(combo)
+    mypme = PMECalculator(jitcombo, mesh_spacing=1.0)
+    _ = torch.jit.script(mypme)
+
+
+def test_combined_potential_incompatability():
+    coulomb1 = CoulombPotential(smearing=1.0, dtype=dtype)
+    coulomb2 = CoulombPotential(dtype=dtype)
+    with pytest.raises(
+        ValueError,
+        match="Cannot combine direct \\(`smearing=None`\\) and range-separated \\(`smearing=float`\\) potentials.",
+    ):
+        _ = CombinedPotential(potentials=[coulomb1, coulomb2], dtype=dtype)
+    with pytest.raises(
+        ValueError,
+        match="You should specify a `smearing` when combining range-separated \\(`smearing=float`\\) potentials.",
+    ):
+        _ = CombinedPotential(potentials=[coulomb1, coulomb1], dtype=dtype)
+    with pytest.raises(
+        ValueError,
+        match="Cannot specify `smearing` when combining direct \\(`smearing=None`\\) potentials.",
+    ):
+        _ = CombinedPotential(
+            potentials=[coulomb2, coulomb2], smearing=1.0, dtype=dtype
+        )
+
+
+def test_combined_potential_learnable_weights():
+    weights = torch.randn(2, dtype=dtype)
+    coulomb1 = CoulombPotential(smearing=2.0, dtype=dtype)
+    coulomb2 = CoulombPotential(smearing=1.0, dtype=dtype)
+    combined = CombinedPotential(
+        potentials=[coulomb1, coulomb2],
+        smearing=1.0,
+        dtype=dtype,
+        initial_weights=weights.clone(),
+        learnable_weights=True,
+    )
+    assert combined.weights.requires_grad
+
+    # make a small optimization step
+    optimizer = torch.optim.Adam(combined.parameters(), lr=0.1)
+    optimizer.zero_grad()
+    loss = torch.sum(combined.weights)
+    loss.backward()
+    optimizer.step()
+    assert torch.allclose(combined.weights, weights - 0.1)
