@@ -108,14 +108,14 @@ class P3MCalculator(Calculator):
             )
 
         with profiler.record_function("update the mesh for the k-space filter"):
-            self._KF.update_mesh(cell, ns)
+            self._KF.update(cell, ns)
 
         with profiler.record_function("step 1: compute density interpolation"):
             interpolator.compute_weights(positions)
             rho_mesh = interpolator.points_to_mesh(particle_weights=charges)
 
         with profiler.record_function("step 2: perform actual convolution using FFT"):
-            potential_mesh = self._KF.compute(rho_mesh)
+            potential_mesh = self._KF.forward(rho_mesh)
 
         with profiler.record_function("step 3: back interpolation + volume scaling"):
             ivolume = torch.abs(cell.det()).pow(-1)
