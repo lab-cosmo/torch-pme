@@ -3,13 +3,14 @@
 Examples
 ========
 
-This section list introductory examples and recipes to the various classes and functions
-of ``torch-pme``. Example are sorted in increasing order of complexity. For details on
-the API specification of the functions take a look at the :ref:`userdoc-reference`
+This section lists introductory examples and recipes to the various classes and 
+functions of ``torch-pme``. 
+Example are sorted in increasing order of complexity. For details on the API 
+specification of the functions take a look at the :ref:`userdoc-reference`
 section.
 
-For running the all examples install with the ``examples`` and ``metatensor`` optional
-dependencies.
+To run the all examples, install ``torchpme`` with the ``examples`` and 
+``metatensor`` optional dependencies.
 
 .. code-block:: bash
 

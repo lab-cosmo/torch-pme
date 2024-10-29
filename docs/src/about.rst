@@ -5,9 +5,11 @@ What is torch-pme
 are stored in :py:class:`torch.Tensor` objects, or in a :py:class:`metatensor.System
 <metatensor.torch.atomistic.System>` object.
 
-torch-pme can be used as qnend-to-end library compuating the potential from
-positions/charged and as a modular library to constract complex fourier space workflows.
+torch-pme can be used as an end-to-end library computing the potential from
+positions/charged and as a modular library to construct complex Fourier-domain
+architectures.
 
-For using ``torch-pme`` as an end-to-end library the main entry point are *calculators*
-which take :ref:`potentials` instances as input and return the calculated potential as
-output.
+To use ``torch-pme`` as an end-to-end library the main entry point are 
+:ref:`calculators`, that compute pair :ref:`potentials` combining real-space
+and k-space components. They take a description of a structure as input and return 
+the calculated potential at the atomic positions as output.
