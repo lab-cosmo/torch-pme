@@ -123,9 +123,7 @@ class EwaldCalculator(Calculator):
         # Gaussian charge density in order to split the potential into a SR and LR part.
         # This contribution always should be subtracted since it depends on the smearing
         # parameter, which is purely a convergence parameter.
-        fill_value = self.potential.self_contribution()
-        self_contrib = torch.full([], fill_value)
-        energy -= charges * self_contrib
+        energy -= charges * self.potential.self_contribution()
 
         # Step 5: The method requires that the unit cell is charge-neutral.
         # If the cell has a net charge (i.e. if sum(charges) != 0), the method

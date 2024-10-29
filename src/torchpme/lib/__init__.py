@@ -7,12 +7,12 @@ from .kvectors import (
 from .mesh_interpolator import MeshInterpolator
 
 __all__ = [
-    "all_neighbor_indices",
-    "distances",
     "KSpaceFilter",
     "KSpaceKernel",
     "MeshInterpolator",
-    "get_ns_mesh",
-    "generate_kvectors_for_mesh",
+    "all_neighbor_indices",
+    "distances",
     "generate_kvectors_for_ewald",
+    "generate_kvectors_for_mesh",
+    "get_ns_mesh",
 ]
