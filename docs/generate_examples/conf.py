@@ -14,6 +14,7 @@ HERE = os.path.dirname(__file__)
 ROOT = os.path.realpath(os.path.join(HERE, "..", ".."))
 
 sphinx_gallery_conf = {
+    "copyfile_regex": r".*\.(xyz)",
     "examples_dirs": ["../../examples"],
     "filename_pattern": ".*",
     "gallery_dirs": ["examples"],
