@@ -314,3 +314,5 @@ potential = calculator_metatensor.forward(system, neighbors)
 # And as above, the values of the potential are the same.
 
 print(potential[0].values)
+
+# %%
