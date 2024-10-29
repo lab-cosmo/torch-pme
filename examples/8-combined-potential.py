@@ -30,13 +30,6 @@ from torchpme.utils.prefactors import eV_A
 
 # %%
 #
-# For the example a CPU should be sufficient, but if available we use a ``"cuda"``
-# acceletor to speed up the optmization.
-
-device = "cuda" if torch.cuda.is_available() else "cpu"
-
-# %%
-#
 # We load the small :download:`dataset <coulomb_test_frames.xyz>` that contains eight
 # randomly placed point charges in a cubic cell of different cell sizes. Each structure
 # contains four positive and four negative charges that interact via a Coulomb
@@ -120,7 +113,7 @@ plt.show()
 calculator = EwaldCalculator(
     potential=potential, lr_wavelength=lr_wavelength, prefactor=eV_A
 )
-calculator.to(device=device, dtype=torch.float64)
+calculator.to(dtype=torch.float64)
 
 
 # %%
@@ -136,12 +129,13 @@ l_cell = []
 l_charges = []
 l_neighbor_indices = []
 l_neighbor_distances = []
-l_ref_energy = torch.zeros(len(frames), device=device)
+l_ref_energy = torch.zeros(len(frames))
 
 for i_atoms, atoms in enumerate(frames):
-    positions = torch.tensor(atoms.positions, device=device)
-    cell = torch.tensor(atoms.cell.array, device=device)
-    charges = torch.tensor(atoms.get_initial_charges().reshape(-1, 1), device=device)
+
+    positions = torch.from_numpy(atoms.positions)
+    cell = torch.from_numpy(atoms.cell.array)
+    charges = torch.from_numpy(atoms.get_initial_charges()).reshape(-1, 1)
 
     i, j, d = nl.compute(points=positions, box=cell, periodic=True, quantities="ijd")
 
@@ -149,8 +143,8 @@ for i_atoms, atoms in enumerate(frames):
     l_cell.append(cell)
     l_charges.append(charges)
 
-    l_neighbor_indices.append(torch.vstack([i, j]).to(device=device).T)
-    l_neighbor_distances.append(d.to(device=device))
+    l_neighbor_indices.append(torch.vstack([i, j]).T)
+    l_neighbor_distances.append(d)
 
     l_ref_energy[i_atoms] = atoms.get_potential_energy()
 
@@ -163,7 +157,7 @@ for i_atoms, atoms in enumerate(frames):
 
 def compute_energy() -> torch.Tensor:
     """Compute the energy of all structures using a globally defined `calculator`."""
-    energy = torch.zeros(len(frames), device=device)
+    energy = torch.zeros(len(frames))
     for i_atoms in range(len(frames)):
         charges = l_charges[i_atoms]
 
