@@ -6,14 +6,15 @@ Combined potentials
 
 .. currentmodule:: torchpme
 
-:Authors: Michele Ceriotti `@ceriottm <https://github.com/ceriottm/>`_
+:Authors: Egor Rumiantsev `@E-Rum <https://github.com/E-Rum/>`_;
+   Philip Loche `@PicoCentauri <https://github.com/PicoCentauri>`_
 
-This is an example to demonstrate the usage :class:`CombinedPotential
-<lib.potentials.CombinedPotential>` class to evaluate potentials that combine multiple
-pair potentials with optimizable ``weights``.
+This is an example to demonstrate the usage of the :class:`CombinedPotential
+<lib.potentials.CombinedPotential>` class to evaluate potentials that
+combine multiple pair potentials with optimizable ``weights``.
 
-We will optimize the ``weights`` to reporoduce the energy of a system that interacts
-solely via Coulomb interactions.
+We will optimize the ``weights`` to reporoduce the energy of a system that
+interacts solely via Coulomb interactions.
 """
 # %%
 
@@ -29,6 +30,8 @@ from torchpme import CombinedPotential, EwaldCalculator, InversePowerLawPotentia
 from torchpme.utils.prefactors import eV_A
 
 # %%
+# Combined potentials
+# -------------------
 #
 # We load the small :download:`dataset <coulomb_test_frames.xyz>` that contains eight
 # randomly placed point charges in a cubic cell of different cell sizes. Each structure
@@ -59,20 +62,29 @@ lr_wavelength = 0.5 * smearing
 #
 # We now construct the potential as sum of two :class:`InversePowerLawPotential
 # <lib.potentials.InversePowerLawPotential>` using :class:`CombinedPotential
-# <lib.potentials.CombinedPotential>`.
+# <lib.potentials.CombinedPotential>`. The presence of a numerical `smearing`
+# value is used as an indication that the potential can compute the terms needed
+# for range-separated evaluation, and so one has to set it also for the combined
+# potential, even if it is not used explicitly in the evaluation of the combination.
 
 pot_1 = InversePowerLawPotential(exponent=1.0, smearing=smearing)
 pot_2 = InversePowerLawPotential(exponent=2.0, smearing=smearing)
 
 potential = CombinedPotential(potentials=[pot_1, pot_2], smearing=smearing)
 
+# Note also that :class:`CombinedPotential <lib.potentials.CombinedPotential>`
+# can be used with any combination of potentials, as long they are all either
+# direct or range separated. For instance, one can combine a
+# :class:`CoulombPotential <lib.potentials.CoulombPotential>` and a
+# :class:`SplinePotential <lib.potentials.SplinePotential>`.
 
 # %%
-#
+# Plotting terms in the potential
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # We now plot of the individual and combined ``potential`` functions together with an
 # explicit sum of the two potentials.
 
-dist = torch.logspace(-4, 2, 1000)
+dist = torch.logspace(-3, 2, 1000)
 
 fig, ax = plt.subplots()
 
@@ -88,10 +100,7 @@ ax.plot(
 )
 
 ax.set(
-    xlabel="Distance",
-    ylabel="Potential",
-    xscale="log",
-    yscale="log",
+    xlabel="Distance", ylabel="Potential", xscale="log", yscale="log", xlim=[1e-3, 1e2]
 )
 
 ax.legend()
@@ -105,10 +114,43 @@ plt.show()
 # faster compared to the :math:`p=1` potential (blue). We also verify that the combined
 # potential (black) is the sum of the two potentials that we explicitly calculated
 # (dotted green line).
-#
-# We next construct the calculuator. Note that belwo we use the :class:`EwaldCalculator`
+
+k = torch.logspace(-2, 2, 1000)
+
+fig, ax = plt.subplots()
+
+ax.plot(dist, pot_1.lr_from_k_sq(k**2), label="p=1")
+ax.plot(dist, pot_2.lr_from_k_sq(k**2), label="p=2")
+
+ax.plot(
+    dist, potential.lr_from_k_sq(k**2).detach(), label="Combined potential", c="black"
+)
+ax.plot(
+    dist,
+    pot_1.lr_from_k_sq(k**2) + pot_2.lr_from_k_sq(k**2),
+    label="Explict combination",
+    ls=":",
+)
+
+ax.set(
+    xlabel=r"$|\mathbf{k}|$",
+    ylabel="Potential",
+    xscale="log",
+    yscale="log",
+    xlim=[1e-2, 1e2],
+)
+
+ax.legend()
+
+plt.show()
+
+
+# %%
+# Optimizing the mixing weights
+# -----------------------------
+# We next construct the calculator. Note that below we use the :class:`EwaldCalculator`
 # but one can of course also use the :class:`PMECalculator` if one wants to optimize a
-# mhuch bigger system.
+# much bigger system.
 
 calculator = EwaldCalculator(
     potential=potential, lr_wavelength=lr_wavelength, prefactor=eV_A
@@ -119,7 +161,7 @@ calculator.to(dtype=torch.float64)
 # %%
 #
 # To save some time during optimization we precompute the neighborlist and store all
-# values in conviennt lists We store the data in lists of torch tensors becauese in
+# values in convient lists. We store the data in lists of torch tensors because in
 # general the number of particles in each frame can be different.
 
 nl = NeighborList(cutoff=cutoff, full_list=False)
@@ -149,7 +191,8 @@ for i_atoms, atoms in enumerate(frames):
 
 
 # %%
-#
+# Definition of loss and optimizer
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # For the optimization we define two functions that compute the energy of all structures and
 # the mean squared error of the energy with respect to the reference values as loss.
 
@@ -179,13 +222,15 @@ def loss() -> torch.Tensor:
     return mse.sum()
 
 
+optimizer = torch.optim.Adam(calculator.parameters(), lr=0.1)
+
+
 # %%
-#
+# Running the optimization
+# ~~~~~~~~~~~~~~~~~~~~~~~~
 # We now optimize the weights of the potentials to minimize the mean squared error using
 # the :class:`torch.optim.Adam` optimizer and stop either after 1000 epochs or when the
 # loss is smaller than :math:`10^{-2}`.
-
-optimizer = torch.optim.Adam(calculator.parameters(), lr=0.1)
 
 weights_timeseries = []
 loss_timeseries = []
@@ -205,7 +250,10 @@ for _ in range(1000):
 
 # %%
 #
-# We now plot the learning curve of our optimization.
+# We can show the evolution of the weights during the optimization. The weights for
+# the :math:`1/r` and :math:`1/r^2` potentials converge towards :math:`1` and :math:`0`,
+# respectively. This is the expected behavior, since the reference potential used to
+# compute the energy of the structures includes only a Coulombic term.
 
 fig, ax = plt.subplots()
 
@@ -219,16 +267,11 @@ ax.plot(weights_timeseries_array[:, 1], label="p=2", c="orange")
 
 ax.set(
     ylim=(-0.2, 1.2),
-    xlabel="Kernel learning epoch",
-    ylabel="Kernel weight",
+    xlabel="Learning epoch",
+    ylabel="Mixing weights",
     xscale="log",
 )
 
 ax.legend()
 plt.show()
 # %%
-#
-# The plot shows the evolution of the weights during the optimization. The weights for
-# the :math:`1/r` and :math:`1/r^2` potentials converge towards :math:`1` and :math:`0`,
-# respectively. This is expected as since the reference potential were we calculated the
-# structures is solely Coulombic.
