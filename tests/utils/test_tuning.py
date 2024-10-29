@@ -121,6 +121,19 @@ def test_skip_optimization(tune):
 
 
 @pytest.mark.parametrize("tune", [tune_ewald, tune_pme])
+def test_non_positive_charge_error(tune):
+    pos, _, cell, _, _ = define_crystal()
+
+    match = "sum of squared charges must be positive, got -1.0"
+    with pytest.raises(ValueError, match=match):
+        tune(-1.0, cell, pos)
+
+    match = "sum of squared charges must be positive, got 0.0"
+    with pytest.raises(ValueError, match=match):
+        tune(0.0, cell, pos)
+
+
+@pytest.mark.parametrize("tune", [tune_ewald, tune_pme])
 def test_accuracy_error(tune):
     pos, charges, cell, _, _ = define_crystal()
 

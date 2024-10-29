@@ -77,7 +77,7 @@ def tune_ewald(
         values typically result in accuracies around :math:`10^{-7}`.
 
 
-    :param sum_squared_charges: accumulated squared charges
+    :param sum_squared_charges: accumulated squared charges, must be positive
     :param cell: single tensor of shape (3, 3), describing the bounding
     :param positions: single tensor of shape (``len(charges), 3``) containing the
         Cartesian positions of all point charges in the system.
@@ -118,7 +118,7 @@ def tune_ewald(
     0.5485209762493759
     """
 
-    _validate_parameters(cell, positions, exponent)
+    _validate_parameters(sum_squared_charges, cell, positions, exponent)
 
     if not isinstance(accuracy, float):
         raise ValueError(f"'{accuracy}' is not a float.")
@@ -215,7 +215,7 @@ def tune_pme(
         setting ``max_steps = 0``. This can be useful if fast tuning is required. These
         values typically result in accuracies around :math:`10^{-2}`.
 
-    :param sum_squared_charges: accumulated squared charges
+    :param sum_squared_charges: accumulated squared charges, must be positive
     :param cell: single tensor of shape (3, 3), describing the bounding
     :param positions: single tensor of shape (``len(charges), 3``) containing the
         Cartesian positions of all point charges in the system.
@@ -262,7 +262,7 @@ def tune_pme(
     0.15078003506282253
     """
 
-    _validate_parameters(cell, positions, exponent)
+    _validate_parameters(sum_squared_charges, cell, positions, exponent)
 
     if not isinstance(accuracy, float):
         raise ValueError(f"'{accuracy}' is not a float.")
@@ -382,7 +382,16 @@ def _estimate_smearing(
     return max_cutoff.item() / 5.0
 
 
-def _validate_parameters(cell: torch.Tensor, positions: torch.Tensor, exponent: int):
+def _validate_parameters(
+    sum_squared_charges: float,
+    cell: torch.Tensor,
+    positions: torch.Tensor,
+    exponent: int,
+):
+    if sum_squared_charges <= 0:
+        raise ValueError(
+            f"sum of squared charges must be positive, got {sum_squared_charges}"
+        )
     dtype = positions.dtype
     device = positions.device
     if exponent != 1:
