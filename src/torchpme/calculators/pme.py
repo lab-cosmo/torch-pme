@@ -128,9 +128,7 @@ class PMECalculator(Calculator):
             # the potential into a SR and LR part. This contribution always should be
             # subtracted since it depends on the smearing parameter, which is purely a
             # convergence parameter.
-            fill_value = self.potential.self_contribution()
-            self_contrib = torch.full([], fill_value, device=self._device)
-            interpolated_potential -= charges * self_contrib
+            interpolated_potential -= charges * self.potential.self_contribution()
 
         with profiler.record_function("step 5: charge neutralization"):
             # If the cell has a net charge (i.e. if sum(charges) != 0), the method

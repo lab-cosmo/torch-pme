@@ -6,6 +6,7 @@ from .kvectors import (
 )
 from .mesh_interpolator import MeshInterpolator
 from .potentials import (
+    CombinedPotential,
     CoulombPotential,
     InversePowerLawPotential,
     Potential,
@@ -21,6 +22,7 @@ __all__ = [
     "Potential",
     "CoulombPotential",
     "InversePowerLawPotential",
+    "CombinedPotential",
     "SplinePotential",
     "get_ns_mesh",
     "generate_kvectors_for_mesh",

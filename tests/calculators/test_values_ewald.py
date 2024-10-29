@@ -1,5 +1,4 @@
 import math
-import os
 import sys
 from pathlib import Path
 
@@ -9,9 +8,10 @@ import torch
 from ase.io import read
 
 from torchpme import EwaldCalculator, InversePowerLawPotential, PMECalculator
+from torchpme.utils.prefactors import eV_A
 
 sys.path.append(str(Path(__file__).parents[1]))
-from helpers import define_crystal, neighbor_list_torch
+from helpers import COULOMB_TEST_FRAMES, define_crystal, neighbor_list_torch
 
 DTYPE = torch.float64
 
@@ -220,10 +220,8 @@ def test_random_structure(
     # fourierspacing = 0.01  ; 1/nm
     # pme_order = 8
     # rcoulomb = 0.3  ; nm
-    struc_path = "tests/reference_structures/"
-    frame = read(os.path.join(struc_path, "coulomb_test_frames.xyz"), frame_index)
+    frame = read(COULOMB_TEST_FRAMES, frame_index)
 
-    # Energies in Gaussian units (without e²/[4 π ɛ_0] prefactor)
     energy_target = (
         torch.tensor(frame.get_potential_energy(), dtype=DTYPE) / scaling_factor
     )
@@ -260,6 +258,7 @@ def test_random_structure(
             ),
             lr_wavelength=lr_wavelength,
             full_neighbor_list=full_neighbor_list,
+            prefactor=eV_A,
         )
         rtol_e = 2e-5
         rtol_f = 3.5e-3
@@ -271,6 +270,7 @@ def test_random_structure(
             ),
             mesh_spacing=smearing / 8,
             full_neighbor_list=full_neighbor_list,
+            prefactor=eV_A,
         )
         rtol_e = 4.5e-3
         rtol_f = 5.0e-3
