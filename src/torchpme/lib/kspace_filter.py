@@ -226,7 +226,11 @@ class KSpaceFilter(torch.nn.Module):
 
 class P3MKSpaceFilter(KSpaceFilter):
     @torch.jit.export
-    def update_filter(self):
+    def update(
+        self,
+        cell: Optional[torch.Tensor] = None,
+        ns_mesh: Optional[torch.Tensor] = None,
+    ):
         r"""
         Applies one or more scalar filter functions to the squared norms of the
         reciprocal space mesh grids, storing it so it can be applied multiple times.
@@ -234,4 +238,30 @@ class P3MKSpaceFilter(KSpaceFilter):
         :py:class:`KSpaceKernel`-derived object provided upon initialization
         to compute the kernel values over the grid points.
         """
-        self._kfilter = self._kernel.kernel_from_k(self._kvectors)
+        if cell is not None:
+            if cell.shape != (3, 3):
+                raise ValueError(
+                    f"cell of shape {list(cell.shape)} should be of shape (3, 3)"
+                )
+            self.cell = cell
+
+        if ns_mesh is not None:
+            if ns_mesh.shape != (3,):
+                raise ValueError(
+                    f"shape {list(ns_mesh.shape)} of `ns_mesh` has to be (3,)"
+                )
+            self.ns_mesh = ns_mesh
+
+        if self.cell.device != self.ns_mesh.device:
+            raise ValueError(
+                "`cell` and `ns_mesh` are on different devices, got "
+                f"{self.cell.device} and {self.ns_mesh.device}"
+            )
+
+        if cell is not None or ns_mesh is not None:
+            self._kvectors = generate_kvectors_for_mesh(ns=self.ns_mesh, cell=self.cell)
+            self._k_sq = torch.linalg.norm(self._kvectors, dim=3) ** 2
+
+        # always update the kfilter to reduce the risk it'd go out of sync if the is an
+        # update in the underlaying potential
+        self._kfilter = self.kernel.kernel_from_k(self._kvectors)
