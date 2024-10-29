@@ -1,6 +1,6 @@
 import math
 import warnings
-from typing import Callable
+from typing import Callable, Optional
 
 import torch
 
@@ -12,7 +12,7 @@ def _optimize_parameters(
     accuracy: float = 1e-6,
     learning_rate: float = 5e-3,
     verbose: bool = False,
-):
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     optimizer = torch.optim.Adam(params, lr=learning_rate)
 
     for step in range(max_steps):
@@ -44,11 +44,16 @@ def _optimize_parameters(
             stacklevel=2,
         )
 
+    return params[0], params[1], params[2]
+
 
 def tune_ewald(
     sum_squared_charges: float,
     cell: torch.Tensor,
     positions: torch.Tensor,
+    smearing: Optional[float] = None,
+    lr_wavelength: Optional[float] = None,
+    cutoff: Optional[float] = None,
     exponent: int = 1,
     accuracy: float = 1e-3,
     max_steps: int = 50000,
@@ -59,8 +64,9 @@ def tune_ewald(
     Find the optimal parameters for :class:`torchpme.calculators.ewald.EwaldCalculator`.
 
     The error formulas are given `online
-    <https://www2.icp.uni-stuttgart.de/~icp/mediawiki/images/4/4d/Script_Longrange_Interactions.pdf>`_.
-    Note the difference notation between the parameters in the reference and ours:
+    <https://www2.icp.uni-stuttgart.de/~icp/mediawiki/images/4/4d/Script_Longrange_Interactions.pdf>`_
+    (now not available, need to be updated later). Note the difference notation between
+    the parameters in the reference and ours:
 
     .. math::
 
@@ -69,6 +75,13 @@ def tune_ewald(
         K &= \frac{2 \pi}{\mathrm{lr\_wavelength}}
 
         r_c &= \mathrm{cutoff}
+
+    For the optimization we use the Adam optimizer (see :class:`torch.optim.Adam`). By
+    default this function optimize the ``smearing``, ``lr_wavelength`` and ``cutoff``
+    based on the error formula given `online`_. You can limit the optimization by giving
+    one or more parameters to the function. For example in usual ML workflows the cutoff
+    is fixed and one wants to optimize only the ``smearing`` and the ``lr_wavelength``
+    with respect to the minimal error and fixed cutoff.
 
     .. hint::
 
@@ -81,6 +94,12 @@ def tune_ewald(
     :param cell: single tensor of shape (3, 3), describing the bounding
     :param positions: single tensor of shape (``len(charges), 3``) containing the
         Cartesian positions of all point charges in the system.
+    :param smearing: if its value is given, it will not be tuned, see
+        :class:`torchpme.EwaldCalculator` for details
+    :param lr_wavelength: if its value is given, it will not be tuned, see
+        :class:`torchpme.EwaldCalculator` for details
+    :param cutoff: if its value is given, it will not be tuned, see
+        :class:`torchpme.EwaldCalculator` for details
     :param exponent: exponent :math:`p` in :math:`1/r^p` potentials
     :param accuracy: Recomended values for a balance between the accuracy and speed is
         :math:`10^{-3}`. For more accurate results, use :math:`10^{-6}`.
@@ -116,6 +135,25 @@ def tune_ewald(
 
     >>> print(cutoff)
     0.5485209762493759
+
+    You can give one parameter to the function to tune only other parameters, for
+    example, fixing the cutoff to 0.1
+
+    >>> smearing, parameter, cutoff = tune_ewald(
+    ...     torch.sum(charges**2, dim=0), cell, positions, cutoff=0.1, accuracy=1e-1
+    ... )
+
+    You can check the values of the parameters, now the cutoff is fixed
+
+    >>> print(smearing)
+    0.03234481782822382
+
+    >>> print(parameter)
+    {'lr_wavelength': 0.004985734847925747}
+
+    >>> print(cutoff)
+    0.1
+
     """
 
     _validate_parameters(sum_squared_charges, cell, positions, exponent)
@@ -127,7 +165,20 @@ def tune_ewald(
     min_dimension = float(torch.min(cell_dimensions))
     half_cell = float(torch.min(cell_dimensions) / 2)
 
-    smearing_init = _estimate_smearing(cell)
+    def inverse_smooth_lr_wavelength(value=half_cell / 10):
+        """smooth_lr_wavelength(inverse_smooth_lr_wavelength(value)) == value"""
+        return -math.log(min_dimension / value - 1)
+
+    def estimate_cutoff():
+        return half_cell
+
+    smearing_init = _estimate_smearing(cell) if smearing is None else smearing
+    lr_wavelength_init = (
+        inverse_smooth_lr_wavelength()
+        if lr_wavelength is None
+        else inverse_smooth_lr_wavelength(lr_wavelength)
+    )
+    cutoff_init = estimate_cutoff() if cutoff is None else cutoff
     prefac = 2 * sum_squared_charges / math.sqrt(len(positions))
     volume = torch.abs(cell.det())
 
@@ -161,19 +212,25 @@ def tune_ewald(
     # initial guess
     dtype = positions.dtype
     device = positions.device
-
+    # If a parameter is not given, it is initialized with an initial guess and needs
+    # to be optimized
     smearing = torch.tensor(
-        smearing_init, device=device, dtype=dtype, requires_grad=True
-    )
-    lr_wavelength = torch.tensor(
-        -math.log(10 * min_dimension / half_cell - 1),
+        smearing_init,
         device=device,
         dtype=dtype,
-        requires_grad=True,
-    )  # sigmoid(lr_wavelength) == half_cell / 10
-    cutoff = torch.tensor(half_cell, device=device, dtype=dtype, requires_grad=True)
+        requires_grad=(smearing is None),
+    )
+    lr_wavelength = torch.tensor(
+        lr_wavelength_init,
+        device=device,
+        dtype=dtype,
+        requires_grad=(lr_wavelength is None),
+    )
+    cutoff = torch.tensor(
+        cutoff_init, device=device, dtype=dtype, requires_grad=(cutoff is None)
+    )
 
-    _optimize_parameters(
+    smearing_opt, lr_wavelength_opt, cutoff_opt = _optimize_parameters(
         [smearing, lr_wavelength, cutoff],
         loss,
         max_steps,
@@ -183,9 +240,9 @@ def tune_ewald(
     )
 
     return (
-        float(smearing),
-        {"lr_wavelength": float(smooth_lr_wavelength(lr_wavelength))},
-        float(cutoff),
+        float(smearing_opt),
+        {"lr_wavelength": float(smooth_lr_wavelength(lr_wavelength_opt))},
+        float(cutoff_opt),
     )
 
 
@@ -193,6 +250,9 @@ def tune_pme(
     sum_squared_charges: float,
     cell: torch.Tensor,
     positions: torch.Tensor,
+    smearing: Optional[float] = None,
+    mesh_spacing: Optional[float] = None,
+    cutoff: Optional[float] = None,
     interpolation_nodes: int = 4,
     exponent: int = 1,
     accuracy: float = 1e-3,
@@ -209,6 +269,13 @@ def tune_pme(
 
         \alpha = \left(\sqrt{2}\,\mathrm{smearing} \right)^{-1}
 
+    For the optimization we use the Adam optimizer (see :class:`torch.optim.Adam`). By
+    default this function optimize the ``smearing``, ``mesh_spacing`` and ``cutoff``
+    based on the error formula given `elsewhere`_. You can limit the optimization by
+    giving one or more parameters to the function. For example in usual ML workflows the
+    cutoff is fixed and one wants to optimize only the ``smearing`` and the
+    ``mesh_spacing`` with respect to the minimal error and fixed cutoff.
+
     .. hint::
 
         Tuning uses an initial guess for the optimization, which can be applied by
@@ -219,6 +286,12 @@ def tune_pme(
     :param cell: single tensor of shape (3, 3), describing the bounding
     :param positions: single tensor of shape (``len(charges), 3``) containing the
         Cartesian positions of all point charges in the system.
+    :param smearing: if its value is given, it will not be tuned, see
+        :class:`torchpme.PMECalculator` for details
+    :param mesh_spacing: if its value is given, it will not be tuned, see
+        :class:`torchpme.PMECalculator` for details
+    :param cutoff: if its value is given, it will not be tuned, see
+        :class:`torchpme.PMECalculator` for details
     :param interpolation_nodes: The number ``n`` of nodes used in the interpolation per
         coordinate axis. The total number of interpolation nodes in 3D will be ``n^3``.
         In general, for ``n`` nodes, the interpolation will be performed by piecewise
@@ -260,6 +333,25 @@ def tune_pme(
 
     >>> print(cutoff)
     0.15078003506282253
+
+    You can give one parameter to the function to tune only other parameters, for
+    example, fixing the cutoff to 0.1
+
+    >>> smearing, parameter, cutoff = tune_pme(
+    ...     torch.sum(charges**2, dim=0), cell, positions, cutoff=0.1, accuracy=1e-1
+    ... )
+
+    You can check the values of the parameters, now the cutoff is fixed
+
+    >>> print(smearing)
+    0.024764025655599434
+
+    >>> print(parameter)
+    {'mesh_spacing': 0.012499975000000003, 'interpolation_nodes': 4}
+
+    >>> print(cutoff)
+    0.1
+
     """
 
     _validate_parameters(sum_squared_charges, cell, positions, exponent)
@@ -272,7 +364,18 @@ def tune_pme(
     min_dimension = float(torch.min(cell_dimensions))
     half_cell = float(torch.min(cell_dimensions) / 2)
 
-    smearing_init = _estimate_smearing(cell)
+    def inverse_smooth_mesh_spacing(value):
+        """smooth_mesh_spacing(inverse_smooth_mesh_spacing(value)) == value"""
+        return -math.log(min_dimension / value - 1)
+
+    smearing_init = _estimate_smearing(cell) if smearing is None else smearing
+    mesh_spacing_init = (
+        inverse_smooth_mesh_spacing(smearing_init / 8)
+        if mesh_spacing is None
+        else inverse_smooth_mesh_spacing(mesh_spacing)
+    )
+    cutoff_init = half_cell / 5 if cutoff is None else cutoff
+
     prefac = 2 * sum_squared_charges / math.sqrt(len(positions))
     volume = torch.abs(cell.det())
 
@@ -329,20 +432,22 @@ def tune_pme(
     dtype = positions.dtype
     device = positions.device
 
+    # If a parameter is not given, it is initialized with an initial guess and needs
+    # to be optimized
     smearing = torch.tensor(
-        smearing_init, device=device, dtype=dtype, requires_grad=True
+        smearing_init, device=device, dtype=dtype, requires_grad=(smearing is None)
     )
-
-    # smooth_mesh_spacing(mesh_spacing) = smearing / 8, is the standard initial guess
     mesh_spacing = torch.tensor(
-        -math.log(min_dimension * 8 / smearing_init - 1),
+        mesh_spacing_init,
         device=device,
         dtype=dtype,
-        requires_grad=True,
+        requires_grad=(mesh_spacing is None),
     )
-    cutoff = torch.tensor(half_cell / 5, device=device, dtype=dtype, requires_grad=True)
+    cutoff = torch.tensor(
+        cutoff_init, device=device, dtype=dtype, requires_grad=(cutoff is None)
+    )
 
-    _optimize_parameters(
+    smearing_opt, mesh_spacing_opt, cutoff_opt = _optimize_parameters(
         [smearing, mesh_spacing, cutoff],
         loss,
         max_steps,
@@ -352,12 +457,12 @@ def tune_pme(
     )
 
     return (
-        float(smearing),
+        float(smearing_opt),
         {
-            "mesh_spacing": float(smooth_mesh_spacing(mesh_spacing)),
+            "mesh_spacing": float(smooth_mesh_spacing(mesh_spacing_opt)),
             "interpolation_nodes": int(interpolation_nodes),
         },
-        float(cutoff),
+        float(cutoff_opt),
     )
 
 
