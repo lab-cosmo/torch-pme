@@ -18,9 +18,9 @@ compatible with the ``metatensor`` library.
 .. note::
 
    All calculators compute the potential, from which the "atomic" energies :math:`E_i`
-   can be determined by multiplying the potential :math:`V_i` with the charges 
-   :math:`q_i`. 
-   The total electrostatic energy :math:`E` is then the sum of all :math:`E_i`.
+   can be determined by multiplying the potential :math:`V_i` with the charges
+   :math:`q_i`. The total electrostatic energy :math:`E` is then the sum of all
+   :math:`E_i`.
 
    .. math::
 
