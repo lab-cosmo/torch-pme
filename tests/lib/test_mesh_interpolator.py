@@ -1,6 +1,4 @@
-"""
-Tests for mesh interpolator class
-"""
+"""Tests for mesh interpolator class"""
 
 import pytest
 import torch
@@ -10,9 +8,7 @@ from torchpme.lib import MeshInterpolator
 
 
 class TestMeshInterpolatorForward:
-    """
-    Tests for the "points_to_mesh" function of the MeshInterpolator class
-    """
+    """Tests for the "points_to_mesh" function of the MeshInterpolator class"""
 
     # Define parameters that are common to all tests
     interpolation_nodes_P3M = [1, 2, 3, 4, 5]
@@ -200,9 +196,7 @@ class TestMeshInterpolatorBackward:
 
     @pytest.mark.parametrize("n_mesh", torch.arange(18, 31))
     def test_exact_invertibility_for_interpolation_nodes_two(self, n_mesh):
-        """
-        Test for interpolation interpolation_nodes = 2
-        """
+        """Test for interpolation interpolation_nodes = 2"""
         torch.random.manual_seed(3351285)
         # Define some basic parameteres for this test
         # While we could also loop over these, we are instead varying these
@@ -240,9 +234,7 @@ class TestMeshInterpolatorBackward:
     @pytest.mark.parametrize("random_runs", random_runs)
     @pytest.mark.parametrize("interpolation_nodes", interpolation_nodes)
     def test_total_mass(self, interpolation_nodes, random_runs):
-        """
-        interpolate on all mesh points: should yield same total mass
-        """
+        """interpolate on all mesh points: should yield same total mass"""
         # Define some basic parameteres for this test
         # While we could also loop over these, we are instead varying these
         # parameters across the various tests to reduce the number of calls

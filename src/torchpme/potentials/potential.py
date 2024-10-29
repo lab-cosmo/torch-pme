@@ -4,7 +4,8 @@ import torch
 
 
 class Potential(torch.nn.Module):
-    r"""Base class defining the interface for a pair potential energy function
+    r"""
+    Base class defining the interface for a pair potential energy function
 
     The class provides the interface to compute a short-range and long-range functions
     in real space (such that :math:`V(r)=V_{\mathrm{SR}}(r)+V_{\mathrm{LR}}(r)` ), as
@@ -69,7 +70,6 @@ class Potential(torch.nn.Module):
         :param dist: a torc.Tensor containing the interatomic distances over which the
             cutoff function should be computed.
         """
-
         if self.exclusion_radius is None:
             raise ValueError(
                 "Cannot compute cutoff function when `exclusion_radius` is not set"
@@ -83,19 +83,20 @@ class Potential(torch.nn.Module):
 
     @torch.jit.export
     def from_dist(self, dist: torch.Tensor) -> torch.Tensor:
-        """Computes a pair potential given a tensor of interatomic distances.
+        """
+        Computes a pair potential given a tensor of interatomic distances.
 
         :param dist: torch.Tensor containing the distances at which the potential
             is to be evaluated.
         """
-
         raise NotImplementedError(
             f"from_dist is not implemented for {self.__class__.__name__}"
         )
 
     @torch.jit.export
     def sr_from_dist(self, dist: torch.Tensor) -> torch.Tensor:
-        r"""Short-range part of the pair potential in real space.
+        r"""
+        Short-range part of the pair potential in real space.
 
         Even though one can provide a custom version, this is usually evaluated as
         :math:`V_{\mathrm{SR}}(r)=V(r)-V_{\mathrm{LR}}(r)`, based on the full and
@@ -108,7 +109,6 @@ class Potential(torch.nn.Module):
         :param dist: torch.tensor containing the distances at which the potential is to
             be evaluated.
         """
-
         if self.smearing is None:
             raise ValueError(
                 "Cannot compute range-separated potential when `smearing` is not specified."
@@ -126,7 +126,6 @@ class Potential(torch.nn.Module):
         :param dist: torch.tensor containing the distances at which the potential is to
             be evaluated.
         """
-
         raise NotImplementedError(
             f"lr_from_dist is not implemented for {self.__class__.__name__}"
         )
@@ -152,7 +151,6 @@ class Potential(torch.nn.Module):
         Compatibility function with the interface of :class:`KSpaceKernel`, so that
         potentials can be used as kernels for :class:`KSpaceFilter`.
         """
-
         return self.lr_from_k_sq(k_sq)
 
     @torch.jit.export

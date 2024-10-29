@@ -15,7 +15,8 @@ from ..potentials.spline import Potential
 
 
 class Calculator(torch.nn.Module):
-    """Base calculator for the metatensor interface.
+    """
+    Base calculator for the metatensor interface.
 
     This is just a thin wrapper around the corresponding
     generic torch :class:`torchpme.calculators.Calculator`.
@@ -157,7 +158,6 @@ class Calculator(torch.nn.Module):
 
         :return: TensorMap containing the potential of all types.
         """
-
         self._validate_compute_parameters(system, neighbors)
 
         # In actual computations, the data type (dtype) and device (e.g. CPU, GPU) of

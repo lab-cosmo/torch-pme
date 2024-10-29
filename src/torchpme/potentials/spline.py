@@ -12,7 +12,8 @@ from .potential import Potential
 
 
 class SplinePotential(Potential):
-    r"""Potential built from a spline interpolation.
+    r"""
+    Potential built from a spline interpolation.
 
     The potential is assumed to have only a long-range part, but one can also
     add a short-range part if needed, by inheriting and redefining
@@ -121,12 +122,12 @@ class SplinePotential(Potential):
         return self.lr_from_dist(dist) + self.sr_from_dist(dist)
 
     def sr_from_dist(self, dist: torch.Tensor) -> torch.Tensor:
-        """Short-range part of the range-separated potential.
+        """
+        Short-range part of the range-separated potential.
 
         :param dist: torch.tensor containing the distances at which the potential is to
             be evaluated.
         """
-
         return 0.0 * dist
 
     def lr_from_dist(self, dist: torch.Tensor) -> torch.Tensor:

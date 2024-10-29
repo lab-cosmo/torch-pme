@@ -6,7 +6,8 @@ from .potential import Potential
 
 
 class CombinedPotential(Potential):
-    """A potential that is a linear combination of multiple potentials.
+    """
+    A potential that is a linear combination of multiple potentials.
 
     A class representing a combined potential that aggregates multiple individual
     potentials with weights for use in long-range (LR) and short-range (SR)

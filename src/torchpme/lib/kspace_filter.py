@@ -103,7 +103,8 @@ class KSpaceFilter(torch.nn.Module):
         cell: Optional[torch.Tensor] = None,
         ns_mesh: Optional[torch.Tensor] = None,
     ) -> None:
-        """Update buffers and derived attributes of the instance.
+        """
+        Update buffers and derived attributes of the instance.
 
         If neither ``cell`` nor ``ns_mesh`` are passed, only the filter is updated,
         typically following a change in the underlying potential. If ``cell`` and/or

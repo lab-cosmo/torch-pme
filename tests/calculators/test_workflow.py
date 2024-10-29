@@ -1,5 +1,7 @@
-"""Basic tests if the calculator works and is torch scriptable. Actual tests are done
-for the metatensor calculator."""
+"""
+Basic tests if the calculator works and is torch scriptable. Actual tests are done
+for the metatensor calculator.
+"""
 
 import io
 import math

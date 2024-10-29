@@ -155,7 +155,6 @@ def tune_ewald(
     0.1
 
     """
-
     _validate_parameters(sum_squared_charges, cell, positions, exponent)
 
     if not isinstance(accuracy, float):
@@ -183,9 +182,11 @@ def tune_ewald(
     volume = torch.abs(cell.det())
 
     def smooth_lr_wavelength(lr_wavelength):
-        """Confine to (0, min_dimension), ensuring that the ``ns``
+        """
+        Confine to (0, min_dimension), ensuring that the ``ns``
         parameter is not smaller than 1
-        (see :func:`_compute_lr` of :class:`CalculatorEwald`)."""
+        (see :func:`_compute_lr` of :class:`CalculatorEwald`).
+        """
         return min_dimension * torch.sigmoid(lr_wavelength)
 
     def err_Fourier(smearing, lr_wavelength):
@@ -260,7 +261,8 @@ def tune_pme(
     learning_rate: float = 5e-3,
     verbose: bool = False,
 ):
-    r"""Find the optimal parameters for :class:`torchpme.PMECalculator`.
+    r"""
+    Find the optimal parameters for :class:`torchpme.PMECalculator`.
 
     For the error formulas are given `elsewhere <https://doi.org/10.1063/1.470043>`_.
     Note the difference notation between the parameters in the reference and ours:
@@ -353,7 +355,6 @@ def tune_pme(
     0.1
 
     """
-
     _validate_parameters(sum_squared_charges, cell, positions, exponent)
 
     if not isinstance(accuracy, float):
@@ -380,9 +381,11 @@ def tune_pme(
     volume = torch.abs(cell.det())
 
     def smooth_mesh_spacing(mesh_spacing):
-        """Confine to (0, min_dimension), ensuring that the ``ns``
+        """
+        Confine to (0, min_dimension), ensuring that the ``ns``
         parameter is not smaller than 1
-        (see :func:`_compute_lr` of :class:`PMEPotential`)."""
+        (see :func:`_compute_lr` of :class:`PMEPotential`).
+        """
         return min_dimension * torch.sigmoid(mesh_spacing)
 
     def err_Fourier(smearing, mesh_spacing):
@@ -579,7 +582,6 @@ def _compute_RMS_phi(
 
 def _get_ns_mesh_differentiable(cell: torch.Tensor, mesh_spacing: float):
     """differentiable version of :func:`get_ns_mesh`"""
-
     basis_norms = torch.linalg.norm(cell, dim=1)
     ns_approx = basis_norms / mesh_spacing
     ns_actual_approx = 2 * ns_approx + 1  # actual number of mesh points

@@ -73,7 +73,6 @@ class Calculator(torch.nn.Module):
             len(charges))``, where If the inputs are only single tensors only a single
             torch tensor with the potentials is returned.
         """
-
         # Compute the pair potential terms V(r_ij) for each pair of atoms (i,j)
         # contained in the neighbor list
         with profiler.record_function("compute bare potential"):
