@@ -598,23 +598,20 @@ class CombinedPotential(Potential):
     """A potential that is a linear combination of multiple potentials.
 
     A class representing a combined potential that aggregates multiple individual
-    potentials with weights for use in long-range (LR) and short-range
-    (SR) interactions.
+    potentials with weights for use in long-range (LR) and short-range (SR)
+    interactions.
 
-    The `CombinedPotential` class allows for flexible combination of potential
-    functions with user-specified weights, which can be either fixed or trainable.
+    The `CombinedPotential` class allows for flexible combination of potential functions
+    with user-specified weights, which can be either fixed or trainable.
 
-    :param potentials: list[Potential]
-        List of potential objects, each implementing a compatible interface
-        with methods `from_dist`, `lr_from_dist`, `lr_from_k_sq`,
+    :param potentials: List of potential objects, each implementing a compatible
+        interface with methods `from_dist`, `lr_from_dist`, `lr_from_k_sq`,
         `self_contribution`, and `background_correction`.
-    :param initial_weights: Optional[torch.Tensor], default=None
-        Initial weights for combining the potentials. If provided, the length
-        must match the number of potentials. If `None`, weights are initialized
-        to ones.
-    :param learnable_weights: Optional[bool], default=True
-        If `True`, weights are trainable parameters, allowing optimization during
-        training. If `False`, weights are fixed.
+    :param initial_weights: Initial weights for combining the potentials. If provided,
+        the length must match the number of potentials. If `None`, weights are
+        initialized to ones.
+    :param learnable_weights: If `True`, weights are trainable parameters, allowing
+        optimization during training. If `False`, weights are fixed.
     :param dtype: Optional, the type used for the internal buffers and parameters
     :param device: Optional, the device used for the internal buffers and parameters
     """
@@ -642,26 +639,26 @@ class CombinedPotential(Potential):
         smearings = [pot.smearing for pot in potentials]
         if not all(smearings) and any(smearings):
             raise ValueError(
-                "Cannot combine potentials with and without smearing parameters."
+                r"Cannot combine direct (`smearing=None`) and range-separated (`smearing=float`) potentials."
             )
 
         if all(smearings) and not self.smearing:
             # this is very misleading, but it is the way the original code works,
             # otherwise mypy complains
             raise ValueError(
-                "Cannot combine potentials with smearing parameters without specifying `smearing`."
+                r"You should specify a `smearing` when combining range-separated (`smearing=float`) potentials."
             )
         if not any(smearings) and self.smearing:
             # this is very misleading, but it is the way the original code works,
             # otherwise mypy complai
             raise ValueError(
-                "Cannot combine potentials without smearing parameters with specifying `smearing`."
+                r"Cannot specify `smearing` when combining direct (`smearing=None`) potentials."
             )
 
         if initial_weights is not None:
             if len(initial_weights) != len(potentials):
                 raise ValueError(
-                    "The number of initial weights must match the number of exponents"
+                    "The number of initial weights must match the number of potentials being combined"
                 )
         else:
             initial_weights = torch.ones(len(potentials), dtype=dtype, device=device)
@@ -673,34 +670,21 @@ class CombinedPotential(Potential):
             self.register_buffer("weights", initial_weights)
 
     def from_dist(self, dist: torch.Tensor) -> torch.Tensor:
-        """
-        Full potential as a function of :math:`r`.
-        """
         potentials = [pot.from_dist(dist) for pot in self.potentials]
         potentials = torch.stack(potentials, dim=-1)
         return torch.inner(self.weights, potentials)
 
     def sr_from_dist(self, dist: torch.Tensor) -> torch.Tensor:
-        """
-        SR part of the range-separated potential.
-        """
         potentials = [pot.sr_from_dist(dist) for pot in self.potentials]
         potentials = torch.stack(potentials, dim=-1)
         return torch.inner(self.weights, potentials)
 
     def lr_from_dist(self, dist: torch.Tensor) -> torch.Tensor:
-        """
-        LR part of the range-separated potential.
-        """
-
         potentials = [pot.lr_from_dist(dist) for pot in self.potentials]
         potentials = torch.stack(potentials, dim=-1)
         return torch.inner(self.weights, potentials)
 
     def lr_from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
-        """
-        Fourier transform of the LR part potential in terms of :math:`k^2`.
-        """
         potentials = [pot.lr_from_k_sq(k_sq) for pot in self.potentials]
         potentials = torch.stack(potentials, dim=-1)
         return torch.inner(self.weights, potentials)
@@ -717,5 +701,9 @@ class CombinedPotential(Potential):
         potentials = torch.stack(potentials, dim=-1)
         return torch.inner(self.weights, potentials)
 
+    from_dist.__doc__ = Potential.from_dist.__doc__
+    sr_from_dist.__doc__ = Potential.sr_from_dist.__doc__
+    lr_from_dist.__doc__ = Potential.lr_from_dist.__doc__
+    lr_from_k_sq.__doc__ = Potential.lr_from_k_sq.__doc__
     self_contribution.__doc__ = Potential.self_contribution.__doc__
     background_correction.__doc__ = Potential.background_correction.__doc__

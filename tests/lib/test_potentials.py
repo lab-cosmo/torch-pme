@@ -515,6 +515,8 @@ def test_combined_potential(smearing):
 
 @pytest.mark.parametrize("smearing", smearinges)
 def test_combined_potentials_jit(smearing):
+    # make a separate test as pytest.mark.parametrize does not work with
+    # torch.jit.script for combined potentials
     coulomb = CoulombPotential(smearing=smearing, dtype=dtype)
     x_grid = torch.logspace(-2, 2, 100, dtype=dtype)
     y_grid = coulomb.lr_from_dist(x_grid)
@@ -535,6 +537,40 @@ def test_combined_potential_incompatability():
     coulomb2 = CoulombPotential(dtype=dtype)
     with pytest.raises(
         ValueError,
-        match="Cannot combine potentials with and without smearing parameters.",
+        match="Cannot combine direct \\(`smearing=None`\\) and range-separated \\(`smearing=float`\\) potentials.",
     ):
         _ = CombinedPotential(potentials=[coulomb1, coulomb2], dtype=dtype)
+    with pytest.raises(
+        ValueError,
+        match="You should specify a `smearing` when combining range-separated \\(`smearing=float`\\) potentials.",
+    ):
+        _ = CombinedPotential(potentials=[coulomb1, coulomb1], dtype=dtype)
+    with pytest.raises(
+        ValueError,
+        match="Cannot specify `smearing` when combining direct \\(`smearing=None`\\) potentials.",
+    ):
+        _ = CombinedPotential(
+            potentials=[coulomb2, coulomb2], smearing=1.0, dtype=dtype
+        )
+
+
+def test_combined_potential_learnable_weights():
+    weights = torch.randn(2, dtype=dtype)
+    coulomb1 = CoulombPotential(smearing=2.0, dtype=dtype)
+    coulomb2 = CoulombPotential(smearing=1.0, dtype=dtype)
+    combined = CombinedPotential(
+        potentials=[coulomb1, coulomb2],
+        smearing=1.0,
+        dtype=dtype,
+        initial_weights=weights.clone(),
+        learnable_weights=True,
+    )
+    assert combined.weights.requires_grad
+
+    # make a small optimization step
+    optimizer = torch.optim.Adam(combined.parameters(), lr=0.1)
+    optimizer.zero_grad()
+    loss = torch.sum(combined.weights)
+    loss.backward()
+    optimizer.step()
+    assert torch.allclose(combined.weights, weights - 0.1)
