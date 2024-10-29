@@ -469,6 +469,183 @@ def tune_pme(
     )
 
 
+def tune_p3m(
+    sum_squared_charges: float,
+    cell: torch.Tensor,
+    positions: torch.Tensor,
+    interpolation_nodes: int = 4,
+    exponent: int = 1,
+    accuracy: float = 1e-3,
+    max_steps: int = 50000,
+    learning_rate: float = 5e-3,
+    verbose: bool = False,
+):
+    r"""Find the optimal parameters for :class:`torchpme.calculators.pme.PMECalculator`.
+
+    For the error formulas are given `elsewhere <https://doi.org/10.1063/1.470043>`_.
+    Note the difference notation between the parameters in the reference and ours:
+
+    .. math::
+
+        \alpha = \left(\sqrt{2}\,\mathrm{smearing} \right)^{-1}
+
+    .. hint::
+
+        Tuning uses an initial guess for the optimization, which can be applied by
+        setting ``max_steps = 0``. This can be useful if fast tuning is required. These
+        values typically result in accuracies around :math:`10^{-2}`.
+
+    :param sum_squared_charges: accumulated squared charges, must be positive
+    :param cell: single tensor of shape (3, 3), describing the bounding
+    :param positions: single tensor of shape (``len(charges), 3``) containing the
+        Cartesian positions of all point charges in the system.
+    :param interpolation_nodes: The number ``n`` of nodes used in the interpolation per
+        coordinate axis. The total number of interpolation nodes in 3D will be ``n^3``.
+        In general, for ``n`` nodes, the interpolation will be performed by piecewise
+        polynomials of degree ``n - 1`` (e.g. ``n = 4`` for cubic interpolation). Only
+        the values ``3, 4, 5, 6, 7`` are supported.
+    :param exponent: exponent :math:`p` in :math:`1/r^p` potentials
+    :param accuracy: Recomended values for a balance between the accuracy and speed is
+        :math:`10^{-3}`. For more accurate results, use :math:`10^{-6}`.
+    :param max_steps: maximum number of gradient descent steps
+    :param learning_rate: learning rate for gradient descent
+    :param verbose: whether to print the progress of gradient descent
+
+    :return: Tuple containing a float of the optimal smearing for the :py:class:
+        `CoulombPotential`, a dictionary with the parameters for
+        :py:class:`PMECalculator` and a float of the optimal cutoff value for the
+        neighborlist computation.
+
+    Example
+    -------
+    >>> import torch
+    >>> from vesin.torch import NeighborList
+    >>> _ = torch.manual_seed(0)
+    >>> positions = torch.tensor(
+    ...     [[0.0, 0.0, 0.0], [0.5, 0.5, 0.5]], dtype=torch.float64
+    ... )
+    >>> charges = torch.tensor([[1.0], [-1.0]], dtype=torch.float64)
+    >>> cell = torch.eye(3, dtype=torch.float64)
+    >>> smearing, parameter, cutoff = tune_pme(
+    ...     torch.sum(charges**2, dim=0), cell, positions, accuracy=1e-1
+    ... )
+
+    You can check the values of the parameters
+
+    >>> print(smearing)
+    0.04576166523476457
+
+    >>> print(parameter)
+    {'mesh_spacing': 0.012499975000000003, 'interpolation_nodes': 4}
+
+    >>> print(cutoff)
+    0.15078003506282253
+    """
+
+    _validate_parameters(sum_squared_charges, cell, positions, exponent)
+
+    if not isinstance(accuracy, float):
+        raise ValueError(f"'{accuracy}' is not a float.")
+    interpolation_nodes = torch.tensor(interpolation_nodes)
+
+    cell_dimensions = torch.linalg.norm(cell, dim=1)
+    min_dimension = float(torch.min(cell_dimensions))
+    half_cell = float(torch.min(cell_dimensions) / 2)
+
+    def inverse_smooth_mesh_spacing(value):
+        """smooth_mesh_spacing(inverse_smooth_mesh_spacing(value)) == value"""
+        return -math.log(min_dimension / value - 1)
+
+    smearing_init = _estimate_smearing(cell)
+    mesh_spacing_init = (
+        inverse_smooth_mesh_spacing(smearing_init / 8)
+        if mesh_spacing is None
+        else inverse_smooth_mesh_spacing(mesh_spacing)
+    )
+    cutoff_init = half_cell / 5 if cutoff is None else cutoff
+    prefac = 2 * sum_squared_charges / math.sqrt(len(positions))
+    volume = torch.abs(cell.det())
+
+    def smooth_mesh_spacing(mesh_spacing):
+        """Confine to (0, min_dimension), ensuring that the ``ns``
+        parameter is not smaller than 1
+        (see :py:func:`_compute_lr` of :py:class:`PMEPotential`)."""
+        return min_dimension * torch.sigmoid(mesh_spacing)
+
+    def err_Fourier(smearing, mesh_spacing):
+        ns_mesh = _get_ns_mesh_differentiable(cell, mesh_spacing)
+        inverse_cell = torch.linalg.inv(cell)
+        reciprocal_cell = 2 * torch.pi * inverse_cell.T
+        reciprocal_cell_dimensions = torch.linalg.norm(reciprocal_cell, dim=1)
+        spacing = reciprocal_cell_dimensions / ns_mesh
+        h = torch.prod(spacing) ** (1 / 3)
+
+        return (
+            prefac
+            / volume ** (2 / 3)
+            * (smearing * h) ** interpolation_nodes
+            * torch.sqrt(
+                smearing
+                * volume ** (1 / 3)
+                * math.sqrt(2 * torch.pi)
+                * sum(
+                    A_COEF[m][interpolation_nodes] * (h * smearing) ** (2 * m)
+                    for m in range(interpolation_nodes)
+                )
+            )
+        )
+
+    def err_real(smearing, cutoff):
+        return (
+            prefac
+            / torch.sqrt(cutoff * volume)
+            * torch.exp(-(cutoff**2) / 2 / smearing**2)
+        )
+
+    def loss(smearing, mesh_spacing, cutoff):
+        return torch.sqrt(
+            err_Fourier(smearing, smooth_mesh_spacing(mesh_spacing)) ** 2
+            + err_real(smearing, cutoff) ** 2
+        )
+
+    # initial guess
+    dtype = positions.dtype
+    device = positions.device
+
+    # If a parameter is not given, it is initialized with an initial guess and needs
+    # to be optimized
+    smearing = torch.tensor(
+        smearing_init, device=device, dtype=dtype, requires_grad=(smearing is None)
+    )
+    mesh_spacing = torch.tensor(
+        mesh_spacing_init,
+        device=device,
+        dtype=dtype,
+        requires_grad=(mesh_spacing is None),
+    )
+    cutoff = torch.tensor(
+        cutoff_init, device=device, dtype=dtype, requires_grad=(cutoff is None)
+    )
+
+    _optimize_parameters(
+        [smearing, mesh_spacing, cutoff],
+        loss,
+        max_steps,
+        accuracy,
+        learning_rate,
+        verbose,
+    )
+
+    return (
+        float(smearing),
+        {
+            "mesh_spacing": float(smooth_mesh_spacing(mesh_spacing)),
+            "interpolation_nodes": int(interpolation_nodes),
+        },
+        float(cutoff),
+    )
+
+
 def _estimate_smearing(
     cell: torch.Tensor,
 ) -> float:
@@ -629,3 +806,59 @@ class _Round(torch.autograd.Function):
     @staticmethod
     def backward(ctx, grad_output):
         return grad_output
+
+
+A_COEF = [
+    [None, 2 / 3, 1 / 50, 1 / 588, 1 / 4320, 1 / 23_232, 691 / 68_140_800, 1 / 345_600],
+    [
+        None,
+        None,
+        5 / 294,
+        7 / 1440,
+        3 / 1936,
+        7601 / 13_628_160,
+        13 / 57_600,
+        3617 / 35_512_320,
+    ],
+    [
+        None,
+        None,
+        None,
+        21 / 3872,
+        7601 / 2_271_360,
+        143 / 69_120,
+        47_021 / 35_512_320,
+        745_739 / 838_397_952,
+    ],
+    [
+        None,
+        None,
+        None,
+        None,
+        143 / 28_800,
+        517_231 / 106_536_960,
+        9_694_607 / 2_095_994_880,
+        56_399_353 / 12_773_376_000,
+    ],
+    [
+        None,
+        None,
+        None,
+        None,
+        None,
+        106_640_677 / 11_737_571_328,
+        733_191_589 / 59_609_088_000,
+        25_091_609 / 1_560_084_480,
+    ],
+    [
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        326_190_917 / 11_700_633_600,
+        1_755_948_832_039 / 36_229_939_200_000,
+    ],
+    [None, None, None, None, None, None, None, 4_887_769_399 / 37_838_389_248],
+]
