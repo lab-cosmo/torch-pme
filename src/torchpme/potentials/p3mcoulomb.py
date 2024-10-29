@@ -11,7 +11,7 @@ class P3MCoulombPotential(CoulombPotential):
     def __init__(
         self,
         interpolation_nodes: int,
-        mesh_spacing: float,
+        mesh_spacing: torch.Tensor,
         cell: torch.Tensor,
         smearing: Optional[float] = None,
         exclusion_radius: Optional[float] = None,
@@ -20,18 +20,18 @@ class P3MCoulombPotential(CoulombPotential):
     ):
         super().__init__(smearing, exclusion_radius, dtype, device)
         self.interpolation_nodes = interpolation_nodes
-        self.mesh_spacing = mesh_spacing
+        self.mesh_spacing = mesh_spacing.reshape(1, 1, 1, 1, 3)
         self.cell = cell
 
     @cached_property
     def _volume(self) -> torch.Tensor:
-        return torch.det(self.cell)
+        return 1 / torch.det(self.cell) * torch.prod(self.mesh_spacing)
 
     @cached_property
     def _k_vectors(self) -> torch.Tensor:
         inverse_cell = torch.linalg.inv(self.cell)
         reciprocal_cell = 2 * torch.pi * inverse_cell.T
-        return torch.concat(
+        return self.mesh_spacing * torch.concat(
             [torch.zeros((1, 3)), reciprocal_cell, -reciprocal_cell], dim=0
         )[torch.newaxis, torch.newaxis, torch.newaxis, ...]  # Shape (1, 1, 1, 7, 3)
 
@@ -67,22 +67,9 @@ class P3MCoulombPotential(CoulombPotential):
             torch.unsqueeze(k, -2) + self._k_vectors
         )
         diff_operator_sq = torch.linalg.norm(diff_operator, dim=-1) ** 2
-        print(diff_operator)
-        print(torch.squeeze(
-                torch.unsqueeze(diff_operator, dim=-2)  # (nx, ny, nz, 1, 3)
-                @ torch.unsqueeze(
-                    torch.sum(
-                        torch.unsqueeze(charge_assignment, -1)
-                        * reference_force,  # (nx, ny, nz, 7, 3)
-                        dim=-2,
-                    ),  # (nx, ny, nz, 3)
-                    dim=-1,
-                ),  # (nx, ny, nz, 3, 1) -> (nx, ny, nz, 1, 1)
-                dim=[-2, -1],
-            )  # (nx, ny, nz)
-            / diff_operator_sq)
 
-        return (
+        return torch.where(diff_operator_sq == 0,
+            0.0j,
             torch.squeeze(
                 torch.unsqueeze(diff_operator, dim=-2)  # (nx, ny, nz, 1, 3)
                 @ torch.unsqueeze(

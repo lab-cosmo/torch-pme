@@ -97,7 +97,6 @@ class P3MCalculator(Calculator):
             # Compute number of times each basis vector of the reciprocal space can be
             # scaled until the cutoff is reached
             ns = get_ns_mesh(cell, self.mesh_spacing)
-            print(ns)
 
         with profiler.record_function("init 1: initialize mesh interpolator"):
             interpolator = MeshInterpolator(
