@@ -121,6 +121,20 @@ def test_skip_optimization(tune):
 
 
 @pytest.mark.parametrize("tune", [tune_ewald, tune_pme])
+def test_fix_parameters(tune):
+    pos, charges, cell, _, _ = define_crystal()
+    smearing, _, _ = tune(float(torch.sum(charges**2)), cell, pos, 0.1, None, None)
+    pytest.approx(smearing, 0.1)
+
+    _, lr_cutoff, _ = tune(float(torch.sum(charges**2)), cell, pos, None, 0.1, None)
+    lr_cutoff = list(lr_cutoff.values())[0]
+    pytest.approx(lr_cutoff, 0.1)
+
+    _, _, sr_cutoff = tune(float(torch.sum(charges**2)), cell, pos, None, None, 0.1)
+    pytest.approx(sr_cutoff, 0.1)
+
+
+@pytest.mark.parametrize("tune", [tune_ewald, tune_pme])
 def test_non_positive_charge_error(tune):
     pos, _, cell, _, _ = define_crystal()
 
