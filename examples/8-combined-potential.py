@@ -114,6 +114,10 @@ plt.show()
 # faster compared to the :math:`p=1` potential (blue). We also verify that the combined
 # potential (black) is the sum of the two potentials that we explicitly calculated
 # (dotted green line).
+#
+# The :class:`CombinedPotential <lib.potentials.CombinedPotential>` class
+# combines all terms in a range-separated potential, including the k-space
+# kernel.
 
 k = torch.logspace(-2, 2, 1000)
 
@@ -137,7 +141,8 @@ ax.set(
     ylabel="Potential",
     xscale="log",
     yscale="log",
-    xlim=[1e-2, 1e2],
+    xlim=[1e-2, 1e1],
+    ylim=[1e-10, 1e4],
 )
 
 ax.legend()
