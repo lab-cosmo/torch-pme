@@ -1,8 +1,8 @@
 """
 .. _example-combined-potential:
 
-Combined potentials
-===================
+Optimizing a linear combination of potentials
+=============================================
 
 .. currentmodule:: torchpme
 
