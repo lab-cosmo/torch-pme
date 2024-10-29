@@ -135,6 +135,25 @@ def tune_ewald(
 
     >>> print(cutoff)
     0.5485209762493759
+
+    You can give one parameter to the function to tune only other parameters, for
+    example, fixing the cutoff to 0.1
+
+    >>> smearing, parameter, cutoff = tune_ewald(
+    ...     torch.sum(charges**2, dim=0), cell, positions, cutoff=0.1, accuracy=1e-1
+    ... )
+
+    You can check the values of the parameters, now the cutoff is fixed
+
+    >>> print(smearing)
+    0.03234481782822382
+
+    >>> print(parameter)
+    {'lr_wavelength': 0.004985734847925747}
+
+    >>> print(cutoff)
+    0.1
+
     """
 
     _validate_parameters(sum_squared_charges, cell, positions, exponent)
@@ -314,6 +333,25 @@ def tune_pme(
 
     >>> print(cutoff)
     0.15078003506282253
+
+    You can give one parameter to the function to tune only other parameters, for
+    example, fixing the cutoff to 0.1
+
+    >>> smearing, parameter, cutoff = tune_pme(
+    ...     torch.sum(charges**2, dim=0), cell, positions, cutoff=0.1, accuracy=1e-1
+    ... )
+
+    You can check the values of the parameters, now the cutoff is fixed
+
+    >>> print(smearing)
+    0.024764025655599434
+
+    >>> print(parameter)
+    {'mesh_spacing': 0.012499975000000003, 'interpolation_nodes': 4}
+
+    >>> print(cutoff)
+    0.1
+
     """
 
     _validate_parameters(sum_squared_charges, cell, positions, exponent)
