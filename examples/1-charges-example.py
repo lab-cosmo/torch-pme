@@ -1,6 +1,9 @@
 """
 Computations with Multiple Charge Channels
 ==========================================
+
+.. currentmodule:: torchpme
+
 In a physical system, the (electrical) charge is a scalar atomic property, and besides
 the distance between the particles, the charge defines the electrostatic potential. When
 computing a potential with Meshlode, you can not only pass a (reshaped) 1-D array
@@ -78,7 +81,7 @@ neighbor_indices = torch.stack([i, j], dim=1)
 
 # %%
 #
-# Next, we initialize the :py:class:`PMECalculator` calculator with an ``exponent`` of
+# Next, we initialize the :class:`PMECalculator` calculator with an ``exponent`` of
 # *1* for electrostatic interactions between the two atoms. This calculator
 # will be used to *compute* the potential energy of the system.
 
@@ -89,7 +92,7 @@ calculator = torchpme.PMECalculator(
 # %%
 #
 # Single Charge Channel
-# #####################\
+# #####################
 #
 # As a first application of multiple charge channels, we start simply by using the
 # classic definition of one charge channel per atom.
@@ -152,8 +155,8 @@ charges_one_hot = torch.tensor([[1.0, 0.0], [0.0, 1.0]], dtype=torch.float64)
 # of the ``charges_one_hot`` is zero as well as the ``(1,0)`` which corresponds to the
 # charge of Cl in the Na channel.
 #
-# We now again calculate the potential using the same ``PMECalculator`` calculator using
-# the ``charges_one_hot`` as input.
+# We now again calculate the potential using the same :class:`PMECalculator` calculator
+# using the ``charges_one_hot`` as input.
 
 potential_one_hot = calculator(
     charges=charges_one_hot,
@@ -192,7 +195,7 @@ calculator_metatensor = torchpme.metatensor.PMECalculator(
 
 # %%
 #
-# Computation with metatensor involves using Metatensor's :py:class:`System
+# Computation with metatensor involves using Metatensor's :class:`System
 # <metatensor.torch.atomistic.System>` class. The ``System`` stores atomic ``types``,
 # ``positions``, and ``cell`` dimensions.
 #
@@ -233,7 +236,7 @@ neighbors = TensorBlock(D.reshape(-1, 3, 1), samples, [components], properties)
 # #####################
 #
 # For the metatensor branch, charges of the atoms are defined in a tensor format and
-# attached to the system as a :py:class:`TensorBlock <metatensor.torch.TensorBlock>`.
+# attached to the system as a :class:`TensorBlock <metatensor.torch.TensorBlock>`.
 
 # Create a TensorBlock for the charges
 data = TensorBlock(
@@ -257,14 +260,14 @@ potential_metatensor = calculator_metatensor.forward(system, neighbors)
 
 # %%
 #
-# The calculated potential is wrapped inside a :py:class:`TensorMap
+# The calculated potential is wrapped inside a :class:`TensorMap
 # <metatensor.torch.TensorMap>` and annotated with metadata of the computation.
 
 print(potential_metatensor)
 
 # %%
 #
-# The tensorMap has *1* :py:class:`TensorBlock <metatensor.torch.TensorBlock>` and the
+# The tensorMap has *1* :class:`TensorBlock <metatensor.torch.TensorBlock>` and the
 # values of the potential are stored in the ``values`` property.
 
 print(potential_metatensor[0].values)
@@ -280,7 +283,7 @@ print(potential_metatensor[0])
 # %%
 #
 # If you want to inspect the metadata in more detail, you can access the
-# :py:class:`Labels <metatensor.torch.Labels>` using the
+# :class:`Labels <metatensor.torch.Labels>` using the
 # ``potential_metatensor[0].properties`` and ``potential_metatensor[0].samples``
 # attributes.
 #

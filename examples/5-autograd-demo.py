@@ -4,16 +4,17 @@
 Custom ``torch-pme`` models with automatic differentiation
 ==========================================================
 
+.. currentmodule:: torchpme
+
 :Authors: Michele Ceriotti `@ceriottm <https://github.com/ceriottm/>`_
 
 This example showcases how the main building blocks of ``torchpme``,
-:py:class:`MeshInterpolator` and :py:class:`KSpacaFilter` can be
-combined creatively to construct arbitrary models that incorporate
-long-range structural correlations.
+:class:`MeshInterpolator` and :class:`KSpacaFilter` can be combined creatively to
+construct arbitrary models that incorporate long-range structural correlations.
 
-None of the models presented here has probably much meaning, and
-the use in a ML setting (including the definition of an appropriate
-loss, and its optimization) is left as an exercise to the reader.
+None of the models presented here has probably much meaning, and the use in a ML setting
+(including the definition of an appropriate loss, and its optimization) is left as an
+exercise to the reader.
 """
 
 from time import time
@@ -73,7 +74,7 @@ cell = torch.from_numpy(structure.cell.array).to(device=device, dtype=dtype)
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #
 # The construction of a "decorated atom density" through
-# :py:class:`MeshInterpolator <torchpme.lib.MeshInterpolator>`
+# :class:`MeshInterpolator <torchpme.lib.MeshInterpolator>`
 # can be easily differentiated through.
 # We only need to request a gradient evaluation, evaluate the grid, and compute
 # a function of the grid points (again, this is a proof-of-principle example,
@@ -178,7 +179,7 @@ Charges gradients:
 # Optimizable k-space filter
 # --------------------------
 # The operations in a
-# :py:class:`KSpaceFilter <torchpme.lib.KSpaceFilter>`
+# :class:`KSpaceFilter <torchpme.lib.KSpaceFilter>`
 # can also be differentiated through.
 
 # %%
@@ -288,7 +289,7 @@ Param. sigma:
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #
 # It is also possible to combine all this in a
-# custom :py:class:`torch.nn.Module`, which is the
+# custom :class:`torch.nn.Module`, which is the
 # first step towards designing a model training pipeline
 # based on a custom ``torchpme`` model.
 

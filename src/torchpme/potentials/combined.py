@@ -25,6 +25,11 @@ class CombinedPotential(Potential):
         optimization during training. If `False`, weights are fixed.
     :param dtype: Optional, the type used for the internal buffers and parameters
     :param device: Optional, the device used for the internal buffers and parameters
+
+    .. minigallery::
+        :add-heading:
+
+        torchpme.CombinedPotential
     """
 
     def __init__(
