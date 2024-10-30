@@ -34,7 +34,7 @@ class InversePowerLawPotential(Potential):
         smearing parameter corresponds to the "width" of the Gaussian.
     :param: exclusion_radius: float or torch.Tensor containing the length scale
         corresponding to a local environment. See also
-        :py:class:`Potential`.
+        :class:`Potential`.
     :param dtype: type used for the internal buffers and parameters
     :param device: device used for the internal buffers and parameters
     """

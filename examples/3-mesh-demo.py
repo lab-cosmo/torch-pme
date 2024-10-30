@@ -104,7 +104,7 @@ rho_mesh_fine = interpolator_fine.points_to_mesh(charges)
 # %%
 #
 # Note that the meshing can be also used for multiple "pseudo-charge" values per atom
-# simultaneously. In that case, :py:func:`points_to_mesh
+# simultaneously. In that case, :func:`points_to_mesh
 # <torchpme.lib.MeshInterpolator.points_to_mesh>` will return multiple mesh values.
 
 pseudo_charges = torch.normal(mean=0, std=1, size=(len(structure), 4))
@@ -272,7 +272,7 @@ fig.show()
 
 # %%
 #
-# Even though it is not specifically designed for that, :py:func:`points_to_mesh
+# Even though it is not specifically designed for that, :func:`points_to_mesh
 # <lib.MeshInterpolator.mesh_to_points>` can interpolate arbitrary functions
 # defined on the grid. For instance, here we define a product of sine functions along
 # the three Cartesian directions, :math:`\cos(2\pi x/L)\cos(2\pi y/L)\cos(2\pi z/L)`
@@ -325,7 +325,7 @@ chemiscope.show(
 # If you want to interpolate on a different set of points than the ones a
 # :class:`MeshInterpolator <lib.MeshInterpolator>` object was initialized
 # on, it is easy to do by either creating a new one or simply calling again
-# :py:func:`compute_weights
+# :func:`compute_weights
 # <torchpme.lib.MeshInterpolator.compute_weights>` for the new set of
 # points.
 

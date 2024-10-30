@@ -107,9 +107,9 @@ def tune_ewald(
     :param learning_rate: learning rate for gradient descent
     :param verbose: whether to print the progress of gradient descent
 
-    :return: Tuple containing a float of the optimal smearing for the :py:class:
+    :return: Tuple containing a float of the optimal smearing for the :class:
         `CoulombPotential`, a dictionary with the parameters for
-        :py:class:`EwaldCalculator` and a float of the optimal cutoff value for the
+        :class:`EwaldCalculator` and a float of the optimal cutoff value for the
         neighborlist computation.
 
     Example
@@ -185,7 +185,7 @@ def tune_ewald(
     def smooth_lr_wavelength(lr_wavelength):
         """Confine to (0, min_dimension), ensuring that the ``ns``
         parameter is not smaller than 1
-        (see :py:func:`_compute_lr` of :py:class:`CalculatorEwald`)."""
+        (see :func:`_compute_lr` of :class:`CalculatorEwald`)."""
         return min_dimension * torch.sigmoid(lr_wavelength)
 
     def err_Fourier(smearing, lr_wavelength):
@@ -304,9 +304,9 @@ def tune_pme(
     :param learning_rate: learning rate for gradient descent
     :param verbose: whether to print the progress of gradient descent
 
-    :return: Tuple containing a float of the optimal smearing for the :py:class:
+    :return: Tuple containing a float of the optimal smearing for the :class:
         `CoulombPotential`, a dictionary with the parameters for
-        :py:class:`PMECalculator` and a float of the optimal cutoff value for the
+        :class:`PMECalculator` and a float of the optimal cutoff value for the
         neighborlist computation.
 
     Example
@@ -382,7 +382,7 @@ def tune_pme(
     def smooth_mesh_spacing(mesh_spacing):
         """Confine to (0, min_dimension), ensuring that the ``ns``
         parameter is not smaller than 1
-        (see :py:func:`_compute_lr` of :py:class:`PMEPotential`)."""
+        (see :func:`_compute_lr` of :class:`PMEPotential`)."""
         return min_dimension * torch.sigmoid(mesh_spacing)
 
     def err_Fourier(smearing, mesh_spacing):
@@ -578,7 +578,7 @@ def _compute_RMS_phi(
 
 
 def _get_ns_mesh_differentiable(cell: torch.Tensor, mesh_spacing: float):
-    """differentiable version of :py:func:`get_ns_mesh`"""
+    """differentiable version of :func:`get_ns_mesh`"""
 
     basis_norms = torch.linalg.norm(cell, dim=1)
     ns_approx = basis_norms / mesh_spacing

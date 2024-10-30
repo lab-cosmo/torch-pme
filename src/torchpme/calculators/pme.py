@@ -24,10 +24,10 @@ class PMECalculator(Calculator):
         For a training exercise it is recommended only run a tuning procedure with
         :func:`torchpme.utils.tuning.tune_pme` for the largest system in your dataset.
 
-    :param potential: A :py:class:`torchpme.potentials.Potential` object that implements
+    :param potential: A :class:`torchpme.potentials.Potential` object that implements
         the evaluation of short and long-range potential terms. The ``smearing``
         parameter of the potential determines the split between real and k-space
-        regions. For a :py:class:`torchpme.CoulombPotential` it corresponds to the
+        regions. For a :class:`torchpme.CoulombPotential` it corresponds to the
         smearing of the atom-centered Gaussian used to split the Coulomb potential into
         the short- and long-range parts. A reasonable value for most systems is to set
         it to ``1/5`` times the neighbor list cutoff.
@@ -39,9 +39,9 @@ class PMECalculator(Calculator):
         In general, for ``n`` nodes, the interpolation will be performed by piecewise
         polynomials of degree ``n - 1`` (e.g. ``n = 4`` for cubic interpolation).
         Only the values ``3, 4, 5, 6, 7`` are supported.
-    :param full_neighbor_list: If set to :py:obj:`True`, a "full" neighbor list
+    :param full_neighbor_list: If set to :obj:`True`, a "full" neighbor list
         is expected as input. This means that each atom pair appears twice. If
-        set to :py:obj:`False`, a "half" neighbor list is expected.
+        set to :obj:`False`, a "half" neighbor list is expected.
     :param prefactor: electrostatics prefactor; see :ref:`prefactors` for details and
         common values.
     """

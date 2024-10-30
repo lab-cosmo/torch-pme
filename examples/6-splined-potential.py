@@ -47,7 +47,7 @@ spline_fine = SplinePotential(r_grid=x_grid_fine, y_grid=y_grid_fine)
 
 # %%
 # The real-space function can be easily evaluated using the
-# :py:func:`lr_from_dist <torchpme.lib.SplinePotential.lr_from_dist>`
+# :func:`lr_from_dist <torchpme.lib.SplinePotential.lr_from_dist>`
 # member function. The convergence with
 # number of spline points is fast, for such a slowly-varying function.
 

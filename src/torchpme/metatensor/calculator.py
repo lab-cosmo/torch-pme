@@ -18,14 +18,14 @@ class Calculator(torch.nn.Module):
     """Base calculator for the metatensor interface.
 
     This is just a thin wrapper around the corresponding
-    generic torch :py:class:`torchpme.calculators.Calculator`.
+    generic torch :class:`torchpme.calculators.Calculator`.
     If you want to wrap a ``metatensor`` interface around another
     calculator, you can just define the class and set the static
     member ``_base_calculator`` to the corresponding
     torch calculator.
 
     :param potential: every calculator requires an instance of a
-        :py:class:`Potential <torchpme.lib.Potential>` that is used
+        :class:`Potential <torchpme.lib.Potential>` that is used
         to compute real and k-space terms for a 2-body potential.
     """
 
@@ -144,15 +144,15 @@ class Calculator(torch.nn.Module):
         for each "types-channels".
 
         :param systems: single System or list of
-            :py:class:`metatensor.torch.atomisic.System` on which to run the
+            :class:`metatensor.torch.atomisic.System` on which to run the
             calculations. The system should have ``"charges"`` using the
-            :py:meth:`add_data <metatensor.torch.atomistic.System.add_data>` method.
+            :meth:`add_data <metatensor.torch.atomistic.System.add_data>` method.
         :param neighbors: single TensorBlock or list of a
-            :py:class:`metatensor.torch.TensorBlock` containing the **half neighbor
+            :class:`metatensor.torch.TensorBlock` containing the **half neighbor
             list**, required for periodic computations (Ewald, PME) and optional for
             direct computations. If a neighbor list is attached to a
-            :py:class`metatensor.torch.atomistic.System` it can be extracted with the
-            :py:meth:`get_neighborlist
+            :class`metatensor.torch.atomistic.System` it can be extracted with the
+            :meth:`get_neighborlist
             <metatensor.torch.atomistic.System.get_neighborlist>` method.
 
         :return: TensorMap containing the potential of all types.

@@ -90,7 +90,7 @@ def generate_kvectors_for_mesh(cell: torch.Tensor, ns: torch.Tensor) -> torch.Te
 
     .. seealso::
 
-        :py:func:`generate_kvectors_for_ewald` for a function to be used for Ewald
+        :func:`generate_kvectors_for_ewald` for a function to be used for Ewald
         calculators.
     """
     return _generate_kvectors(cell=cell, ns=ns, for_ewald=False)
@@ -107,7 +107,7 @@ def generate_kvectors_for_ewald(
     reciprocal space vectors is performed explicitly rather than using the fast Fourier
     transform (FFT) algorithm.
 
-    The main difference with :py:func:`generate_kvectors_for_mesh` is the shape of the
+    The main difference with :func:`generate_kvectors_for_mesh` is the shape of the
     output tensor (see documentation on return) and the fact that the full set of
     reciprocal space vectors is returned, rather than the FFT-optimized set that roughly
     contains only half of the vectors.
@@ -125,7 +125,7 @@ def generate_kvectors_for_ewald(
 
     .. seealso::
 
-        :py:func:`generate_kvectors_for_mesh` for a function to be used with mesh based
+        :func:`generate_kvectors_for_mesh` for a function to be used with mesh based
         calculators like PME.
     """
     return _generate_kvectors(cell=cell, ns=ns, for_ewald=True).reshape(-1, 3)

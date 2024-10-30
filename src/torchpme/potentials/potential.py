@@ -21,8 +21,8 @@ class Potential(torch.nn.Module):
     often useful when combining ``torch-pme``-based ML models with local models that are
     better suited to describe the structure within a local cutoff.
 
-    Note that a :py:class:`Potential` class can also be used inside a
-    :py:class:`KSpaceFilter`, see :py:func:`Potential.kernel_from_k_sq`.
+    Note that a :class:`Potential` class can also be used inside a
+    :class:`KSpaceFilter`, see :func:`Potential.kernel_from_k_sq`.
 
     :param smearing: The length scale associated with the switching between
         :math:`V_{\mathrm{SR}}(r)` and :math:`V_{\mathrm{LR}}(r)`
@@ -149,8 +149,8 @@ class Potential(torch.nn.Module):
     @torch.jit.export
     def kernel_from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
         """
-        Compatibility function with the interface of :py:class:`KSpaceKernel`, so that
-        potentials can be used as kernels for :py:class:`KSpaceFilter`.
+        Compatibility function with the interface of :class:`KSpaceKernel`, so that
+        potentials can be used as kernels for :class:`KSpaceFilter`.
         """
 
         return self.lr_from_k_sq(k_sq)

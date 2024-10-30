@@ -54,7 +54,7 @@ mesh_value = (
 # To define and apply a Gaussian smearing filter, we first define the convolution kernel
 # that must be applied in the Fourier domain, and then use it as a parameter of the
 # filter class. The application of the filter requires simply a call to
-# :py:func:`lib.KSpaceKernel.compute`.
+# :func:`lib.KSpaceKernel.compute`.
 
 
 # This is the filter function. NB it is applied
@@ -217,7 +217,7 @@ multi_filtered = multi_kernel_filter.forward(multi_mesh)
 
 # %%
 # When the parameters of the kernel or the ``cell`` are modified, one has to call
-# :py:func:`KSpaceFilter.update` before applying the filter
+# :func:`KSpaceFilter.update` before applying the filter
 
 multi_kernel._sigma = torch.tensor([1.0, 0.5, 0.25])
 multi_kernel_filter.update(cell)

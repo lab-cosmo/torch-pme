@@ -10,7 +10,7 @@ positions and computes interatomic potential-like terms.
 
 Our calculator API follows the `rascaline <https://luthaf.fr/rascaline>`_ API and coding
 guidelines to promote usability and interoperability with existing workflows. All
-calculators return the representations as a :py:obj:`List` of :py:class:`torch.Tensor`.
+calculators return the representations as a :obj:`List` of :class:`torch.Tensor`.
 
 We also provide a :ref:`metatensor` interface, that use inputs and return outputs
 compatible with the ``metatensor`` library.

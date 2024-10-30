@@ -2,7 +2,7 @@ What is torch-pme
 =================
 
 ``torch-pme`` provides an interface in which the positions of the atoms in a structure
-are stored in :py:class:`torch.Tensor` objects, or in a :py:class:`metatensor.System
+are stored in :class:`torch.Tensor` objects, or in a :class:`metatensor.System
 <metatensor.torch.atomistic.System>` object.
 
 torch-pme can be used as an end-to-end library computing the potential from

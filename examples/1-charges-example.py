@@ -292,7 +292,7 @@ print(potential_metatensor[0])
 #
 # We now create new charges data based on the species-wise ``charges_one_hot`` and
 # overwrite the ``system``'s charges data using ``override=True`` when applying the
-# :py:meth:`add_data <metatensor.torch.atomistic.System.add_data>` method.
+# :meth:`add_data <metatensor.torch.atomistic.System.add_data>` method.
 
 data_one_hot = TensorBlock(
     values=charges_one_hot,

@@ -154,7 +154,7 @@ def distances(
 # %%
 #
 # To use this function we now the tracking of operations by setting
-# the :py:attr:`requires_grad <torch.Tensor.requires_grad>` property to :py:obj:`True`.
+# the :attr:`requires_grad <torch.Tensor.requires_grad>` property to :obj:`True`.
 
 
 positions.requires_grad = True
