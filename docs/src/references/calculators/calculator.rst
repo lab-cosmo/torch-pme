@@ -2,5 +2,9 @@ Calculator
 ##########
 
 .. autoclass:: torchpme.Calculator
-    :members: forward
-    :undoc-members:
+    :members:
+
+.. minigallery::
+    :add-heading:
+
+    torchpme.Calculator

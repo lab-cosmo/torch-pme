@@ -26,16 +26,11 @@ class Potential(torch.nn.Module):
 
     :param smearing: The length scale associated with the switching between
         :math:`V_{\mathrm{SR}}(r)` and :math:`V_{\mathrm{LR}}(r)`
-    :param exclusion_radius: A length scale that defines a *local environment* within which
-        the potential should be smoothly zeroed out, as it will be described by a
+    :param exclusion_radius: A length scale that defines a *local environment* within
+        which the potential should be smoothly zeroed out, as it will be described by a
         separate model.
-    :param dtype: Optional, the type used for the internal buffers and parameters
-    :param device: Optional, the device used for the internal buffers and parameters
-
-    .. minigallery::
-        :add-heading:
-
-        torchpme.potentials.Potential
+    :param dtype: type used for the internal buffers and parameters
+    :param device: device used for the internal buffers and parameters
     """
 
     def __init__(

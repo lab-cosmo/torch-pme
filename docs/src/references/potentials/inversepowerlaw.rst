@@ -2,5 +2,7 @@ InversePowerLawPotential
 ########################
 
 .. autoclass:: torchpme.InversePowerLawPotential
-    :members: forward
-    :undoc-members:
+    :members:
+
+.. minigallery:: torchpme.InversePowerLawPotential
+    :add-heading:

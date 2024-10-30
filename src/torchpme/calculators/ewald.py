@@ -52,11 +52,6 @@ class EwaldCalculator(Calculator):
         :py:obj:`False`, a "half" neighbor list is expected.
     :param prefactor: electrostatics prefactor; see :ref:`prefactors` for details and
         common values.
-
-    .. minigallery::
-        :add-heading:
-
-        torchpme.EwaldCalculator
     """
 
     def __init__(

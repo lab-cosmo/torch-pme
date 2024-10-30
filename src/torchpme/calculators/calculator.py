@@ -24,11 +24,6 @@ class Calculator(torch.nn.Module):
         will come from a full (True) or half (False, default) neighbor list.
     :param prefactor: electrostatics prefactor; see :ref:`prefactors` for details and
         common values.
-
-    .. minigallery::
-        :add-heading:
-
-        torchpme.Calculator
     """
 
     def __init__(

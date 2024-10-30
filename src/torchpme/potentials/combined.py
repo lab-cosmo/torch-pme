@@ -12,8 +12,8 @@ class CombinedPotential(Potential):
     potentials with weights for use in long-range (LR) and short-range (SR)
     interactions.
 
-    The `CombinedPotential` class allows for flexible combination of potential functions
-    with user-specified weights, which can be either fixed or trainable.
+    The ``CombinedPotential`` class allows for flexible combination of potential
+    functions with user-specified weights, which can be either fixed or trainable.
 
     :param potentials: List of potential objects, each implementing a compatible
         interface with methods `from_dist`, `lr_from_dist`, `lr_from_k_sq`,
@@ -23,13 +23,11 @@ class CombinedPotential(Potential):
         initialized to ones.
     :param learnable_weights: If `True`, weights are trainable parameters, allowing
         optimization during training. If `False`, weights are fixed.
-    :param dtype: Optional, the type used for the internal buffers and parameters
-    :param device: Optional, the device used for the internal buffers and parameters
-
-    .. minigallery::
-        :add-heading:
-
-        torchpme.CombinedPotential
+    :param exclusion_radius: A length scale that defines a *local environment* within
+        which the potential should be smoothly zeroed out, as it will be described by a
+        separate model.
+    :param dtype: type used for the internal buffers and parameters
+    :param device: device used for the internal buffers and parameters
     """
 
     def __init__(

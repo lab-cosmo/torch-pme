@@ -36,16 +36,13 @@ class SplinePotential(Potential):
         when using a reciprocal spline
     :param yhat_at_zero: value to be used for :math:`k\rightarrow 0`
         in the k-space kernel
-    :param: smearing: a length scale for switching between real and
-        k-space evaluation. Not used internally, only provided as a
-        hint for calculators using this potential
-    :param: exclusion_radius: Not used internally, only provided as a
-        hint for calculators using this potential
-
-    .. minigallery::
-        :add-heading:
-
-        torchpme.potentials.SplinePotential
+    :param smearing: The length scale associated with the switching between
+        :math:`V_{\mathrm{SR}}(r)` and :math:`V_{\mathrm{LR}}(r)`
+    :param exclusion_radius: A length scale that defines a *local environment* within
+        which the potential should be smoothly zeroed out, as it will be described by a
+        separate model.
+    :param dtype: type used for the internal buffers and parameters
+    :param device: device used for the internal buffers and parameters
     """
 
     def __init__(

@@ -125,7 +125,7 @@ def generate_kvectors_for_ewald(
 
     .. seealso::
 
-        :py:func:`generate_kvectors_for_mesh` for a function to be used with mmesh based
-        calculators.
+        :py:func:`generate_kvectors_for_mesh` for a function to be used with mesh based
+        calculators like PME.
     """
     return _generate_kvectors(cell=cell, ns=ns, for_ewald=True).reshape(-1, 3)

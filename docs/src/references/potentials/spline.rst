@@ -2,5 +2,7 @@ SplinePotential
 ###############
 
 .. autoclass:: torchpme.potentials.SplinePotential
-    :members: forward
-    :undoc-members:
+    :members:
+
+.. minigallery:: torchpme.SplinePotential
+    :add-heading:

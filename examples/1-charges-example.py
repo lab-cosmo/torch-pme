@@ -101,9 +101,9 @@ charges = torch.tensor([[1.0], [-1.0]], dtype=torch.float64)
 
 # %%
 #
-# Any input the meshLODE calculators has to be a 2D array where the *rows* describe the
-# number of atoms (here ``(2)``) and the *columns* the number of atomic charge channels
-# (here ``(1)``).
+# Any input the calculators has to be a 2D array where the *rows* describe the number of
+# atoms (here ``(2)``) and the *columns* the number of atomic charge channels (here
+# ``(1)``).
 
 print(charges.shape)
 

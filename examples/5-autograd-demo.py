@@ -1,8 +1,8 @@
 """
 .. _example-autograd-demo:
 
-Custom ``torch-pme`` models with automatic differentiation
-==========================================================
+Custom models with automatic differentiation
+============================================
 
 .. currentmodule:: torchpme
 

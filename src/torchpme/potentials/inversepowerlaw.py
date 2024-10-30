@@ -35,11 +35,8 @@ class InversePowerLawPotential(Potential):
     :param: exclusion_radius: float or torch.Tensor containing the length scale
         corresponding to a local environment. See also
         :py:class:`Potential`.
-
-    .. minigallery::
-        :add-heading:
-
-        torchpme.InversePowerLawPotential
+    :param dtype: type used for the internal buffers and parameters
+    :param device: device used for the internal buffers and parameters
     """
 
     def __init__(

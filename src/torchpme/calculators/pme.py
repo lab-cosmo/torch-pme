@@ -44,12 +44,6 @@ class PMECalculator(Calculator):
         set to :py:obj:`False`, a "half" neighbor list is expected.
     :param prefactor: electrostatics prefactor; see :ref:`prefactors` for details and
         common values.
-
-    .. minigallery::
-        :add-heading:
-
-        torchpme.PMECalculator
-
     """
 
     def __init__(
