@@ -61,7 +61,7 @@ def tune_ewald(
     verbose: bool = False,
 ) -> tuple[float, dict[str, float], float]:
     r"""
-    Find the optimal parameters for :class:`torchpme.calculators.ewald.EwaldCalculator`.
+    Find the optimal parameters for :class:`torchpme.EwaldCalculator`.
 
     The error formulas are given `online
     <https://www2.icp.uni-stuttgart.de/~icp/mediawiki/images/4/4d/Script_Longrange_Interactions.pdf>`_
@@ -76,12 +76,12 @@ def tune_ewald(
 
         r_c &= \mathrm{cutoff}
 
-    For the optimization we use the Adam optimizer (see :class:`torch.optim.Adam`). By
-    default this function optimize the ``smearing``, ``lr_wavelength`` and ``cutoff``
-    based on the error formula given `online`_. You can limit the optimization by giving
-    one or more parameters to the function. For example in usual ML workflows the cutoff
-    is fixed and one wants to optimize only the ``smearing`` and the ``lr_wavelength``
-    with respect to the minimal error and fixed cutoff.
+    For the optimization we use the :class:`torch.optim.Adam` optimizer. By default this
+    function optimize the ``smearing``, ``lr_wavelength`` and ``cutoff`` based on the
+    error formula given `online`_. You can limit the optimization by giving one or more
+    parameters to the function. For example in usual ML workflows the cutoff is fixed
+    and one wants to optimize only the ``smearing`` and the ``lr_wavelength`` with
+    respect to the minimal error and fixed cutoff.
 
     .. hint::
 
@@ -260,7 +260,7 @@ def tune_pme(
     learning_rate: float = 5e-3,
     verbose: bool = False,
 ):
-    r"""Find the optimal parameters for :class:`torchpme.calculators.pme.PMECalculator`.
+    r"""Find the optimal parameters for :class:`torchpme.PMECalculator`.
 
     For the error formulas are given `elsewhere <https://doi.org/10.1063/1.470043>`_.
     Note the difference notation between the parameters in the reference and ours:
@@ -269,12 +269,12 @@ def tune_pme(
 
         \alpha = \left(\sqrt{2}\,\mathrm{smearing} \right)^{-1}
 
-    For the optimization we use the Adam optimizer (see :class:`torch.optim.Adam`). By
-    default this function optimize the ``smearing``, ``mesh_spacing`` and ``cutoff``
-    based on the error formula given `elsewhere`_. You can limit the optimization by
-    giving one or more parameters to the function. For example in usual ML workflows the
-    cutoff is fixed and one wants to optimize only the ``smearing`` and the
-    ``mesh_spacing`` with respect to the minimal error and fixed cutoff.
+    For the optimization we use the :class:`torch.optim.Adam` optimizer. By default this
+    function optimize the ``smearing``, ``mesh_spacing`` and ``cutoff`` based on the
+    error formula given `elsewhere`_. You can limit the optimization by giving one or
+    more parameters to the function. For example in usual ML workflows the cutoff is
+    fixed and one wants to optimize only the ``smearing`` and the ``mesh_spacing`` with
+    respect to the minimal error and fixed cutoff.
 
     .. hint::
 
