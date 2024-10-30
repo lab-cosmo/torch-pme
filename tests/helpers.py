@@ -30,7 +30,7 @@ def define_crystal(crystal_name="CsCl"):
         positions = torch.tensor([[0, 0, 0], [0.5, 0.5, 0.5]], dtype=DTYPE)
         charges = torch.tensor([-1.0, 1.0], dtype=DTYPE)
         cell = torch.eye(3, dtype=DTYPE)
-        madelung_ref = 2.035361
+        madelung_ref = 2.0353610945260
         num_formula_units = 1
 
     # Sodium-Chloride (NaCl) structure using a primitive unit cell
@@ -41,7 +41,7 @@ def define_crystal(crystal_name="CsCl"):
         positions = torch.tensor([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]], dtype=DTYPE)
         charges = torch.tensor([1.0, -1.0], dtype=DTYPE)
         cell = torch.tensor([[0, 1.0, 1], [1, 0, 1], [1, 1, 0]], dtype=DTYPE)  # fcc
-        madelung_ref = 1.74756
+        madelung_ref = 1.7475645946
         num_formula_units = 1
 
     # Sodium-Chloride (NaCl) structure using a cubic unit cell
@@ -64,7 +64,7 @@ def define_crystal(crystal_name="CsCl"):
         )
         charges = torch.tensor([+1.0, -1, -1, -1, +1, +1, +1, -1], dtype=DTYPE)
         cell = 2 * torch.eye(3, dtype=DTYPE)
-        madelung_ref = 1.747565
+        madelung_ref = 1.7475645946
         num_formula_units = 4
 
     # ZnS (zincblende) structure
@@ -77,7 +77,7 @@ def define_crystal(crystal_name="CsCl"):
         positions = torch.tensor([[0, 0, 0], [0.5, 0.5, 0.5]], dtype=DTYPE)
         charges = torch.tensor([1.0, -1], dtype=DTYPE)
         cell = torch.tensor([[0, 1, 1], [1, 0, 1], [1, 1, 0]], dtype=DTYPE)
-        madelung_ref = 2 * 1.63806 / SQRT3
+        madelung_ref = 2 * 1.6380550533 / SQRT3
         num_formula_units = 1
 
     # Wurtzite structure
@@ -116,7 +116,7 @@ def define_crystal(crystal_name="CsCl"):
         )
         charges = torch.tensor([-1, -1, 2], dtype=DTYPE)
         cell = torch.tensor([[a, a, 0], [a, 0, a], [0, a, a]], dtype=DTYPE) / 2.0
-        madelung_ref = 11.636575
+        madelung_ref = 11.6365752270768
         num_formula_units = 1
 
     # Copper(I)-Oxide structure (e.g. Cu2O with Cu+ and O2-)
