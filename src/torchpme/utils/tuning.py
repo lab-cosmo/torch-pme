@@ -61,7 +61,7 @@ def tune_ewald(
     verbose: bool = False,
 ) -> tuple[float, dict[str, float], float]:
     r"""
-    Find the optimal parameters for :class:`torchpme.calculators.ewald.EwaldCalculator`.
+    Find the optimal parameters for :class:`torchpme.EwaldCalculator`.
 
     The error formulas are given `online
     <https://www2.icp.uni-stuttgart.de/~icp/mediawiki/images/4/4d/Script_Longrange_Interactions.pdf>`_
@@ -76,12 +76,12 @@ def tune_ewald(
 
         r_c &= \mathrm{cutoff}
 
-    For the optimization we use the Adam optimizer (see :class:`torch.optim.Adam`). By
-    default this function optimize the ``smearing``, ``lr_wavelength`` and ``cutoff``
-    based on the error formula given `online`_. You can limit the optimization by giving
-    one or more parameters to the function. For example in usual ML workflows the cutoff
-    is fixed and one wants to optimize only the ``smearing`` and the ``lr_wavelength``
-    with respect to the minimal error and fixed cutoff.
+    For the optimization we use the :class:`torch.optim.Adam` optimizer. By default this
+    function optimize the ``smearing``, ``lr_wavelength`` and ``cutoff`` based on the
+    error formula given `online`_. You can limit the optimization by giving one or more
+    parameters to the function. For example in usual ML workflows the cutoff is fixed
+    and one wants to optimize only the ``smearing`` and the ``lr_wavelength`` with
+    respect to the minimal error and fixed cutoff.
 
     .. hint::
 
@@ -107,9 +107,9 @@ def tune_ewald(
     :param learning_rate: learning rate for gradient descent
     :param verbose: whether to print the progress of gradient descent
 
-    :return: Tuple containing a float of the optimal smearing for the :py:class:
+    :return: Tuple containing a float of the optimal smearing for the :class:
         `CoulombPotential`, a dictionary with the parameters for
-        :py:class:`EwaldCalculator` and a float of the optimal cutoff value for the
+        :class:`EwaldCalculator` and a float of the optimal cutoff value for the
         neighborlist computation.
 
     Example
@@ -185,7 +185,7 @@ def tune_ewald(
     def smooth_lr_wavelength(lr_wavelength):
         """Confine to (0, min_dimension), ensuring that the ``ns``
         parameter is not smaller than 1
-        (see :py:func:`_compute_lr` of :py:class:`CalculatorEwald`)."""
+        (see :func:`_compute_lr` of :class:`CalculatorEwald`)."""
         return min_dimension * torch.sigmoid(lr_wavelength)
 
     def err_Fourier(smearing, lr_wavelength):
@@ -260,7 +260,7 @@ def tune_pme(
     learning_rate: float = 5e-3,
     verbose: bool = False,
 ):
-    r"""Find the optimal parameters for :class:`torchpme.calculators.pme.PMECalculator`.
+    r"""Find the optimal parameters for :class:`torchpme.PMECalculator`.
 
     For the error formulas are given `elsewhere <https://doi.org/10.1063/1.470043>`_.
     Note the difference notation between the parameters in the reference and ours:
@@ -269,12 +269,12 @@ def tune_pme(
 
         \alpha = \left(\sqrt{2}\,\mathrm{smearing} \right)^{-1}
 
-    For the optimization we use the Adam optimizer (see :class:`torch.optim.Adam`). By
-    default this function optimize the ``smearing``, ``mesh_spacing`` and ``cutoff``
-    based on the error formula given `elsewhere`_. You can limit the optimization by
-    giving one or more parameters to the function. For example in usual ML workflows the
-    cutoff is fixed and one wants to optimize only the ``smearing`` and the
-    ``mesh_spacing`` with respect to the minimal error and fixed cutoff.
+    For the optimization we use the :class:`torch.optim.Adam` optimizer. By default this
+    function optimize the ``smearing``, ``mesh_spacing`` and ``cutoff`` based on the
+    error formula given `elsewhere`_. You can limit the optimization by giving one or
+    more parameters to the function. For example in usual ML workflows the cutoff is
+    fixed and one wants to optimize only the ``smearing`` and the ``mesh_spacing`` with
+    respect to the minimal error and fixed cutoff.
 
     .. hint::
 
@@ -304,9 +304,9 @@ def tune_pme(
     :param learning_rate: learning rate for gradient descent
     :param verbose: whether to print the progress of gradient descent
 
-    :return: Tuple containing a float of the optimal smearing for the :py:class:
+    :return: Tuple containing a float of the optimal smearing for the :class:
         `CoulombPotential`, a dictionary with the parameters for
-        :py:class:`PMECalculator` and a float of the optimal cutoff value for the
+        :class:`PMECalculator` and a float of the optimal cutoff value for the
         neighborlist computation.
 
     Example
@@ -382,7 +382,7 @@ def tune_pme(
     def smooth_mesh_spacing(mesh_spacing):
         """Confine to (0, min_dimension), ensuring that the ``ns``
         parameter is not smaller than 1
-        (see :py:func:`_compute_lr` of :py:class:`PMEPotential`)."""
+        (see :func:`_compute_lr` of :class:`PMEPotential`)."""
         return min_dimension * torch.sigmoid(mesh_spacing)
 
     def err_Fourier(smearing, mesh_spacing):
@@ -578,7 +578,7 @@ def _compute_RMS_phi(
 
 
 def _get_ns_mesh_differentiable(cell: torch.Tensor, mesh_spacing: float):
-    """differentiable version of :py:func:`get_ns_mesh`"""
+    """differentiable version of :func:`get_ns_mesh`"""
 
     basis_norms = torch.linalg.norm(cell, dim=1)
     ns_approx = basis_norms / mesh_spacing

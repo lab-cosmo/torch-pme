@@ -1,4 +1,4 @@
-from .base import Calculator
+from .calculator import Calculator
 from .ewald import EwaldCalculator
 from .pme import PMECalculator
 

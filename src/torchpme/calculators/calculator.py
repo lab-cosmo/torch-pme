@@ -1,23 +1,23 @@
 import torch
 from torch import profiler
 
-from ..lib import Potential
+from ..potentials import Potential
 
 
 class Calculator(torch.nn.Module):
     """
     Base calculator for the torch interface. Based on a
-    :py:class:`Potential` class, it computes the value of a potential
+    :class:`Potential` class, it computes the value of a potential
     by either directly summing over neighbor atoms, or by combining
     a local part computed in real space, and a long-range part computed
     in the Fourier domain. The class can be used directly to evaluate
     the real-space part of the potential, or subclassed providing
     a strategy to evalate the long-range contribution in k-space
-    (see e.g. :py:class:`PMECalculator` or :py:class:`EwaldCalculator`).
+    (see e.g. :class:`PMECalculator` or :class:`EwaldCalculator`).
     NB: typically a subclass should only provide an implementation of
-    :py:func:`Calculator._compute_kspace`.
+    :func:`Calculator._compute_kspace`.
 
-    :param potential: a :py:class:`Potential` class object containing the functions
+    :param potential: a :class:`Potential` class object containing the functions
         that are necessary to compute the various components of the potential, as
         well as the parameters that determine the behavior of the potential itself.
     :param full_neighbor_list: parameter indicating whether the neighbor information
