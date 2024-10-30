@@ -1,8 +1,8 @@
 import pytest
 import torch
 
+from torchpme import CoulombPotential
 from torchpme.calculators import Calculator
-from torchpme.lib.potentials import CoulombPotential
 from torchpme.utils.tuning import _estimate_smearing
 
 # Define some example parameters

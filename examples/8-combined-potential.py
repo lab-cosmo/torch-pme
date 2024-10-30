@@ -9,16 +9,15 @@ Optimizing a linear combination of potentials
 :Authors: Egor Rumiantsev `@E-Rum <https://github.com/E-Rum/>`_;
    Philip Loche `@PicoCentauri <https://github.com/PicoCentauri>`_
 
-This is an example to demonstrate the usage of the :class:`CombinedPotential
-<lib.potentials.CombinedPotential>` class to evaluate potentials that
-combine multiple pair potentials with optimizable ``weights``.
+This is an example to demonstrate the usage of the :class:`CombinedPotential` class to
+evaluate potentials that combine multiple pair potentials with optimizable ``weights``.
 
 We will optimize the ``weights`` to reporoduce the energy of a system that
 interacts solely via Coulomb interactions.
 """
 # %%
 
-# sphinx_gallery_thumbnail_number = 2
+# sphinx_gallery_thumbnail_number = 3
 
 import ase.io
 import chemiscope
@@ -60,23 +59,20 @@ lr_wavelength = 0.5 * smearing
 
 # %%
 #
-# We now construct the potential as sum of two :class:`InversePowerLawPotential
-# <lib.potentials.InversePowerLawPotential>` using :class:`CombinedPotential
-# <lib.potentials.CombinedPotential>`. The presence of a numerical `smearing`
-# value is used as an indication that the potential can compute the terms needed
-# for range-separated evaluation, and so one has to set it also for the combined
-# potential, even if it is not used explicitly in the evaluation of the combination.
+# We now construct the potential as sum of two :class:`InversePowerLawPotential` using
+# :class:`CombinedPotential`. The presence of a numerical `smearing` value is used as an
+# indication that the potential can compute the terms needed for range-separated
+# evaluation, and so one has to set it also for the combined potential, even if it is
+# not used explicitly in the evaluation of the combination.
 
 pot_1 = InversePowerLawPotential(exponent=1.0, smearing=smearing)
 pot_2 = InversePowerLawPotential(exponent=2.0, smearing=smearing)
 
 potential = CombinedPotential(potentials=[pot_1, pot_2], smearing=smearing)
 
-# Note also that :class:`CombinedPotential <lib.potentials.CombinedPotential>`
-# can be used with any combination of potentials, as long they are all either
-# direct or range separated. For instance, one can combine a
-# :class:`CoulombPotential <lib.potentials.CoulombPotential>` and a
-# :class:`SplinePotential <lib.potentials.SplinePotential>`.
+# Note also that :class:`CombinedPotential` can be used with any combination of
+# potentials, as long they are all either direct or range separated. For instance, one
+# can combine a :class:`CoulombPotential` and a :class:`SplinePotential`.
 
 # %%
 # Plotting terms in the potential
@@ -115,7 +111,7 @@ plt.show()
 # potential (black) is the sum of the two potentials that we explicitly calculated
 # (dotted green line).
 #
-# The :class:`CombinedPotential <lib.potentials.CombinedPotential>` class
+# The :class:`CombinedPotential` class
 # combines all terms in a range-separated potential, including the k-space
 # kernel.
 

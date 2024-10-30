@@ -1,8 +1,8 @@
 import contextlib
 
-from . import utils  # noqa
+from . import calculators, lib, potentials, utils  # noqa
 from .calculators import Calculator, EwaldCalculator, PMECalculator
-from .lib.potentials import (
+from .potentials import (
     CombinedPotential,
     CoulombPotential,
     InversePowerLawPotential,

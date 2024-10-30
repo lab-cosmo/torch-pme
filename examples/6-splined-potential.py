@@ -4,12 +4,13 @@
 Splined potentials
 ==================
 
+.. currentmodule:: torchpme
+
 :Authors: Michele Ceriotti `@ceriottm <https://github.com/ceriottm/>`_
 
-This notebook demonstrates the use of the :py:class:`SplinePotential
-<torchpme.lib.SplinePotential>`
-class to evaluate potentials for which there is no simple analytical
-expression for the Fourier-domain filter.
+This notebook demonstrates the use of the :class:`SplinePotential` class to evaluate
+potentials for which there is no simple analytical expression for the Fourier-domain
+filter.
 """
 
 # %%
@@ -19,7 +20,7 @@ import torch
 from matplotlib import pyplot as plt
 
 import torchpme
-from torchpme.lib.potentials import CoulombPotential, SplinePotential
+from torchpme.potentials import CoulombPotential, SplinePotential
 
 device = "cpu"
 dtype = torch.float64
@@ -46,7 +47,7 @@ spline_fine = SplinePotential(r_grid=x_grid_fine, y_grid=y_grid_fine)
 
 # %%
 # The real-space function can be easily evaluated using the
-# :py:func:`lr_from_dist <torchpme.lib.SplinePotential.lr_from_dist>`
+# :func:`lr_from_dist <torchpme.lib.SplinePotential.lr_from_dist>`
 # member function. The convergence with
 # number of spline points is fast, for such a slowly-varying function.
 
@@ -77,7 +78,7 @@ ax[0].legend()
 # %%
 # Fourier-domain kernel
 # ~~~~~~~~~~~~~~~~~~~~~
-# A core feature of :py:class:`SplinePotential <torchpme.lib.SplinePotential>`
+# A core feature of :class:`SplinePotential <torchpme.lib.SplinePotential>`
 # is that it can evaluate
 # automatically the Fourier-domain kernel that is used in k-space methods.
 # This is done by evaluating
@@ -136,7 +137,7 @@ ax.legend()
 #
 # ``torch-pme`` is all about long-range potentials, and the problem
 # with them is that they converge to zero *very* slowly. In order to address
-# this, :py:class:`SplinePotential` implements a "reciprocal spline", i.e.
+# this, :class:`SplinePotential` implements a "reciprocal spline", i.e.
 # the splining grid provided in the definition of the potential is actually
 # defined relative to :math:`1/r`, and "continued" to :math:`1/r\rightarrow 0`.
 # We use a smeared-Coulomb potential to have a more interesting use case.
@@ -343,8 +344,8 @@ positions = torch.from_numpy(structure.positions).to(device=device, dtype=dtype)
 cell = torch.from_numpy(structure.cell.array).to(device=device, dtype=dtype)
 
 # %%
-# We use :py:class:`MeshInterpolator <torchpme.lib.MeshInterpolator>`
-# and :py:class:`KSpaceFilter <torchpme.lib.KSpaceFilter>`
+# We use :class:`MeshInterpolator <torchpme.lib.MeshInterpolator>`
+# and :class:`KSpaceFilter <torchpme.lib.KSpaceFilter>`
 # to compute the potential on a grid. Note that the Coulomb potential
 # includes only the k-space part, and therefore has no exclusion zone
 # in reality.
@@ -380,7 +381,7 @@ kernel_spline.update(cell, ns)
 spline_mesh = kernel_spline.forward(rho_mesh) * ivolume
 
 # %%
-# The potential computed using :py:class:`SplinePotential
+# The potential computed using :class:`SplinePotential
 # <torchpme.lib.SplinePotential>` also
 # takes into account the removal of the short-range part of the
 # smooth Coulomb potential, and therefore describes only the

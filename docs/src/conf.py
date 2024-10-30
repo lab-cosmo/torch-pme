@@ -87,7 +87,7 @@ exclude_patterns = [
 
 python_use_unqualified_type_names = True
 
-autoclass_content = "both"
+autoclass_content = "class"
 autodoc_member_order = "bysource"
 autodoc_typehints = "both"
 autodoc_typehints_format = "short"

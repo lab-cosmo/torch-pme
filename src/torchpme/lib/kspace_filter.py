@@ -1,9 +1,9 @@
-from typing import Optional, Union
+from typing import Optional
 
 import torch
 
+# from ..potentials import Potential
 from .kvectors import generate_kvectors_for_mesh
-from .potentials import Potential
 
 
 class KSpaceKernel(torch.nn.Module):
@@ -43,7 +43,7 @@ class KSpaceFilter(torch.nn.Module):
     The class combines the costruction of a reciprocal-space grid
     :math:`\{mathbf{k}_n\}`
     (that should be commensurate to the grid in real space, so the class takes
-    the same options as :py:class:`MeshInterpolator`), the calculation of
+    the same options as :class:`MeshInterpolator`), the calculation of
     a scalar filter function :math:`\phi(|\mathbf{k}|^2)`, defined as a function of
     the squared norm of the reciprocal space grid points, and the application
     of the filter to a real-space function :math:`f(\mathbf{x})`,
@@ -66,17 +66,18 @@ class KSpaceFilter(torch.nn.Module):
         the k-space mesh points
     :param fft_norm: str
         The normalization applied to the forward FT. Can be
-        "forward", "backward", "ortho". See :py:func:`torch:fft:rfftn`
+        "forward", "backward", "ortho". See :func:`torch:fft:rfftn`
     :param ifft_norm: str
         The normalization applied to the inverse FT. Can be
-        "forward", "backward", "ortho". See :py:func:`torch:fft:irfftn`
+        "forward", "backward", "ortho". See :func:`torch:fft:irfftn`
     """
 
     def __init__(
         self,
         cell: torch.Tensor,
         ns_mesh: torch.Tensor,
-        kernel: Union[KSpaceKernel, Potential],
+        # kernel: Union[KSpaceKernel, Potential],
+        kernel: KSpaceKernel,
         fft_norm: str = "ortho",
         ifft_norm: str = "ortho",
     ):
@@ -147,7 +148,7 @@ class KSpaceFilter(torch.nn.Module):
         Applies the k-space filter by Fourier transforming the given
         ``mesh_values`` tensor, multiplying the result by the filter array
         (that should have been previously computed with a call to
-        :py:func:`update`) and Fourier-transforming back
+        :func:`update`) and Fourier-transforming back
         to real space.
 
         If you update the ``cell``, the ``ns_mesh`` or anything inside the ``kernel``

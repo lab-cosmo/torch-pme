@@ -2,6 +2,8 @@
 Advanced neighbor list usage
 ============================
 
+.. currentmodule:: torchpme
+
 Accurately calculating forces as derivatives from energy is crucial for predicting
 system dynamics as well as in training machine learning models. In systems where forces
 are derived from the gradients of the potential energy, it is essential that the
@@ -152,7 +154,7 @@ def distances(
 # %%
 #
 # To use this function we now the tracking of operations by setting
-# the :py:attr:`requires_grad <torch.Tensor.requires_grad>` property to :py:obj:`True`.
+# the :attr:`requires_grad <torch.Tensor.requires_grad>` property to :obj:`True`.
 
 
 positions.requires_grad = True
@@ -176,7 +178,8 @@ neighbor_distances = distances(
 
 # %%
 #
-# and initialize a PME instance to compute the potential.
+# and initialize a :class:`PMECalculator` instance using a :class:`CoulombPotential` to
+# compute the potential.
 
 pme = torchpme.PMECalculator(
     potential=torchpme.CoulombPotential(smearing=smearing), **pme_params
