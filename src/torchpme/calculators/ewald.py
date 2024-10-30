@@ -21,7 +21,7 @@ class EwaldCalculator(Calculator):
         For a training exercise it is recommended only run a tuning procedure with
         :func:`torchpme.utils.tuning.tune_ewald` for the largest system in your dataset.
 
-    For a :math:`\mathcal{O}(N^1.5)` scaling, one can set the parameters as following:
+    For a :math:`\mathcal{O}(N^{1.5})` scaling, one can set the parameters as following:
 
     .. math::
 
