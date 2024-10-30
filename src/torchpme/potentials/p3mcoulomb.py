@@ -32,12 +32,14 @@ class P3MCoulombPotential(CoulombPotential):
 
     @cached_property
     def _k_vectors(self) -> torch.Tensor:
-        return torch.concat(
-            [torch.zeros((1, 3)), self._reciprocal_cell, -self._reciprocal_cell[:-1]],
-            dim=0,
-        )[
-            torch.newaxis, torch.newaxis, torch.newaxis, ...
-        ]  # Shape (1, 1, 1, 6, 3), no -z direction vector
+        m = torch.tensor([-2, -1, 0, 1, 2], dtype=self.cell.dtype).unsqueeze(-1)
+        m = (
+            pad(input=m, pad=(0, 2))[:, None, None]
+            + pad(input=m, pad=(1, 1))[None, :, None]
+            + pad(input=m, pad=(2, 0))[None, None, 2:]  # no -z direction vector
+        ).reshape(-1, 3)
+        m = m[torch.linalg.norm(m, dim=1) <= 2]
+        return (m @ self._reciprocal_cell).reshape(1, 1, 1, -1, 3)
 
     @torch.jit.export
     def kernel_from_k(self, k: torch.Tensor) -> torch.Tensor:
@@ -84,7 +86,7 @@ class P3MCoulombPotential(CoulombPotential):
                 torch.unsqueeze(D, dim=-2)  # (nx, ny, nz, 1, 3)
                 @ torch.unsqueeze(
                     torch.sum(
-                        torch.unsqueeze(U2, -1) * R,  # (nx, ny, nz, 67, 3)
+                        torch.unsqueeze(U2, -1) * R,  # (nx, ny, nz, 6, 3)
                         dim=-2,
                     ),  # (nx, ny, nz, 3)
                     dim=-1,
