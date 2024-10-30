@@ -45,6 +45,7 @@ symbols = ("Cs", "Cl")
 types = torch.tensor([55, 17])
 positions = torch.tensor([(0, 0, 0), (0.5, 0.5, 0.5)], dtype=torch.float64)
 cell = torch.eye(3, dtype=torch.float64)
+pbc = torch.tensor([True, True, True])
 
 
 # %%
@@ -205,7 +206,7 @@ calculator_metatensor = torchpme.metatensor.PMECalculator(
 #    only on the charge of the atom, NOT on the atom's type. However, we still have to
 #    pass them because it is an obligatory parameter to build the `System` class.
 
-system = System(types=types, positions=positions, cell=cell)
+system = System(types=types, positions=positions, cell=cell, pbc=pbc)
 
 # %%
 #

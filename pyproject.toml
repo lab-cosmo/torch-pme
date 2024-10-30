@@ -56,7 +56,7 @@ examples = [
     "vesin >= 0.2.0",
     "vesin-torch >= 0.2.0",
 ]
-metatensor = ["metatensor-torch <0.6,>=0.5"]
+metatensor = ["metatensor-torch <0.7,>=0.6"]
 
 [project.urls]
 homepage = "http://torch-pme.readthedocs.io"

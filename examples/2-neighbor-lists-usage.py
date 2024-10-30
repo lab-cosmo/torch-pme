@@ -58,7 +58,7 @@ atoms_unitcell = ase.Atoms(
     symbols=["Cs", "Cl"],
     positions=np.array([(0, 0, 0), (0.5, 0.5, 0.5)]),
     cell=np.eye(3),
-    pbc=True,
+    pbc=torch.tensor([True, True, True]),
 )
 charges_unitcell = np.array([1.0, -1.0])
 

@@ -15,6 +15,7 @@ def system():
         types=torch.tensor([1, 2, 2]),
         positions=torch.tensor([[0.0, 0.0, 0.0], [0.0, 0.0, 0.2], [0.0, 0.0, 0.5]]),
         cell=4.2 * torch.eye(3),
+        pbc=torch.tensor([True, True, True]),
     )
 
     charges = torch.tensor([1.0, -0.5, -0.5]).unsqueeze(1)
@@ -166,7 +167,7 @@ def test_wrong_neighbors_properties(system, neighbors):
 
 def test_wrong_system_not_all_charges(system, neighbors):
     system_nocharge = mts_torch.atomistic.System(
-        system.types, system.positions, system.cell
+        system.types, system.positions, system.cell, pbc=system.pbc
     )
 
     calculator = CalculatorTest()
@@ -177,7 +178,9 @@ def test_wrong_system_not_all_charges(system, neighbors):
 
 
 def test_different_number_charge_channels(system, neighbors):
-    system_channels = mts_atomistic.System(system.types, system.positions, system.cell)
+    system_channels = mts_atomistic.System(
+        system.types, system.positions, system.cell, pbc=system.pbc
+    )
 
     charges2 = torch.tensor([[1.0, 2.0], [-1.0, -2.0]])
     data2 = mts_torch.TensorBlock(
@@ -205,6 +208,7 @@ def test_systems_with_different_number_of_atoms(system, neighbors):
         types=torch.tensor([1, 1, 8]),
         positions=torch.tensor([[0.0, 0.0, 0.0], [0.0, 0.0, 2.0], [0.0, 2.0, 2.0]]),
         cell=torch.zeros([3, 3]),
+        pbc=torch.tensor([True, True, True]),
     )
 
     charges = torch.tensor([1.0, -1.0, 2.0]).unsqueeze(1)
