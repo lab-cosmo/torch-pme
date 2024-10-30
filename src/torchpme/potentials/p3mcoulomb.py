@@ -67,12 +67,13 @@ class P3MCoulombPotential(CoulombPotential):
         print(f"{k.shape=}")
         D = self._diff_operator(k)
         print(f"{D.shape=}")
+        k_prime = torch.unsqueeze(k, -2) + self._k_vectors
         U2 = (
-            self._charge_assignment(torch.unsqueeze(k, -2) + self._k_vectors)
+            self._charge_assignment(k_prime)
             / self._volume
         ) ** 2
         print(f"{U2.shape=}")
-        R = self._reference_force(torch.unsqueeze(k, -2) + self._k_vectors)
+        R = self._reference_force(k_prime)
         print(f"{R.shape=}")
         D2 = torch.linalg.norm(D, dim=-1) ** 2
         print(f"{D2.shape=}")
@@ -96,37 +97,26 @@ class P3MCoulombPotential(CoulombPotential):
             / denominator,
         )
 
-    def _diff_operator(self, k: torch.Tensor) -> torch.Tensor:
-        """
-        From shape (nx, ny, nz, 3) to shape (nx, ny, nz, 3)"""
-        return (
-            1j
-            * torch.sin(k * self.mesh_spacing.squeeze(0))
-            / (self.mesh_spacing.squeeze(0))
-        )
+        # k = k.double()
+        # print(f"{k.shape=}")
+        # D = self._diff_operator(k)
+        # print(f"{D.shape=}")
+        # ks = torch.unsqueeze(k, -2) + self._k_vectors
+        # U2 = (self._charge_assignment(ks) / self._volume) ** 2
+        # print(f"{U2.shape=}")
+        # DU2 = D.unsqueeze(-2) * U2.unsqueeze(-1)
+        # print(f"{DU2.shape=}")
+        # R = self._reference_force(ks)
+        # print(f"{R.shape=}")
+        # denominator = torch.sum(torch.linalg.norm(DU2, dim=-1), dim=-1) # ** 2
+        # print(f"{denominator.shape=}")
 
-    def _charge_assignment(self, k: torch.Tensor) -> torch.Tensor:
-        """
-        From shape (nx, ny, nz, 6, 3) to shape (nx, ny, nz, 6)"""
-        return torch.prod(
-            self.mesh_spacing
-            * torch.sinc(k * self.mesh_spacing / 2 / torch.pi)
-            ** self.interpolation_nodes,
-            dim=-1,
-        )
-
-    def _reference_force(self, k: torch.Tensor) -> torch.Tensor:
-        """
-        From shape (nx, ny, nz, 6, 3) to shape (nx, ny, nz, 6, 3)"""
-
-        k_sq = torch.linalg.norm(k, dim=-1) ** 2
-        print(f"{k_sq.shape=}")
-
-        return (
-            k
-            * torch.where(
-                k_sq == 0,
-                0.0j,
-                -1j * 4 * torch.pi * torch.exp(-0.5 * self.smearing**2 * k_sq) / k_sq,
-            )[..., torch.newaxis]
-        )
+        # return torch.where(
+        #     denominator == 0,
+        #     0.0j,
+        #     torch.sum(
+        #         DU2 * R,  # (nx, ny, nz, 6, 3)
+        #         dim=(-2, -1),
+        #     )  # (nx, ny, nz)
+        #     / denominator,
+        # )
