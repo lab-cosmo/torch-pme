@@ -473,6 +473,9 @@ def tune_p3m(
     sum_squared_charges: float,
     cell: torch.Tensor,
     positions: torch.Tensor,
+    smearing: float = None,
+    mesh_spacing: float = None,
+    cutoff: float = None,
     interpolation_nodes: int = 4,
     exponent: int = 1,
     accuracy: float = 1e-3,
@@ -482,7 +485,7 @@ def tune_p3m(
 ):
     r"""Find the optimal parameters for :class:`torchpme.calculators.pme.PMECalculator`.
 
-    For the error formulas are given `elsewhere <https://doi.org/10.1063/1.470043>`_.
+    For the error formulas are given `here <https://doi.org/10.1063/1.477415>`_.
     Note the difference notation between the parameters in the reference and ours:
 
     .. math::
@@ -502,8 +505,8 @@ def tune_p3m(
     :param interpolation_nodes: The number ``n`` of nodes used in the interpolation per
         coordinate axis. The total number of interpolation nodes in 3D will be ``n^3``.
         In general, for ``n`` nodes, the interpolation will be performed by piecewise
-        polynomials of degree ``n - 1`` (e.g. ``n = 4`` for cubic interpolation). Only
-        the values ``3, 4, 5, 6, 7`` are supported.
+        polynomials of degree ``n`` (e.g. ``n = 3`` for cubic interpolation). Only
+        the values ``1, 2, 3, 4, 5`` are supported.
     :param exponent: exponent :math:`p` in :math:`1/r^p` potentials
     :param accuracy: Recomended values for a balance between the accuracy and speed is
         :math:`10^{-3}`. For more accurate results, use :math:`10^{-6}`.
@@ -526,7 +529,7 @@ def tune_p3m(
     ... )
     >>> charges = torch.tensor([[1.0], [-1.0]], dtype=torch.float64)
     >>> cell = torch.eye(3, dtype=torch.float64)
-    >>> smearing, parameter, cutoff = tune_pme(
+    >>> smearing, parameter, cutoff = tune_p3m(
     ...     torch.sum(charges**2, dim=0), cell, positions, accuracy=1e-1
     ... )
 
@@ -583,13 +586,14 @@ def tune_p3m(
         return (
             prefac
             / volume ** (2 / 3)
-            * (smearing * h) ** interpolation_nodes
+            * (h * (1 / 2**0.5 / smearing)) ** interpolation_nodes
             * torch.sqrt(
-                smearing
+                (1 / 2**0.5 / smearing)
                 * volume ** (1 / 3)
                 * math.sqrt(2 * torch.pi)
                 * sum(
-                    A_COEF[m][interpolation_nodes] * (h * smearing) ** (2 * m)
+                    A_COEF[m][interpolation_nodes]
+                    * (h * (1 / 2**0.5 / smearing)) ** (2 * m)
                     for m in range(interpolation_nodes)
                 )
             )
