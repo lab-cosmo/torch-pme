@@ -1,6 +1,4 @@
-"""
-Madelung tests
-"""
+"""Madelung tests"""
 
 import io
 

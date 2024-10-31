@@ -237,9 +237,7 @@ fig.show()
 
 
 def get_theta_phi_quadrature(L):
-    """
-    Legendre quadrature nodes for integrals over theta, phi
-    """
+    """Legendre quadrature nodes for integrals over theta, phi"""
     quads = []
     weights = []
     for w_index in range(0, 2 * L - 1):
@@ -258,7 +256,6 @@ def get_radial_quadrature(order, R):
     Generates Gauss-Legendre quadrature nodes and weights for radial integration
     in spherical coordinates over the interval [0, R].
     """
-
     gl_nodes, gl_weights = np.polynomial.legendre.leggauss(order)
     nodes = (R / 2) * (gl_nodes + 1)
     weights = (R / 2) ** 3 * gl_weights * (gl_nodes + 1) ** 2
@@ -494,10 +491,7 @@ lode_features = my_lode.forward(
 
 
 def value_to_seismic(value, vrange=0.1):
-    """
-    Maps a value within [vmin, vmax] to an RGB color string using the 'seismic' colormap.
-    """
-
+    """Map values to RGB color string using the 'seismic' colormap."""
     vmin, vmax = -vrange, vrange
     # Ensure the value is within the specified range
     clipped_value = np.clip(value, vmin, vmax)

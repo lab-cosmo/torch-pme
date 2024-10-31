@@ -6,7 +6,8 @@ from .potential import Potential
 
 
 class CoulombPotential(Potential):
-    """Smoothed electrostatic Coulomb potential :math:`1/r`.
+    """
+    Smoothed electrostatic Coulomb potential :math:`1/r`.
 
     Here :math:`r` is the inter-particle distance
 
@@ -71,7 +72,6 @@ class CoulombPotential(Potential):
         :param dist: torch.tensor containing the distances at which the potential is to
             be evaluated.
         """
-
         if self.smearing is None:
             raise ValueError(
                 "Cannot compute long-range contribution without specifying `smearing`."
@@ -86,7 +86,6 @@ class CoulombPotential(Potential):
         :param k_sq: torch.tensor containing the squared lengths (2-norms) of the wave
             vectors k at which the Fourier-transformed potential is to be evaluated
         """
-
         # The k=0 term often needs to be set separately since for exponents p<=3
         # dimension, there is a divergence to +infinity. Setting this value manually
         # to zero physically corresponds to the addition of a uniform background charge

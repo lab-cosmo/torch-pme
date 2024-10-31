@@ -6,7 +6,8 @@ from .calculator import Calculator
 
 
 class EwaldCalculator(Calculator):
-    r"""Potential computed using the Ewald sum.
+    r"""
+    Potential computed using the Ewald sum.
 
     Scaling as :math:`\mathcal{O}(N^2)` with respect to the number of particles
     :math:`N`.
