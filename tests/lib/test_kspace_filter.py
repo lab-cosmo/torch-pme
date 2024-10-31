@@ -1,6 +1,4 @@
-"""
-Tests for `kspace_filter` classes
-"""
+"""Tests for `kspace_filter` classes"""
 
 import pytest
 import torch

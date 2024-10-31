@@ -72,7 +72,8 @@ class MeshInterpolator(torch.nn.Module):
         cell: Optional[torch.Tensor] = None,
         ns_mesh: Optional[torch.Tensor] = None,
     ) -> None:
-        """Update buffers and derived attributes of the instance.
+        """
+        Update buffers and derived attributes of the instance.
 
         Call this to reuse a ``MeshInterpolator`` object when the ``cell`` parameters or
         the mesh resolution changes. If neither ``cell`` nor ``ns_mesh`` are passed
@@ -83,7 +84,6 @@ class MeshInterpolator(torch.nn.Module):
         :param ns_mesh: toch.tensor of shape ``(3,)`` Number of mesh points to use along
             each of the three axes
         """
-
         if cell is not None:
             if cell.shape != (3, 3):
                 raise ValueError(

@@ -14,7 +14,6 @@ def get_ns_mesh(cell: torch.Tensor, mesh_spacing: float):
 
     :return: torch.tensor of length 3 containing the mesh size
     """
-
     basis_norms = torch.linalg.norm(cell, dim=1)
     ns_approx = basis_norms / mesh_spacing
     ns_actual_approx = 2 * ns_approx + 1  # actual number of mesh points

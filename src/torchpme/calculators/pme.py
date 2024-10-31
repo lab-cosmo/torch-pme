@@ -9,7 +9,8 @@ from .calculator import Calculator
 
 
 class PMECalculator(Calculator):
-    r"""Potential using a particle mesh-based Ewald (PME).
+    r"""
+    Potential using a particle mesh-based Ewald (PME).
 
     Scaling as :math:`\mathcal{O}(NlogN)` with respect to the number of particles
     :math:`N` used as a reference to test faster implementations.

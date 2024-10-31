@@ -6,15 +6,20 @@ from torch.special import gammainc, gammaincc, gammaln
 from .potential import Potential
 
 
-# since pytorch has implemented the incomplete Gamma functions, but not the much more
-# commonly used (complete) Gamma function, we define it in a custom way to make autograd
-# work as in https://discuss.pytorch.org/t/is-there-a-gamma-function-in-pytorch/17122
 def gamma(x: torch.Tensor) -> torch.Tensor:
+    """
+    (Complete) Gamma function.
+
+    pytorch has not implemented the commonly used (complete) Gamma function. We define
+    it in a custom way to make autograd work as in
+    https://discuss.pytorch.org/t/is-there-a-gamma-function-in-pytorch/17122
+    """
     return torch.exp(gammaln(x))
 
 
 class InversePowerLawPotential(Potential):
-    """Inverse power-law potentials of the form :math:`1/r^p`.
+    """
+    Inverse power-law potentials of the form :math:`1/r^p`.
 
     Here :math:`r` is a distance parameter and :math:`p` an exponent.
 
@@ -87,7 +92,6 @@ class InversePowerLawPotential(Potential):
         :param dist: torch.tensor containing the distances at which the potential is to
             be evaluated.
         """
-
         if self.smearing is None:
             raise ValueError(
                 "Cannot compute long-range contribution without specifying `smearing`."
@@ -103,7 +107,8 @@ class InversePowerLawPotential(Potential):
 
     @torch.jit.export
     def lr_from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
-        """Fourier transform of the LR part potential in terms of :math:`k^2`.
+        """
+        Fourier transform of the LR part potential in terms of :math:`k^2`.
 
         If only the Coulomb potential is needed, the last line can be
         replaced by

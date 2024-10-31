@@ -4,7 +4,8 @@ import torch
 
 
 class CubicSpline(torch.nn.Module):
-    r"""Cubic spline calculator.
+    r"""
+    Cubic spline calculator.
 
     Class implementing a cubic spline for a real-valued function.
 
@@ -42,7 +43,8 @@ class CubicSpline(torch.nn.Module):
 
 
 class CubicSplineReciprocal(torch.nn.Module):
-    r"""Reciprocal-axis cubic spline calculator.
+    r"""
+    Reciprocal-axis cubic spline calculator.
 
     Computes a spline on a :math:`1/x` grid, "extending" it so that
     it converges smoothly to zero as :math:`x\rightarrow\infty`.
@@ -115,14 +117,14 @@ class CubicSplineReciprocal(torch.nn.Module):
 
 
 def _solve_tridiagonal(a, b, c, d):
-    """Helper function to solve a tri-diagonal linear problem.
+    """
+    Helper function to solve a tri-diagonal linear problem.
 
     a = torch.zeros(n)  # Sub-diagonal (a[1..n-1])
     b = torch.zeros(n)  # Main diagonal (b[0..n-1])
     c = torch.zeros(n)  # Super-diagonal (c[0..n-2])
     d = torch.zeros(n)  # Right-hand side (d[0..n-1])
     """
-
     n = len(d)
     # Create copies to avoid modifying the original arrays
     c_prime = torch.zeros(n)
@@ -151,7 +153,8 @@ def compute_second_derivatives(
     y_points: torch.Tensor,
     high_precision: Optional[bool] = True,
 ):
-    """Computes second derivatives given the grid points of a cubic spline.
+    """
+    Computes second derivatives given the grid points of a cubic spline.
 
     :param x_points: Abscissas of the splining points for the real-space function
     :param y_points: Ordinates of the splining points for the real-space function
@@ -159,7 +162,6 @@ def compute_second_derivatives(
 
     :return: The second derivatives for the spline points
     """
-
     # Do the calculation in float64 if required
     x = x_points
     y = y_points
@@ -206,7 +208,8 @@ def compute_spline_ft(
     d2y_points: torch.Tensor,
     high_precision: Optional[bool] = True,
 ):
-    r"""Computes the Fourier transform of a splined radial function.
+    r"""
+    Computes the Fourier transform of a splined radial function.
 
     Evaluates the integral
 
