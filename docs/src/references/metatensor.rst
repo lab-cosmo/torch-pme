@@ -16,7 +16,7 @@ For a plain :class:`torch.Tensor` refer to :ref:`calculators`.
 Implemented Calculators
 -----------------------
 
-.. automodule:: torchpme.metatensor.Calculator
+.. autoclass:: torchpme.metatensor.Calculator
     :members:
 
 .. autoclass:: torchpme.metatensor.EwaldCalculator

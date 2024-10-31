@@ -48,8 +48,8 @@ def test_compute_output_shapes():
 def test_invalid_shape_positions():
     calculator = CalculatorTest()
     match = (
-        r"each `positions` must be a tensor with shape \[n_atoms, 3\], got at least "
-        r"one tensor with shape \[4, 5\]"
+        r"`positions` must be a tensor with shape \[n_atoms, 3\], got tensor with "
+        r"shape \[4, 5\]"
     )
     with pytest.raises(ValueError, match=match):
         calculator.forward(
@@ -65,8 +65,7 @@ def test_invalid_shape_positions():
 def test_invalid_shape_cell():
     calculator = CalculatorTest()
     match = (
-        r"each `cell` must be a tensor with shape \[3, 3\], got at least one tensor "
-        r"with shape \[2, 2\]"
+        r"`cell` must be a tensor with shape \[3, 3\], got tensor with shape \[2, 2\]"
     )
     with pytest.raises(ValueError, match=match):
         calculator.forward(
@@ -81,8 +80,8 @@ def test_invalid_shape_cell():
 def test_invalid_dtype_cell():
     calculator = CalculatorTest()
     match = (
-        r"each `cell` must have the same type torch.float32 as `positions`, "
-        r"got at least one tensor of type torch.float64"
+        r"type of `cell` \(torch.float64\) must be same as `positions` "
+        r"\(torch.float32\)"
     )
     with pytest.raises(ValueError, match=match):
         calculator.forward(
@@ -96,10 +95,7 @@ def test_invalid_dtype_cell():
 
 def test_invalid_device_cell():
     calculator = CalculatorTest()
-    match = (
-        r"each `cell` must be on the same device cpu as `positions`, "
-        r"got at least one tensor with device meta"
-    )
+    match = r"device of `cell` \(meta\) must be same as `positions` \(cpu\)"
     with pytest.raises(ValueError, match=match):
         calculator.forward(
             positions=POSITIONS_1,
@@ -114,9 +110,8 @@ def test_invalid_device_cell():
 def test_invalid_dim_charges():
     calculator = CalculatorTest()
     match = (
-        r"each `charges` needs to be a 2-dimensional tensor, got at least "
-        r"one tensor with 1 dimension\(s\) and shape "
-        r"\[4\]"
+        r"`charges` must be a 2-dimensional tensor, got tensor with 1 dimension\(s\) "
+        r"and shape \[4\]"
     )
     with pytest.raises(ValueError, match=match):
         calculator.forward(
@@ -131,10 +126,9 @@ def test_invalid_dim_charges():
 def test_invalid_shape_charges():
     calculator = CalculatorTest()
     match = (
-        r"each `charges` must be a tensor with shape \[n_atoms, n_channels\], with "
-        r"`n_atoms` being the same as the variable `positions`. Got at "
-        r"least one tensor with shape \[6, 2\] where "
-        r"positions contains 4 atoms"
+        r"`charges` must be a tensor with shape \[n_atoms, n_channels\], with "
+        r"`n_atoms` being the same as the variable `positions`. Got tensor with "
+        r"shape \[6, 2\] where positions contains 4 atoms"
     )
     with pytest.raises(ValueError, match=match):
         calculator.forward(
@@ -149,8 +143,8 @@ def test_invalid_shape_charges():
 def test_invalid_dtype_charges():
     calculator = CalculatorTest()
     match = (
-        r"each `charges` must have the same type torch.float32 as `positions`, "
-        r"got at least one tensor of type torch.float64"
+        r"type of `charges` \(torch.float32\) must be same as `positions` "
+        r"\(torch.float32\)"
     )
     with pytest.raises(ValueError, match=match):
         calculator.forward(
@@ -164,10 +158,7 @@ def test_invalid_dtype_charges():
 
 def test_invalid_device_charges():
     calculator = CalculatorTest()
-    match = (
-        r"each `charges` must be on the same device cpu as `positions`, "
-        r"got at least one tensor with device meta"
-    )
+    match = r"device of `charges` \(meta\) must be same as `positions` \(cpu\)"
     with pytest.raises(ValueError, match=match):
         calculator.forward(
             positions=POSITIONS_1,
@@ -198,9 +189,7 @@ def test_invalid_shape_neighbor_indices_neighbor_distances():
     calculator = CalculatorTest()
     match = (
         r"`neighbor_indices` and `neighbor_distances` need to have shapes "
-        r"\[num_neighbors, 2\] and \[num_neighbors\]. For at least one "
-        r"structure, got \[10, 2\] and "
-        r"\[11, 3\], which is inconsistent"
+        r"\[num_neighbors, 2\] and \[num_neighbors\], but got \[10, 2\] and \[11, 3\]"
     )
     with pytest.raises(ValueError, match=match):
         calculator.forward(
@@ -214,10 +203,7 @@ def test_invalid_shape_neighbor_indices_neighbor_distances():
 
 def test_invalid_device_neighbor_indices():
     calculator = CalculatorTest()
-    match = (
-        r"each `neighbor_indices` must be on the same device cpu as `positions`, "
-        r"got at least one tensor with device meta"
-    )
+    match = r"device of `neighbor_indices` \(meta\) must be same as `positions` \(cpu\)"
     with pytest.raises(ValueError, match=match):
         calculator.forward(
             positions=POSITIONS_1,
@@ -231,8 +217,7 @@ def test_invalid_device_neighbor_indices():
 def test_invalid_device_neighbor_distances():
     calculator = CalculatorTest()
     match = (
-        r"each `neighbor_distances` must be on the same device cpu as `positions`, "
-        r"got at least one tensor with device meta"
+        r"device of `neighbor_distances` \(meta\) must be same as `positions` \(cpu\)"
     )
     with pytest.raises(ValueError, match=match):
         calculator.forward(
