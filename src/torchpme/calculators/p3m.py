@@ -1,11 +1,11 @@
 import torch
 from torch import profiler
 
-from ..lib import Potential
 from ..lib.kspace_filter import P3MKSpaceFilter
 from ..lib.kvectors import get_ns_mesh
 from ..lib.mesh_interpolator import MeshInterpolator
-from .base import Calculator
+from ..potentials import Potential
+from .calculator import Calculator
 
 
 class P3MCalculator(Calculator):
