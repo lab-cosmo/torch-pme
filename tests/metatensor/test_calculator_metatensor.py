@@ -94,8 +94,8 @@ def test_wrong_neighbors_dtype(system, neighbors):
 
     calculator = CalculatorTest()
     match = (
-        "each `neighbors` must have the same type torch.float32 as "
-        "`systems`, got at least one `neighbors` of type torch.float64"
+        r"dtype of `neighbors` \(torch.float64\) must be the same as `system` "
+        r"\(torch.float32\)"
     )
     with pytest.raises(ValueError, match=match):
         calculator.forward(system, neighbors)
@@ -105,10 +105,7 @@ def test_wrong_neighbors_device(system, neighbors):
     neighbors = neighbors.to("meta")
 
     calculator = CalculatorTest()
-    match = (
-        "each `neighbors` must be on the same device cpu as "
-        "`systems`, got at least one `neighbors` with device meta"
-    )
+    match = r"device of `neighbors` \(meta\) must be the same as `system` \(cpu\)"
     with pytest.raises(ValueError, match=match):
         calculator.forward(system, neighbors)
 
@@ -194,9 +191,9 @@ def test_different_number_charge_channels(system, neighbors):
     calculator = CalculatorTest()
 
     match = (
-        r"each `charges` must be a tensor with shape \[n_atoms, n_channels\], "
-        r"with `n_atoms` being the same as the variable `positions`. "
-        r"Got at least one tensor with shape \[2, 2\] where positions contains 3 atoms"
+        r"`charges` must be a tensor with shape \[n_atoms, n_channels\], with "
+        r"`n_atoms` being the same as the variable `positions`. Got tensor with "
+        r"shape \[2, 2\] where positions contains 3 atoms"
     )
     with pytest.raises(ValueError, match=match):
         calculator.forward(system_channels, neighbors)
