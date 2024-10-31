@@ -145,9 +145,7 @@ class Calculator(torch.nn.Module):
                 :class:`NeighborListOptions
                 <metatensor.torch.atomistic.NeighborListOptions>` directly in the
                 constructor, we chose explicit passing for consistency with the torch
-                interface. This approach also simplifies the internal logic, ensuring
-                the correct neighbors are used when multiple neighbor lists are attached
-                to a :class:`metatensor.torch.atomistic.System`.
+                interface.
 
         :return: :class:`metatensor.torch.TensorMap` containing the potential
         """
