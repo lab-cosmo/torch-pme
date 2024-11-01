@@ -175,6 +175,7 @@ class Calculator(torch.nn.Module):
             cell=cell,
             positions=positions,
         )
+        print(f"{potential_lr=}, {potential_sr=}")
 
         return self.prefactor * (potential_sr + potential_lr)
 

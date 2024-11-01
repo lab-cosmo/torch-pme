@@ -1,7 +1,8 @@
+from functools import cached_property
 from typing import Optional
 
 import torch
-
+from torch.nn.functional import pad
 from .coulomb import CoulombPotential
 
 
@@ -22,7 +23,11 @@ class P3MCoulombPotential(CoulombPotential):
         self.interpolation_nodes = interpolation_nodes
         self.mesh_spacing = mesh_spacing.reshape(1, 1, 1, 1, 3)
         self.cell = cell
-        inverse_cell = torch.linalg.inv(cell)
+        if cell.is_cuda:
+            # use function that does not synchronize with the CPU
+            inverse_cell = torch.linalg.inv_ex(cell)[0]
+        else:
+            inverse_cell = torch.linalg.inv(cell)
         self._reciprocal_cell = 2 * torch.pi * inverse_cell.T
 
     @cached_property
@@ -47,8 +52,9 @@ class P3MCoulombPotential(CoulombPotential):
         Compatibility function with the interface of :py:class:`KSpaceKernel`, so that
         potentials can be used as kernels for :py:class:`KSpaceFilter`.
         """
-
-        return self.lr_from_k(k)
+        result = self.lr_from_k(k)
+        # print(result)
+        return result
 
     def lr_from_k(self, k: torch.Tensor) -> torch.Tensor:
         """
@@ -64,18 +70,12 @@ class P3MCoulombPotential(CoulombPotential):
             )
 
         k = k.double()
-        print(f"{k.shape=}")
         D = self._diff_operator(k)
-        print(f"{D.shape=}")
         k_prime = torch.unsqueeze(k, -2) + self._k_vectors
         U2 = (self._charge_assignment(k_prime) / self._volume) ** 2
-        print(f"{U2.shape=}")
         R = self._reference_force(k_prime)
-        print(f"{R.shape=}")
         D2 = torch.linalg.norm(D, dim=-1) ** 2
-        print(f"{D2.shape=}")
         denominator = D2 * torch.sum(U2, dim=-1) ** 2
-        print(f"{denominator.shape=}")
 
         return torch.where(
             denominator == 0,
@@ -121,6 +121,7 @@ class P3MCoulombPotential(CoulombPotential):
     def _diff_operator(self, k: torch.Tensor) -> torch.Tensor:
         """
         From shape (nx, ny, nz, 3) to shape (nx, ny, nz, 3)"""
+        print(k * self.mesh_spacing.squeeze(0) / torch.pi)
         return (
             1j
             * torch.sin(k * self.mesh_spacing.squeeze(0))
@@ -130,10 +131,14 @@ class P3MCoulombPotential(CoulombPotential):
     def _charge_assignment(self, k: torch.Tensor) -> torch.Tensor:
         """
         From shape (nx, ny, nz, 6, 3) to shape (nx, ny, nz, 6)"""
-        return torch.prod(self.mesh_spacing) * torch.prod(
-            torch.sinc(k * self.mesh_spacing / 2 / torch.pi)
-            ** self.interpolation_nodes,
-            dim=-1,
+        print(k * self.mesh_spacing / 2 / torch.pi)
+        return (
+            torch.prod(self.mesh_spacing)
+            * torch.prod(
+                torch.sinc(k * self.mesh_spacing / 2 / torch.pi),
+                dim=-1,
+            )
+            ** self.interpolation_nodes
         )
 
     def _reference_force(self, k: torch.Tensor) -> torch.Tensor:
@@ -141,13 +146,5 @@ class P3MCoulombPotential(CoulombPotential):
         From shape (nx, ny, nz, 6, 3) to shape (nx, ny, nz, 6, 3)"""
 
         k_sq = torch.linalg.norm(k, dim=-1) ** 2
-        print(f"{k_sq.shape=}")
 
-        return (
-            k
-            * torch.where(
-                k_sq == 0,
-                0.0j,
-                -1j * 4 * torch.pi * torch.exp(-0.5 * self.smearing**2 * k_sq) / k_sq,
-            )[..., torch.newaxis]
-        )
+        return -1j * k * self.lr_from_k_sq(k_sq)[..., torch.newaxis]
