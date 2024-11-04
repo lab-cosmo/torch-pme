@@ -11,21 +11,22 @@ except ImportError:
     ) from None
 
 from .. import calculators as torch_calculators
-from ..lib.potentials import Potential
+from ..potentials.spline import Potential
 
 
 class Calculator(torch.nn.Module):
-    """Base calculator for the metatensor interface.
+    """
+    Base calculator for the metatensor interface.
 
     This is just a thin wrapper around the corresponding
-    generic torch :py:class:`torchpme.calculators.Calculator`.
+    generic torch :class:`torchpme.calculators.Calculator`.
     If you want to wrap a ``metatensor`` interface around another
     calculator, you can just define the class and set the static
     member ``_base_calculator`` to the corresponding
     torch calculator.
 
     :param potential: every calculator requires an instance of a
-        :py:class:`Potential <torchpme.lib.Potential>` that is used
+        :class:`Potential <torchpme.lib.Potential>` that is used
         to compute real and k-space terms for a 2-body potential.
     """
 
@@ -46,43 +47,19 @@ class Calculator(torch.nn.Module):
         system: System,
         neighbors: TensorBlock,
     ):
-        # check that all inputs are of the same type
-
         dtype = system.positions.dtype
         device = system.positions.device
 
-        _components_labels = Labels(
-            ["xyz"],
-            torch.arange(3, dtype=torch.int32, device=device).unsqueeze(1),
-        )
-        _properties_labels = Labels(
-            ["distance"], torch.zeros(1, 1, dtype=torch.int32, device=device)
-        )
-
-        if system.positions.dtype != dtype:
-            raise ValueError(
-                "`dtype` of all systems must be the same, got "
-                f"{system.positions.dtype} and {dtype}`"
-            )
-
-        if system.positions.device != device:
-            raise ValueError(
-                "`device` of all systems must be the same, got "
-                f"{system.positions.device} and {device}`"
-            )
-
         if neighbors.values.dtype != dtype:
             raise ValueError(
-                f"each `neighbors` must have the same type {dtype} "
-                "as `systems`, got at least one `neighbors` of type "
-                f"{neighbors.values.dtype}"
+                f"dtype of `neighbors` ({neighbors.values.dtype}) must be the same "
+                f"as `system` ({dtype})"
             )
 
         if neighbors.values.device != device:
             raise ValueError(
-                f"each `neighbors` must be on the same device {device} "
-                "as `systems`, got at least one `neighbors` with device "
-                f"{neighbors.values.device}"
+                f"device of `neighbors` ({neighbors.values.device}) must be the same "
+                f"as `system` ({device})"
             )
 
         # Check metadata of neighbors
@@ -101,14 +78,21 @@ class Calculator(torch.nn.Module):
                 "'cell_shift_c'"
             )
 
+        components_labels = Labels(
+            ["xyz"],
+            torch.arange(3, dtype=torch.int32, device=device).unsqueeze(1),
+        )
         components = neighbors.components
-        if len(components) != 1 or components[0] != _components_labels:
+        if len(components) != 1 or components[0] != components_labels:
             raise ValueError(
                 "Invalid components for `neighbors`: there should be a single "
                 "'xyz'=[0, 1, 2] component"
             )
 
-        if neighbors.properties != _properties_labels:
+        properties_labels = Labels(
+            ["distance"], torch.zeros(1, 1, dtype=torch.int32, device=device)
+        )
+        if neighbors.properties != properties_labels:
             raise ValueError(
                 "Invalid properties for `neighbors`: there should be a single "
                 "'distance'=0 property"
@@ -135,29 +119,36 @@ class Calculator(torch.nn.Module):
         neighbors: TensorBlock,
     ) -> TensorMap:
         """
-        Compute potential for the provided ``system``.
+        Compute the potential "energy".
 
-        All ``systems`` must have the same ``dtype`` and the same ``device``. If each
-        system contains a custom data field ``charges`` the potential will be calculated
-        for each "charges-channel". The number of `charges-channels` must be same in all
-        ``systems``. If no "explicit" charges are set the potential will be calculated
-        for each "types-channels".
+        The ``system`` must contain a custom data field ``charges``. The potential will
+        be calculated for each ``"charges_channel"``, which will also be the properties
+        name of the returned :class:`metatensor.torch.TensorMap`.
 
-        :param systems: single System or list of
-            :py:class:`metatensor.torch.atomisic.System` on which to run the
-            calculations. The system should have ``"charges"`` using the
-            :py:meth:`add_data <metatensor.torch.atomistic.System.add_data>` method.
-        :param neighbors: single TensorBlock or list of a
-            :py:class:`metatensor.torch.TensorBlock` containing the **half neighbor
-            list**, required for periodic computations (Ewald, PME) and optional for
-            direct computations. If a neighbor list is attached to a
-            :py:class`metatensor.torch.atomistic.System` it can be extracted with the
-            :py:meth:`get_neighborlist
-            <metatensor.torch.atomistic.System.get_neighborlist>` method.
+        :param system: System to run the calculations. The system must have attached
+            ``"charges"`` using the :meth:`add_data
+            <metatensor.torch.atomistic.System.add_data>` method.
+        :param neighbors: The neighbor list. If a neighbor list is attached to a
+            :class:`metatensor.torch.atomistic.System` it can be extracted with the
+            :meth:`get_neighborlist
+            <metatensor.torch.atomistic.System.get_neighborlist>` method using a
+            :class:`NeighborListOptions
+            <metatensor.torch.atomistic.NeighborListOptions>`. Note to use the same
+            ``full_list`` option for these options as provided for
+            ``full_neighbor_list`` in the constructor.
 
-        :return: TensorMap containing the potential of all types.
+            .. note::
+
+                Although ``neighbors`` can be attached to the ``system``, they are
+                required to be passed explicitly here. While it's possible to design the
+                class to automatically extract the neighbor list by accepting a
+                :class:`NeighborListOptions
+                <metatensor.torch.atomistic.NeighborListOptions>` directly in the
+                constructor, we chose explicit passing for consistency with the torch
+                interface.
+
+        :return: :class:`metatensor.torch.TensorMap` containing the potential
         """
-
         self._validate_compute_parameters(system, neighbors)
 
         # In actual computations, the data type (dtype) and device (e.g. CPU, GPU) of

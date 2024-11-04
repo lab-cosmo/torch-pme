@@ -14,7 +14,9 @@ HERE = os.path.dirname(__file__)
 ROOT = os.path.realpath(os.path.join(HERE, "..", ".."))
 
 sphinx_gallery_conf = {
+    "backreferences_dir": "backreferences",
     "copyfile_regex": r".*\.(xyz)",
+    "doc_module": ("torchpme",),
     "examples_dirs": ["../../examples"],
     "filename_pattern": ".*",
     "gallery_dirs": ["examples"],

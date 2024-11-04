@@ -66,7 +66,6 @@ def test_sr_lr_split(exponent, smearing):
     whether the sum of the SR and LR parts combine to the standard inverse power-law
     potential.
     """
-
     # Compute diverse potentials for this inverse power law
     ipl = InversePowerLawPotential(exponent=exponent, smearing=smearing, dtype=dtype)
 
@@ -95,7 +94,6 @@ def test_exact_sr(exponent, smearing):
     distance range (the variable dist_min) is increased, since the potential has a
     (removable) singularity at r=0.
     """
-
     # Compute SR part of Coulomb potential using the potentials class working for any
     # exponent
     ipl = InversePowerLawPotential(exponent=exponent, smearing=smearing, dtype=dtype)
@@ -130,7 +128,6 @@ def test_exact_lr(exponent, smearing):
     distance range (the variable dist_min) is increased, since the potential has a
     (removable) singularity at r=0.
     """
-
     # Compute LR part of Coulomb potential using the potentials class working for any
     # exponent
     ipl = InversePowerLawPotential(exponent=exponent, smearing=smearing, dtype=dtype)
@@ -165,7 +162,6 @@ def test_exact_fourier(exponent, smearing):
     distance range (the variable dist_min) is increased, since the potential has a
     (removable) singularity at r=0.
     """
-
     # Compute LR part of Coulomb potential using the potentials class working for any
     # exponent
     ipl = InversePowerLawPotential(exponent=exponent, smearing=smearing, dtype=dtype)
@@ -291,9 +287,10 @@ def test_f_cutoff(exclusion_radius):
 
 @pytest.mark.parametrize("smearing", smearinges)
 def test_inverserp_coulomb(smearing):
-    """Check that an explicit Coulomb potential
-    matches the 1/r^p implementation with p=1."""
-
+    """
+    Check that an explicit Coulomb potential
+    matches the 1/r^p implementation with p=1.
+    """
     # Compute LR part of Coulomb potential using the potentials class working for any
     # exponent
     ipl = InversePowerLawPotential(exponent=1.0, smearing=smearing, dtype=dtype)
@@ -439,7 +436,6 @@ def test_potentials_jit(potpars):
 
 @pytest.mark.parametrize("smearing", smearinges)
 def test_combined_potential(smearing):
-    """"""
     ipl_1 = InversePowerLawPotential(exponent=1.0, smearing=smearing, dtype=dtype)
     ipl_2 = InversePowerLawPotential(exponent=2.0, smearing=smearing, dtype=dtype)
 

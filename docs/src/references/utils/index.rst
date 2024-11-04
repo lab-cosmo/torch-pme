@@ -1,5 +1,7 @@
-General helper functions
-########################
+.. _utils:
+
+General utility functions
+#########################
 
 .. toctree::
    :maxdepth: 1

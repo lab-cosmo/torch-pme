@@ -1,6 +1,4 @@
-"""
-Madelung tests
-"""
+"""Madelung tests"""
 
 import io
 
@@ -54,6 +52,7 @@ class TestWorkflow:
             types=torch.tensor([1, 2, 2]),
             positions=torch.tensor([[0.0, 0.0, 0.0], [0.0, 0.0, 0.2], [0.0, 0.0, 0.5]]),
             cell=4.2 * torch.eye(3),
+            pbc=torch.tensor([True, True, True]),
         )
 
         charges = torch.tensor([1.0, -0.5, -0.5]).unsqueeze(1)

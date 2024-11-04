@@ -3,4 +3,8 @@ PMECalculator
 
 .. autoclass:: torchpme.PMECalculator
     :members: forward
-    :undoc-members:
+
+.. minigallery::
+    :add-heading:
+
+    torchpme.PMECalculator

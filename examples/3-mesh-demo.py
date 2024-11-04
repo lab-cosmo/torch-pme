@@ -4,6 +4,8 @@
 Examples of the ``MeshInterpolator`` class
 ==========================================
 
+.. currentmodule:: torchpme
+
 :Authors: Michele Ceriotti `@ceriottm <https://github.com/ceriottm/>`_
 
 This notebook showcases the functionality of ``torch-pme`` by going
@@ -80,7 +82,7 @@ cell = torch.from_numpy(structure.cell.array).to(device=device, dtype=dtype)
 
 # %%
 #
-# We now use :py:class:`MeshInterpolator <torchpme.lib.MeshInterpolator>` to project
+# We now use :class:`MeshInterpolator <lib.MeshInterpolator>` to project
 # atomic positions on a grid. Note that ideally the interpolation represents a sharp
 # density peaked at atomic positions, so the degree of smoothening depends on the grid
 # resolution (as well as on the interpolation nodes)
@@ -102,7 +104,7 @@ rho_mesh_fine = interpolator_fine.points_to_mesh(charges)
 # %%
 #
 # Note that the meshing can be also used for multiple "pseudo-charge" values per atom
-# simultaneously. In that case, :py:func:`points_to_mesh
+# simultaneously. In that case, :func:`points_to_mesh
 # <torchpme.lib.MeshInterpolator.points_to_mesh>` will return multiple mesh values.
 
 pseudo_charges = torch.normal(mean=0, std=1, size=(len(structure), 4))
@@ -249,8 +251,8 @@ chemiscope.show(
 # Mesh interpolation
 # ------------------
 #
-# Once a mesh has been defined, it is possible to use the :py:class:`MeshInterpolator
-# <torchpme.lib.MeshInterpolator>` object to compute an interpolation of the field on
+# Once a mesh has been defined, it is possible to use the :class:`MeshInterpolator
+# <lib.MeshInterpolator>` object to compute an interpolation of the field on
 # the points for which the weights have been computed.
 #
 # A very important point to grasp is that the charge mapping on the grid is designed to
@@ -270,8 +272,8 @@ fig.show()
 
 # %%
 #
-# Even though it is not specifically designed for that, :py:func:`points_to_mesh
-# <torchpme.lib.MeshInterpolator.mesh_to_points>` can interpolate arbitrary functions
+# Even though it is not specifically designed for that, :func:`points_to_mesh
+# <lib.MeshInterpolator.mesh_to_points>` can interpolate arbitrary functions
 # defined on the grid. For instance, here we define a product of sine functions along
 # the three Cartesian directions, :math:`\cos(2\pi x/L)\cos(2\pi y/L)\cos(2\pi z/L)`
 
@@ -321,9 +323,9 @@ chemiscope.show(
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #
 # If you want to interpolate on a different set of points than the ones a
-# :py:class:`MeshInterpolator <torchpme.lib.MeshInterpolator>` object was initialized
+# :class:`MeshInterpolator <lib.MeshInterpolator>` object was initialized
 # on, it is easy to do by either creating a new one or simply calling again
-# :py:func:`compute_weights
+# :func:`compute_weights
 # <torchpme.lib.MeshInterpolator.compute_weights>` for the new set of
 # points.
 

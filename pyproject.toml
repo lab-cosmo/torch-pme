@@ -56,7 +56,7 @@ examples = [
     "vesin >= 0.2.0",
     "vesin-torch >= 0.2.0",
 ]
-metatensor = ["metatensor-torch <0.6,>=0.5"]
+metatensor = ["metatensor-torch <0.7,>=0.6"]
 
 [project.urls]
 homepage = "http://torch-pme.readthedocs.io"
@@ -80,11 +80,40 @@ exclude = ["docs/src/examples/**"]
 line-length = 88
 
 [tool.ruff.lint]
-# See https://docs.astral.sh/ruff/rules for details
-extend-select = ["B", "E", "UP", "I", "SIM", "PT", "RET", "W", "Q"]
+# See https://docs.astral.sh/ruff/rules for additional details
+extend-select = [
+    "B",  # Pyflakes checks (e.g., unused imports, undefined variables)
+    "D",  # PEP 257 docstring conventions (e.g., formatting, consistency)
+    "E",  # Pycodestyle errors (e.g., indentation, whitespace, syntax)
+    "UP",  # PyUpgrade rules (e.g., upgrading to modern Python syntax)
+    "I",  # Import conventions (e.g., sorting imports, duplicate imports)
+    "SIM",  # Simplification suggestions (e.g., refactoring redundant code)
+    "PT",  # Pytest style rules (e.g., avoiding assert in tests)
+    "RET",  # Return statements consistency (e.g., avoiding multiple return paths)
+    "W",  # Warnings about style (e.g., trailing whitespace, blank lines)
+    "Q",  # Quotes consistency (e.g., single vs. double quotes)
+]
 
-# E501: don't worry about too long lines
-ignore = ["E501"]
+ignore = [
+    "D100",  # Missing docstring in public module
+    "D102",  # Missing docstring in public method
+    "D104",  # Missing docstring in public package
+    "D107",  # Missing docstring in __init__
+    "D203",  # 1 blank line required before class docstring
+    "D205",  # 1 blank line required between summary line and description
+    "D212",  # Multi-line docstring summary should start at the first line
+    "D400",  # First line should end with a period
+    "D401",  # First line should be in imperative mood
+    "D403",  # First word of the first line should be capitalized
+    "D404",  # First word of the docstring should not be This
+    "D412",  # No blank lines allowed between a section header and its conten
+    "D415",  # First line should end with a period, question mark, or exclamation point
+    "D416",  # Section name should end with a colon
+    "E501",  # Line too long
+]
+
+[tool.ruff.lint.per-file-ignores]
+"**/{tests,docs,examples}/*" = ["D1"]  # Don't require any docstrings in these directories
 
 [tool.ruff.lint.isort]
 known-first-party = ["torchpme"]

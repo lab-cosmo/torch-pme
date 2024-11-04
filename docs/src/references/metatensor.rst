@@ -3,7 +3,7 @@
 Metatensor Bindings
 ###################
 
-torch-pme calculators returning representations as :py:class:`metatensor.TensorMap`.
+torch-pme calculators returning representations as :class:`metatensor.TensorMap`.
 For using these bindings you need to install the ``metatensor.torch`` optional
 dependencies.
 
@@ -11,15 +11,25 @@ dependencies.
 
    pip install .[metatensor]
 
-For a plain :py:class:`torch.Tensor` refer to :ref:`calculators`.
+For a plain :class:`torch.Tensor` refer to :ref:`calculators`.
 
 Implemented Calculators
 -----------------------
 
-.. autoclass:: torchpme.metatensor.PMECalculator
-    :members: forward
-    :undoc-members:
+.. autoclass:: torchpme.metatensor.Calculator
+    :members:
 
 .. autoclass:: torchpme.metatensor.EwaldCalculator
     :members: forward
-    :undoc-members:
+
+.. autoclass:: torchpme.metatensor.PMECalculator
+    :members: forward
+
+Examples using the Metatensor Bindings
+--------------------------------------
+
+.. minigallery::
+
+    torchpme.metatensor.Calculator
+    torchpme.metatensor.PMECalculator
+    torchpme.metatensor.EwaldCalculator

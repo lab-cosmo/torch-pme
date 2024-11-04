@@ -1,11 +1,13 @@
 import torch
 
-from ..lib import Potential, generate_kvectors_for_ewald
-from .base import Calculator
+from ..lib import generate_kvectors_for_ewald
+from ..potentials import Potential
+from .calculator import Calculator
 
 
 class EwaldCalculator(Calculator):
-    r"""Potential computed using the Ewald sum.
+    r"""
+    Potential computed using the Ewald sum.
 
     Scaling as :math:`\mathcal{O}(N^2)` with respect to the number of particles
     :math:`N`.
@@ -20,7 +22,7 @@ class EwaldCalculator(Calculator):
         For a training exercise it is recommended only run a tuning procedure with
         :func:`torchpme.utils.tuning.tune_ewald` for the largest system in your dataset.
 
-    For a :math:`\mathcal{O}(N^1.5)` scaling, one can set the parameters as following:
+    For a :math:`\mathcal{O}(N^{1.5})` scaling, one can set the parameters as following:
 
     .. math::
 
@@ -35,9 +37,9 @@ class EwaldCalculator(Calculator):
     times in each direction, resulting in a system of 8192 atoms.
 
     :param potential: the two-body potential that should be computed, implemented
-        as a :py:class:`torchpme.lib.Potential` object. The ``smearing`` parameter
+        as a :class:`torchpme.potentials.Potential` object. The ``smearing`` parameter
         of the potential determines the split between real and k-space regions.
-        For a :py:class:`torchpme.lib.CoulombPotential` it corresponds to the
+        For a :class:`torchpme.CoulombPotential` it corresponds to the
         width of the atom-centered Gaussian used to split the Coulomb potential
         into the short- and long-range parts. A reasonable value for
         most systems is to set it to ``1/5`` times the neighbor list cutoff.
@@ -46,13 +48,11 @@ class EwaldCalculator(Calculator):
         wavelength >= this value will be kept. If not set to a global value, it will be
         set to half the smearing parameter to ensure convergence of the
         long-range part to a relative precision of 1e-5.
-    :param full_neighbor_list: If set to :py:obj:`True`, a "full" neighbor list is
+    :param full_neighbor_list: If set to :obj:`True`, a "full" neighbor list is
         expected as input. This means that each atom pair appears twice. If set to
-        :py:obj:`False`, a "half" neighbor list is expected.
+        :obj:`False`, a "half" neighbor list is expected.
     :param prefactor: electrostatics prefactor; see :ref:`prefactors` for details and
         common values.
-
-    For an **example** on the usage for any calculator refer to :ref:`userdoc-how-to`.
     """
 
     def __init__(

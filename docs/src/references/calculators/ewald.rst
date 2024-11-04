@@ -3,4 +3,8 @@ EwaldCalculator
 
 .. autoclass:: torchpme.EwaldCalculator
     :members: forward
-    :undoc-members:
+
+.. minigallery::
+    :add-heading:
+
+    torchpme.EwaldCalculator

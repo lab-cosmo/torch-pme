@@ -1,15 +1,16 @@
 import torch
 from torch import profiler
 
-from ..lib import Potential
 from ..lib.kspace_filter import KSpaceFilter
 from ..lib.kvectors import get_ns_mesh
 from ..lib.mesh_interpolator import MeshInterpolator
-from .base import Calculator
+from ..potentials import Potential
+from .calculator import Calculator
 
 
 class PMECalculator(Calculator):
-    r"""Potential using a particle mesh-based Ewald (PME).
+    r"""
+    Potential using a particle mesh-based Ewald (PME).
 
     Scaling as :math:`\mathcal{O}(NlogN)` with respect to the number of particles
     :math:`N` used as a reference to test faster implementations.
@@ -24,13 +25,13 @@ class PMECalculator(Calculator):
         For a training exercise it is recommended only run a tuning procedure with
         :func:`torchpme.utils.tuning.tune_pme` for the largest system in your dataset.
 
-    :param potential: A :py:class:`Potential` object that implements the evaluation
-        of short and long-range potential terms. The ``smearing`` parameter
-        of the potential determines the split between real and k-space regions.
-        For a :py:class:`torchpme.lib.CoulombPotential` it corresponds
-        to the smearing of the atom-centered Gaussian used to split the
-        Coulomb potential into the short- and long-range parts. A reasonable value for
-        most systems is to set it to ``1/5`` times the neighbor list cutoff.
+    :param potential: A :class:`torchpme.potentials.Potential` object that implements
+        the evaluation of short and long-range potential terms. The ``smearing``
+        parameter of the potential determines the split between real and k-space
+        regions. For a :class:`torchpme.CoulombPotential` it corresponds to the
+        smearing of the atom-centered Gaussian used to split the Coulomb potential into
+        the short- and long-range parts. A reasonable value for most systems is to set
+        it to ``1/5`` times the neighbor list cutoff.
     :param mesh_spacing: Value that determines the umber of Fourier-space grid points
         that will be used along each axis. If set to None, it will automatically be set
         to half of ``smearing``.
@@ -39,13 +40,11 @@ class PMECalculator(Calculator):
         In general, for ``n`` nodes, the interpolation will be performed by piecewise
         polynomials of degree ``n - 1`` (e.g. ``n = 4`` for cubic interpolation).
         Only the values ``3, 4, 5, 6, 7`` are supported.
-    :param full_neighbor_list: If set to :py:obj:`True`, a "full" neighbor list
+    :param full_neighbor_list: If set to :obj:`True`, a "full" neighbor list
         is expected as input. This means that each atom pair appears twice. If
-        set to :py:obj:`False`, a "half" neighbor list is expected.
+        set to :obj:`False`, a "half" neighbor list is expected.
     :param prefactor: electrostatics prefactor; see :ref:`prefactors` for details and
         common values.
-
-    For an **example** on the usage for any calculator refer to :ref:`userdoc-how-to`.
     """
 
     def __init__(

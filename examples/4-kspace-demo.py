@@ -4,14 +4,15 @@
 Examples of the ``KSpaceFilter`` class
 ==========================================
 
+.. currentmodule:: torchpme
+
 :Authors: Michele Ceriotti `@ceriottm <https://github.com/ceriottm/>`_
 
-This notebook demonstrates the use of the
-:py:class:`KSpaceFilter <torchpme.lib.KSpaceFilter>` class
-to transform a density by applying a scalar filter in reciprocal space.
+This notebook demonstrates the use of the :class:`KSpaceFilter <lib.KSpaceFilter>`
+class to transform a density by applying a scalar filter in reciprocal space.
 
-The class supports many different use cases, and can be reused several
-times if the filter or the mesh size don't change.
+The class supports many different use cases, and can be reused several times if the
+filter or the mesh size don't change.
 """
 
 from time import time
@@ -28,14 +29,14 @@ device = "cpu"
 dtype = torch.float64
 
 # %%
+#
 # Demonstrates the application of a k-space filter
 # ------------------------------------------------
 #
-# We define a fairly rugged function on a mesh, and apply a
-# smoothening filter. We start creating a grid
-# (we use a :py:class:`MeshInterpolator` object for
-# simplicity to generate the grid with the right shape) and computing a
-# sharp Gaussian field in the :math:`xy` plane.
+# We define a fairly rugged function on a mesh, and apply a smoothening filter. We start
+# creating a grid (we use a :class:`MeshInterpolator` object for simplicity to generate
+# the grid with the right shape) and computing a sharp Gaussian field in the :math:`xy`
+# plane.
 
 cell = torch.eye(3, dtype=dtype, device=device) * 6.0
 ns_mesh = torch.tensor([9, 9, 9])
@@ -49,11 +50,11 @@ mesh_value = (
 ).reshape(1, *xyz_mesh.shape[:-1])
 
 # %%
-# To define and apply a Gaussian smearing filter,
-# we first define the convolution kernel that must be applied
-# in the Fourier domain, and then use it as a parameter of the
-# filter class. The application of the filter requires simply
-# a call to :py:func:`KSpaceKernel.compute`.
+#
+# To define and apply a Gaussian smearing filter, we first define the convolution kernel
+# that must be applied in the Fourier domain, and then use it as a parameter of the
+# filter class. The application of the filter requires simply a call to
+# :func:`lib.KSpaceKernel.compute`.
 
 
 # This is the filter function. NB it is applied
@@ -172,14 +173,14 @@ chemiscope.show(
 )
 
 # %%
+#
 # Adjustable and multi-channel filters
 # ------------------------------------
-# :py:class:`KSpaceFilter <torchpme.lib.KSpaceFilter>` can
-# also be applied for more complicated use cases. For
-# instance, one can apply multiple filters to multiple
-# real-space mesh channels, and use a
-# :py:class:`torch.nn.Module`-derived class to define an
-# adjustable kernel.
+#
+# :class:`KSpaceFilter <lib.KSpaceFilter>` can also be applied for more complicated
+# use cases. For instance, one can apply multiple filters to multiple real-space mesh
+# channels, and use a :class:`torch.nn.Module`-derived class to define an adjustable
+# kernel.
 
 # %%
 # We initialize a three-channel mesh, with identical
@@ -216,7 +217,7 @@ multi_filtered = multi_kernel_filter.forward(multi_mesh)
 
 # %%
 # When the parameters of the kernel or the ``cell`` are modified, one has to call
-# :py:func:`KSpaceFilter.update` before applying the filter
+# :func:`KSpaceFilter.update` before applying the filter
 
 multi_kernel._sigma = torch.tensor([1.0, 0.5, 0.25])
 multi_kernel_filter.update(cell)

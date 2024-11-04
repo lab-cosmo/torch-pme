@@ -1,6 +1,9 @@
 """
 Computations with Multiple Charge Channels
 ==========================================
+
+.. currentmodule:: torchpme
+
 In a physical system, the (electrical) charge is a scalar atomic property, and besides
 the distance between the particles, the charge defines the electrostatic potential. When
 computing a potential with Meshlode, you can not only pass a (reshaped) 1-D array
@@ -42,6 +45,7 @@ symbols = ("Cs", "Cl")
 types = torch.tensor([55, 17])
 positions = torch.tensor([(0, 0, 0), (0.5, 0.5, 0.5)], dtype=torch.float64)
 cell = torch.eye(3, dtype=torch.float64)
+pbc = torch.tensor([True, True, True])
 
 
 # %%
@@ -78,18 +82,18 @@ neighbor_indices = torch.stack([i, j], dim=1)
 
 # %%
 #
-# Next, we initialize the :py:class:`PMECalculator` calculator with an ``exponent`` of
+# Next, we initialize the :class:`PMECalculator` calculator with an ``exponent`` of
 # *1* for electrostatic interactions between the two atoms. This calculator
 # will be used to *compute* the potential energy of the system.
 
 calculator = torchpme.PMECalculator(
-    torchpme.lib.CoulombPotential(smearing=smearing), **pme_params
+    torchpme.CoulombPotential(smearing=smearing), **pme_params
 )
 
 # %%
 #
 # Single Charge Channel
-# #####################\
+# #####################
 #
 # As a first application of multiple charge channels, we start simply by using the
 # classic definition of one charge channel per atom.
@@ -98,9 +102,9 @@ charges = torch.tensor([[1.0], [-1.0]], dtype=torch.float64)
 
 # %%
 #
-# Any input the meshLODE calculators has to be a 2D array where the *rows* describe the
-# number of atoms (here ``(2)``) and the *columns* the number of atomic charge channels
-# (here ``(1)``).
+# Any input the calculators has to be a 2D array where the *rows* describe the number of
+# atoms (here ``(2)``) and the *columns* the number of atomic charge channels (here
+# ``(1)``).
 
 print(charges.shape)
 
@@ -152,8 +156,8 @@ charges_one_hot = torch.tensor([[1.0, 0.0], [0.0, 1.0]], dtype=torch.float64)
 # of the ``charges_one_hot`` is zero as well as the ``(1,0)`` which corresponds to the
 # charge of Cl in the Na channel.
 #
-# We now again calculate the potential using the same ``PMECalculator`` calculator using
-# the ``charges_one_hot`` as input.
+# We now again calculate the potential using the same :class:`PMECalculator` calculator
+# using the ``charges_one_hot`` as input.
 
 potential_one_hot = calculator(
     charges=charges_one_hot,
@@ -187,12 +191,12 @@ print(charge_Na * potential_one_hot[0] + charge_Cl * potential_one_hot[1])
 # creating a new calculator with the metatensor interface.
 
 calculator_metatensor = torchpme.metatensor.PMECalculator(
-    torchpme.lib.CoulombPotential(smearing=smearing), **pme_params
+    torchpme.CoulombPotential(smearing=smearing), **pme_params
 )
 
 # %%
 #
-# Computation with metatensor involves using Metatensor's :py:class:`System
+# Computation with metatensor involves using Metatensor's :class:`System
 # <metatensor.torch.atomistic.System>` class. The ``System`` stores atomic ``types``,
 # ``positions``, and ``cell`` dimensions.
 #
@@ -202,7 +206,7 @@ calculator_metatensor = torchpme.metatensor.PMECalculator(
 #    only on the charge of the atom, NOT on the atom's type. However, we still have to
 #    pass them because it is an obligatory parameter to build the `System` class.
 
-system = System(types=types, positions=positions, cell=cell)
+system = System(types=types, positions=positions, cell=cell, pbc=pbc)
 
 # %%
 #
@@ -233,7 +237,7 @@ neighbors = TensorBlock(D.reshape(-1, 3, 1), samples, [components], properties)
 # #####################
 #
 # For the metatensor branch, charges of the atoms are defined in a tensor format and
-# attached to the system as a :py:class:`TensorBlock <metatensor.torch.TensorBlock>`.
+# attached to the system as a :class:`TensorBlock <metatensor.torch.TensorBlock>`.
 
 # Create a TensorBlock for the charges
 data = TensorBlock(
@@ -257,14 +261,14 @@ potential_metatensor = calculator_metatensor.forward(system, neighbors)
 
 # %%
 #
-# The calculated potential is wrapped inside a :py:class:`TensorMap
+# The calculated potential is wrapped inside a :class:`TensorMap
 # <metatensor.torch.TensorMap>` and annotated with metadata of the computation.
 
 print(potential_metatensor)
 
 # %%
 #
-# The tensorMap has *1* :py:class:`TensorBlock <metatensor.torch.TensorBlock>` and the
+# The tensorMap has *1* :class:`TensorBlock <metatensor.torch.TensorBlock>` and the
 # values of the potential are stored in the ``values`` property.
 
 print(potential_metatensor[0].values)
@@ -280,7 +284,7 @@ print(potential_metatensor[0])
 # %%
 #
 # If you want to inspect the metadata in more detail, you can access the
-# :py:class:`Labels <metatensor.torch.Labels>` using the
+# :class:`Labels <metatensor.torch.Labels>` using the
 # ``potential_metatensor[0].properties`` and ``potential_metatensor[0].samples``
 # attributes.
 #
@@ -289,7 +293,7 @@ print(potential_metatensor[0])
 #
 # We now create new charges data based on the species-wise ``charges_one_hot`` and
 # overwrite the ``system``'s charges data using ``override=True`` when applying the
-# :py:meth:`add_data <metatensor.torch.atomistic.System.add_data>` method.
+# :meth:`add_data <metatensor.torch.atomistic.System.add_data>` method.
 
 data_one_hot = TensorBlock(
     values=charges_one_hot,
@@ -311,3 +315,5 @@ potential = calculator_metatensor.forward(system, neighbors)
 # And as above, the values of the potential are the same.
 
 print(potential[0].values)
+
+# %%
