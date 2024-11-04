@@ -267,39 +267,6 @@ def neighbor_list_torch(
     return neighbor_indices, S
 
 
-def gradcheck(f, x, eps=1e-06, atol=1e-05, rtol=0.001):
-    """Assert that finite difference gradients of f wrt x match autograd"""
-
-    # we do our own because torch.autograd.gradcheck does not work
-    # with pytest (it copies locals(), which pytest pollutes with
-    # on-the-fly assertion rewriting)
-
-    # for convenenience, we work on flattened inputs:
-    shape = x.shape
-    x = x.reshape(-1)
-
-    def _f(flattened):
-        return f(flattened.reshape(shape))
-
-    x1 = torch.clone(x)
-    x1.requires_grad = True
-    reference = torch.autograd.grad(_f(x1), x1)[0]
-
-    x = torch.clone(x)
-    for i in range(x.shape[0]):
-        # we do central differences: df ~ 1/eps (f(x+eps/2) - f(x-eps/2))
-        x[i] += eps / 2  # x + eps/2
-        fa = _f(x)
-
-        x[i] -= eps  # x - eps/2
-        fb = _f(x)
-
-        d = (fa - fb) / eps
-        torch.testing.assert_close(reference[i], d, rtol=rtol, atol=atol)
-
-        x[i] += eps / 2  # back to x
-
-
 def compute_distances(positions, neighbor_indices, cell=None, neighbor_shifts=None):
     """Compute pairwise distances."""
     atom_is = neighbor_indices[:, 0]

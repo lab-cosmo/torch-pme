@@ -307,8 +307,7 @@ def test_random_structure(
             neighbor_shifts=neighbor_shifts,
         )
         return (
-            0.5  # TODO fix where the factor of 0.5 comes from
-            * charges
+            charges
             * calc(
                 charges=charges,
                 cell=strained_cell,
@@ -324,8 +323,12 @@ def test_random_structure(
 
     stress = torch.autograd.grad(energy, strain)[0]
     stress_target = (
-        torch.tensor(frame.get_stress(voigt=False), dtype=DTYPE) / scaling_factor
+        torch.tensor(
+            frame.get_stress(voigt=False, include_ideal_gas=False), dtype=DTYPE
+        )
+        / scaling_factor
     )
+    stress_target *= 2.0  # convert from GROMACS "virial"
 
     # stress is a tensor -- we rotate across *both* indices
     # note that we apply the reverse rotation, and therefore transpose
