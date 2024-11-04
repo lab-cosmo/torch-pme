@@ -98,10 +98,14 @@ class CoulombPotential(Potential):
                 "Cannot compute long-range kernel without specifying `smearing`."
             )
 
+        # avoid NaNs in backward, see
+        # https://github.com/jax-ml/jax/issues/1052
+        # https://github.com/tensorflow/probability/blob/main/discussion/where-nan.pdf
+        masked = torch.where(k_sq == 0, 1.0, k_sq)
         return torch.where(
             k_sq == 0,
             0.0,
-            4 * torch.pi * torch.exp(-0.5 * self.smearing**2 * k_sq) / k_sq,
+            4 * torch.pi * torch.exp(-0.5 * self.smearing**2 * masked) / masked,
         )
 
     def self_contribution(self) -> torch.Tensor:
