@@ -216,7 +216,8 @@ def test_wigner(crystal_name, scaling_factor):
 def test_random_structure(
     cutoff, frame_index, scaling_factor, ortho, calc_name, full_neighbor_list
 ):
-    """Verify that energy, forces and stress agree with GROMACS.
+    """
+    Verify that energy, forces and stress agree with GROMACS.
 
     Structures consisting of 4 Na and 4 Cl atoms placed randomly in cubic cells of
     varying sizes.
