@@ -327,5 +327,8 @@ def test_random_structure(
         torch.tensor(frame.get_stress(voigt=False), dtype=DTYPE) / scaling_factor
     )
 
-    # TODO: how does the stress transform under orthogonal transformations?
-    # torch.testing.assert_close(stress, stress_target @ ortho, atol=0.0, rtol=1e-3)
+    # stress is a tensor -- we rotate across *both* indices
+    # note that we apply the reverse rotation, and therefore transpose
+    stress_target = torch.einsum("ab,aA,bB->AB", stress_target, ortho, ortho)
+
+    torch.testing.assert_close(stress, stress_target, atol=0.0, rtol=2e-3)
