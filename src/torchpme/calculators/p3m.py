@@ -118,7 +118,7 @@ class P3MCalculator(Calculator):
 
         with profiler.record_function("step 2: perform actual convolution using FFT"):
             potential_mesh = self.kspace_filter.forward(rho_mesh)
-            print(potential_mesh)
+            # print(potential_mesh)
 
         with profiler.record_function("step 3: back interpolation + volume scaling"):
             ivolume = torch.abs(cell.det()).pow(-1)
