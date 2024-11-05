@@ -60,6 +60,8 @@ def generate_examples():
 def setup(app):
     generate_examples()
 
+    app.add_css_file("css/torch-pme.css")
+
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
@@ -117,12 +119,17 @@ html_theme_options = {
             "class": "fa-brands fa-github fa-2x",
         },
     ],
+    "top_of_page_buttons": [],
 }
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
+
 html_static_path = ["../static"]
+html_favicon = "../static/images/torch-pme-icon.png"
+html_logo = "../static/images/torch-pme-icon.svg"
+html_title = "torch-pme"
 
 # font-awesome logos (used in the footer)
 html_css_files = [
