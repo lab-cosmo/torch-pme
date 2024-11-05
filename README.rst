@@ -1,5 +1,9 @@
 torch-pme
-========
+=========
+
+.. image:: docs/static/images/torch-pme-icon.svg
+     :width: 200 px
+     :align: left
 
 |tests| |codecov| |docs|
 

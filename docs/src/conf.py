@@ -60,6 +60,8 @@ def generate_examples():
 def setup(app):
     generate_examples()
 
+    app.add_css_file("css/torch-pme.css")
+
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
@@ -125,8 +127,8 @@ html_theme_options = {
 # so a file named "default.css" will overwrite the builtin "default.css".
 
 html_static_path = ["../static"]
-html_favicon = "../static/torch-pme-icon.png"
-html_logo = "../static/torch-pme-icon.svg"
+html_favicon = "../static/images/torch-pme-icon.png"
+html_logo = "../static/images/torch-pme-icon.svg"
 html_title = "torch-pme"
 
 # font-awesome logos (used in the footer)
