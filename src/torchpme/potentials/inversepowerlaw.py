@@ -139,10 +139,11 @@ class InversePowerLawPotential(Potential):
         # Fourier-transformed LR potential does not diverge as k->0, and one
         # could instead assign the correct limit. This is not implemented for now
         # for consistency reasons.
+        masked = torch.where(x == 0, 1.0, x)  # avoid NaNs in backwards, see Coulomb
         return torch.where(
             k_sq == 0,
             0.0,
-            prefac * gammaincc(peff, x) / x**peff * gamma(peff),
+            prefac * gammaincc(peff, masked) / masked**peff * gamma(peff),
         )
 
     def self_contribution(self) -> torch.Tensor:

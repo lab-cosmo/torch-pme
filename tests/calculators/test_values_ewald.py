@@ -7,11 +7,21 @@ import pytest
 import torch
 from ase.io import read
 
-from torchpme import EwaldCalculator, InversePowerLawPotential, PMECalculator
-from torchpme.utils.prefactors import eV_A
+import torchpme
+from torchpme import (
+    CoulombPotential,
+    EwaldCalculator,
+    InversePowerLawPotential,
+    PMECalculator,
+)
 
 sys.path.append(str(Path(__file__).parents[1]))
-from helpers import COULOMB_TEST_FRAMES, define_crystal, neighbor_list_torch
+from helpers import (
+    COULOMB_TEST_FRAMES,
+    compute_distances,
+    define_crystal,
+    neighbor_list_torch,
+)
 
 DTYPE = torch.float64
 
@@ -197,83 +207,64 @@ def test_wigner(crystal_name, scaling_factor):
         torch.testing.assert_close(energies, energies_ref, atol=0.0, rtol=4.2e-6)
 
 
-@pytest.mark.parametrize("sr_cutoff", [5.54, 6.01])
+@pytest.mark.parametrize("cutoff", [5.54, 6.01])
 @pytest.mark.parametrize("frame_index", [0, 1, 2])
-@pytest.mark.parametrize("scaling_factor", [0.4325, 1.3353610])
+@pytest.mark.parametrize("scaling_factor", [0.43, 1.33])
 @pytest.mark.parametrize("ortho", generate_orthogonal_transformations())
 @pytest.mark.parametrize("calc_name", ["ewald", "pme"])
 @pytest.mark.parametrize("full_neighbor_list", [True, False])
 def test_random_structure(
-    sr_cutoff, frame_index, scaling_factor, ortho, calc_name, full_neighbor_list
+    cutoff, frame_index, scaling_factor, ortho, calc_name, full_neighbor_list
 ):
     """
-    Check that the potentials obtained from the main code agree with the ones computed
-    using an external library (GROMACS) for more complicated structures consisting of
-    8 atoms placed randomly in cubic cells of varying sizes.
+    Verify that energy, forces and stress agree with GROMACS.
+
+    Structures consisting of 4 Na and 4 Cl atoms placed randomly in cubic cells of
+    varying sizes.
+
+    GROMACS values are computed with SPME and parameters as defined in the manual:
+    https://manual.gromacs.org/documentation/current/user-guide/mdp-options.html#ewald
+
+    .. code-block:: none
+
+        coulombtype = PME fourierspacing = 0.01 ; 1/nm
+        pme_order = 8
+        rcoulomb = 0.3  ; nm
     """
-    # Get the predefined frames with the
-    # Coulomb energy and forces computed by GROMACS using PME
-    # using parameters as defined in the GROMACS manual
-    # https://manual.gromacs.org/documentation/current/user-guide/mdp-options.html#ewald
-    #
-    # coulombtype = PME
-    # fourierspacing = 0.01  ; 1/nm
-    # pme_order = 8
-    # rcoulomb = 0.3  ; nm
     frame = read(COULOMB_TEST_FRAMES, frame_index)
 
-    energy_target = (
-        torch.tensor(frame.get_potential_energy(), dtype=DTYPE) / scaling_factor
-    )
-    # Forces in Gaussian units per Å
-    forces_target = torch.tensor(frame.get_forces(), dtype=DTYPE) / scaling_factor**2
+    positions = scaling_factor * torch.tensor(frame.positions, dtype=DTYPE) @ ortho
+    cell = scaling_factor * torch.tensor(frame.cell.array, dtype=DTYPE) @ ortho
+    charges = torch.tensor(frame.get_initial_charges(), dtype=DTYPE).reshape((-1, 1))
 
-    # Convert into input format suitable for torch-pme
-    positions = scaling_factor * (torch.tensor(frame.positions, dtype=DTYPE) @ ortho)
+    cutoff *= scaling_factor
+    smearing = cutoff / 6.0
 
-    # Enable backward for positions
+    if calc_name == "ewald":
+        calc = EwaldCalculator(
+            CoulombPotential(smearing=smearing),
+            lr_wavelength=0.5 * smearing,
+            full_neighbor_list=full_neighbor_list,
+            prefactor=torchpme.utils.prefactors.eV_A,
+        )
+
+    elif calc_name == "pme":
+        calc = PMECalculator(
+            CoulombPotential(smearing=smearing),
+            mesh_spacing=smearing / 8.0,
+            full_neighbor_list=full_neighbor_list,
+            prefactor=torchpme.utils.prefactors.eV_A,
+        )
+
     positions.requires_grad = True
 
-    cell = scaling_factor * torch.tensor(np.array(frame.cell), dtype=DTYPE) @ ortho
-    charges = torch.tensor([1, 1, 1, 1, -1, -1, -1, -1], dtype=DTYPE).reshape((-1, 1))
-    sr_cutoff = scaling_factor * sr_cutoff
-    smearing = sr_cutoff / 6.0
-
-    # Compute neighbor list
     neighbor_indices, neighbor_distances = neighbor_list_torch(
         positions=positions,
         periodic=True,
         box=cell,
-        cutoff=sr_cutoff,
+        cutoff=cutoff,
         full_neighbor_list=full_neighbor_list,
     )
-
-    # Compute potential using torch-pme and compare against reference values
-    if calc_name == "ewald":
-        lr_wavelength = 0.5 * smearing
-        calc = EwaldCalculator(
-            InversePowerLawPotential(
-                exponent=1.0,
-                smearing=smearing,
-            ),
-            lr_wavelength=lr_wavelength,
-            full_neighbor_list=full_neighbor_list,
-            prefactor=eV_A,
-        )
-        rtol_e = 2e-5
-        rtol_f = 3.5e-3
-    elif calc_name == "pme":
-        calc = PMECalculator(
-            InversePowerLawPotential(
-                exponent=1.0,
-                smearing=smearing,
-            ),
-            mesh_spacing=smearing / 8,
-            full_neighbor_list=full_neighbor_list,
-            prefactor=eV_A,
-        )
-        rtol_e = 4.5e-3
-        rtol_f = 5.0e-3
 
     calc.to(dtype=DTYPE)
     potentials = calc.forward(
@@ -284,11 +275,64 @@ def test_random_structure(
         neighbor_distances=neighbor_distances,
     )
 
-    # Compute energy. The double counting of the pairs is already taken into account.
+    # Compute energy
     energy = torch.sum(potentials * charges)
-    torch.testing.assert_close(energy, energy_target, atol=0.0, rtol=rtol_e)
+    energy_target = (
+        torch.tensor(frame.get_potential_energy(), dtype=DTYPE) / scaling_factor
+    )
+    torch.testing.assert_close(energy, energy_target, atol=0.0, rtol=1e-4)
 
     # Compute forces
-    energy.backward()
-    forces = -positions.grad
-    torch.testing.assert_close(forces, forces_target @ ortho, atol=0.0, rtol=rtol_f)
+    forces = torch.autograd.grad(-energy, positions)[0]
+    forces_target = torch.tensor(frame.get_forces(), dtype=DTYPE) / scaling_factor**2
+    torch.testing.assert_close(forces, forces_target @ ortho, atol=0.0, rtol=5e-3)
+
+    neighbor_indices, neighbor_shifts = neighbor_list_torch(
+        positions=positions,
+        periodic=True,
+        box=cell,
+        cutoff=cutoff,
+        full_neighbor_list=full_neighbor_list,
+        neighbor_shifts=True,
+    )
+
+    # Compute stress
+    def energy_wrt_strain(strain):
+        strained_R = positions + torch.einsum("ab,ib->ia", strain, positions)
+        strained_cell = cell + torch.einsum("ab,Ab->Aa", strain, cell)
+
+        d = compute_distances(
+            strained_R,
+            neighbor_indices,
+            cell=strained_cell,
+            neighbor_shifts=neighbor_shifts,
+        )
+        return (
+            charges
+            * calc(
+                charges=charges,
+                cell=strained_cell,
+                positions=strained_R,
+                neighbor_indices=neighbor_indices,
+                neighbor_distances=d,
+            )
+        ).sum()
+
+    strain = torch.zeros(3, 3, dtype=DTYPE)
+    strain.requires_grad = True
+    energy = energy_wrt_strain(strain)
+
+    stress = torch.autograd.grad(energy, strain)[0]
+    stress_target = (
+        torch.tensor(
+            frame.get_stress(voigt=False, include_ideal_gas=False), dtype=DTYPE
+        )
+        / scaling_factor
+    )
+    stress_target *= 2.0  # convert from GROMACS "virial"
+
+    # stress is a tensor -- we rotate across *both* indices
+    # note that we apply the reverse rotation, and therefore transpose
+    stress_target = torch.einsum("ab,aA,bB->AB", stress_target, ortho, ortho)
+
+    torch.testing.assert_close(stress, stress_target, atol=0.0, rtol=2e-3)

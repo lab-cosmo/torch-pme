@@ -245,6 +245,7 @@ def neighbor_list_torch(
     box: Optional[torch.tensor] = None,
     cutoff: Optional[float] = None,
     full_neighbor_list: bool = False,
+    neighbor_shifts: bool = False,
 ) -> tuple[torch.tensor, torch.tensor]:
     if box is None:
         box = torch.zeros(3, 3, dtype=positions.dtype, device=positions.device)
@@ -255,8 +256,33 @@ def neighbor_list_torch(
         cutoff = cutoff_torch.item()
 
     nl = NeighborList(cutoff=cutoff, full_list=full_neighbor_list)
-    i, j, d = nl.compute(points=positions, box=box, periodic=periodic, quantities="ijd")
+    i, j, d, S = nl.compute(
+        points=positions, box=box, periodic=periodic, quantities="ijdS"
+    )
 
     neighbor_indices = torch.stack([i, j], dim=1)
 
-    return neighbor_indices, d
+    if not neighbor_shifts:
+        return neighbor_indices, d
+    return neighbor_indices, S
+
+
+def compute_distances(positions, neighbor_indices, cell=None, neighbor_shifts=None):
+    """Compute pairwise distances."""
+    atom_is = neighbor_indices[:, 0]
+    atom_js = neighbor_indices[:, 1]
+
+    pos_is = positions[atom_is]
+    pos_js = positions[atom_js]
+
+    distance_vectors = pos_js - pos_is
+
+    if cell is not None and neighbor_shifts is not None:
+        shifts = neighbor_shifts.type(cell.dtype)
+        distance_vectors += shifts @ cell
+    elif cell is not None and neighbor_shifts is None:
+        raise ValueError("Provided `cell` but no `neighbor_shifts`.")
+    elif cell is None and neighbor_shifts is not None:
+        raise ValueError("Provided `neighbor_shifts` but no `cell`.")
+
+    return torch.linalg.norm(distance_vectors, dim=1)
