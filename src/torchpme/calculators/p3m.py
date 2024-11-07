@@ -73,6 +73,8 @@ class P3MCalculator(Calculator):
             raise ValueError("Only `interpolation_nodes` from 1 to 5 are allowed")
         self.interpolation_nodes: int = interpolation_nodes
 
+        self.potential._update_potential(self.mesh_spacing, self.interpolation_nodes)
+
         # Initialize the filter module. Set dummy value for smearing to propper
         # initilize the `KSpaceFilter` below
         self.kspace_filter: P3MKSpaceFilter = P3MKSpaceFilter(
