@@ -9,7 +9,8 @@ from .calculator import Calculator
 
 
 class P3MCalculator(Calculator):
-    r"""Potential using a particle-particle particle-mesh based Ewald (P3M).
+    r"""
+    Potential using a particle-particle particle-mesh based Ewald (P3M).
 
     Scaling as :math:`\mathcal{O}(NlogN)` with respect to the number of particles
     :math:`N` used as a reference to test faster implementations.

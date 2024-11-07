@@ -3,8 +3,9 @@ from typing import Optional
 
 import torch
 from torch.nn.functional import pad
-from .coulomb import CoulombPotential
+
 from ..lib.kvectors import get_ns_mesh
+from .coulomb import CoulombPotential
 
 COEF = [
     [1],
@@ -47,9 +48,9 @@ class P3MCoulombPotential(CoulombPotential):
 
     def _update_potential(self, mesh_spacing: float, interpolation_nodes: int):
         cell_dimensions = torch.linalg.norm(self.cell, dim=1)
-        self.mesh_spacing = (cell_dimensions / get_ns_mesh(self.cell, mesh_spacing)).reshape(
-            1, 1, 1, 3
-        )
+        self.mesh_spacing = (
+            cell_dimensions / get_ns_mesh(self.cell, mesh_spacing)
+        ).reshape(1, 1, 1, 3)
         self.interpolation_nodes = interpolation_nodes
 
     @cached_property
@@ -67,7 +68,6 @@ class P3MCoulombPotential(CoulombPotential):
     @cached_property
     def _directions(self) -> torch.Tensor:
         """For km vectors calculation, partly deprecated for now since it's not used"""
-
         # For now, just return zero vector
         return torch.tensor([[0, 0, 0]]).int().numpy()
 
@@ -86,8 +86,7 @@ class P3MCoulombPotential(CoulombPotential):
         Compatibility function with the interface of :py:class:`KSpaceKernel`, so that
         potentials can be used as kernels for :py:class:`KSpaceFilter`.
         """
-        result = self.lr_from_k(k)
-        return result
+        return self.lr_from_k(k)
 
     def lr_from_k(self, k: torch.Tensor) -> torch.Tensor:
         """
@@ -96,7 +95,6 @@ class P3MCoulombPotential(CoulombPotential):
         :param k: torch.tensor containing the wave
             vectors k at which the Fourier-transformed potential is to be evaluated
         """
-
         if self.smearing is None:
             raise ValueError(
                 "Cannot compute long-range kernel without specifying `smearing`."
@@ -125,17 +123,14 @@ class P3MCoulombPotential(CoulombPotential):
         )
 
     def _diff_operator(self, kh: torch.Tensor) -> torch.Tensor:
-        """
-        From shape (nx, ny, nz, 3) to shape (nx, ny, nz, 3)"""
-
+        """From shape (nx, ny, nz, 3) to shape (nx, ny, nz, 3)"""
         temp = torch.zeros(kh.shape, dtype=kh.dtype, device=kh.device)
         for i, coef in enumerate(COEF[self.diff_order - 1]):
             temp += (coef / (i + 1)) * torch.sin(kh * (i + 1))
         return temp / (self.mesh_spacing)
 
     def _charge_assignment(self, kh: torch.Tensor) -> torch.Tensor:
-        """
-        From shape (nx, ny, nz, 3) to shape (nx, ny, nz, nd)"""
+        """From shape (nx, ny, nz, 3) to shape (nx, ny, nz, nd)"""
         U2 = (
             torch.prod(
                 torch.sinc(kh / (2 * torch.pi)),
@@ -152,9 +147,7 @@ class P3MCoulombPotential(CoulombPotential):
         )
 
     def _reference_force(self, k: torch.Tensor) -> torch.Tensor:
-        """
-        From shape (nx, ny, nz, 3) to shape (nx, ny, nz, nd, 3)"""
-
+        """From shape (nx, ny, nz, 3) to shape (nx, ny, nz, nd, 3)"""
         k_sq = torch.linalg.norm(k, dim=-1) ** 2
         R = self.lr_from_k_sq(k_sq)
         return torch.stack(

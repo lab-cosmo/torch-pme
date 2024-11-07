@@ -473,9 +473,9 @@ def tune_p3m(
     sum_squared_charges: float,
     cell: torch.Tensor,
     positions: torch.Tensor,
-    smearing: float = None,
-    mesh_spacing: float = None,
-    cutoff: float = None,
+    smearing: Optional[float] = None,
+    mesh_spacing: Optional[float] = None,
+    cutoff: Optional[float] = None,
     interpolation_nodes: int = 4,
     exponent: int = 1,
     accuracy: float = 1e-3,
@@ -483,7 +483,8 @@ def tune_p3m(
     learning_rate: float = 5e-3,
     verbose: bool = False,
 ):
-    r"""Find the optimal parameters for :class:`torchpme.calculators.pme.PMECalculator`.
+    r"""
+    Find the optimal parameters for :class:`torchpme.calculators.pme.PMECalculator`.
 
     For the error formulas are given `here <https://doi.org/10.1063/1.477415>`_.
     Note the difference notation between the parameters in the reference and ours:
@@ -543,8 +544,8 @@ def tune_p3m(
 
     >>> print(cutoff)
     0.15078003506282253
-    """
 
+    """
     _validate_parameters(sum_squared_charges, cell, positions, exponent)
 
     if not isinstance(accuracy, float):
@@ -559,7 +560,7 @@ def tune_p3m(
         """smooth_mesh_spacing(inverse_smooth_mesh_spacing(value)) == value"""
         return -math.log(min_dimension / value - 1)
 
-    smearing_init = _estimate_smearing(cell)
+    smearing_init = _estimate_smearing(cell) if smearing is None else smearing
     mesh_spacing_init = (
         inverse_smooth_mesh_spacing(smearing_init / 8)
         if mesh_spacing is None
@@ -570,9 +571,11 @@ def tune_p3m(
     volume = torch.abs(cell.det())
 
     def smooth_mesh_spacing(mesh_spacing):
-        """Confine to (0, min_dimension), ensuring that the ``ns``
+        """
+        Confine to (0, min_dimension), ensuring that the ``ns``
         parameter is not smaller than 1
-        (see :py:func:`_compute_lr` of :py:class:`PMEPotential`)."""
+        (see :py:func:`_compute_lr` of :py:class:`PMEPotential`).
+        """
         return min_dimension * torch.sigmoid(mesh_spacing)
 
     def err_Fourier(smearing, mesh_spacing):
@@ -631,7 +634,7 @@ def tune_p3m(
         cutoff_init, device=device, dtype=dtype, requires_grad=(cutoff is None)
     )
 
-    _optimize_parameters(
+    smearing_opt, mesh_spacing_opt, cutoff_opt = _optimize_parameters(
         [smearing, mesh_spacing, cutoff],
         loss,
         max_steps,
@@ -641,12 +644,12 @@ def tune_p3m(
     )
 
     return (
-        float(smearing),
+        float(smearing_opt),
         {
-            "mesh_spacing": float(smooth_mesh_spacing(mesh_spacing)),
+            "mesh_spacing": float(smooth_mesh_spacing(mesh_spacing_opt)),
             "interpolation_nodes": int(interpolation_nodes),
         },
-        float(cutoff),
+        float(cutoff_opt),
     )
 
 

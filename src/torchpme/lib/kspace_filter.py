@@ -225,6 +225,8 @@ class KSpaceFilter(torch.nn.Module):
 
 
 class P3MKSpaceFilter(KSpaceFilter):
+    """A :class:`KSpaceFilter` implementation for P3M potentials."""
+
     @torch.jit.export
     def update(
         self,
