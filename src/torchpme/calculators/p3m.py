@@ -151,3 +151,16 @@ class P3MCalculator(Calculator):
 
         # Compensate for double counting of pairs (i,j) and (j,i)
         return interpolated_potential / 2
+
+    def forward(
+        self,
+        charges: torch.Tensor,
+        cell: torch.Tensor,
+        positions: torch.Tensor,
+        neighbor_indices: torch.Tensor,
+        neighbor_distances: torch.Tensor,
+    ):
+        self.potential._update_cell(cell)
+        return super().forward(
+            charges, cell, positions, neighbor_indices, neighbor_distances
+        )

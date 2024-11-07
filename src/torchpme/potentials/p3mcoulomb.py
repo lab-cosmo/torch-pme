@@ -22,9 +22,6 @@ class P3MCoulombPotential(CoulombPotential):
 
     def __init__(
         self,
-        interpolation_nodes: int,
-        mesh_spacing: torch.Tensor,
-        cell: torch.Tensor,
         smearing: Optional[float] = None,
         exclusion_radius: Optional[float] = None,
         mode: int = 0,
@@ -33,30 +30,37 @@ class P3MCoulombPotential(CoulombPotential):
         device: Optional[torch.device] = None,
     ):
         super().__init__(smearing, exclusion_radius, dtype, device)
-        self.cell = cell
         self.mode = mode
-        self.diff_order = torch.tensor(
-            diff_order, dtype=torch.double, device=cell.device
-        )
+        self.diff_order = diff_order
+        
+        # Dummy variables for initialization
+        self._update_cell(torch.eye(3))
+        self._update_potential(1.0, 1)
+
+    def _update_cell(self, cell: torch.Tensor):
+        self._cell = cell
         if cell.is_cuda:
             # use function that does not synchronize with the CPU
             inverse_cell = torch.linalg.inv_ex(cell)[0]
         else:
             inverse_cell = torch.linalg.inv(cell)
         self._reciprocal_cell = 2 * torch.pi * inverse_cell.T
-        self._update_potential(mesh_spacing, interpolation_nodes)
 
     def _update_potential(self, mesh_spacing: float, interpolation_nodes: int):
-        cell_dimensions = torch.linalg.norm(self.cell, dim=1)
-        self.mesh_spacing = (
-            cell_dimensions / get_ns_mesh(self.cell, mesh_spacing)
-        ).reshape(1, 1, 1, 3)
+        self._crude_mesh_spacing = mesh_spacing
         self.interpolation_nodes = interpolation_nodes
+
+    @property
+    def mesh_spacing(self) -> torch.Tensor:
+        cell_dimensions = torch.linalg.norm(self._cell, dim=1)
+        return (
+            cell_dimensions / get_ns_mesh(self._cell, self._crude_mesh_spacing)
+        ).reshape(1, 1, 1, 3)
 
     @cached_property
     def _k_vectors(self) -> torch.Tensor:
         """For km vectors calculation, deprecated for now, might be useful in the future"""
-        m = torch.tensor([-2, -1, 0, 1, 2], dtype=self.cell.dtype).unsqueeze(-1)
+        m = torch.tensor([-2, -1, 0, 1, 2], dtype=self._cell.dtype).unsqueeze(-1)
         m = (
             pad(input=m, pad=(0, 2))[:, None, None]
             + pad(input=m, pad=(1, 1))[None, :, None]

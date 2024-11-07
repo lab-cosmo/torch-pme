@@ -47,6 +47,20 @@ def _optimize_parameters(
     return params[0], params[1], params[2]
 
 
+def _smooth_mesh_spacing(mesh_spacing, min_dimension):
+    """
+    Confine to (0, min_dimension), ensuring that the ``ns``
+    parameter is not smaller than 1
+    (see :py:func:`_compute_lr` of :py:class:`PMEPotential`).
+    """
+    return min_dimension * torch.sigmoid(mesh_spacing)
+
+
+def _inverse_smooth_mesh_spacing(value, min_dimension):
+    """smooth_mesh_spacing(inverse_smooth_mesh_spacing(value)) == value"""
+    return -math.log(min_dimension / value - 1)
+
+
 def tune_ewald(
     sum_squared_charges: float,
     cell: torch.Tensor,
@@ -365,28 +379,16 @@ def tune_pme(
     min_dimension = float(torch.min(cell_dimensions))
     half_cell = float(torch.min(cell_dimensions) / 2)
 
-    def inverse_smooth_mesh_spacing(value):
-        """smooth_mesh_spacing(inverse_smooth_mesh_spacing(value)) == value"""
-        return -math.log(min_dimension / value - 1)
-
     smearing_init = _estimate_smearing(cell) if smearing is None else smearing
     mesh_spacing_init = (
-        inverse_smooth_mesh_spacing(smearing_init / 8)
+        _inverse_smooth_mesh_spacing(smearing_init / 8, min_dimension)
         if mesh_spacing is None
-        else inverse_smooth_mesh_spacing(mesh_spacing)
+        else _inverse_smooth_mesh_spacing(mesh_spacing, min_dimension)
     )
     cutoff_init = half_cell / 5 if cutoff is None else cutoff
 
     prefac = 2 * sum_squared_charges / math.sqrt(len(positions))
     volume = torch.abs(cell.det())
-
-    def smooth_mesh_spacing(mesh_spacing):
-        """
-        Confine to (0, min_dimension), ensuring that the ``ns``
-        parameter is not smaller than 1
-        (see :func:`_compute_lr` of :class:`PMEPotential`).
-        """
-        return min_dimension * torch.sigmoid(mesh_spacing)
 
     def err_Fourier(smearing, mesh_spacing):
         def H(ns_mesh):
@@ -427,7 +429,8 @@ def tune_pme(
 
     def loss(smearing, mesh_spacing, cutoff):
         return torch.sqrt(
-            err_Fourier(smearing, smooth_mesh_spacing(mesh_spacing)) ** 2
+            err_Fourier(smearing, _smooth_mesh_spacing(mesh_spacing, min_dimension))
+            ** 2
             + err_real(smearing, cutoff) ** 2
         )
 
@@ -462,7 +465,9 @@ def tune_pme(
     return (
         float(smearing_opt),
         {
-            "mesh_spacing": float(smooth_mesh_spacing(mesh_spacing_opt)),
+            "mesh_spacing": float(
+                _smooth_mesh_spacing(mesh_spacing_opt, min_dimension)
+            ),
             "interpolation_nodes": int(interpolation_nodes),
         },
         float(cutoff_opt),
@@ -537,13 +542,13 @@ def tune_p3m(
     You can check the values of the parameters
 
     >>> print(smearing)
-    0.04576166523476457
+    0.04171745838080964
 
     >>> print(parameter)
-    {'mesh_spacing': 0.012499975000000003, 'interpolation_nodes': 4}
+    {'mesh_spacing': 0.011998118077739114, 'interpolation_nodes': 4}
 
     >>> print(cutoff)
-    0.15078003506282253
+    0.15409232806437623
 
     """
     _validate_parameters(sum_squared_charges, cell, positions, exponent)
@@ -556,27 +561,15 @@ def tune_p3m(
     min_dimension = float(torch.min(cell_dimensions))
     half_cell = float(torch.min(cell_dimensions) / 2)
 
-    def inverse_smooth_mesh_spacing(value):
-        """smooth_mesh_spacing(inverse_smooth_mesh_spacing(value)) == value"""
-        return -math.log(min_dimension / value - 1)
-
     smearing_init = _estimate_smearing(cell) if smearing is None else smearing
     mesh_spacing_init = (
-        inverse_smooth_mesh_spacing(smearing_init / 8)
+        _inverse_smooth_mesh_spacing(smearing_init / 8, min_dimension)
         if mesh_spacing is None
-        else inverse_smooth_mesh_spacing(mesh_spacing)
+        else _inverse_smooth_mesh_spacing(mesh_spacing, min_dimension)
     )
     cutoff_init = half_cell / 5 if cutoff is None else cutoff
     prefac = 2 * sum_squared_charges / math.sqrt(len(positions))
     volume = torch.abs(cell.det())
-
-    def smooth_mesh_spacing(mesh_spacing):
-        """
-        Confine to (0, min_dimension), ensuring that the ``ns``
-        parameter is not smaller than 1
-        (see :py:func:`_compute_lr` of :py:class:`PMEPotential`).
-        """
-        return min_dimension * torch.sigmoid(mesh_spacing)
 
     def err_Fourier(smearing, mesh_spacing):
         ns_mesh = _get_ns_mesh_differentiable(cell, mesh_spacing)
@@ -611,7 +604,8 @@ def tune_p3m(
 
     def loss(smearing, mesh_spacing, cutoff):
         return torch.sqrt(
-            err_Fourier(smearing, smooth_mesh_spacing(mesh_spacing)) ** 2
+            err_Fourier(smearing, _smooth_mesh_spacing(mesh_spacing, min_dimension))
+            ** 2
             + err_real(smearing, cutoff) ** 2
         )
 
@@ -646,7 +640,9 @@ def tune_p3m(
     return (
         float(smearing_opt),
         {
-            "mesh_spacing": float(smooth_mesh_spacing(mesh_spacing_opt)),
+            "mesh_spacing": float(
+                _smooth_mesh_spacing(mesh_spacing_opt, min_dimension)
+            ),
             "interpolation_nodes": int(interpolation_nodes),
         },
         float(cutoff_opt),
@@ -815,6 +811,8 @@ class _Round(torch.autograd.Function):
         return grad_output
 
 
+# Coefficients for the P3M Fourier error,
+# see Table II of http://dx.doi.org/10.1063/1.477415
 A_COEF = [
     [None, 2 / 3, 1 / 50, 1 / 588, 1 / 4320, 1 / 23_232, 691 / 68_140_800, 1 / 345_600],
     [
