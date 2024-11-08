@@ -1,11 +1,12 @@
 import contextlib
 
 from . import calculators, lib, potentials, utils  # noqa
-from .calculators import Calculator, EwaldCalculator, PMECalculator
+from .calculators import Calculator, EwaldCalculator, P3MCalculator, PMECalculator
 from .potentials import (
     CombinedPotential,
     CoulombPotential,
     InversePowerLawPotential,
+    P3MCoulombPotential,
     Potential,
     SplinePotential,
 )
@@ -16,8 +17,10 @@ with contextlib.suppress(ImportError):
 __all__ = [
     "Calculator",
     "EwaldCalculator",
+    "P3MCalculator",
     "PMECalculator",
     "CoulombPotential",
+    "P3MCoulombPotential",
     "Potential",
     "InversePowerLawPotential",
     "SplinePotential",

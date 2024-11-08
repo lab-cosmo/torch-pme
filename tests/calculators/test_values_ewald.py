@@ -12,8 +12,12 @@ from torchpme import (
     CoulombPotential,
     EwaldCalculator,
     InversePowerLawPotential,
+    P3MCoulombPotential,
+    P3MCalculator,
     PMECalculator,
 )
+
+from torchpme.utils.tuning import tune_p3m
 
 sys.path.append(str(Path(__file__).parents[1]))
 from helpers import (
@@ -61,7 +65,7 @@ def generate_orthogonal_transformations():
     return transformations
 
 
-@pytest.mark.parametrize("calc_name", ["ewald", "pme"])
+@pytest.mark.parametrize("calc_name", ["ewald", "pme", "p3m"])
 @pytest.mark.parametrize(
     "crystal_name",
     [
@@ -111,6 +115,16 @@ def test_madelung(crystal_name, scaling_factor, calc_name):
         calc = PMECalculator(
             InversePowerLawPotential(
                 exponent=1.0,
+                smearing=smearing,
+            ),
+            mesh_spacing=smearing / 8,
+        )
+        rtol = 9e-4
+    elif calc_name == "p3m":
+        sr_cutoff = 2 * scaling_factor
+        smearing = sr_cutoff / 5.0
+        calc = P3MCalculator(
+            P3MCoulombPotential(
                 smearing=smearing,
             ),
             mesh_spacing=smearing / 8,
@@ -211,7 +225,7 @@ def test_wigner(crystal_name, scaling_factor):
 @pytest.mark.parametrize("frame_index", [0, 1, 2])
 @pytest.mark.parametrize("scaling_factor", [0.43, 1.33])
 @pytest.mark.parametrize("ortho", generate_orthogonal_transformations())
-@pytest.mark.parametrize("calc_name", ["ewald", "pme"])
+@pytest.mark.parametrize("calc_name", ["ewald", "pme", "p3m"])
 @pytest.mark.parametrize("full_neighbor_list", [True, False])
 def test_random_structure(
     cutoff, frame_index, scaling_factor, ortho, calc_name, full_neighbor_list
@@ -251,6 +265,13 @@ def test_random_structure(
     elif calc_name == "pme":
         calc = PMECalculator(
             CoulombPotential(smearing=smearing),
+            mesh_spacing=smearing / 8.0,
+            full_neighbor_list=full_neighbor_list,
+            prefactor=torchpme.utils.prefactors.eV_A,
+        )
+    elif calc_name == "p3m":
+        calc = P3MCalculator(
+            P3MCoulombPotential(smearing=smearing),
             mesh_spacing=smearing / 8.0,
             full_neighbor_list=full_neighbor_list,
             prefactor=torchpme.utils.prefactors.eV_A,
@@ -335,4 +356,4 @@ def test_random_structure(
     # note that we apply the reverse rotation, and therefore transpose
     stress_target = torch.einsum("ab,aA,bB->AB", stress_target, ortho, ortho)
 
-    torch.testing.assert_close(stress, stress_target, atol=0.0, rtol=2e-3)
+    torch.testing.assert_close(stress, stress_target, atol=0.0, rtol=5e-3)

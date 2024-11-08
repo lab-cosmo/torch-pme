@@ -32,7 +32,7 @@ class P3MCoulombPotential(CoulombPotential):
         super().__init__(smearing, exclusion_radius, dtype, device)
         self.mode = mode
         self.diff_order = diff_order
-        
+
         # Dummy variables for initialization
         self._update_cell(torch.eye(3))
         self._update_potential(1.0, 1)
