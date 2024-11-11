@@ -172,7 +172,7 @@ def test_loss_is_nan_error(tune):
         "consider using a smaller learning rate."
     )
     with pytest.raises(ValueError, match=match):
-        tune(float(torch.sum(charges**2)), cell, pos, learning_rate=1e2,  accuracy=1e-6)
+        tune(float(torch.sum(charges**2)), cell, pos, learning_rate=1e2, accuracy=1e-6)
 
 
 @pytest.mark.parametrize("tune", [tune_ewald, tune_pme, tune_p3m])
