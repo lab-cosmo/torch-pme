@@ -93,8 +93,8 @@ ax[0].legend()
 k_test = torch.linspace(0, 10, 256, device=device, dtype=dtype)
 yhat_test = torch.exp(-(k_test**2) / 2)  # /torch.pow(2*torch.pi,torch.tensor([3/2]))
 
-yhat_spline = spline.kernel_from_k_sq(k_test ** 2)
-yhat_spline_fine = spline_fine.kernel_from_k_sq(k_test ** 2)
+yhat_spline = spline.kernel_from_k_sq(k_test**2)
+yhat_spline_fine = spline_fine.kernel_from_k_sq(k_test**2)
 
 fig, ax = plt.subplots(1, 1, figsize=(4, 3), sharex=True, constrained_layout=True)
 
@@ -118,7 +118,7 @@ ax.legend()
 spline_kgrid = SplinePotential(
     r_grid=x_grid, y_grid=y_grid, k_grid=torch.linspace(0, 10, 32)
 )
-yhat_spline_kgrid = spline_kgrid.kernel_from_k_sq(k_test ** 2)
+yhat_spline_kgrid = spline_kgrid.kernel_from_k_sq(k_test**2)
 
 fig, ax = plt.subplots(1, 1, figsize=(4, 3), sharex=True, constrained_layout=True)
 
