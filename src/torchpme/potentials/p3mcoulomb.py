@@ -18,7 +18,25 @@ COEF = [
 
 
 class P3MCoulombPotential(CoulombPotential):
-    r"""Coulomb potential for the P3M method."""
+    r"""Coulomb potential for the P3M method.
+
+    :param smearing: float or torch.Tensor containing the parameter often called "sigma"
+        in publications, which determines the length-scale at which the short-range and
+        long-range parts of the naive :math:`1/r` potential are separated. The smearing
+        parameter corresponds to the "width" of a Gaussian smearing of the particle
+        density.
+    :param exclusion_radius: A length scale that defines a *local environment* within
+        which the potential should be smoothly zeroed out, as it will be described by a
+        separate model.
+    :param mode: int, 0 for the electrostatic potential, 1 for the electrostatic energy,
+        2 for the dipolar torques, and 3 for the dipolar forces. For more details, see
+        eq.30 of `this paper<https://doi.org/10.1063/1.3000389>`_
+    :param diff_order: int, the order of the approximation of the difference operator.
+        Higher order is more accurate, but also more expensive. For more details, see
+        Appendix C of `that paper<http://dx.doi.org/10.1063/1.477414>`_. The values ``1,
+        2, 3, 4, 5, 6`` are supported.
+    :param dtype: type used for the internal buffers and parameters
+    :param device: device used for the internal buffers and parameters"""
 
     def __init__(
         self,
@@ -30,7 +48,14 @@ class P3MCoulombPotential(CoulombPotential):
         device: Optional[torch.device] = None,
     ):
         super().__init__(smearing, exclusion_radius, dtype, device)
+        if mode not in [0, 1, 2, 3]:
+            raise ValueError(f"`mode` should be one of [0, 1, 2, 3], but got {mode}")
         self.mode = mode
+
+        if diff_order not in [1, 2, 3, 4, 5, 6]:
+            raise ValueError(
+                f"`diff_order` should be one of [1, 2, 3, 4, 5, 6], but got {diff_order}"
+            )
         self.diff_order = diff_order
 
         # Dummy variables for initialization
