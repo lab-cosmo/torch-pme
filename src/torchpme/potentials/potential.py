@@ -146,6 +146,14 @@ class Potential(torch.nn.Module):
         )
 
     @torch.jit.export
+    def kernel_from_kvectors(self, kvectors: torch.Tensor) -> torch.Tensor:
+        """
+        Compatibility function with the interface of :class:`KSpaceKernel`, so that
+        potentials can be used as kernels for :class:`KSpaceFilter`.
+        """
+        return self.lr_from_kvectors(kvectors)
+
+    @torch.jit.export
     def kernel_from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
         """
         Compatibility function with the interface of :class:`KSpaceKernel`, so that

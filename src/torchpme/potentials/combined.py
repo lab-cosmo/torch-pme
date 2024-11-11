@@ -99,6 +99,10 @@ class CombinedPotential(Potential):
         potentials = torch.stack(potentials, dim=-1)
         return torch.inner(self.weights, potentials)
 
+    def lr_from_kvectors(self, kvectors: torch.Tensor) -> torch.Tensor:
+        k_sq = torch.linalg.norm(kvectors, dim=-1) ** 2
+        return self.lr_from_k_sq(k_sq)
+
     def lr_from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
         potentials = [pot.lr_from_k_sq(k_sq) for pot in self.potentials]
         potentials = torch.stack(potentials, dim=-1)

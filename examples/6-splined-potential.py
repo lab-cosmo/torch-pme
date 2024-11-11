@@ -93,8 +93,8 @@ ax[0].legend()
 k_test = torch.linspace(0, 10, 256, device=device, dtype=dtype)
 yhat_test = torch.exp(-(k_test**2) / 2)  # /torch.pow(2*torch.pi,torch.tensor([3/2]))
 
-yhat_spline = spline.kernel_from_k_sq(k_test**2)
-yhat_spline_fine = spline_fine.kernel_from_k_sq(k_test**2)
+yhat_spline = spline.kernel_from_kvectors(k_test)
+yhat_spline_fine = spline_fine.kernel_from_kvectors(k_test)
 
 fig, ax = plt.subplots(1, 1, figsize=(4, 3), sharex=True, constrained_layout=True)
 
@@ -118,7 +118,7 @@ ax.legend()
 spline_kgrid = SplinePotential(
     r_grid=x_grid, y_grid=y_grid, k_grid=torch.linspace(0, 10, 32)
 )
-yhat_spline_kgrid = spline_kgrid.kernel_from_k_sq(k_test**2)
+yhat_spline_kgrid = spline_kgrid.kernel_from_kvectors(k_test)
 
 fig, ax = plt.subplots(1, 1, figsize=(4, 3), sharex=True, constrained_layout=True)
 
@@ -220,9 +220,9 @@ y_grid_hiq = coulomb.lr_from_dist(x_grid_hiq)
 spline_hiq = SplinePotential(r_grid=x_grid_hiq, y_grid=y_grid_hiq, reciprocal=True)
 
 k_grid = torch.logspace(-4.1, 4, 1000)
-krn_coul = coulomb.kernel_from_k_sq(k_grid**2)
-krn_spline = spline.kernel_from_k_sq(k_grid**2)
-krn_spline_hiq = spline_hiq.kernel_from_k_sq(k_grid**2)
+krn_coul = coulomb.kernel_from_kvectors(k_test)
+krn_spline = spline.kernel_from_kvectors(k_test)
+krn_spline_hiq = spline_hiq.kernel_from_kvectors(k_test)
 
 fig, ax = plt.subplots(
     1, 1, figsize=(4, 3), sharey=True, sharex=True, constrained_layout=True
@@ -293,8 +293,8 @@ ax.legend()
 # The k-space kernel has a non-trivial shape
 
 k_grid = torch.logspace(-3, 3, 400)
-krn_coul = coulomb.kernel_from_k_sq(k_grid**2)
-krn_spline = spline.kernel_from_k_sq(k_grid**2)
+krn_coul = coulomb.kernel_from_kvectors(k_test)
+krn_spline = spline.kernel_from_kvectors(k_test)
 
 fig, ax = plt.subplots(
     1, 1, figsize=(4, 3), sharey=True, sharex=True, constrained_layout=True

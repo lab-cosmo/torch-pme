@@ -79,6 +79,16 @@ class CoulombPotential(Potential):
 
         return torch.erf(dist * (self._rsqrt2 / self.smearing)) / dist
 
+    def lr_from_kvectors(self, kvectors: torch.Tensor) -> torch.Tensor:
+        r"""
+        Fourier transform of the LR part potential in terms of :math:`\mathbf{k}`.
+
+        :param kvectors: torch.tensor containing the wave vectors k at which the
+            Fourier-transformed potential is to be evaluated
+        """
+        k_sq = torch.linalg.norm(kvectors, dim=-1) ** 2
+        return self.lr_from_k_sq(k_sq)
+
     def lr_from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
         """
         Fourier transform of the LR part potential in terms of :math:`k^2`.
