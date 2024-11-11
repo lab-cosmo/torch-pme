@@ -17,6 +17,7 @@ def _optimize_parameters(
 
     for step in range(max_steps):
         loss_value = loss(params[0], params[1], params[2])
+        print(loss_value)
         if torch.isnan(loss_value):
             raise ValueError(
                 "The value of the estimated error is now nan, consider using a "
@@ -567,7 +568,7 @@ def tune_p3m(
         if mesh_spacing is None
         else _inverse_smooth_mesh_spacing(mesh_spacing, min_dimension)
     )
-    cutoff_init = half_cell if cutoff is None else cutoff
+    cutoff_init = half_cell * 2 if cutoff is None else cutoff
     prefac = 2 * sum_squared_charges / math.sqrt(len(positions))
     volume = torch.abs(cell.det())
 
