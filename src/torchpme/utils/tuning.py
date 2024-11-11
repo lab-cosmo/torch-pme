@@ -567,7 +567,7 @@ def tune_p3m(
         if mesh_spacing is None
         else _inverse_smooth_mesh_spacing(mesh_spacing, min_dimension)
     )
-    cutoff_init = half_cell / 5 if cutoff is None else cutoff
+    cutoff_init = half_cell if cutoff is None else cutoff
     prefac = 2 * sum_squared_charges / math.sqrt(len(positions))
     volume = torch.abs(cell.det())
 
