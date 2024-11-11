@@ -54,19 +54,19 @@ def _generate_kvectors(
     # These are then converted to [0, 1, 2, ...] by multiplying with n.
     # get the frequencies, multiply with n, then w/ the reciprocal space vectors
     kxs = (bx * ns[0]) * torch.fft.fftfreq(
-        ns[0], device=ns.device, dtype=ns.dtype
+        ns[0], device=cell.device, dtype=cell.dtype
     ).unsqueeze(-1)
     kys = (by * ns[1]) * torch.fft.fftfreq(
-        ns[1], device=ns.device, dtype=ns.dtype
+        ns[1], device=cell.device, dtype=cell.dtype
     ).unsqueeze(-1)
 
     if for_ewald:
         kzs = (bz * ns[2]) * torch.fft.fftfreq(
-            ns[2], device=ns.device, dtype=ns.dtype
+            ns[2], device=cell.device, dtype=cell.dtype
         ).unsqueeze(-1)
     else:
         kzs = (bz * ns[2]) * torch.fft.rfftfreq(
-            ns[2], device=ns.device, dtype=ns.dtype
+            ns[2], device=cell.device, dtype=cell.dtype
         ).unsqueeze(-1)
 
     # then take the cartesian product (all possible combinations, same as meshgrid)
