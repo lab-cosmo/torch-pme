@@ -7,8 +7,8 @@ from torch.nn.functional import pad
 from ..lib.kvectors import get_ns_mesh
 from .coulomb import CoulombPotential
 
-COEF = [
-    [1],
+COEF: list[list[float]] = [  # coefficients for the difference operator
+    [1.0],
     [4 / 3, -1 / 3],
     [3 / 2, -3 / 5, 1 / 10],
     [8 / 5, -4 / 5, 8 / 35, -1 / 35],
@@ -18,7 +18,8 @@ COEF = [
 
 
 class P3MCoulombPotential(CoulombPotential):
-    r"""Coulomb potential for the P3M method.
+    r"""
+    Coulomb potential for the P3M method.
 
     :param smearing: float or torch.Tensor containing the parameter often called "sigma"
         in publications, which determines the length-scale at which the short-range and
@@ -36,7 +37,8 @@ class P3MCoulombPotential(CoulombPotential):
         Appendix C of `that paper<http://dx.doi.org/10.1063/1.477414>`_. The values ``1,
         2, 3, 4, 5, 6`` are supported.
     :param dtype: type used for the internal buffers and parameters
-    :param device: device used for the internal buffers and parameters"""
+    :param device: device used for the internal buffers and parameters
+    """
 
     def __init__(
         self,

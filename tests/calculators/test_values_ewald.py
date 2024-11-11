@@ -12,12 +12,10 @@ from torchpme import (
     CoulombPotential,
     EwaldCalculator,
     InversePowerLawPotential,
-    P3MCoulombPotential,
     P3MCalculator,
+    P3MCoulombPotential,
     PMECalculator,
 )
-
-from torchpme.utils.tuning import tune_p3m
 
 sys.path.append(str(Path(__file__).parents[1]))
 from helpers import (

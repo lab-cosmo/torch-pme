@@ -11,7 +11,7 @@ from torchpme import (
     P3MCoulombPotential,
     PMECalculator,
 )
-from torchpme.utils.tuning import _estimate_smearing, tune_ewald, tune_pme, tune_p3m
+from torchpme.utils.tuning import _estimate_smearing, tune_ewald, tune_p3m, tune_pme
 
 sys.path.append(str(Path(__file__).parents[1]))
 from helpers import define_crystal, neighbor_list_torch
