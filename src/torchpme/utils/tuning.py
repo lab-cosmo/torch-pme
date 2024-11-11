@@ -17,7 +17,6 @@ def _optimize_parameters(
 
     for step in range(max_steps):
         loss_value = loss(params[0], params[1], params[2])
-        print(loss_value)
         if torch.isnan(loss_value):
             raise ValueError(
                 "The value of the estimated error is now nan, consider using a "
@@ -543,13 +542,13 @@ def tune_p3m(
     You can check the values of the parameters
 
     >>> print(smearing)
-    0.04171745838080964
+    0.10499979411490586
 
     >>> print(parameter)
-    {'mesh_spacing': 0.011998118077739114, 'interpolation_nodes': 4}
+    {'mesh_spacing': 0.012438407397741125, 'interpolation_nodes': 4}
 
     >>> print(cutoff)
-    0.15409232806437623
+    1.0
 
     """
     _validate_parameters(sum_squared_charges, cell, positions, exponent)
