@@ -196,10 +196,7 @@ class ParametricKernel(torch.nn.Module):
         self._a0 = a0
 
     def kernel_from_kvectors(self, kvectors: torch.Tensor) -> torch.Tensor:
-        k_sq = torch.linalg.norm(kvectors, dim=-1) ** 2
-        return self.kernel_from_k_sq(k_sq)
-
-    def kernel_from_k_sq(self, k2):
+        k2 = torch.linalg.norm(kvectors, dim=-1) ** 2
         filter = torch.stack([torch.exp(-k2 * s**2 / 2) for s in self._sigma])
         filter[0, :] *= self._a0[0] / (1 + k2)
         filter[1, :] *= self._a0[1] / (1 + k2**3)
@@ -311,10 +308,7 @@ class SmearedCoulomb(torchpme.lib.KSpaceKernel):
         self._sigma2 = sigma2
 
     def kernel_from_kvectors(self, kvectors: torch.Tensor) -> torch.Tensor:
-        k_sq = torch.linalg.norm(kvectors, dim=-1) ** 2
-        return self.kernel_from_k_sq(k_sq)
-
-    def kernel_from_k_sq(self, k2):
+        k2 = torch.linalg.norm(kvectors, dim=-1) ** 2
         # we use a mask to set to zero the Gamma-point filter
         mask = torch.ones_like(k2, dtype=torch.bool, device=k2.device)
         mask[..., 0, 0, 0] = False
