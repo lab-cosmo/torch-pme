@@ -8,7 +8,6 @@ from torchpme import (
     CoulombPotential,
     EwaldCalculator,
     P3MCalculator,
-    P3MCoulombPotential,
     PMECalculator,
 )
 from torchpme.utils.tuning import _estimate_smearing, tune_ewald, tune_p3m, tune_pme
@@ -59,13 +58,13 @@ def test_parameter_choose(calculator, tune, param_length, accuracy, rtol):
     )
 
     # Compute potential and compare against target value using default hypers
-    calc = calculator(
-        potential=(
-            CoulombPotential(smearing=smearing)
-            if tune is not tune_p3m
-            else P3MCoulombPotential(smearing=smearing)
-        ),
-        **params,
+    calc = (
+        calculator(
+            potential=(CoulombPotential(smearing=smearing)),
+            **params,
+        )
+        if tune is not tune_p3m
+        else calculator(smearing=smearing, **params)
     )
     potentials = calc.forward(
         positions=pos,

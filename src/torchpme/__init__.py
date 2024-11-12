@@ -6,7 +6,6 @@ from .potentials import (
     CombinedPotential,
     CoulombPotential,
     InversePowerLawPotential,
-    P3MCoulombPotential,
     Potential,
     SplinePotential,
 )
@@ -20,7 +19,6 @@ __all__ = [
     "P3MCalculator",
     "PMECalculator",
     "CoulombPotential",
-    "P3MCoulombPotential",
     "Potential",
     "InversePowerLawPotential",
     "SplinePotential",
