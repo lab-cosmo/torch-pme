@@ -421,7 +421,7 @@ def test_potentials_jit(potpars):
             self.pot = pot(**kwargs)
 
         def forward(self, x: torch.Tensor):
-            return self.pot.lr_from_dist(x), self.pot.lr_from_k_sq(x)
+            return self.pot.lr_from_dist(x), self.pot.lr_from_kvectors(x)
 
     wrapper = JITWrapper(**pars)
     jit_wrapper = torch.jit.script(wrapper)
