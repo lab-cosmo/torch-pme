@@ -4,8 +4,6 @@ from typing import Callable, Optional
 
 import numpy as np
 import torch
-from scipy.optimize import fsolve
-from scipy.special import erfc
 
 
 def _optimize_parameters(
@@ -19,7 +17,7 @@ def _optimize_parameters(
     optimizer = torch.optim.Adam(params, lr=learning_rate)
 
     for step in range(max_steps):
-        loss_value = loss(params[0], params[1], params[2])
+        loss_value = loss(*params)
         if torch.isnan(loss_value):
             raise ValueError(
                 "The value of the estimated error is now nan, consider using a "
@@ -47,7 +45,7 @@ def _optimize_parameters(
             stacklevel=2,
         )
 
-    return params[0], params[1], params[2]
+    return params
 
 
 def tune_ewald(
@@ -171,67 +169,16 @@ def tune_ewald(
         """smooth_lr_wavelength(inverse_smooth_lr_wavelength(value)) == value"""
         return -math.log(min_dimension / value - 1)
 
-    def estimate_cutoff(smearing, accuracy):
-        """
-        Compute a reasonable initial guess for the cutoff radius to be used in the
-        more sophisticated optimizer. Effectively, instead of directly solving the full
-        optimization problem containing three variables, we first perform a single-
-        variable optimization of the cutoff given the (already estimated) smearing.
-
-        Since the real-space sum is truncated at the cutoff, the contribution of an atom
-        right outside of it would precisely be V_SR(cutoff), where V_SR is the
-        short-range function. Hence, we pick as out initial guess simply the cutoff for
-        which V_SR(cutoff) = accuracy.
-        """
-
-        # Define target function, which is the short-range part of the target potential
-        # For now, this is only for the Coulomb potential
-        def sr_func(dist):
-            return erfc(dist / np.sqrt(2) / smearing) / dist - accuracy
-
-        # Define initial guess for single-variable optimization
-        cutoff_init = half_cell
-
-        # Solve equation and return
-        return fsolve(sr_func, cutoff_init)[0]
-
-    def estimate_kcut(smearing, accuracy):
-        """
-        Compute a reasonable initial guess for the reciprocal-space cutoff to be used in
-        the more sophisticated optimizer. Effectively, instead of directly solving the
-        full optimization problem containing three variables, we first perform a single-
-        variable optimization of the cutoff given the (already estimated) smearing.
-
-        Since the reciprocal space sum is truncated at a cutoff kcut, the contribution
-        of the next term in the sum would precisely be G_LR(kcut), where G_LR is the
-        Fourier-transformed long-range function, also called the kernel. Hence, we pick
-        as out initial guess simply the cutoff for which G_LR(kcut) = accuracy.
-        In practice, we work with k squared rather than k.
-        """
-
-        # Define target function, which is the Fourier-transformed long-range part of
-        # the target potential. For now, this is only for the Coulomb potential
-        def lr_func(k_sq):
-            return np.exp(-0.5 * smearing**2 * k_sq) * 4 * np.pi / k_sq - accuracy
-
-        # Define initial guess for single-variable optimization. Note that we work with
-        # k squared rather than k.
-        # We deliberately pick a small value, corresponding to large wavelengths.
-        kcut_sq_init = (2 * np.pi / half_cell) ** 2
-
-        # Solve equation and return
-        return np.sqrt(
-            fsolve(lr_func, kcut_sq_init)[0],
-        )
-
     smearing_init = _estimate_smearing(cell) if smearing is None else smearing
+    # cutoff_init = _estimate_sr_cutoff(cell, accuracy) if cutoff is None else cutoff
+    # lr_wavelength_init = inverse_smooth_lr_wavelength(
+    #     _estimate_lr_cutoff(cell, accuracy)
+    #     if lr_wavelength is None
+    #     else lr_wavelength
+    # )
+    cutoff_init = 1e-3
+    lr_wavelength_init = 1e3
 
-    lr_wavelength_init = (
-        inverse_smooth_lr_wavelength(estimate_kcut(smearing_init, accuracy))
-        if lr_wavelength is None
-        else inverse_smooth_lr_wavelength(lr_wavelength)
-    )
-    cutoff_init = estimate_cutoff(smearing_init, accuracy) if cutoff is None else cutoff
     prefac = 2 * sum_squared_charges / math.sqrt(len(positions))
     volume = torch.abs(cell.det())
 
@@ -523,9 +470,7 @@ def tune_pme(
     )
 
 
-def _estimate_smearing(
-    cell: torch.Tensor,
-) -> float:
+def _estimate_smearing(cell: torch.Tensor) -> float:
     """
     Estimate the smearing for ewald calculators.
 
@@ -542,6 +487,69 @@ def _estimate_smearing(
     max_cutoff = torch.min(cell_dimensions) / 2 - 1e-6
 
     return max_cutoff.item() / 5.0
+
+
+def _estimate_sr_cutoff(cell: torch.Tensor, accuracy: float) -> float:
+    """
+    Compute a reasonable initial guess for the cutoff radius to be used in the
+    more sophisticated optimizer. Effectively, instead of directly solving the full
+    optimization problem containing three variables, we first perform a single-
+    variable optimization of the cutoff given the (already estimated) smearing.
+
+    Since the real-space sum is truncated at the cutoff, the contribution of an atom
+    right outside of it would precisely be V_SR(cutoff), where V_SR is the
+    short-range function. Hence, we pick as out initial guess simply the cutoff for
+    which V_SR(cutoff) = accuracy.
+    """
+    smearing = _estimate_smearing(cell)
+
+    # Define target function, which is the short-range part of the target potential
+    # For now, this is only for the Coulomb potential
+    def loss(cutoff):
+        return torch.erfc(cutoff / math.sqrt(2) / smearing) / cutoff - accuracy
+
+    cell_dimensions = torch.linalg.norm(cell, dim=1)
+    half_cell = float(torch.min(cell_dimensions) / 2)
+
+    cutoff = torch.tensor(
+        half_cell, dtype=cell.dtype, device=cell.device, requires_grad=True
+    )
+    cutoff_opt = _optimize_parameters(params=[cutoff], loss=loss)[0]
+
+    return float(cutoff_opt)
+
+
+def _estimate_lr_cutoff(cell: torch.Tensor, accuracy: float) -> float:
+    """
+    Compute a reasonable initial guess for the reciprocal-space cutoff to be used in
+    the more sophisticated optimizer. Effectively, instead of directly solving the
+    full optimization problem containing three variables, we first perform a single-
+    variable optimization of the cutoff given the (already estimated) smearing.
+
+    Since the reciprocal space sum is truncated at a cutoff kcut, the contribution
+    of the next term in the sum would precisely be G_LR(kcut), where G_LR is the
+    Fourier-transformed long-range function, also called the kernel. Hence, we pick
+    as out initial guess simply the cutoff for which G_LR(kcut) = accuracy.
+    In practice, we work with k squared rather than k.
+    """
+    smearing = _estimate_smearing(cell)
+
+    def loss(k_sq):
+        return torch.exp(-0.5 * smearing**2 * k_sq) * 4 * math.pi / k_sq - accuracy
+
+    cell_dimensions = torch.linalg.norm(cell, dim=1)
+    half_cell = float(torch.min(cell_dimensions) / 2)
+
+    kcut_sq = torch.tensor(
+        (2 * np.pi / half_cell) ** 2,
+        dtype=cell.dtype,
+        device=cell.device,
+        requires_grad=True,
+    )
+
+    kcut_sq_opt = _optimize_parameters(params=[kcut_sq], loss=loss)[0]
+
+    return 2 * math.pi / math.sqrt(float(kcut_sq_opt))
 
 
 def _validate_parameters(
