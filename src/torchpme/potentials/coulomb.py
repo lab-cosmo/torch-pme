@@ -86,28 +86,12 @@ class CoulombPotential(Potential):
         :param kvectors: torch.tensor containing the wave vectors k at which the
             Fourier-transformed potential is to be evaluated
         """
-        k_sq = torch.linalg.norm(kvectors, dim=-1) ** 2
-        return self.lr_from_k_sq(k_sq)
-
-    def lr_from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
-        """
-        Fourier transform of the LR part potential in terms of :math:`k^2`.
-
-        :param k_sq: torch.tensor containing the squared lengths (2-norms) of the wave
-            vectors k at which the Fourier-transformed potential is to be evaluated
-        """
-        # The k=0 term often needs to be set separately since for exponents p<=3
-        # dimension, there is a divergence to +infinity. Setting this value manually
-        # to zero physically corresponds to the addition of a uniform background charge
-        # to make the system charge-neutral. For p>3, on the other hand, the
-        # Fourier-transformed LR potential does not diverge as k->0, and one
-        # could instead assign the correct limit. This is not implemented for now
-        # for consistency reasons.
         if self.smearing is None:
             raise ValueError(
                 "Cannot compute long-range kernel without specifying `smearing`."
             )
 
+        k_sq = torch.linalg.norm(kvectors, dim=-1) ** 2
         # avoid NaNs in backward, see
         # https://github.com/jax-ml/jax/issues/1052
         # https://github.com/tensorflow/probability/blob/main/discussion/where-nan.pdf

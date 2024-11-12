@@ -131,6 +131,19 @@ class Potential(torch.nn.Module):
         )
 
     @torch.jit.export
+    def lr_from_kvectors(self, kvectors: torch.Tensor) -> torch.Tensor:
+        r"""
+        Computes the Fourier-domain version of the long-range part of the pair potential
+        :math:`\hat{V}_\mathrm{LR}(k)`. The function is expressed in terms of :math:`k`.
+
+        :param kvectors: torch.tensor containing the Fourier domain vectors at which
+            :math:`\hat{V}_\mathrm{LR}` must be evaluated.
+        """
+        raise NotImplementedError(
+            f"lr_from_kvectors is not implemented for {self.__class__.__name__}"
+        )
+
+    @torch.jit.export
     def lr_from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
         r"""
         Computes the Fourier-domain version of the long-range part of the pair potential

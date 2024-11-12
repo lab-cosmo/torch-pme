@@ -135,9 +135,6 @@ class SplinePotential(Potential):
 
     def lr_from_kvectors(self, kvectors: torch.Tensor) -> torch.Tensor:
         k_sq = torch.linalg.norm(kvectors, dim=-1) ** 2
-        return self.lr_from_k_sq(k_sq)
-
-    def lr_from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
         return self._krn_spline(k_sq)
 
     def self_contribution(self) -> torch.Tensor:
@@ -148,6 +145,6 @@ class SplinePotential(Potential):
 
     from_dist.__doc__ = Potential.from_dist.__doc__
     lr_from_dist.__doc__ = Potential.lr_from_dist.__doc__
-    lr_from_k_sq.__doc__ = Potential.lr_from_k_sq.__doc__
+    lr_from_kvectors.__doc__ = Potential.lr_from_kvectors.__doc__
     self_contribution.__doc__ = Potential.self_contribution.__doc__
     background_correction.__doc__ = Potential.background_correction.__doc__

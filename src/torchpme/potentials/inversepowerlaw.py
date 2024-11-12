@@ -119,27 +119,6 @@ class InversePowerLawPotential(Potential):
             )
 
         k_sq = torch.linalg.norm(kvectors, dim=-1) ** 2
-        return self.lr_from_k_sq(k_sq)
-
-    @torch.jit.export
-    def lr_from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
-        """
-        Fourier transform of the LR part potential in terms of :math:`k^2`.
-
-        If only the Coulomb potential is needed, the last line can be
-        replaced by
-
-        .. code-block:: python
-
-            fourier = 4 * torch.pi * torch.exp(-0.5 * smearing**2 * k_sq) / k_sq
-
-        :param k_sq: torch.tensor containing the squared lengths (2-norms) of the wave
-            vectors k at which the Fourier-transformed potential is to be evaluated
-        """
-        if self.smearing is None:
-            raise ValueError(
-                "Cannot compute long-range kernel without specifying `smearing`."
-            )
 
         exponent = self.exponent
         smearing = self.smearing

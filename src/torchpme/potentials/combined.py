@@ -100,11 +100,7 @@ class CombinedPotential(Potential):
         return torch.inner(self.weights, potentials)
 
     def lr_from_kvectors(self, kvectors: torch.Tensor) -> torch.Tensor:
-        k_sq = torch.linalg.norm(kvectors, dim=-1) ** 2
-        return self.lr_from_k_sq(k_sq)
-
-    def lr_from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
-        potentials = [pot.lr_from_k_sq(k_sq) for pot in self.potentials]
+        potentials = [pot.lr_from_kvectors(kvectors) for pot in self.potentials]
         potentials = torch.stack(potentials, dim=-1)
         return torch.inner(self.weights, potentials)
 
@@ -123,6 +119,6 @@ class CombinedPotential(Potential):
     from_dist.__doc__ = Potential.from_dist.__doc__
     sr_from_dist.__doc__ = Potential.sr_from_dist.__doc__
     lr_from_dist.__doc__ = Potential.lr_from_dist.__doc__
-    lr_from_k_sq.__doc__ = Potential.lr_from_k_sq.__doc__
+    lr_from_kvectors.__doc__ = Potential.lr_from_kvectors.__doc__
     self_contribution.__doc__ = Potential.self_contribution.__doc__
     background_correction.__doc__ = Potential.background_correction.__doc__

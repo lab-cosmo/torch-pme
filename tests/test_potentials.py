@@ -235,7 +235,7 @@ def test_range_none(potential):
     with pytest.raises(ValueError, match=match):
         _ = pot.lr_from_dist(dist)
     with pytest.raises(ValueError, match=match):
-        _ = pot.lr_from_k_sq(dist)
+        _ = pot.lr_from_kvectors(dist)
     with pytest.raises(ValueError, match=match):
         _ = pot.self_contribution()
     with pytest.raises(ValueError, match=match):
