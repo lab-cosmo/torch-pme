@@ -7,7 +7,7 @@ from torchpme.lib import (
     generate_kvectors_for_mesh,
     get_ns_mesh,
 )
-from torchpme.utils.tuning import _get_ns_mesh_differentiable
+from torchpme.utils.tuning.pme import _get_ns_mesh_differentiable
 
 # Generate random cells and mesh parameters
 cells = []

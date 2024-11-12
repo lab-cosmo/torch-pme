@@ -9,7 +9,7 @@ from torchpme import (
     EwaldCalculator,
     PMECalculator,
 )
-from torchpme.utils.tuning import _estimate_smearing, tune_ewald, tune_pme
+from torchpme.utils import tune_ewald, tune_pme
 
 sys.path.append(str(Path(__file__).parents[1]))
 from helpers import define_crystal, neighbor_list_torch
@@ -111,7 +111,9 @@ def test_skip_optimization(tune):
         )
         cell_dimensions = torch.linalg.norm(cell, dim=1)
         half_cell = float(torch.min(cell_dimensions) / 2)
-        pytest.approx(_estimate_smearing(cell), smearing)
+
+        # pytest.approx(_estimate_smearing(cell), smearing)
+
         if tune is tune_ewald:
             pytest.approx(half_cell / 10, list(params.values())[0])
             pytest.approx(half_cell, sr_cutoff)
@@ -203,6 +205,20 @@ def test_invalid_shape_cell(tune):
             sum_squared_charges=1.0,
             positions=POSITIONS_1,
             cell=torch.ones([2, 2], dtype=DTYPE, device=DEVICE),
+        )
+
+
+@pytest.mark.parametrize("tune", [tune_ewald, tune_pme])
+def test_invalid_cell(tune):
+    match = (
+        "provided `cell` has a determinant of 0 and therefore is not valid for "
+        "periodic calculation"
+    )
+    with pytest.raises(ValueError, match=match):
+        tune(
+            sum_squared_charges=1.0,
+            positions=POSITIONS_1,
+            cell=torch.zeros(3, 3),
         )
 
 
