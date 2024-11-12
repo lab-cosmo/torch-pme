@@ -140,6 +140,12 @@ def test_update(cell_update, ns_mesh_update):
     torch.testing.assert_close(
         kernel_filter._kfilter, kernel.kernel_from_kvectors(kernel_filter._kvectors)
     )
+    torch.testing.assert_close(
+        kernel_filter._kfilter,
+        kernel.kernel_from_k_sq(
+            torch.linalg.norm(kernel_filter._kvectors, dim=-1) ** 2
+        ),
+    )
 
 
 def test_update_ns_wrong_shape():
