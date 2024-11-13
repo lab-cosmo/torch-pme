@@ -7,6 +7,7 @@ from torchpme.lib import (
     KSpaceFilter,
     KSpaceKernel,
     MeshInterpolator,
+    generate_kvectors_for_mesh,
 )
 
 
@@ -19,10 +20,6 @@ class TestKernel:
         @torch.jit.export
         def kernel_from_kvectors(self, kvectors: torch.Tensor) -> torch.Tensor:
             k_sq = torch.linalg.norm(kvectors, dim=-1) ** 2
-            return self.kernel_from_k_sq(k_sq)
-
-        @torch.jit.export
-        def kernel_from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
             return torch.exp(-k_sq / self.param)
 
     class NoopKernel(KSpaceKernel):
@@ -32,27 +29,26 @@ class TestKernel:
         @torch.jit.export
         def kernel_from_kvectors(self, kvectors: torch.Tensor) -> torch.Tensor:
             k_sq = torch.linalg.norm(kvectors, dim=-1) ** 2
-            return self.kernel_from_k_sq(k_sq)
-
-        @torch.jit.export
-        def kernel_from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
             return torch.ones_like(k_sq)
 
     def test_kernel_subclassing(self):
         # check that one can define and use a kernel
         my_krn = self.DemoKernel(1.0)
-        k_sq = torch.arange(0, 10, 0.01)
-        my_krn.kernel_from_k_sq(k_sq)
+        kvectors = torch.zeros((1000, 3))
+        kvectors[:, 0] = torch.arange(0, 10, 0.01)
+
+        my_krn.kernel_from_kvectors(kvectors)
 
     def test_kernel_jitting(self):
         # pytorch
         my_krn = self.DemoKernel(1.0)
-        k_sq = torch.arange(0, 10, 0.01)
-        filter = my_krn.kernel_from_k_sq(k_sq)
+        kvectors = torch.zeros((1000, 3))
+        kvectors[:, 0] = torch.arange(0, 10, 0.01)
+        filter = my_krn.kernel_from_kvectors(kvectors)
 
         # jitted
         jit_krn = torch.jit.script(my_krn)
-        jit_filter = jit_krn.kernel_from_k_sq(k_sq)
+        jit_filter = jit_krn.kernel_from_kvectors(kvectors)
 
         assert torch.allclose(filter, jit_filter)
 
@@ -131,20 +127,12 @@ def test_update(cell_update, ns_mesh_update):
     if ns_mesh_update is not None:
         assert torch.all(kernel_filter.ns_mesh == ns_mesh_update)
 
-    # if cell_update is not None and ns_mesh_update is not None:
-    #     kvectors = generate_kvectors_for_mesh(ns=ns_mesh_update, cell=cell_update)
-    #     k_sq = torch.linalg.norm(kvectors, dim=-1) ** 2
-
-    #     torch.testing.assert_close(kernel_filter._k_sq, k_sq)
+    if cell_update is not None and ns_mesh_update is not None:
+        kvectors = generate_kvectors_for_mesh(ns=ns_mesh_update, cell=cell_update)
+        torch.testing.assert_close(kernel_filter._kvectors, kvectors)
 
     torch.testing.assert_close(
         kernel_filter._kfilter, kernel.kernel_from_kvectors(kernel_filter._kvectors)
-    )
-    torch.testing.assert_close(
-        kernel_filter._kfilter,
-        kernel.kernel_from_k_sq(
-            torch.linalg.norm(kernel_filter._kvectors, dim=-1) ** 2
-        ),
     )
 
 

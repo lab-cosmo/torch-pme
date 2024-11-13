@@ -35,18 +35,6 @@ class KSpaceKernel(torch.nn.Module):
             f"kernel_from_kvectors is not implemented for '{self.__class__.__name__}'"
         )
 
-    def kernel_from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
-        r"""
-        Computes the reciprocal-space kernel on a grid of k points given a
-        tensor containing :math:`|\mathbf{k}|^2`.
-
-        :param k_sq: torch.tensor containing the squared k vector moduli
-            at which the kernel is to be evaluated.
-        """
-        raise NotImplementedError(
-            f"kernel_from_k_sq is not implemented for '{self.__class__.__name__}'"
-        )
-
 
 class KSpaceFilter(torch.nn.Module):
     r"""
@@ -73,7 +61,7 @@ class KSpaceFilter(torch.nn.Module):
     :param ns_mesh: toch.tensor of shape ``(3,)``
         Number of mesh points to use along each of the three axes
     :param kernel: KSpaceKernel
-        A KSpaceKernel-derived class providing a ``from_k_sq`` method that
+        A KSpaceKernel-derived class providing a ``from_kvectors`` method that
         evaluates :math:`\psi` given the square modulus of
         the k-space mesh points
     :param fft_norm: str

@@ -17,7 +17,7 @@ class CombinedPotential(Potential):
     functions with user-specified weights, which can be either fixed or trainable.
 
     :param potentials: List of potential objects, each implementing a compatible
-        interface with methods `from_dist`, `lr_from_dist`, `lr_from_k_sq`,
+        interface with methods `from_dist`, `lr_from_dist`, `lr_from_kvectors`,
         `self_contribution`, and `background_correction`.
     :param initial_weights: Initial weights for combining the potentials. If provided,
         the length must match the number of potentials. If `None`, weights are

@@ -23,7 +23,7 @@ class Potential(torch.nn.Module):
     better suited to describe the structure within a local cutoff.
 
     Note that a :class:`Potential` class can also be used inside a
-    :class:`KSpaceFilter`, see :func:`Potential.kernel_from_k_sq`.
+    :class:`KSpaceFilter`, see :func:`Potential.kernel_from_kvectors`.
 
     :param smearing: The length scale associated with the switching between
         :math:`V_{\mathrm{SR}}(r)` and :math:`V_{\mathrm{LR}}(r)`
