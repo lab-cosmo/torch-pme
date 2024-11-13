@@ -130,24 +130,14 @@ def tune_pme(
     )
 
     cell_dimensions = torch.linalg.norm(cell, dim=1)
-    min_dimension = torch.min(cell_dimensions)
     volume = torch.abs(cell.det())
     prefac = 2 * sum_squared_charges / math.sqrt(len(positions))
 
-    smoother = _SmoothLRWaveLength(min_dimension)
-    smooth_mesh_spacing_opt = smoother(mesh_spacing_opt)
-
-    # we have to clear the graph before passing it to the optimizer
-    smooth_mesh_spacing_opt = torch.tensor(
-        float(mesh_spacing_opt),
-        dtype=mesh_spacing_opt.dtype,
-        device=mesh_spacing_opt.device,
-        requires_grad=mesh_spacing_opt.requires_grad,
-    )
+    ns_mesh_opt = torch.tensor(_get_ns_mesh_differentiable(cell, mesh_spacing_opt), device=cell.device, dtype=cell.dtype)
 
     interpolation_nodes = torch.tensor(interpolation_nodes)
 
-    def err_Fourier(smearing, mesh_spacing):
+    def err_Fourier(smearing, ns_mesh):
         def H(ns_mesh):
             return torch.prod(1 / ns_mesh) ** (1 / 3)
 
@@ -161,8 +151,6 @@ def tune_pme(
 
         def factorial(x):
             return torch.exp(log_factorial(x))
-
-        ns_mesh = _get_ns_mesh_differentiable(cell, mesh_spacing)
 
         return (
             prefac
@@ -184,13 +172,13 @@ def tune_pme(
             * torch.exp(-(cutoff**2) / 2 / smearing**2)
         )
 
-    def loss(smearing, smooth_mesh_spacing_opt, cutoff):
+    def loss(smearing, ns_mesh, cutoff):
         return torch.sqrt(
-            err_Fourier(smearing, smoother.inverse(smooth_mesh_spacing_opt)) ** 2
+            err_Fourier(smearing, ns_mesh) ** 2
             + err_real(smearing, cutoff) ** 2
         )
 
-    params = [smearing_opt, smooth_mesh_spacing_opt, cutoff_opt]
+    params = [smearing_opt, ns_mesh_opt, cutoff_opt]
     _optimize_parameters(
         params=params,
         loss=loss,
@@ -203,7 +191,7 @@ def tune_pme(
     return (
         float(smearing_opt),
         {
-            "mesh_spacing": float(smoother.inverse(smooth_mesh_spacing_opt)),
+            "mesh_spacing": float(torch.min(cell_dimensions / ns_mesh_opt)),
             "interpolation_nodes": int(interpolation_nodes),
         },
         float(cutoff_opt),

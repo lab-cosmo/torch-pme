@@ -99,7 +99,7 @@ def _initial_guess(
 
     # estimate smearing
     if smearing is None:
-        smearing_init = (half_cell - 1e-6) / 5.0
+        smearing_init = (half_cell - 1e-6) / 20.0
 
     smearing_init = torch.tensor(
         smearing_init if smearing is None else smearing,
@@ -136,7 +136,7 @@ def _initial_guess(
             )
 
         kcut_sq_init = torch.tensor(
-            (2 * torch.pi / half_cell) ** 2,
+            (2 * torch.pi / half_cell * 2) ** 2,
             dtype=dtype,
             device=device,
             requires_grad=True,

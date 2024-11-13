@@ -129,27 +129,17 @@ def tune_ewald(
     )
 
     cell_dimensions = torch.linalg.norm(cell, dim=1)
-    min_dimension = torch.min(cell_dimensions)
     volume = torch.abs(cell.det())
     prefac = 2 * sum_squared_charges / math.sqrt(len(positions))
 
-    smoother = _SmoothLRWaveLength(min_dimension)
-    smooth_lr_wavelength_opt = smoother(lr_wavelength_opt)
+    k_cutoff_opt = torch.tensor(2 * torch.pi / lr_wavelength_opt, device=cell.device, dtype=cell.dtype)
 
-    # we have to clear the graph before passing it to the optimizer
-    smooth_lr_wavelength_opt = torch.tensor(
-        float(smooth_lr_wavelength_opt),
-        dtype=lr_wavelength_opt.dtype,
-        device=lr_wavelength_opt.device,
-        requires_grad=lr_wavelength_opt.requires_grad,
-    )
-
-    def err_Fourier(smearing, lr_wavelength):
+    def err_Fourier(smearing, k_cutoff):
         return (
             prefac**0.5
             / smearing
-            / torch.sqrt(2 * torch.pi**2 * volume / lr_wavelength**0.5)
-            * torch.exp(-2 * torch.pi**2 * smearing**2 / lr_wavelength)
+            / torch.sqrt(2 * torch.pi**2 * volume / (2 * torch.pi / k_cutoff)**0.5)
+            * torch.exp(-2 * torch.pi**2 * smearing**2 / (2 * torch.pi / k_cutoff))
         )
 
     def err_real(smearing, cutoff):
@@ -159,13 +149,13 @@ def tune_ewald(
             * torch.exp(-(cutoff**2) / 2 / smearing**2)
         )
 
-    def loss(smearing, smooth_lr_wavelength, cutoff):
+    def loss(smearing, k_cutoff, cutoff):
         return torch.sqrt(
-            err_Fourier(smearing, smoother.inverse(smooth_lr_wavelength)) ** 2
+            err_Fourier(smearing, k_cutoff) ** 2
             + err_real(smearing, cutoff) ** 2
         )
 
-    params = [smearing_opt, smooth_lr_wavelength_opt, cutoff_opt]
+    params = [smearing_opt, k_cutoff_opt, cutoff_opt]
     _optimize_parameters(
         params=params,
         loss=loss,
@@ -177,6 +167,6 @@ def tune_ewald(
 
     return (
         float(smearing_opt),
-        {"lr_wavelength": float(smoother.inverse(smooth_lr_wavelength_opt))},
+        {"lr_wavelength": 2 * torch.pi / float(k_cutoff_opt)},
         float(cutoff_opt),
     )
