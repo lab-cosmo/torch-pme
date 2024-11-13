@@ -17,7 +17,7 @@ class CombinedPotential(Potential):
     functions with user-specified weights, which can be either fixed or trainable.
 
     :param potentials: List of potential objects, each implementing a compatible
-        interface with methods `from_dist`, `lr_from_dist`, `lr_from_k_sq`,
+        interface with methods `from_dist`, `lr_from_dist`, `lr_from_kvectors`,
         `self_contribution`, and `background_correction`.
     :param initial_weights: Initial weights for combining the potentials. If provided,
         the length must match the number of potentials. If `None`, weights are
@@ -99,8 +99,8 @@ class CombinedPotential(Potential):
         potentials = torch.stack(potentials, dim=-1)
         return torch.inner(self.weights, potentials)
 
-    def lr_from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
-        potentials = [pot.lr_from_k_sq(k_sq) for pot in self.potentials]
+    def lr_from_kvectors(self, kvectors: torch.Tensor) -> torch.Tensor:
+        potentials = [pot.lr_from_kvectors(kvectors) for pot in self.potentials]
         potentials = torch.stack(potentials, dim=-1)
         return torch.inner(self.weights, potentials)
 
@@ -119,6 +119,6 @@ class CombinedPotential(Potential):
     from_dist.__doc__ = Potential.from_dist.__doc__
     sr_from_dist.__doc__ = Potential.sr_from_dist.__doc__
     lr_from_dist.__doc__ = Potential.lr_from_dist.__doc__
-    lr_from_k_sq.__doc__ = Potential.lr_from_k_sq.__doc__
+    lr_from_kvectors.__doc__ = Potential.lr_from_kvectors.__doc__
     self_contribution.__doc__ = Potential.self_contribution.__doc__
     background_correction.__doc__ = Potential.background_correction.__doc__

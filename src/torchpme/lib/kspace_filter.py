@@ -23,28 +23,16 @@ class KSpaceKernel(torch.nn.Module):
     def __init__(self):
         super().__init__()
 
-    def kernel_from_k(self, k: torch.Tensor) -> torch.Tensor:
+    def kernel_from_kvectors(self, kvectors: torch.Tensor) -> torch.Tensor:
         r"""
-        Computes the reciprocal-space kernel on a grid of k points given a
-        tensor containing :math:`|\mathbf{k}|`.
+        Computes the reciprocal-space kernel on a grid of k points given a tensor
+        containing :math:`\mathbf{k}`.
 
-        :param k: torch.tensor containing the k vector moduli at which the kernel
-            is to be evaluated.
+        :param kvectors: torch.tensor containing the k vector at which the
+            kernel is to be evaluated.
         """
         raise NotImplementedError(
-            f"kernel_from_k is not implemented for '{self.__class__.__name__}'"
-        )
-
-    def kernel_from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
-        r"""
-        Computes the reciprocal-space kernel on a grid of k points given a
-        tensor containing :math:`|\mathbf{k}|^2`.
-
-        :param k_sq: torch.tensor containing the squared k vector moduli
-            at which the kernel is to be evaluated.
-        """
-        raise NotImplementedError(
-            f"kernel_from_k_sq is not implemented for '{self.__class__.__name__}'"
+            f"kernel_from_kvectors is not implemented for '{self.__class__.__name__}'"
         )
 
 
@@ -53,7 +41,7 @@ class KSpaceFilter(torch.nn.Module):
     Apply a reciprocal-space filter to a real-space mesh.
 
     The class combines the costruction of a reciprocal-space grid
-    :math:`\{mathbf{k}_n\}`
+    :math:`\{\mathbf{k}_n\}`
     (that should be commensurate to the grid in real space, so the class takes
     the same options as :class:`MeshInterpolator`), the calculation of
     a scalar filter function :math:`\phi(|\mathbf{k}|^2)`, defined as a function of
@@ -73,7 +61,7 @@ class KSpaceFilter(torch.nn.Module):
     :param ns_mesh: toch.tensor of shape ``(3,)``
         Number of mesh points to use along each of the three axes
     :param kernel: KSpaceKernel
-        A KSpaceKernel-derived class providing a ``from_k_sq`` method that
+        A KSpaceKernel-derived class providing a ``from_kvectors`` method that
         evaluates :math:`\psi` given the square modulus of
         the k-space mesh points
     :param fft_norm: str
@@ -150,11 +138,10 @@ class KSpaceFilter(torch.nn.Module):
 
         if cell is not None or ns_mesh is not None:
             self._kvectors = generate_kvectors_for_mesh(ns=self.ns_mesh, cell=self.cell)
-            self._k_sq = torch.linalg.norm(self._kvectors, dim=3) ** 2
 
         # always update the kfilter to reduce the risk it'd go out of sync if the is an
         # update in the underlaying potential
-        self._kfilter = self.kernel.kernel_from_k_sq(self._k_sq)
+        self._kfilter = self.kernel.kernel_from_kvectors(self._kvectors)
 
     def forward(self, mesh_values: torch.Tensor) -> torch.Tensor:
         """
