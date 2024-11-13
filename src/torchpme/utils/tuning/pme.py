@@ -6,7 +6,6 @@ import torch
 from . import (
     _initial_guess,
     _optimize_parameters,
-    _SmoothLRWaveLength,
     _validate_parameters,
 )
 
@@ -22,7 +21,7 @@ def tune_pme(
     exponent: int = 1,
     accuracy: float = 1e-3,
     max_steps: int = 50000,
-    learning_rate: float = 5e-3,
+    learning_rate: float = 0.1,
     verbose: bool = False,
 ):
     r"""
@@ -119,21 +118,29 @@ def tune_pme(
     0.1
 
     """
-    _validate_parameters(sum_squared_charges, cell, positions, exponent)
+    _validate_parameters(sum_squared_charges, cell, positions, exponent, accuracy)
 
-    smearing_opt, mesh_spacing_opt, cutoff_opt = _initial_guess(
+    smearing_opt, cutoff_opt = _initial_guess(
         cell=cell,
         smearing=smearing,
-        lr_wavelength=mesh_spacing,  # why can we pass this here?
         cutoff=cutoff,
         accuracy=accuracy,
     )
 
+    # We choose only one mesh as initial guess
+    if mesh_spacing is None:
+        ns_mesh_opt = torch.tensor(
+            [1, 1, 1],
+            device=cell.device,
+            dtype=cell.dtype,
+            requires_grad=True,
+        )
+    else:
+        ns_mesh_opt = _get_ns_mesh_differentiable(cell, mesh_spacing)
+
     cell_dimensions = torch.linalg.norm(cell, dim=1)
     volume = torch.abs(cell.det())
     prefac = 2 * sum_squared_charges / math.sqrt(len(positions))
-
-    ns_mesh_opt = torch.tensor(_get_ns_mesh_differentiable(cell, mesh_spacing_opt), device=cell.device, dtype=cell.dtype)
 
     interpolation_nodes = torch.tensor(interpolation_nodes)
 
@@ -174,8 +181,7 @@ def tune_pme(
 
     def loss(smearing, ns_mesh, cutoff):
         return torch.sqrt(
-            err_Fourier(smearing, ns_mesh) ** 2
-            + err_real(smearing, cutoff) ** 2
+            err_Fourier(smearing, ns_mesh) ** 2 + err_real(smearing, cutoff) ** 2
         )
 
     params = [smearing_opt, ns_mesh_opt, cutoff_opt]

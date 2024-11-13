@@ -6,9 +6,10 @@ import torch
 from . import (
     _initial_guess,
     _optimize_parameters,
-    _SmoothLRWaveLength,
     _validate_parameters,
 )
+
+TWO_PI = 2 * math.pi
 
 
 def tune_ewald(
@@ -21,7 +22,7 @@ def tune_ewald(
     exponent: int = 1,
     accuracy: float = 1e-3,
     max_steps: int = 50000,
-    learning_rate: float = 5e-2,
+    learning_rate: float = 0.1,
     verbose: bool = False,
 ) -> tuple[float, dict[str, float], float]:
     r"""
@@ -118,28 +119,29 @@ def tune_ewald(
     0.1
 
     """
-    _validate_parameters(sum_squared_charges, cell, positions, exponent)
+    _validate_parameters(sum_squared_charges, cell, positions, exponent, accuracy)
 
-    smearing_opt, lr_wavelength_opt, cutoff_opt = _initial_guess(
-        cell=cell,
-        smearing=smearing,
-        lr_wavelength=lr_wavelength,
-        cutoff=cutoff,
-        accuracy=accuracy,
+    smearing_opt, cutoff_opt = _initial_guess(
+        cell=cell, smearing=smearing, cutoff=cutoff, accuracy=accuracy
     )
 
-    cell_dimensions = torch.linalg.norm(cell, dim=1)
+    # We choose a very small initial fourier wavelength
+    k_cutoff_opt = torch.tensor(
+        1e-3 if lr_wavelength is None else TWO_PI / lr_wavelength,
+        dtype=cell.dtype,
+        device=cell.device,
+        requires_grad=(lr_wavelength is None),
+    )
+
     volume = torch.abs(cell.det())
     prefac = 2 * sum_squared_charges / math.sqrt(len(positions))
-
-    k_cutoff_opt = torch.tensor(2 * torch.pi / lr_wavelength_opt, device=cell.device, dtype=cell.dtype)
 
     def err_Fourier(smearing, k_cutoff):
         return (
             prefac**0.5
             / smearing
-            / torch.sqrt(2 * torch.pi**2 * volume / (2 * torch.pi / k_cutoff)**0.5)
-            * torch.exp(-2 * torch.pi**2 * smearing**2 / (2 * torch.pi / k_cutoff))
+            / torch.sqrt(TWO_PI**2 * volume / (TWO_PI / k_cutoff) ** 0.5)
+            * torch.exp(-(TWO_PI**2) * smearing**2 / (TWO_PI / k_cutoff))
         )
 
     def err_real(smearing, cutoff):
@@ -151,8 +153,7 @@ def tune_ewald(
 
     def loss(smearing, k_cutoff, cutoff):
         return torch.sqrt(
-            err_Fourier(smearing, k_cutoff) ** 2
-            + err_real(smearing, cutoff) ** 2
+            err_Fourier(smearing, k_cutoff) ** 2 + err_real(smearing, cutoff) ** 2
         )
 
     params = [smearing_opt, k_cutoff_opt, cutoff_opt]
@@ -167,6 +168,6 @@ def tune_ewald(
 
     return (
         float(smearing_opt),
-        {"lr_wavelength": 2 * torch.pi / float(k_cutoff_opt)},
+        {"lr_wavelength": TWO_PI / float(k_cutoff_opt)},
         float(cutoff_opt),
     )
