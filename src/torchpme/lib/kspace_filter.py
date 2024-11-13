@@ -253,4 +253,4 @@ class P3MKSpaceFilter(KSpaceFilter):
 
         # always update the kfilter to reduce the risk it'd go out of sync if the is an
         # update in the underlaying potential
-        self._kfilter = self.kernel.kernel_from_k(self._kvectors)
+        self._kfilter = self.kernel.kernel_from_kvectors(self._kvectors)

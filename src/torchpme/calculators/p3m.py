@@ -279,14 +279,14 @@ class _P3MCoulombPotential(CoulombPotential):
         # return m[torch.linalg.norm(m, dim=1) <= 2].int().numpy()
 
     @torch.jit.export
-    def kernel_from_k(self, k: torch.Tensor) -> torch.Tensor:
+    def kernel_from_kvectors(self, k: torch.Tensor) -> torch.Tensor:
         """
         Compatibility function with the interface of :py:class:`KSpaceKernel`, so that
         potentials can be used as kernels for :py:class:`KSpaceFilter`.
         """
-        return self.lr_from_k(k)
+        return self.lr_from_kvectors(k)
 
-    def lr_from_k(self, k: torch.Tensor) -> torch.Tensor:
+    def lr_from_kvectors(self, k: torch.Tensor) -> torch.Tensor:
         """
         Fourier transform of the LR part potential in terms of :math:`k`.
 
@@ -346,8 +346,7 @@ class _P3MCoulombPotential(CoulombPotential):
 
     def _reference_force(self, k: torch.Tensor) -> torch.Tensor:
         """From shape (nx, ny, nz, 3) to shape (nx, ny, nz, nd, 3)"""
-        k_sq = torch.linalg.norm(k, dim=-1) ** 2
-        R = self.lr_from_k_sq(k_sq)
+        R = super().lr_from_kvectors(k)
         return torch.stack(
             [
                 torch.roll(R, shifts=tuple(direction), dims=(0, 1, 2))
