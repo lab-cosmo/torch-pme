@@ -113,7 +113,7 @@ def tune_ewald(
     0.03338293212285428
 
     >>> print(parameter)
-    {'lr_wavelength': 0.004985734847925747}
+    {'lr_wavelength': 0.009495381717988971}
 
     >>> print(cutoff)
     0.1

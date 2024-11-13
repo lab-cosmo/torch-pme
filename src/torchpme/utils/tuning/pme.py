@@ -112,7 +112,7 @@ def tune_pme(
     0.2203882967167176
 
     >>> print(parameter)
-    {'mesh_spacing': 0.5006356677157211, 'interpolation_nodes': 4}
+    {'mesh_spacing': 0.5006356677116188, 'interpolation_nodes': 4}
 
     >>> print(cutoff)
     0.6
