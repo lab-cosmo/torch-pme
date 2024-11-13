@@ -76,7 +76,9 @@ def _initial_guess(
         cutoff_init = torch.tensor(
             half_cell, dtype=dtype, device=device, requires_grad=True
         )
-        _optimize_parameters(params=[cutoff_init], loss=loss, accuracy=accuracy, init_guess=True)
+        _optimize_parameters(
+            params=[cutoff_init], loss=loss, accuracy=accuracy, init_guess=True
+        )
 
     cutoff_init = torch.tensor(
         float(cutoff_init) if cutoff is None else cutoff,
