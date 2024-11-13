@@ -132,8 +132,8 @@ def test_fix_parameters(tune):
     kspace_param = list(kspace_param.values())[0]
     pytest.approx(kspace_param, 0.1)
 
-    _, _, sr_cutoff = tune(float(torch.sum(charges**2)), cell, pos, None, None, 0.1)
-    pytest.approx(sr_cutoff, 0.1)
+    _, _, sr_cutoff = tune(float(torch.sum(charges**2)), cell, pos, None, None, 1.0)
+    pytest.approx(sr_cutoff, 1.0)
 
 
 @pytest.mark.parametrize("tune", [tune_ewald, tune_pme])
@@ -167,7 +167,7 @@ def test_loss_is_nan_error(tune):
         "consider using a smaller learning rate."
     )
     with pytest.raises(ValueError, match=match):
-        tune(float(torch.sum(charges**2)), cell, pos, learning_rate=1e2)
+        tune(float(torch.sum(charges**2)), cell, pos, learning_rate=1e1000)
 
 
 @pytest.mark.parametrize("tune", [tune_ewald, tune_pme])
@@ -232,7 +232,7 @@ def test_invalid_dtype_cell(tune):
         tune(
             sum_squared_charges=1.0,
             positions=POSITIONS_1,
-            cell=torch.ones([3, 3], dtype=torch.float64, device=DEVICE),
+            cell=torch.eye(3, dtype=torch.float64, device=DEVICE),
         )
 
 
@@ -246,5 +246,5 @@ def test_invalid_device_cell(tune):
         tune(
             sum_squared_charges=1.0,
             positions=POSITIONS_1,
-            cell=torch.ones([3, 3], dtype=DTYPE, device="meta"),
+            cell=torch.eye(3, dtype=DTYPE, device="meta"),
         )

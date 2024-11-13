@@ -12,12 +12,13 @@ def _optimize_parameters(
     accuracy: float = 1e-6,
     learning_rate: float = 0.01,
     verbose: bool = False,
+    init_guess: bool = False,
 ) -> None:
     optimizer = torch.optim.Adam(params, lr=learning_rate)
 
     for step in range(max_steps):
         loss_value = loss(*params)
-        if torch.isnan(loss_value):
+        if torch.isnan(loss_value) or torch.isinf(loss_value):
             raise ValueError(
                 "The value of the estimated error is now nan, consider using a "
                 "smaller learning rate."
@@ -36,7 +37,7 @@ def _optimize_parameters(
             "Skip optimization, return the initial guess.",
             stacklevel=2,
         )
-    elif loss_value > accuracy:
+    elif (loss_value > accuracy) and not init_guess:
         warnings.warn(
             "The searching for the parameters is ended, but the error is "
             f"{float(loss_value):.3e}, larger than the given accuracy {accuracy}. "
@@ -75,7 +76,7 @@ def _initial_guess(
         cutoff_init = torch.tensor(
             half_cell, dtype=dtype, device=device, requires_grad=True
         )
-        _optimize_parameters(params=[cutoff_init], loss=loss, accuracy=accuracy)
+        _optimize_parameters(params=[cutoff_init], loss=loss, accuracy=accuracy, init_guess=True)
 
     cutoff_init = torch.tensor(
         float(cutoff_init) if cutoff is None else cutoff,
