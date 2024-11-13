@@ -91,31 +91,31 @@ def tune_pme(
     You can check the values of the parameters
 
     >>> print(smearing)
-    0.04576166523476457
+    0.676902293587229
 
     >>> print(parameter)
-    {'mesh_spacing': 0.012499975000000003, 'interpolation_nodes': 4}
+    {'mesh_spacing': 0.6305715724469457, 'interpolation_nodes': 4}
 
     >>> print(cutoff)
-    0.15078003506282253
+    2.2659840735500225
 
     You can give one parameter to the function to tune only other parameters, for
     example, fixing the cutoff to 0.1
 
     >>> smearing, parameter, cutoff = tune_pme(
-    ...     torch.sum(charges**2, dim=0), cell, positions, cutoff=0.1, accuracy=1e-1
+    ...     torch.sum(charges**2, dim=0), cell, positions, cutoff=0.6, accuracy=1e-1
     ... )
 
     You can check the values of the parameters, now the cutoff is fixed
 
     >>> print(smearing)
-    0.024764025655599434
+    0.2203882967006755
 
     >>> print(parameter)
-    {'mesh_spacing': 0.012499975000000003, 'interpolation_nodes': 4}
+    {'mesh_spacing': 0.5006356677157211, 'interpolation_nodes': 4}
 
     >>> print(cutoff)
-    0.1
+    0.6
 
     """
     _validate_parameters(sum_squared_charges, cell, positions, exponent, accuracy)

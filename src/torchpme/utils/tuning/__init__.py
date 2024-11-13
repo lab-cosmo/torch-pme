@@ -112,18 +112,6 @@ def _validate_parameters(
         )
 
     # check shape, dtype and device of cell
-    if list(cell.shape) != [3, 3]:
-        raise ValueError(
-            "each `cell` must be a tensor with shape [3, 3], got at least one tensor "
-            f"with shape {list(cell.shape)}"
-        )
-
-    if torch.equal(cell.det(), torch.full([], 0, dtype=cell.dtype, device=cell.device)):
-        raise ValueError(
-            "provided `cell` has a determinant of 0 and therefore is not valid for "
-            "periodic calculation"
-        )
-
     dtype = positions.dtype
     if cell.dtype != dtype:
         raise ValueError(
@@ -138,6 +126,18 @@ def _validate_parameters(
             f"each `cell` must be on the same device {device} as `positions`, got at "
             "least one tensor with device "
             f"{cell.device}"
+        )
+
+    if list(cell.shape) != [3, 3]:
+        raise ValueError(
+            "each `cell` must be a tensor with shape [3, 3], got at least one tensor "
+            f"with shape {list(cell.shape)}"
+        )
+
+    if torch.equal(cell.det(), torch.full([], 0, dtype=cell.dtype, device=cell.device)):
+        raise ValueError(
+            "provided `cell` has a determinant of 0 and therefore is not valid for "
+            "periodic calculation"
         )
 
     if not isinstance(accuracy, float):

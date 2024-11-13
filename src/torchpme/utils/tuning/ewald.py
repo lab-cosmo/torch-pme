@@ -92,13 +92,13 @@ def tune_ewald(
     You can check the values of the parameters
 
     >>> print(smearing)
-    0.14999979983727296
+    0.7530910961166689
 
     >>> print(parameter)
-    {'lr_wavelength': 0.047677734917968666}
+    {'lr_wavelength': 11.138539277012102}
 
     >>> print(cutoff)
-    0.5485209762493759
+    2.210346724253052
 
     You can give one parameter to the function to tune only other parameters, for
     example, fixing the cutoff to 0.1
@@ -110,7 +110,7 @@ def tune_ewald(
     You can check the values of the parameters, now the cutoff is fixed
 
     >>> print(smearing)
-    0.03234481782822382
+    0.03338293212619831
 
     >>> print(parameter)
     {'lr_wavelength': 0.004985734847925747}
