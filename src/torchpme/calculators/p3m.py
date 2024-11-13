@@ -5,7 +5,7 @@ import torch
 from torch import profiler
 from torch.nn.functional import pad
 
-from ..lib.kspace_filter import P3MKSpaceFilter
+from ..lib.kspace_filter import KSpaceFilter
 from ..lib.kvectors import get_ns_mesh
 from ..lib.mesh_interpolator import MeshInterpolator
 from ..potentials import CoulombPotential
@@ -86,7 +86,7 @@ class P3MCalculator(Calculator):
 
         # Initialize the filter module. Set dummy value for smearing to propper
         # initilize the `KSpaceFilter` below
-        self.kspace_filter: P3MKSpaceFilter = P3MKSpaceFilter(
+        self.kspace_filter: KSpaceFilter = KSpaceFilter(
             cell=torch.eye(3),
             ns_mesh=torch.ones(3, dtype=int),
             kernel=self.potential,
