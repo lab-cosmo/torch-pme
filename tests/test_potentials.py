@@ -49,6 +49,8 @@ k_max = 2 * torch.pi / 0.1
 num_k = 200
 ks = torch.linspace(k_min, k_max, num_k, dtype=dtype)
 ks_sq = ks**2
+kvectors = torch.zeros((num_k, 3), dtype=dtype)
+kvectors[:, 0] = ks
 
 # Define machine epsilon
 machine_epsilon = torch.finfo(dtype).eps
@@ -166,7 +168,7 @@ def test_exact_fourier(exponent, smearing):
     # exponent
     ipl = InversePowerLawPotential(exponent=exponent, smearing=smearing, dtype=dtype)
 
-    fourier_from_class = ipl.lr_from_k_sq(ks_sq)
+    fourier_from_class = ipl.lr_from_kvectors(kvectors)
 
     # Compute exact analytical expression obtained for relevant exponents
     if exponent == 1.0:
@@ -235,7 +237,7 @@ def test_range_none(potential):
     with pytest.raises(ValueError, match=match):
         _ = pot.lr_from_dist(dist)
     with pytest.raises(ValueError, match=match):
-        _ = pot.lr_from_k_sq(dist)
+        _ = pot.lr_from_kvectors(dist)
     with pytest.raises(ValueError, match=match):
         _ = pot.self_contribution()
     with pytest.raises(ValueError, match=match):
@@ -256,9 +258,10 @@ def test_no_impl():
     ):
         mypot.lr_from_dist(torch.tensor([1, 2.0, 3.0]))
     with pytest.raises(
-        NotImplementedError, match="lr_from_k_sq is not implemented for NoImplPotential"
+        NotImplementedError,
+        match="lr_from_kvectors is not implemented for NoImplPotential",
     ):
-        mypot.lr_from_k_sq(torch.tensor([1, 2.0, 3.0]))
+        mypot.lr_from_kvectors(torch.tensor([1, 2.0, 3.0]))
     with pytest.raises(
         NotImplementedError,
         match="self_contribution is not implemented for NoImplPotential",
@@ -299,14 +302,14 @@ def test_inverserp_coulomb(smearing):
     ipl_from_dist = ipl.from_dist(dists)
     ipl_sr_from_dist = ipl.sr_from_dist(dists)
     ipl_lr_from_dist = ipl.lr_from_dist(dists_sq)
-    ipl_fourier = ipl.lr_from_k_sq(ks_sq)
+    ipl_fourier = ipl.lr_from_kvectors(kvectors)
     ipl_self = ipl.self_contribution()
     ipl_bg = ipl.background_correction()
 
     coul_from_dist = coul.from_dist(dists)
     coul_sr_from_dist = coul.sr_from_dist(dists)
     coul_lr_from_dist = coul.lr_from_dist(dists_sq)
-    coul_fourier = coul.lr_from_k_sq(ks_sq)
+    coul_fourier = coul.lr_from_kvectors(kvectors)
     coul_self = coul.self_contribution()
     coul_bg = coul.background_correction()
 
@@ -359,7 +362,10 @@ def test_spline_potential_cases():
         yhat_grid=y_grid_2,
         reciprocal=False,
     )
-    assert_close(spline.lr_from_k_sq(x_grid_2**2), y_grid_2)
+
+    kvectors_x_grid_2 = torch.zeros((len(x_grid_2), 3))
+    kvectors_x_grid_2[:, 0] = x_grid_2
+    assert_close(spline.lr_from_kvectors(kvectors_x_grid_2), y_grid_2)
 
     assert_close(spline.background_correction(), torch.tensor([0.0]))
     assert_close(spline.self_contribution(), spline.lr_from_dist(torch.tensor([0.0])))
@@ -378,9 +384,11 @@ def test_spline_potential_vs_coulomb():
     z_spline = spline.lr_from_dist(t_grid)
     assert_close(z_coul, z_spline, atol=5e-5, rtol=0)
 
-    k_grid2 = torch.logspace(-2, 1, 40)
-    krn_coul = coulomb.kernel_from_k_sq(k_grid2)
-    krn_spline = spline.kernel_from_k_sq(k_grid2)
+    kvectors2 = torch.zeros((40, 3), dtype=dtype)
+    kvectors2[:, 0] = torch.logspace(-2, 1, 40)
+
+    krn_coul = coulomb.kernel_from_kvectors(kvectors2)
+    krn_spline = spline.kernel_from_kvectors(kvectors2)
     assert_close(krn_coul[:30], krn_spline[:30], atol=0, rtol=5e-5)
     assert_close(krn_coul[30:], krn_spline[30:], atol=5e-5, rtol=0)
 
@@ -421,7 +429,7 @@ def test_potentials_jit(potpars):
             self.pot = pot(**kwargs)
 
         def forward(self, x: torch.Tensor):
-            return self.pot.lr_from_dist(x), self.pot.lr_from_k_sq(x)
+            return self.pot.lr_from_dist(x), self.pot.lr_from_kvectors(x)
 
     wrapper = JITWrapper(**pars)
     jit_wrapper = torch.jit.script(wrapper)
@@ -442,14 +450,14 @@ def test_combined_potential(smearing):
     ipl_1_from_dist = ipl_1.from_dist(dists)
     ipl_1_sr_from_dist = ipl_1.sr_from_dist(dists)
     ipl_1_lr_from_dist = ipl_1.lr_from_dist(dists_sq)
-    ipl_1_fourier = ipl_1.lr_from_k_sq(ks_sq)
+    ipl_1_fourier = ipl_1.lr_from_kvectors(kvectors)
     ipl_1_self = ipl_1.self_contribution()
     ipl_1_bg = ipl_1.background_correction()
 
     ipl_2_from_dist = ipl_2.from_dist(dists)
     ipl_2_sr_from_dist = ipl_2.sr_from_dist(dists)
     ipl_2_lr_from_dist = ipl_2.lr_from_dist(dists_sq)
-    ipl_2_fourier = ipl_2.lr_from_k_sq(ks_sq)
+    ipl_2_fourier = ipl_2.lr_from_kvectors(kvectors)
     ipl_2_self = ipl_2.self_contribution()
     ipl_2_bg = ipl_2.background_correction()
 
@@ -464,7 +472,7 @@ def test_combined_potential(smearing):
     combined_from_dist = combined.from_dist(dists)
     combined_sr_from_dist = combined.sr_from_dist(dists)
     combined_lr_from_dist = combined.lr_from_dist(dists_sq)
-    combined_fourier = combined.lr_from_k_sq(ks_sq)
+    combined_fourier = combined.lr_from_kvectors(kvectors)
     combined_self = combined.self_contribution()
     combined_bg = combined.background_correction()
 

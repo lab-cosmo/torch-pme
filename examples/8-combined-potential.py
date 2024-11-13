@@ -115,19 +115,23 @@ plt.show()
 # combines all terms in a range-separated potential, including the k-space
 # kernel.
 
-k = torch.logspace(-2, 2, 1000)
+kvectors = torch.zeros((1000, 3))
+kvectors[:, 0] = torch.logspace(-2, 2, 1000)
 
 fig, ax = plt.subplots()
 
-ax.plot(dist, pot_1.lr_from_k_sq(k**2), label="p=1")
-ax.plot(dist, pot_2.lr_from_k_sq(k**2), label="p=2")
+ax.plot(dist, pot_1.lr_from_kvectors(kvectors), label="p=1")
+ax.plot(dist, pot_2.lr_from_kvectors(kvectors), label="p=2")
 
 ax.plot(
-    dist, potential.lr_from_k_sq(k**2).detach(), label="Combined potential", c="black"
+    dist,
+    potential.lr_from_kvectors(kvectors).detach(),
+    label="Combined potential",
+    c="black",
 )
 ax.plot(
     dist,
-    pot_1.lr_from_k_sq(k**2) + pot_2.lr_from_k_sq(k**2),
+    pot_1.lr_from_kvectors(kvectors) + pot_2.lr_from_kvectors(kvectors),
     label="Explict combination",
     ls=":",
 )
