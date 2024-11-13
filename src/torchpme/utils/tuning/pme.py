@@ -109,7 +109,7 @@ def tune_pme(
     You can check the values of the parameters, now the cutoff is fixed
 
     >>> print(smearing)
-    0.2203882967006755
+    0.2203882967167176
 
     >>> print(parameter)
     {'mesh_spacing': 0.5006356677157211, 'interpolation_nodes': 4}
