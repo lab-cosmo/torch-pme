@@ -126,7 +126,7 @@ def test_fix_parameters(tune):
     pytest.approx(smearing, 0.1)
 
     kwargs = kwargs_ref.copy()
-    if tune.__name__ == "tune_pme":
+    if tune.__name__ in ["tune_pme", "tune_p3m"]:
         kwargs["mesh_spacing"] = 0.1
     else:
         kwargs["lr_wavelength"] = 0.1

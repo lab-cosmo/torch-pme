@@ -1,5 +1,4 @@
 import math
-import warnings
 from typing import Optional
 
 import torch
@@ -10,7 +9,6 @@ from . import (
     _optimize_parameters,
     _validate_parameters,
 )
-
 
 # Coefficients for the P3M Fourier error,
 # see Table II of http://dx.doi.org/10.1063/1.477415
@@ -69,6 +67,7 @@ A_COEF = [
     [None, None, None, None, None, None, None, 4_887_769_399 / 37_838_389_248],
 ]
 
+
 def tune_p3m(
     sum_squared_charges: float,
     cell: torch.Tensor,
@@ -81,8 +80,7 @@ def tune_p3m(
     accuracy: float = 1e-3,
     max_steps: int = 50000,
     learning_rate: float = 5e-3,
-    verbose: bool = False,
-):
+) -> tuple[float, dict[str, float], float]:
     r"""
     Find the optimal parameters for :class:`torchpme.calculators.pme.PMECalculator`.
 
@@ -137,22 +135,16 @@ def tune_p3m(
     You can check the values of the parameters
 
     >>> print(smearing)
-    0.10499979411490586
+    0.5084014996119913
 
     >>> print(parameter)
-    {'mesh_spacing': 0.012438407397741125, 'interpolation_nodes': 4}
+    {'mesh_spacing': 0.546694745583215, 'interpolation_nodes': 4}
 
     >>> print(cutoff)
-    1.0
+    2.6863848597963442
 
     """
-    _validate_parameters(sum_squared_charges, cell, positions, exponent)
-
-    if not isinstance(accuracy, float):
-        raise ValueError(f"'{accuracy}' is not a float.")
-    interpolation_nodes = torch.tensor(interpolation_nodes)
-
-    cell_dimensions = torch.linalg.norm(cell, dim=1)
+    _validate_parameters(sum_squared_charges, cell, positions, exponent, accuracy)
 
     smearing_opt, cutoff_opt = _estimate_smearing_cutoff(
         cell=cell,
@@ -178,10 +170,7 @@ def tune_p3m(
     interpolation_nodes = torch.tensor(interpolation_nodes, device=cell.device)
 
     def err_Fourier(smearing, ns_mesh):
-        inverse_cell = torch.linalg.inv(cell)
-        reciprocal_cell = 2 * torch.pi * inverse_cell.T
-        reciprocal_cell_dimensions = torch.linalg.norm(reciprocal_cell, dim=1)
-        spacing = reciprocal_cell_dimensions / ns_mesh
+        spacing = cell_dimensions / ns_mesh
         h = torch.prod(spacing) ** (1 / 3)
 
         return (
@@ -209,9 +198,7 @@ def tune_p3m(
 
     def loss(smearing, ns_mesh, cutoff):
         return torch.sqrt(
-            err_Fourier(smearing, ns_mesh)
-            ** 2
-            + err_real(smearing, cutoff) ** 2
+            err_Fourier(smearing, ns_mesh) ** 2 + err_real(smearing, cutoff) ** 2
         )
 
     params = [smearing_opt, ns_mesh_opt, cutoff_opt]
