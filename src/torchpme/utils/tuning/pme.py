@@ -109,7 +109,7 @@ def tune_pme(
     You can check the values of the parameters, now the cutoff is fixed
 
     >>> print(smearing)
-    0.2203882967167176
+    0.22038829671671745
 
     >>> print(parameter)
     {'mesh_spacing': 0.5006356677116188, 'interpolation_nodes': 4}
@@ -240,8 +240,8 @@ def _compute_RMS_phi(
         dim=0,
     )
     positions_rel = positions_rel[torch.newaxis, :, :]
-    positions_rel += (
-        1e-10 * torch.randn(positions_rel.shape, dtype=cell.dtype, device=cell.device)
+    positions_rel += 1e-10 * torch.randn(
+        positions_rel.shape, dtype=cell.dtype, device=cell.device
     )  # Noises help the algorithm work for tiny systems (<100 atoms)
     return (
         torch.mean(
