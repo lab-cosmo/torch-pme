@@ -233,12 +233,6 @@ class _P3MCoulombPotential(CoulombPotential):
 
     def _update_cell(self, cell: torch.Tensor):
         self._cell = cell
-        if cell.is_cuda:
-            # use function that does not synchronize with the CPU
-            inverse_cell = torch.linalg.inv_ex(cell)[0]
-        else:
-            inverse_cell = torch.linalg.inv(cell)
-        self._reciprocal_cell = 2 * torch.pi * inverse_cell.T
 
     def _update_potential(self, mesh_spacing: float, interpolation_nodes: int):
         self._crude_mesh_spacing = mesh_spacing
@@ -250,33 +244,6 @@ class _P3MCoulombPotential(CoulombPotential):
         return (
             cell_dimensions / get_ns_mesh(self._cell, self._crude_mesh_spacing)
         ).reshape(1, 1, 1, 3)
-
-    @cached_property
-    def _k_vectors(self) -> torch.Tensor:
-        """For km vectors calculation, deprecated for now, might be useful in the future"""
-        m = torch.tensor([-2, -1, 0, 1, 2], dtype=self._cell.dtype).unsqueeze(-1)
-        m = (
-            pad(input=m, pad=(0, 2))[:, None, None]
-            + pad(input=m, pad=(1, 1))[None, :, None]
-            + pad(input=m, pad=(2, 0))[None, None, 2:]  # no -z direction vector
-        ).reshape(-1, 3)
-        m = m[torch.linalg.norm(m, dim=1) <= 2]
-        return (m @ self._reciprocal_cell).reshape(1, 1, 1, -1, 3)
-
-    @cached_property
-    def _directions(self) -> torch.Tensor:
-        """For km vectors calculation, partly deprecated for now since it's not used"""
-        # For now, just return zero vector
-        return torch.tensor([[0, 0, 0]]).int().numpy()
-
-        # May be useful in the future
-        # m = torch.tensor([-2, -1, 0, 1, 2], dtype=self.cell.dtype).# unsqueeze(-1)
-        # m = (
-        #     pad(input=m, pad=(0, 2))[:, None, None]
-        #     + pad(input=m, pad=(1, 1))[None, :, None]
-        #     + pad(input=m, pad=(2, 0))[None, None, 2:]  # no -z direction vector
-        # ).reshape(-1, 3)
-        # return m[torch.linalg.norm(m, dim=1) <= 2].int().numpy()
 
     @torch.jit.export
     def kernel_from_kvectors(self, k: torch.Tensor) -> torch.Tensor:
@@ -300,6 +267,7 @@ class _P3MCoulombPotential(CoulombPotential):
 
         kh = k.double() * self.mesh_spacing
         if self.mode == 0:
+            # No need to calculate these things, all going to be one due to the zero exponent
             D = torch.ones(k.shape, dtype=k.dtype, device=k.device)
             D2 = torch.ones(k.shape[:3], dtype=k.dtype, device=k.device)
         else:
@@ -308,11 +276,14 @@ class _P3MCoulombPotential(CoulombPotential):
 
         U2 = self._charge_assignment(kh) ** 2
         R = self._reference_force(k)
-        numerator = torch.sum(
-            (self.k_prime(k) @ D.unsqueeze(-1)).squeeze(-1) ** self.mode * U2 * R,
-            dim=-1,
+
+        # Calculate the kernel
+        # See eq.30 of this paper https://doi.org/10.1063/1.3000389 for your main
+        # reference, as well as the paragraph below eq.31.
+        numerator = (
+            (k.unsqueeze(-2) @ D.unsqueeze(-1)).squeeze((-2, -1)) ** self.mode * U2 * R
         )
-        denominator = D2**self.mode * torch.sum(U2, dim=-1) ** 2
+        denominator = D2**(2 * self.mode) * U2**2
 
         return torch.where(
             denominator == 0,
@@ -321,14 +292,22 @@ class _P3MCoulombPotential(CoulombPotential):
         )
 
     def _diff_operator(self, kh: torch.Tensor) -> torch.Tensor:
-        """From shape (nx, ny, nz, 3) to shape (nx, ny, nz, 3)"""
+        """The approximation to the differential operator ``ik``. The ``i`` is taken
+        out and cancels with the prefactor ``-i`` of the reference force function.
+        See the Appendix C of this paper http://dx.doi.org/10.1063/1.477414.
+
+        From shape (nx, ny, nz, 3) to shape (nx, ny, nz, 3)"""
         temp = torch.zeros(kh.shape, dtype=kh.dtype, device=kh.device)
         for i, coef in enumerate(COEF[self.diff_order - 1]):
             temp += (coef / (i + 1)) * torch.sin(kh * (i + 1))
         return temp / (self.mesh_spacing)
 
     def _charge_assignment(self, kh: torch.Tensor) -> torch.Tensor:
-        """From shape (nx, ny, nz, 3) to shape (nx, ny, nz, nd)"""
+        """The Fourier transformed charge assignment function devided by the volume of one mesh cell. See eq.18 and the paragraph below eq.31 of this paper
+        http://dx.doi.org/10.1063/1.477414. Be aware that the volume cancels out
+        with the prefactor of the assignment function (see eq.18).
+
+        From shape (nx, ny, nz, 3) to shape (nx, ny, nz, nd)"""
         U2 = (
             torch.prod(
                 torch.sinc(kh / (2 * torch.pi)),
@@ -336,30 +315,12 @@ class _P3MCoulombPotential(CoulombPotential):
             )
             ** self.interpolation_nodes
         )
-        return torch.stack(
-            [
-                torch.roll(U2, shifts=tuple(direction), dims=(0, 1, 2))
-                for direction in self._directions
-            ],
-            dim=-1,
-        )
+        return U2
 
     def _reference_force(self, k: torch.Tensor) -> torch.Tensor:
-        """From shape (nx, ny, nz, 3) to shape (nx, ny, nz, nd, 3)"""
-        R = super().lr_from_kvectors(k)
-        return torch.stack(
-            [
-                torch.roll(R, shifts=tuple(direction), dims=(0, 1, 2))
-                for direction in self._directions
-            ],
-            dim=-1,
-        )
-
-    def k_prime(self, k: torch.Tensor) -> torch.Tensor:
-        return torch.stack(
-            [
-                torch.roll(k, shifts=tuple(direction), dims=(0, 1, 2))
-                for direction in self._directions
-            ],
-            dim=-2,
-        )
+        """The Fourier transform of the true reference force. See eq.32 of this paper
+        http://dx.doi.org/10.1063/1.477414. In this implementation, the ``ik`` part
+        is taken out and directly do the production with the differential operator.
+        
+        From shape (nx, ny, nz, 3) to shape (nx, ny, nz, nd)"""
+        return super().lr_from_kvectors(k)
