@@ -1,9 +1,7 @@
-from functools import cached_property
 from typing import Optional
 
 import torch
 from torch import profiler
-from torch.nn.functional import pad
 
 from ..lib.kspace_filter import KSpaceFilter
 from ..lib.kvectors import get_ns_mesh
@@ -286,7 +284,7 @@ class _P3MCoulombPotential(CoulombPotential):
         numerator = (
             (k.unsqueeze(-2) @ D.unsqueeze(-1)).squeeze((-2, -1)) ** self.mode * U2 * R
         )
-        denominator = D2**(2 * self.mode) * U2**2
+        denominator = D2 ** (2 * self.mode) * U2**2
 
         return torch.where(
             denominator == 0,
@@ -295,35 +293,40 @@ class _P3MCoulombPotential(CoulombPotential):
         )
 
     def _diff_operator(self, kh: torch.Tensor) -> torch.Tensor:
-        """The approximation to the differential operator ``ik``. The ``i`` is taken
+        """
+        The approximation to the differential operator ``ik``. The ``i`` is taken
         out and cancels with the prefactor ``-i`` of the reference force function.
         See the Appendix C of this paper http://dx.doi.org/10.1063/1.477414.
 
-        From shape (nx, ny, nz, 3) to shape (nx, ny, nz, 3)"""
+        From shape (nx, ny, nz, 3) to shape (nx, ny, nz, 3)
+        """
         temp = torch.zeros(kh.shape, dtype=kh.dtype, device=kh.device)
         for i, coef in enumerate(COEF[self.diff_order - 1]):
             temp += (coef / (i + 1)) * torch.sin(kh * (i + 1))
         return temp / (self.mesh_spacing)
 
     def _charge_assignment(self, kh: torch.Tensor) -> torch.Tensor:
-        """The Fourier transformed charge assignment function devided by the volume of one mesh cell. See eq.18 and the paragraph below eq.31 of this paper
+        """
+        The Fourier transformed charge assignment function devided by the volume of one mesh cell. See eq.18 and the paragraph below eq.31 of this paper
         http://dx.doi.org/10.1063/1.477414. Be aware that the volume cancels out
         with the prefactor of the assignment function (see eq.18).
 
-        From shape (nx, ny, nz, 3) to shape (nx, ny, nz, nd)"""
-        U2 = (
+        From shape (nx, ny, nz, 3) to shape (nx, ny, nz, nd)
+        """
+        return (
             torch.prod(
                 torch.sinc(kh / (2 * torch.pi)),
                 dim=-1,
             )
             ** self.interpolation_nodes
         )
-        return U2
 
     def _reference_force(self, k: torch.Tensor) -> torch.Tensor:
-        """The Fourier transform of the true reference force. See eq.32 of this paper
+        """
+        The Fourier transform of the true reference force. See eq.32 of this paper
         http://dx.doi.org/10.1063/1.477414. In this implementation, the ``ik`` part
         is taken out and directly do the production with the differential operator.
-        
-        From shape (nx, ny, nz, 3) to shape (nx, ny, nz, nd)"""
+
+        From shape (nx, ny, nz, 3) to shape (nx, ny, nz, nd)
+        """
         return super().lr_from_kvectors(k)
