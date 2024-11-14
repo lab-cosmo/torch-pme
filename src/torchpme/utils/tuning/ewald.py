@@ -117,7 +117,7 @@ def tune_ewald(
         cell=cell, smearing=smearing, cutoff=cutoff, accuracy=accuracy
     )
 
-    # We choose a very small initial fourier wavelength
+    # We choose a very small initial fourier wavelength, hardcoded for now
     k_cutoff_opt = torch.tensor(
         1e-3 if lr_wavelength is None else TWO_PI / lr_wavelength,
         dtype=cell.dtype,

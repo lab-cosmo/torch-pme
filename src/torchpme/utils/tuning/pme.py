@@ -3,6 +3,7 @@ from typing import Optional
 
 import torch
 
+from ...lib import get_ns_mesh
 from . import (
     _estimate_smearing_cutoff,
     _optimize_parameters,
@@ -128,7 +129,7 @@ def tune_pme(
             requires_grad=True,
         )
     else:
-        ns_mesh_opt = _get_ns_mesh_differentiable(cell, mesh_spacing)
+        ns_mesh_opt = get_ns_mesh(cell, mesh_spacing)
 
     cell_dimensions = torch.linalg.norm(cell, dim=1)
     volume = torch.abs(cell.det())
@@ -240,29 +241,6 @@ def _compute_RMS_phi(
         )
         ** 0.5
     )
-
-
-def _get_ns_mesh_differentiable(cell: torch.Tensor, mesh_spacing: float):
-    """differentiable version of :func:`get_ns_mesh`"""
-    basis_norms = torch.linalg.norm(cell, dim=1)
-    ns_approx = basis_norms / mesh_spacing
-    ns_actual_approx = 2 * ns_approx + 1  # actual number of mesh points
-    # ns = [nx, ny, nz], closest power of 2 (helps for FT efficiency)
-    return torch.tensor(2).pow(_Ceil.apply(torch.log2(ns_actual_approx)))
-
-
-class _Ceil(torch.autograd.Function):
-    """ceil function with non-zero gradient"""
-
-    @staticmethod
-    def forward(ctx, input):
-        result = torch.ceil(input)
-        ctx.save_for_backward(result)
-        return result
-
-    @staticmethod
-    def backward(ctx, grad_output):
-        return grad_output
 
 
 class _Floor(torch.autograd.Function):
