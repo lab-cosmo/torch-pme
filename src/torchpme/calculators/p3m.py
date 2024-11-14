@@ -235,6 +235,9 @@ class _P3MCoulombPotential(CoulombPotential):
         self._cell = cell
 
     def _update_potential(self, mesh_spacing: float, interpolation_nodes: int):
+        # The mesh spacing here is not the one used in the actual potential.
+        # See the `mesh_spacing` property below for reference,
+        # which is the actual mesh spacing.
         self._crude_mesh_spacing = mesh_spacing
         self.interpolation_nodes = interpolation_nodes
 
