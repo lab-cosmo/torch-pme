@@ -4,7 +4,7 @@ from typing import Optional
 import torch
 
 from . import (
-    _initial_guess,
+    _estimate_smearing_cutoff,
     _optimize_parameters,
     _validate_parameters,
 )
@@ -23,7 +23,6 @@ def tune_ewald(
     accuracy: float = 1e-3,
     max_steps: int = 50000,
     learning_rate: float = 0.1,
-    verbose: bool = False,
 ) -> tuple[float, dict[str, float], float]:
     r"""
     Find the optimal parameters for :class:`torchpme.EwaldCalculator`.
@@ -48,12 +47,6 @@ def tune_ewald(
     and one wants to optimize only the ``smearing`` and the ``lr_wavelength`` with
     respect to the minimal error and fixed cutoff.
 
-    .. hint::
-
-        Tuning uses an initial guess for the optimization, which can be applied by
-        setting ``max_steps = 0``. This can be useful if fast tuning is required. These
-        values typically result in accuracies around :math:`10^{-7}`.
-
     :param sum_squared_charges: accumulated squared charges, must be positive
     :param cell: single tensor of shape (3, 3), describing the bounding
     :param positions: single tensor of shape (``len(charges), 3``) containing the
@@ -69,7 +62,6 @@ def tune_ewald(
         :math:`10^{-3}`. For more accurate results, use :math:`10^{-6}`.
     :param max_steps: maximum number of gradient descent steps
     :param learning_rate: learning rate for gradient descent
-    :param verbose: whether to print the progress of gradient descent
 
     :return: Tuple containing a float of the optimal smearing for the :class:
         `CoulombPotential`, a dictionary with the parameters for
@@ -92,13 +84,13 @@ def tune_ewald(
     You can check the values of the parameters
 
     >>> print(smearing)
-    0.7530910961166689
+    0.7527865828476816
 
     >>> print(parameter)
-    {'lr_wavelength': 11.138539277012102}
+    {'lr_wavelength': 11.138556788117427}
 
     >>> print(cutoff)
-    2.210346724253052
+    2.207855328192979
 
     You can give one parameter to the function to tune only other parameters, for
     example, fixing the cutoff to 0.1
@@ -121,7 +113,7 @@ def tune_ewald(
     """
     _validate_parameters(sum_squared_charges, cell, positions, exponent, accuracy)
 
-    smearing_opt, cutoff_opt = _initial_guess(
+    smearing_opt, cutoff_opt = _estimate_smearing_cutoff(
         cell=cell, smearing=smearing, cutoff=cutoff, accuracy=accuracy
     )
 
@@ -163,7 +155,6 @@ def tune_ewald(
         max_steps=max_steps,
         accuracy=accuracy,
         learning_rate=learning_rate,
-        verbose=verbose,
     )
 
     return (

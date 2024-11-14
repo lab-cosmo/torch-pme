@@ -8,15 +8,13 @@ import torch
 def _optimize_parameters(
     params: list[torch.Tensor],
     loss: Callable,
-    max_steps: int = 10000,
-    accuracy: float = 1e-6,
-    learning_rate: float = 0.01,
-    verbose: bool = False,
-    init_guess: bool = False,
+    max_steps: int,
+    accuracy: float,
+    learning_rate: float,
 ) -> None:
     optimizer = torch.optim.Adam(params, lr=learning_rate)
 
-    for step in range(max_steps):
+    for _ in range(max_steps):
         loss_value = loss(*params)
         if torch.isnan(loss_value) or torch.isinf(loss_value):
             raise ValueError(
@@ -27,17 +25,10 @@ def _optimize_parameters(
         optimizer.step()
         optimizer.zero_grad()
 
-        if verbose and (step % 100 == 0):
-            print(f"{step}: {loss_value:.2e}")
         if loss_value <= accuracy:
             break
 
-    if max_steps == 0:
-        warnings.warn(
-            "Skip optimization, return the initial guess.",
-            stacklevel=2,
-        )
-    elif (loss_value > accuracy) and not init_guess:
+    if loss_value > accuracy:
         warnings.warn(
             "The searching for the parameters is ended, but the error is "
             f"{float(loss_value):.3e}, larger than the given accuracy {accuracy}. "
@@ -46,11 +37,11 @@ def _optimize_parameters(
         )
 
 
-def _initial_guess(
+def _estimate_smearing_cutoff(
     cell: torch.Tensor,
-    smearing: Optional[float] = None,
-    cutoff: Optional[float] = None,
-    accuracy: float = 1e-3,
+    smearing: Optional[float],
+    cutoff: Optional[float],
+    accuracy: float,
 ) -> tuple[torch.tensor, torch.tensor]:
     dtype = cell.dtype
     device = cell.device
@@ -67,7 +58,7 @@ def _initial_guess(
     )
 
     if cutoff is None:
-        # solve V_SR(cutoff) == accuracy
+        # solve V_SR(cutoff) == accuracy for cutoff
         def loss(cutoff):
             return (
                 torch.erfc(cutoff / math.sqrt(2) / smearing_init) / cutoff - accuracy
@@ -77,7 +68,11 @@ def _initial_guess(
             half_cell, dtype=dtype, device=device, requires_grad=True
         )
         _optimize_parameters(
-            params=[cutoff_init], loss=loss, accuracy=accuracy, init_guess=True
+            params=[cutoff_init],
+            loss=loss,
+            accuracy=accuracy,
+            max_steps=1000,
+            learning_rate=0.1,
         )
 
     cutoff_init = torch.tensor(
@@ -96,7 +91,7 @@ def _validate_parameters(
     positions: torch.Tensor,
     exponent: int,
     accuracy: float,
-):
+) -> None:
     if sum_squared_charges <= 0:
         raise ValueError(
             f"sum of squared charges must be positive, got {sum_squared_charges}"

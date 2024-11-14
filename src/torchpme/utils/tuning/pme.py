@@ -4,7 +4,7 @@ from typing import Optional
 import torch
 
 from . import (
-    _initial_guess,
+    _estimate_smearing_cutoff,
     _optimize_parameters,
     _validate_parameters,
 )
@@ -22,7 +22,6 @@ def tune_pme(
     accuracy: float = 1e-3,
     max_steps: int = 50000,
     learning_rate: float = 0.1,
-    verbose: bool = False,
 ):
     r"""
     Find the optimal parameters for :class:`torchpme.PMECalculator`.
@@ -40,12 +39,6 @@ def tune_pme(
     more parameters to the function. For example in usual ML workflows the cutoff is
     fixed and one wants to optimize only the ``smearing`` and the ``mesh_spacing`` with
     respect to the minimal error and fixed cutoff.
-
-    .. hint::
-
-        Tuning uses an initial guess for the optimization, which can be applied by
-        setting ``max_steps = 0``. This can be useful if fast tuning is required. These
-        values typically result in accuracies around :math:`10^{-2}`.
 
     :param sum_squared_charges: accumulated squared charges, must be positive
     :param cell: single tensor of shape (3, 3), describing the bounding
@@ -67,7 +60,6 @@ def tune_pme(
         :math:`10^{-3}`. For more accurate results, use :math:`10^{-6}`.
     :param max_steps: maximum number of gradient descent steps
     :param learning_rate: learning rate for gradient descent
-    :param verbose: whether to print the progress of gradient descent
 
     :return: Tuple containing a float of the optimal smearing for the :class:
         `CoulombPotential`, a dictionary with the parameters for
@@ -91,13 +83,13 @@ def tune_pme(
     You can check the values of the parameters
 
     >>> print(smearing)
-    0.676902293587229
+    0.6768985898318037
 
     >>> print(parameter)
-    {'mesh_spacing': 0.6305715724469457, 'interpolation_nodes': 4}
+    {'mesh_spacing': 0.6305733973385922, 'interpolation_nodes': 4}
 
     >>> print(cutoff)
-    2.2659840735500225
+    2.243154348782357
 
     You can give one parameter to the function to tune only other parameters, for
     example, fixing the cutoff to 0.1
@@ -120,7 +112,7 @@ def tune_pme(
     """
     _validate_parameters(sum_squared_charges, cell, positions, exponent, accuracy)
 
-    smearing_opt, cutoff_opt = _initial_guess(
+    smearing_opt, cutoff_opt = _estimate_smearing_cutoff(
         cell=cell,
         smearing=smearing,
         cutoff=cutoff,
@@ -191,7 +183,6 @@ def tune_pme(
         max_steps=max_steps,
         accuracy=accuracy,
         learning_rate=learning_rate,
-        verbose=verbose,
     )
 
     return (
