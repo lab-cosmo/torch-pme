@@ -86,7 +86,7 @@ chemiscope.show(
 # ---------------
 #
 # Based on our system we will first *tune* the PME parameters for an accurate
-# computation. we first convert the ``positions``, ``charges`` and the ``cell`` from
+# computation. We first convert the ``positions``, ``charges`` and the ``cell`` from
 # NumPy arrays into torch tensors and compute the summed squared charges.
 
 positions = torch.from_numpy(atoms.positions)
@@ -100,6 +100,7 @@ smearing, pme_params, cutoff = torchpme.utils.tune_pme(
 )
 
 # %%
+#
 # The tuning found the following best values for our system.
 
 print("smearing:", smearing)
