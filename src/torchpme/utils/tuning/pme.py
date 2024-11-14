@@ -142,7 +142,7 @@ def tune_pme(
     volume = torch.abs(cell.det())
     prefac = 2 * sum_squared_charges / math.sqrt(len(positions))
 
-    interpolation_nodes = torch.tensor(interpolation_nodes)
+    interpolation_nodes = torch.tensor(interpolation_nodes, device=cell.device)
 
     def err_Fourier(smearing, ns_mesh):
         def H(ns_mesh):
@@ -241,7 +241,7 @@ def _compute_RMS_phi(
     )
     positions_rel = positions_rel[torch.newaxis, :, :]
     positions_rel += (
-        torch.randn(positions_rel.shape) * 1e-10
+        1e-10 * torch.randn(positions_rel.shape, dtype=cell.dtype, device=cell.device)
     )  # Noises help the algorithm work for tiny systems (<100 atoms)
     return (
         torch.mean(
