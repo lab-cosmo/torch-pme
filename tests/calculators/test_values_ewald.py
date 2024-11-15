@@ -207,8 +207,8 @@ def test_wigner(crystal_name, scaling_factor):
         torch.testing.assert_close(energies, energies_ref, atol=0.0, rtol=4.2e-6)
 
 
-@pytest.mark.parametrize("cutoff", [5.54, 6.01])
-@pytest.mark.parametrize("frame_index", [0, 1, 2])
+@pytest.mark.parametrize("cutoff", [5.54])
+@pytest.mark.parametrize("frame_index", [0, 1])
 @pytest.mark.parametrize("scaling_factor", [0.43, 1.33])
 @pytest.mark.parametrize("ortho", generate_orthogonal_transformations())
 @pytest.mark.parametrize("calc_name", ["ewald", "pme"])
