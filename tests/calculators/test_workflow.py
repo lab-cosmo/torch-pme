@@ -9,7 +9,13 @@ import math
 import pytest
 import torch
 
-from torchpme import Calculator, CoulombPotential, EwaldCalculator, PMECalculator
+from torchpme import (
+    Calculator,
+    CoulombPotential,
+    EwaldCalculator,
+    P3MCalculator,
+    PMECalculator,
+)
 
 AVAILABLE_DEVICES = [torch.device("cpu")] + torch.cuda.is_available() * [
     torch.device("cuda")
@@ -19,7 +25,6 @@ CHARGES_CSCL = torch.tensor([1.0, -1.0])
 SMEARING = 0.1
 LR_WAVELENGTH = SMEARING / 4
 MESH_SPACING = SMEARING / 4
-NUM_NODES_PER_AXIS = 3
 
 
 @pytest.mark.parametrize(
@@ -43,8 +48,11 @@ NUM_NODES_PER_AXIS = 3
             {
                 "potential": CoulombPotential(smearing=SMEARING),
                 "mesh_spacing": MESH_SPACING,
-                "interpolation_nodes": NUM_NODES_PER_AXIS,
             },
+        ),
+        (
+            P3MCalculator,
+            {"smearing": SMEARING, "mesh_spacing": MESH_SPACING},
         ),
     ],
 )
