@@ -361,3 +361,132 @@ class _P3MCoulombPotential(CoulombPotential):
             0.0,
             4 * torch.pi * torch.exp(-0.5 * self.smearing**2 * masked) / masked,
         )
+
+
+class _P3MSimpleCoulombPotential(CoulombPotential):
+    r"""
+    Coulomb potential for the P3M method.
+
+    :param smearing: float or torch.Tensor containing the parameter often called "sigma"
+        in publications, which determines the length-scale at which the short-range and
+        long-range parts of the naive :math:`1/r` potential are separated. The smearing
+        parameter corresponds to the "width" of a Gaussian smearing of the particle
+        density.
+    :param exclusion_radius: A length scale that defines a *local environment* within
+        which the potential should be smoothly zeroed out, as it will be described by a
+        separate model.
+    :param mode: int, 0 for the electrostatic potential, 1 for the electrostatic energy,
+        2 for the dipolar torques, and 3 for the dipolar forces. For more details, see
+        eq.30 of `this paper<https://doi.org/10.1063/1.3000389>`_
+    :param diff_order: int, the order of the approximation of the difference operator.
+        Higher order is more accurate, but also more expensive. For more details, see
+        Appendix C of `that paper<http://dx.doi.org/10.1063/1.477414>`_. The values ``1,
+        2, 3, 4, 5, 6`` are supported.
+    :param dtype: type used for the internal buffers and parameters
+    :param device: device used for the internal buffers and parameters
+    """
+
+    def __init__(
+        self,
+        smearing: Optional[float] = None,
+        exclusion_radius: Optional[float] = None,
+        diff_order: int = 2,
+        dtype: Optional[torch.dtype] = None,
+        device: Optional[torch.device] = None,
+    ):
+        super().__init__(smearing, exclusion_radius, dtype, device)
+
+        if diff_order not in [1, 2, 3, 4, 5, 6]:
+            raise ValueError(
+                f"`diff_order` should be one of [1, 2, 3, 4, 5, 6], but got {diff_order}"
+            )
+        self.diff_order = diff_order
+
+        # Dummy variables for initialization
+        self._update_cell(torch.eye(3))
+        self._update_potential(1.0, 1)
+
+    def _update_cell(self, cell: torch.Tensor):
+        self._cell = cell
+
+    def _update_potential(self, mesh_spacing: float, interpolation_nodes: int):
+        # The mesh spacing here is not the one used in the actual potential.
+        # See the `mesh_spacing` property below for reference,
+        # which is the actual mesh spacing.
+        self._crude_mesh_spacing = mesh_spacing
+        self.interpolation_nodes = interpolation_nodes
+
+    @property
+    def mesh_spacing(self) -> torch.Tensor:
+        cell_dimensions = torch.linalg.norm(self._cell, dim=1)
+        return (
+            cell_dimensions / get_ns_mesh(self._cell, self._crude_mesh_spacing)
+        ).reshape(1, 1, 1, 3)
+
+    @torch.jit.export
+    def kernel_from_kvectors(self, k: torch.Tensor) -> torch.Tensor:
+        """
+        Compatibility function with the interface of :py:class:`KSpaceKernel`, so that
+        potentials can be used as kernels for :py:class:`KSpaceFilter`.
+        """
+        return self.lr_from_kvectors(k)
+
+    def lr_from_kvectors(self, k: torch.Tensor) -> torch.Tensor:
+        """
+        Fourier transform of the LR part potential in terms of :math:`k`.
+
+        :param k: torch.tensor containing the wave
+            vectors k at which the Fourier-transformed potential is to be evaluated
+        """
+        kh = k * (self.mesh_spacing / (2 * torch.pi))
+        # No need to calculate these things, all going to be one due to the zero exponent
+        U2 = self._charge_assignment(kh)
+        R = self._reference_force(k)
+
+        # Calculate the kernel
+        # See eq.30 of this paper https://doi.org/10.1063/1.3000389 for your main
+        # reference, as well as the paragraph below eq.31.
+
+        return torch.where(
+            U2 == 0,
+            0.0,
+            R / U2,
+        )
+
+    def _charge_assignment(self, kh: torch.Tensor) -> torch.Tensor:
+        """
+        The Fourier transformed charge assignment function divided by the volume of one mesh cell.
+        See eq.18 and the paragraph below eq.31 of this paper
+        http://dx.doi.org/10.1063/1.477414. Be aware that the volume cancels out
+        with the prefactor of the assignment function (see eq.18).
+
+        From shape (nx, ny, nz, 3) to shape (nx, ny, nz, nd)
+        """
+        return torch.prod(
+            torch.sinc(kh),
+            dim=-1,
+        ) ** (2 * self.interpolation_nodes)
+
+    def _reference_force(self, k: torch.Tensor) -> torch.Tensor:
+        """
+        The Fourier transform of the true reference force. See eq.32 of this paper
+        http://dx.doi.org/10.1063/1.477414. In this implementation, the ``ik`` part
+        is taken out and directly multiplied with the differential operator.
+
+        From shape (nx, ny, nz, 3) to shape (nx, ny, nz, nd)
+        """
+        if self.smearing is None:
+            raise ValueError(
+                "Cannot compute long-range kernel without specifying `smearing`."
+            )
+
+        k_sq = torch.linalg.norm(k, dim=-1) ** 2
+        # avoid NaNs in backward, see
+        # https://github.com/jax-ml/jax/issues/1052
+        # https://github.com/tensorflow/probability/blob/main/discussion/where-nan.pdf
+        masked = torch.where(k_sq == 0, 1.0, k_sq)
+        return torch.where(
+            k_sq == 0,
+            0.0,
+            4 * torch.pi * torch.exp(-0.5 * self.smearing**2 * masked) / masked,
+        )

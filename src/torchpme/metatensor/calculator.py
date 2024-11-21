@@ -11,7 +11,6 @@ except ImportError:
     ) from None
 
 from .. import calculators as torch_calculators
-from ..potentials.spline import Potential
 
 
 class Calculator(torch.nn.Module):
