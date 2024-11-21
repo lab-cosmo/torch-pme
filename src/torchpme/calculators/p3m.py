@@ -307,7 +307,8 @@ class _P3MCoulombPotential(CoulombPotential):
 
     def _charge_assignment(self, kh: torch.Tensor) -> torch.Tensor:
         """
-        The Fourier transformed charge assignment function devided by the volume of one mesh cell. See eq.18 and the paragraph below eq.31 of this paper
+        The Fourier transformed charge assignment function divided by the volume of one mesh cell. 
+        See eq.18 and the paragraph below eq.31 of this paper
         http://dx.doi.org/10.1063/1.477414. Be aware that the volume cancels out
         with the prefactor of the assignment function (see eq.18).
 
@@ -325,7 +326,7 @@ class _P3MCoulombPotential(CoulombPotential):
         """
         The Fourier transform of the true reference force. See eq.32 of this paper
         http://dx.doi.org/10.1063/1.477414. In this implementation, the ``ik`` part
-        is taken out and directly do the production with the differential operator.
+        is taken out and directly multiplied with the differential operator.
 
         From shape (nx, ny, nz, 3) to shape (nx, ny, nz, nd)
         """
