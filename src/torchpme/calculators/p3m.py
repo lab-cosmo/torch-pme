@@ -166,20 +166,33 @@ class P3MCalculator(Calculator):
         neighbor_indices: torch.Tensor,
         neighbor_distances: torch.Tensor,
     ):
-        self.potential._update_cell(cell)
-        return super().forward(
-            charges, cell, positions, neighbor_indices, neighbor_distances
+        self.potential._update_cell(cell)  # Can we eventually remove it?
+
+        self._validate_compute_parameters(
+            charges=charges,
+            cell=cell,
+            positions=positions,
+            neighbor_indices=neighbor_indices,
+            neighbor_distances=neighbor_distances,
         )
 
+        # Compute short-range (SR) part using a real space sum
+        potential_sr = self._compute_rspace(
+            charges=charges,
+            neighbor_indices=neighbor_indices,
+            neighbor_distances=neighbor_distances,
+        )
 
-COEF: list[list[float]] = [  # coefficients for the difference operator
-    [1.0],
-    [4 / 3, -1 / 3],
-    [3 / 2, -3 / 5, 1 / 10],
-    [8 / 5, -4 / 5, 8 / 35, -1 / 35],
-    [5 / 3, -20 / 21, 5 / 14, -5 / 63, 1 / 126],
-    [12 / 7, -15 / 14, 10 / 21, -1 / 7, 2 / 77, -1 / 465],
-]
+        if self.potential.smearing is None:
+            return self.prefactor * potential_sr
+        # Compute long-range (LR) part using a Fourier / reciprocal space sum
+        potential_lr = self._compute_kspace(
+            charges=charges,
+            cell=cell,
+            positions=positions,
+        )
+
+        return self.prefactor * (potential_sr + potential_lr)
 
 
 class _P3MCoulombPotential(CoulombPotential):
@@ -226,7 +239,7 @@ class _P3MCoulombPotential(CoulombPotential):
         self.diff_order = diff_order
 
         # Dummy variables for initialization
-        self._update_cell(torch.eye(3))
+        self._update_cell(torch.eye(3, device=device, dtype=dtype))
         self._update_potential(1.0, 1)
 
     def _update_cell(self, cell: torch.Tensor):
@@ -236,15 +249,12 @@ class _P3MCoulombPotential(CoulombPotential):
         # The mesh spacing here is not the one used in the actual potential.
         # See the `mesh_spacing` property below for reference,
         # which is the actual mesh spacing.
-        self._crude_mesh_spacing = mesh_spacing
-        self.interpolation_nodes = interpolation_nodes
-
-    @property
-    def mesh_spacing(self) -> torch.Tensor:
+        self.mesh_spacing = mesh_spacing
         cell_dimensions = torch.linalg.norm(self._cell, dim=1)
-        return (
-            cell_dimensions / get_ns_mesh(self._cell, self._crude_mesh_spacing)
+        self._actual_mesh_spacing = (
+            cell_dimensions / get_ns_mesh(self._cell, self.mesh_spacing)
         ).reshape(1, 1, 1, 3)
+        self.interpolation_nodes = interpolation_nodes
 
     @torch.jit.export
     def kernel_from_kvectors(self, k: torch.Tensor) -> torch.Tensor:
@@ -266,7 +276,7 @@ class _P3MCoulombPotential(CoulombPotential):
                 "Cannot compute long-range kernel without specifying `smearing`."
             )
 
-        kh = k.double() * self.mesh_spacing
+        kh = k * self._actual_mesh_spacing.to(device=k.device, dtype=k.dtype)
         if self.mode == 0:
             # No need to calculate these things, all going to be one due to the zero exponent
             D = torch.ones(k.shape, dtype=k.dtype, device=k.device)
@@ -281,9 +291,7 @@ class _P3MCoulombPotential(CoulombPotential):
         # Calculate the kernel
         # See eq.30 of this paper https://doi.org/10.1063/1.3000389 for your main
         # reference, as well as the paragraph below eq.31.
-        numerator = (
-            torch.sum(k * D, dim=-1) ** self.mode * U2 * R
-        )
+        numerator = torch.sum(k * D, dim=-1) ** self.mode * U2 * R
         denominator = D2 ** (2 * self.mode) * U2**2
 
         return torch.where(
@@ -300,14 +308,22 @@ class _P3MCoulombPotential(CoulombPotential):
 
         From shape (nx, ny, nz, 3) to shape (nx, ny, nz, 3)
         """
+        COEF: list[list[float]] = [  # coefficients for the difference operator
+            [1.0],
+            [4 / 3, -1 / 3],
+            [3 / 2, -3 / 5, 1 / 10],
+            [8 / 5, -4 / 5, 8 / 35, -1 / 35],
+            [5 / 3, -20 / 21, 5 / 14, -5 / 63, 1 / 126],
+            [12 / 7, -15 / 14, 10 / 21, -1 / 7, 2 / 77, -1 / 465],
+        ]
         temp = torch.zeros(kh.shape, dtype=kh.dtype, device=kh.device)
         for i, coef in enumerate(COEF[self.diff_order - 1]):
             temp += (coef / (i + 1)) * torch.sin(kh * (i + 1))
-        return temp / (self.mesh_spacing)
+        return temp / (self._actual_mesh_spacing)
 
     def _charge_assignment(self, kh: torch.Tensor) -> torch.Tensor:
         """
-        The Fourier transformed charge assignment function divided by the volume of one mesh cell. 
+        The Fourier transformed charge assignment function divided by the volume of one mesh cell.
         See eq.18 and the paragraph below eq.31 of this paper
         http://dx.doi.org/10.1063/1.477414. Be aware that the volume cancels out
         with the prefactor of the assignment function (see eq.18).
@@ -330,4 +346,18 @@ class _P3MCoulombPotential(CoulombPotential):
 
         From shape (nx, ny, nz, 3) to shape (nx, ny, nz, nd)
         """
-        return super().lr_from_kvectors(k)
+        if self.smearing is None:
+            raise ValueError(
+                "Cannot compute long-range kernel without specifying `smearing`."
+            )
+
+        k_sq = torch.linalg.norm(k, dim=-1) ** 2
+        # avoid NaNs in backward, see
+        # https://github.com/jax-ml/jax/issues/1052
+        # https://github.com/tensorflow/probability/blob/main/discussion/where-nan.pdf
+        masked = torch.where(k_sq == 0, 1.0, k_sq)
+        return torch.where(
+            k_sq == 0,
+            0.0,
+            4 * torch.pi * torch.exp(-0.5 * self.smearing**2 * masked) / masked,
+        )
