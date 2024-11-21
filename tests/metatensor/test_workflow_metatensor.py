@@ -17,7 +17,6 @@ AVAILABLE_DEVICES = [torch.device("cpu")] + torch.cuda.is_available() * [
 SMEARING = 0.1
 LR_WAVELENGTH = SMEARING / 4
 MESH_SPACING = SMEARING / 4
-NUM_NODES_PER_AXIS = 3
 
 
 @pytest.mark.parametrize(
@@ -41,8 +40,11 @@ NUM_NODES_PER_AXIS = 3
             {
                 "potential": torchpme.CoulombPotential(smearing=SMEARING),
                 "mesh_spacing": MESH_SPACING,
-                "interpolation_nodes": NUM_NODES_PER_AXIS,
             },
+        ),
+        (
+            torchpme.metatensor.P3MCalculator,
+            {"smearing": SMEARING, "mesh_spacing": MESH_SPACING},
         ),
     ],
 )
