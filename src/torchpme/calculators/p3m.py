@@ -282,7 +282,7 @@ class _P3MCoulombPotential(CoulombPotential):
         # See eq.30 of this paper https://doi.org/10.1063/1.3000389 for your main
         # reference, as well as the paragraph below eq.31.
         numerator = (
-            (k.unsqueeze(-2) @ D.unsqueeze(-1)).squeeze((-2, -1)) ** self.mode * U2 * R
+            torch.sum(k * D, dim=-1) ** self.mode * U2 * R
         )
         denominator = D2 ** (2 * self.mode) * U2**2
 
