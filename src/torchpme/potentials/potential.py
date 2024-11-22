@@ -138,7 +138,7 @@ class Potential(torch.nn.Module):
         :math:`k^2`, as that avoids, in several important cases, an unnecessary square
         root operation.
         :param k_sq: torch.tensor containing the squared norm of the Fourier domain
-            vectors at which :math:`\hat{V}_\mathrm{LR}` must be evaluated.
+        vectors at which :math:`\hat{V}_\mathrm{LR}` must be evaluated.
         """
         raise NotImplementedError(
             f"lr_from_k_sq is not implemented for {self.__class__.__name__}"
