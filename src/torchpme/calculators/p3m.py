@@ -439,18 +439,18 @@ class _P3MSimpleCoulombPotential(CoulombPotential):
             vectors k at which the Fourier-transformed potential is to be evaluated
         """
         kh = k * (self.mesh_spacing / (2 * torch.pi))
-        # No need to calculate these things, all going to be one due to the zero exponent
         U2 = self._charge_assignment(kh)
         R = self._reference_force(k)
 
         # Calculate the kernel
         # See eq.30 of this paper https://doi.org/10.1063/1.3000389 for your main
         # reference, as well as the paragraph below eq.31.
-
+        
+        masked = torch.where(U2 == 0, 1.0, U2)
         return torch.where(
             U2 == 0,
             0.0,
-            R / U2,
+            R / masked,
         )
 
     def _charge_assignment(self, kh: torch.Tensor) -> torch.Tensor:
