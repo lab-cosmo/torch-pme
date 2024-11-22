@@ -209,3 +209,210 @@ class KSpaceFilter(torch.nn.Module):
             # well-defined
             s=mesh_values.shape[-3:],
         )
+
+
+class P3MKSpaceFilter(KSpaceFilter):
+    """A P3M implementation of the k-space filter."""
+
+    def __init__(
+        self,
+        cell: torch.Tensor,
+        ns_mesh: torch.Tensor,
+        interpolation_nodes: int,
+        # kernel: Union[KSpaceKernel, Potential],
+        kernel: KSpaceKernel,
+        mode: int = 0,
+        diff_order: int = 2,
+        fft_norm: str = "ortho",
+        ifft_norm: str = "ortho",
+    ):
+        self.interpolation_nodes = interpolation_nodes
+        if mode not in [0, 1, 2, 3]:
+            raise ValueError(f"`mode` should be one of [0, 1, 2, 3], but got {mode}")
+        self.mode = mode
+        if diff_order not in [1, 2, 3, 4, 5, 6]:
+            raise ValueError(
+                f"`diff_order` should be one of [1, 2, 3, 4, 5, 6], but got {diff_order}"
+            )
+        self.diff_order = diff_order
+
+        super().__init__(cell, ns_mesh, kernel, fft_norm, ifft_norm)
+
+    @torch.jit.export
+    def update(
+        self,
+        cell: Optional[torch.Tensor] = None,
+        ns_mesh: Optional[torch.Tensor] = None,
+    ) -> None:
+        """
+        Update buffers and derived attributes of the instance.
+
+        If neither ``cell`` nor ``ns_mesh`` are passed, only the filter is updated,
+        typically following a change in the underlying potential. If ``cell`` and/or
+        ``ns_mesh`` are given, the instance's attributes required by these will also be
+        updated accordingly.
+
+        :param cell: torch.tensor of shape ``(3, 3)``, where `
+            `cell[i]`` is the i-th basis vector of the unit cell
+        :param ns_mesh: toch.tensor of shape ``(3,)``
+            Number of mesh points to use along each of the three axes
+        """
+        if cell is not None:
+            if cell.shape != (3, 3):
+                raise ValueError(
+                    f"cell of shape {list(cell.shape)} should be of shape (3, 3)"
+                )
+            self.cell = cell
+
+        if ns_mesh is not None:
+            if ns_mesh.shape != (3,):
+                raise ValueError(
+                    f"shape {list(ns_mesh.shape)} of `ns_mesh` has to be (3,)"
+                )
+            self.ns_mesh = ns_mesh
+
+        if self.cell.device != self.ns_mesh.device:
+            raise ValueError(
+                "`cell` and `ns_mesh` are on different devices, got "
+                f"{self.cell.device} and {self.ns_mesh.device}"
+            )
+
+        if cell is not None or ns_mesh is not None:
+            self._kvectors = generate_kvectors_for_mesh(ns=self.ns_mesh, cell=self.cell)
+
+        # always update the kfilter to reduce the risk it'd go out of sync if the is an
+        self._influence = self._calc_influence(self._kvectors)
+        # update in the underlaying potential
+        self._kfilter = self.kernel.kernel_from_kvectors(self._kvectors)
+
+    def forward(self, mesh_values: torch.Tensor) -> torch.Tensor:
+        """
+        Applies the k-space filter by Fourier transforming the given
+        ``mesh_values`` tensor, multiplying the result by the filter array
+        (that should have been previously computed with a call to
+        :func:`update`) and Fourier-transforming back
+        to real space.
+
+        If you update the ``cell``, the ``ns_mesh`` or anything inside the ``kernel``
+        object after you initlized the object, you have call :meth:`update` to update
+        the object calling this method.
+
+        .. code-block:: python
+
+            kernel_filter.update(cell)
+            kernel_filter.forward(mesh)
+
+        :param mesh_values: torch.tensor of shape ``(n_channels, nx, ny, nz)``
+            The values of the input function on a real-space mesh. Shape
+            should match the shape of the filter.
+
+        :returns: torch.tensor of shape ``(n_channels, nx, ny, nz)``
+            The real-space mesh containing the transformed function values.
+        """
+        if mesh_values.dim() != 4:
+            raise ValueError(
+                "`mesh_values` needs to be a 4 dimensional tensor, got "
+                f"{mesh_values.dim()}"
+            )
+
+        if mesh_values.device != self._kfilter.device:
+            raise ValueError(
+                "`mesh_values` and the k-space filter are on different devices, got "
+                f"{mesh_values.device} and {self._kfilter.device}"
+            )
+
+        # Applying the Fourier filter involves the following substeps:
+        # 1. Fourier transform the input mesh
+        # 2. multiply by kernel in k-space
+        # 3. transform back
+        # For the Fourier transforms, we use the normalization conditions
+        # that do not introduce any extra factors of 1/n_mesh.
+        # This is why the forward transform (fft) is called with the
+        # normalization option 'backward' (the convention in which 1/n_mesh
+        # is in the backward transformation) and vice versa for the
+        # inverse transform (irfft).
+
+        dims = (1, 2, 3)  # dimensions along which to Fourier transform
+        mesh_hat = torch.fft.rfftn(mesh_values, norm=self._fft_norm, dim=dims)
+
+        if mesh_hat.shape[-3:] != self._kfilter.shape[-3:]:
+            raise ValueError(
+                "The real-space mesh is inconsistent with the k-space grid."
+            )
+
+        filter_hat = mesh_hat * self._influence * self._kfilter
+
+        return torch.fft.irfftn(
+            filter_hat,
+            norm=self._ifft_norm,
+            dim=dims,
+            # NB: we must specify the size of the output
+            # as for certain mesh sizes the inverse FT is not
+            # well-defined
+            s=mesh_values.shape[-3:],
+        )
+
+    def _calc_influence(self, k: torch.Tensor) -> torch.Tensor:
+        ONE_TENSOR = torch.tensor(1).to(device=k.device, dtype=k.dtype)
+        cell_dimensions = torch.linalg.norm(self.cell, dim=1)
+        actual_mesh_spacing = (cell_dimensions / self.ns_mesh).reshape(1, 1, 1, 3)
+
+        kh = k * actual_mesh_spacing.to(device=k.device, dtype=k.dtype)
+        if self.mode == 0:
+            # No need to calculate these things, all going to be one due to the zero exponent
+            D = torch.ones(k.shape, dtype=k.dtype, device=k.device)
+            D2 = torch.ones(k.shape[:3], dtype=k.dtype, device=k.device)
+        else:
+            D = self._diff_operator(kh)
+            D2 = torch.linalg.norm(D, dim=-1) ** 2
+
+        U2 = self._charge_assignment(kh)
+
+        # Calculate the kernel
+        # See eq.30 of this paper https://doi.org/10.1063/1.3000389 for your main
+        # reference, as well as the paragraph below eq.31.
+        numerator = U2 * (
+            ONE_TENSOR if self.mode == 0 else torch.sum(k * D, dim=-1) ** self.mode
+        )
+        denominator = U2**2 * (ONE_TENSOR if self.mode == 0 else D2 ** (2 * self.mode))
+
+        return torch.where(
+            denominator == 0,
+            0.0,
+            numerator / denominator,
+        )
+
+    def _diff_operator(self, kh: torch.Tensor) -> torch.Tensor:
+        """
+        The approximation to the differential operator ``ik``. The ``i`` is taken
+        out and cancels with the prefactor ``-i`` of the reference force function.
+        See the Appendix C of this paper http://dx.doi.org/10.1063/1.477414.
+
+        From shape (nx, ny, nz, 3) to shape (nx, ny, nz, 3)
+        """
+        COEF: list[list[float]] = [  # coefficients for the difference operator
+            [1.0],
+            [4 / 3, -1 / 3],
+            [3 / 2, -3 / 5, 1 / 10],
+            [8 / 5, -4 / 5, 8 / 35, -1 / 35],
+            [5 / 3, -20 / 21, 5 / 14, -5 / 63, 1 / 126],
+            [12 / 7, -15 / 14, 10 / 21, -1 / 7, 2 / 77, -1 / 465],
+        ]
+        temp = torch.zeros(kh.shape, dtype=kh.dtype, device=kh.device)
+        for i, coef in enumerate(COEF[self.diff_order - 1]):
+            temp += (coef / (i + 1)) * torch.sin(kh * (i + 1))
+        return temp / (self._actual_mesh_spacing)
+
+    def _charge_assignment(self, kh: torch.Tensor) -> torch.Tensor:
+        """
+        The Fourier transformed charge assignment function divided by the volume of one mesh cell, in a squared form.
+        See eq.18 and the paragraph below eq.31 of this paper
+        http://dx.doi.org/10.1063/1.477414. Be aware that the volume cancels out
+        with the prefactor of the assignment function (see eq.18).
+
+        From shape (nx, ny, nz, 3) to shape (nx, ny, nz, nd)
+        """
+        return torch.prod(
+            torch.sinc(kh / (2 * torch.pi)),
+            dim=-1,
+        ) ** (self.interpolation_nodes * 2)

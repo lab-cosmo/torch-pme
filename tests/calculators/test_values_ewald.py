@@ -121,7 +121,7 @@ def test_madelung(crystal_name, scaling_factor, calc_name):
         sr_cutoff = 2 * scaling_factor
         smearing = sr_cutoff / 5.0
         calc = P3MCalculator(
-            smearing=smearing,
+            CoulombPotential(smearing=smearing),
             mesh_spacing=smearing / 8,
         )
         rtol = 9e-4
@@ -266,7 +266,7 @@ def test_random_structure(
         )
     elif calc_name == "p3m":
         calc = P3MCalculator(
-            smearing=smearing,
+            CoulombPotential(smearing=smearing),
             mesh_spacing=smearing / 8.0,
             full_neighbor_list=full_neighbor_list,
             prefactor=torchpme.utils.prefactors.eV_A,

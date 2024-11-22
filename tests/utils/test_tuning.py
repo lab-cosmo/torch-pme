@@ -56,13 +56,9 @@ def test_parameter_choose(calculator, tune, param_length, accuracy):
     )
 
     # Compute potential and compare against target value using default hypers
-    calc = (
-        calculator(
-            potential=(CoulombPotential(smearing=smearing)),
-            **params,
-        )
-        if tune is not tune_p3m
-        else calculator(smearing=smearing, **params)
+    calc = calculator(
+        potential=(CoulombPotential(smearing=smearing)),
+        **params,
     )
     potentials = calc.forward(
         positions=pos,

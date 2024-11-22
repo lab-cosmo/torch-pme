@@ -3,7 +3,7 @@ from typing import Optional
 import torch
 from torch import profiler
 
-from ..lib.kspace_filter import KSpaceFilter
+from ..lib.kspace_filter import P3MKSpaceFilter
 from ..lib.kvectors import get_ns_mesh
 from ..lib.mesh_interpolator import MeshInterpolator
 from ..potentials import CoulombPotential
@@ -57,17 +57,12 @@ class P3MCalculator(Calculator):
 
     def __init__(
         self,
-        smearing: float,
+        potential: CoulombPotential,
         mesh_spacing: float,
         interpolation_nodes: int = 4,
-        diff_order: int = 2,
         full_neighbor_list: bool = False,
         prefactor: float = 1.0,
     ):
-        if smearing is None:
-            raise ValueError(
-                "Must specify range radius to use a potential with P3MCalculator"
-            )
         self.mesh_spacing: float = mesh_spacing
 
         if interpolation_nodes not in [1, 2, 3, 4, 5]:
@@ -75,21 +70,17 @@ class P3MCalculator(Calculator):
         self.interpolation_nodes: int = interpolation_nodes
 
         super().__init__(
-            potential=_P3MCoulombPotential(
-                self.mesh_spacing,
-                self.interpolation_nodes,
-                smearing=smearing,
-                diff_order=diff_order,
-            ),
+            potential=potential,
             full_neighbor_list=full_neighbor_list,
             prefactor=prefactor,
         )
 
         # Initialize the filter module. Set dummy value for smearing to propper
         # initilize the `KSpaceFilter` below
-        self.kspace_filter: KSpaceFilter = KSpaceFilter(
+        self.kspace_filter: P3MKSpaceFilter = P3MKSpaceFilter(
             cell=torch.eye(3),
             ns_mesh=torch.ones(3, dtype=int),
+            interpolation_nodes=self.interpolation_nodes,
             kernel=self.potential,
             fft_norm="backward",
             ifft_norm="forward",
@@ -160,42 +151,6 @@ class P3MCalculator(Calculator):
 
         # Compensate for double counting of pairs (i,j) and (j,i)
         return interpolated_potential / 2
-
-    def forward(
-        self,
-        charges: torch.Tensor,
-        cell: torch.Tensor,
-        positions: torch.Tensor,
-        neighbor_indices: torch.Tensor,
-        neighbor_distances: torch.Tensor,
-    ):
-        self.potential._update_cell(cell)  # Can we eventually remove it?
-
-        self._validate_compute_parameters(
-            charges=charges,
-            cell=cell,
-            positions=positions,
-            neighbor_indices=neighbor_indices,
-            neighbor_distances=neighbor_distances,
-        )
-
-        # Compute short-range (SR) part using a real space sum
-        potential_sr = self._compute_rspace(
-            charges=charges,
-            neighbor_indices=neighbor_indices,
-            neighbor_distances=neighbor_distances,
-        )
-
-        if self.potential.smearing is None:
-            return self.prefactor * potential_sr
-        # Compute long-range (LR) part using a Fourier / reciprocal space sum
-        potential_lr = self._compute_kspace(
-            charges=charges,
-            cell=cell,
-            positions=positions,
-        )
-
-        return self.prefactor * (potential_sr + potential_lr)
 
 
 class _P3MCoulombPotential(CoulombPotential):

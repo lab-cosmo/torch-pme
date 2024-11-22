@@ -52,7 +52,10 @@ MESH_SPACING = SMEARING / 4
         ),
         (
             P3MCalculator,
-            {"smearing": SMEARING, "mesh_spacing": MESH_SPACING},
+            {
+                "potential": CoulombPotential(smearing=SMEARING),
+                "mesh_spacing": MESH_SPACING,
+            },
         ),
     ],
 )
