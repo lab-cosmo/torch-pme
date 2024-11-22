@@ -293,29 +293,17 @@ class P3MKSpaceFilter(KSpaceFilter):
         actual_mesh_spacing = (cell_dimensions / self.ns_mesh).reshape(1, 1, 1, 3)
 
         kh = k * actual_mesh_spacing.to(device=k.device, dtype=k.dtype)
-        if self.mode == 0:
-            # No need to calculate these things, all going to be one due to the zero exponent
-            D = torch.ones(k.shape, dtype=k.dtype, device=k.device)
-            D2 = torch.ones(k.shape[:3], dtype=k.dtype, device=k.device)
-        else:
-            D = self._diff_operator(kh, actual_mesh_spacing)
-            D2 = torch.linalg.norm(D, dim=-1) ** 2
-
         U2 = self._charge_assignment(kh)
-
-        # Calculate the kernel
-        # See eq.30 of this paper https://doi.org/10.1063/1.3000389 for your main
-        # reference, as well as the paragraph below eq.31.
-        numerator = U2 * (
-            ONE_TENSOR if self.mode == 0 else torch.sum(k * D, dim=-1) ** self.mode
-        )
-        denominator = U2**2 * (ONE_TENSOR if self.mode == 0 else D2 ** (2 * self.mode))
-
-        return torch.where(
-            denominator == 0,
-            0.0,
-            numerator / denominator,
-        )
+        if self.mode == 0:
+            # special (much simpler) case for point-charge potentials
+            masked = torch.where(U2 == 0, 1.0, U2)
+            return torch.where(U2 == 0, 0.0, torch.reciprocal(U2))
+        D = self._diff_operator(kh, actual_mesh_spacing)
+        D2mode = torch.linalg.norm(D, dim=-1) ** (4 * self.mode)
+        numerator = torch.sum(k * D, dim=-1) ** self.mode
+        denominator = U2 * D2
+        masked = torch.where(denominator == 0, 1.0, denominator)
+        return torch.where(denominator == 0, 0.0, numerator / denominator)
 
     def _diff_operator(
         self, kh: torch.Tensor, actual_mesh_spacing: torch.Tensor
