@@ -44,7 +44,10 @@ MESH_SPACING = SMEARING / 4
         ),
         (
             torchpme.metatensor.P3MCalculator,
-            {"smearing": SMEARING, "mesh_spacing": MESH_SPACING},
+            {
+                "potential": torchpme.CoulombPotential(smearing=SMEARING),
+                "mesh_spacing": MESH_SPACING,
+            },
         ),
     ],
 )

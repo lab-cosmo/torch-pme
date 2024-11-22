@@ -299,9 +299,9 @@ class P3MKSpaceFilter(KSpaceFilter):
             masked = torch.where(U2 == 0, 1.0, U2)
             return torch.where(U2 == 0, 0.0, torch.reciprocal(U2))
         D = self._diff_operator(kh, actual_mesh_spacing)
-        D2mode = torch.linalg.norm(D, dim=-1) ** (4 * self.mode)
+        D_to_4mode = torch.linalg.norm(D, dim=-1) ** (4 * self.mode)
         numerator = torch.sum(k * D, dim=-1) ** self.mode
-        denominator = U2 * D2
+        denominator = U2 * D_to_4mode
         masked = torch.where(denominator == 0, 1.0, denominator)
         return torch.where(denominator == 0, 0.0, numerator / denominator)
 
