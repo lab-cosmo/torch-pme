@@ -76,7 +76,6 @@ class KSpaceFilter(torch.nn.Module):
         self,
         cell: torch.Tensor,
         ns_mesh: torch.Tensor,
-        # kernel: Union[KSpaceKernel, Potential],
         kernel: KSpaceKernel,
         fft_norm: str = "ortho",
         ifft_norm: str = "ortho",
@@ -212,19 +211,21 @@ class KSpaceFilter(torch.nn.Module):
 
 
 class P3MKSpaceFilter(KSpaceFilter):
-    """A P3M implementation of the k-space filter."""
+    """
+    A specialized implementation of the k-space filter for the
+    P3M method, with a cell-dependent Green's function kernel.
+    """
 
     def __init__(
         self,
         cell: torch.Tensor,
         ns_mesh: torch.Tensor,
         interpolation_nodes: int,
-        # kernel: Union[KSpaceKernel, Potential],
         kernel: KSpaceKernel,
-        mode: int = 0,
-        diff_order: int = 2,
         fft_norm: str = "ortho",
         ifft_norm: str = "ortho",
+        mode: int = 0,
+        diff_order: int = 2,
     ):
         self.interpolation_nodes = interpolation_nodes
         if mode not in [0, 1, 2, 3]:

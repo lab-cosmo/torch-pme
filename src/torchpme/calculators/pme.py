@@ -68,8 +68,6 @@ class PMECalculator(Calculator):
 
         self.mesh_spacing: float = mesh_spacing
 
-        # Initialize the filter module. Set dummy value for smearing to propper
-        # initilize the `KSpaceFilter` below
         self.kspace_filter: KSpaceFilter = KSpaceFilter(
             cell=torch.eye(3),
             ns_mesh=torch.ones(3, dtype=int),
