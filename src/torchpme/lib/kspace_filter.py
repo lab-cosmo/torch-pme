@@ -225,17 +225,17 @@ class P3MKSpaceFilter(KSpaceFilter):
         fft_norm: str = "ortho",
         ifft_norm: str = "ortho",
         mode: int = 0,
-        diff_order: int = 2,
+        differential_order: int = 2,
     ):
         self.interpolation_nodes = interpolation_nodes
         if mode not in [0, 1, 2, 3]:
             raise ValueError(f"`mode` should be one of [0, 1, 2, 3], but got {mode}")
         self.mode = mode
-        if diff_order not in [1, 2, 3, 4, 5, 6]:
+        if differential_order not in [1, 2, 3, 4, 5, 6]:
             raise ValueError(
-                f"`diff_order` should be one of [1, 2, 3, 4, 5, 6], but got {diff_order}"
+                f"`differential_order` should be one of [1, 2, 3, 4, 5, 6], but got {differential_order}"
             )
-        self.diff_order = diff_order
+        self.differential_order = differential_order
 
         super().__init__(cell, ns_mesh, kernel, fft_norm, ifft_norm)
 
@@ -283,11 +283,11 @@ class P3MKSpaceFilter(KSpaceFilter):
 
         # always update the kfilter to reduce the risk it'd go out of sync if the is an
         # update in the underlaying potential
-        self._kfilter = self._calc_influence(
+        self._kfilter = self._compute_influence(
             self._kvectors
         ) * self.kernel.kernel_from_kvectors(self._kvectors)
 
-    def _calc_influence(self, k: torch.Tensor) -> torch.Tensor:
+    def _compute_influence(self, k: torch.Tensor) -> torch.Tensor:
         cell_dimensions = torch.linalg.norm(self.cell, dim=1)
         actual_mesh_spacing = (cell_dimensions / self.ns_mesh).reshape(1, 1, 1, 3)
 
@@ -297,14 +297,17 @@ class P3MKSpaceFilter(KSpaceFilter):
             # special (much simpler) case for point-charge potentials
             masked = torch.where(U2 == 0, 1.0, U2)
             return torch.where(U2 == 0, 0.0, torch.reciprocal(masked))
-        D = self._diff_operator(kh, actual_mesh_spacing)
+
+        D = self._differential_operator(kh, actual_mesh_spacing)
         D_to_4mode = torch.linalg.norm(D, dim=-1) ** (4 * self.mode)
+
         numerator = torch.sum(k * D, dim=-1) ** self.mode
         denominator = U2 * D_to_4mode
+
         masked = torch.where(denominator == 0, 1.0, denominator)
         return torch.where(denominator == 0, 0.0, numerator / masked)
 
-    def _diff_operator(
+    def _differential_operator(
         self, kh: torch.Tensor, actual_mesh_spacing: torch.Tensor
     ) -> torch.Tensor:
         """
@@ -323,7 +326,7 @@ class P3MKSpaceFilter(KSpaceFilter):
             [12 / 7, -15 / 14, 10 / 21, -1 / 7, 2 / 77, -1 / 465],
         ]
         temp = torch.zeros(kh.shape, dtype=kh.dtype, device=kh.device)
-        for i, coef in enumerate(COEF[self.diff_order - 1]):
+        for i, coef in enumerate(COEF[self.differential_order - 1]):
             temp += (coef / (i + 1)) * torch.sin(kh * (i + 1))
         return temp / (actual_mesh_spacing)
 

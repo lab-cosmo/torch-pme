@@ -2,7 +2,7 @@ import torch
 
 from ..lib.kspace_filter import P3MKSpaceFilter
 from ..lib.mesh_interpolator import MeshInterpolator
-from ..potentials import CoulombPotential
+from ..potentials import Potential
 from .pme import PMECalculator
 
 
@@ -38,7 +38,7 @@ class P3MCalculator(PMECalculator):
         In general, for ``n`` nodes, the interpolation will be performed by piecewise
         polynomials of degree ``n - 1`` (e.g. ``n = 4`` for cubic interpolation).
         Only the values ``1, 2, 3, 4, 5`` are supported.
-    :param diff_order: int, the order of the approximation of the difference operator.
+    :param differential_order: int, the order of the approximation of the difference operator.
         Higher order is more accurate, but also more expensive. For more details, see
         Appendix C of `that paper<http://dx.doi.org/10.1063/1.477414>`_. The values ``1,
         2, 3, 4, 5, 6`` are supported.
@@ -53,7 +53,7 @@ class P3MCalculator(PMECalculator):
 
     def __init__(
         self,
-        potential: CoulombPotential,
+        potential: Potential,
         mesh_spacing: float,
         interpolation_nodes: int = 4,
         full_neighbor_list: bool = False,
@@ -77,7 +77,7 @@ class P3MCalculator(PMECalculator):
             interpolation_nodes=self.interpolation_nodes,
             kernel=self.potential,
             mode=0,  # Green's function for point-charge potentials
-            diff_order=2,  # Order of the discretization of the differential operator
+            differential_order=2,  # Order of the discretization of the differential operator
             fft_norm="backward",
             ifft_norm="forward",
         )
