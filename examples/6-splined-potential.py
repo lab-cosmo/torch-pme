@@ -76,7 +76,6 @@ ax[1].set_ylim(-1e-2, 1e-2)
 ax[0].legend()
 
 # %%
-#
 # Fourier-domain kernel
 # ~~~~~~~~~~~~~~~~~~~~~
 # A core feature of :class:`SplinePotential <torchpme.lib.SplinePotential>`
@@ -89,23 +88,13 @@ ax[0].legend()
 #      \hat{f}(k) =4\pi\int \mathrm{d}r \frac{\sin k r}{k} r f(r)
 #
 # in a semin-analytical way - that is, by computing the integral over each
-# segment in the cubic spline. We first create the length of the kvectors
+# segment in the cubic spline.
 
 k_test = torch.linspace(0, 10, 256, device=device, dtype=dtype)
-
-# %%
-#
-# From the length of the kvectors ``k_test`` we create vectors pointing in the
-# x-direction with the same length. Note that the actual direction does not matter for
-# the calculation of the kernel.
-
-kvectors = torch.zeros((256, 3))
-kvectors[:, 0] = k_test
-
 yhat_test = torch.exp(-(k_test**2) / 2)  # /torch.pow(2*torch.pi,torch.tensor([3/2]))
 
-yhat_spline = spline.kernel_from_kvectors(kvectors)
-yhat_spline_fine = spline_fine.kernel_from_kvectors(kvectors)
+yhat_spline = spline.kernel_from_k_sq(k_test**2)
+yhat_spline_fine = spline_fine.kernel_from_k_sq(k_test**2)
 
 fig, ax = plt.subplots(1, 1, figsize=(4, 3), sharex=True, constrained_layout=True)
 
@@ -129,7 +118,7 @@ ax.legend()
 spline_kgrid = SplinePotential(
     r_grid=x_grid, y_grid=y_grid, k_grid=torch.linspace(0, 10, 32)
 )
-yhat_spline_kgrid = spline_kgrid.kernel_from_kvectors(kvectors)
+yhat_spline_kgrid = spline_kgrid.kernel_from_k_sq(k_test**2)
 
 fig, ax = plt.subplots(1, 1, figsize=(4, 3), sharex=True, constrained_layout=True)
 
@@ -231,12 +220,9 @@ y_grid_hiq = coulomb.lr_from_dist(x_grid_hiq)
 spline_hiq = SplinePotential(r_grid=x_grid_hiq, y_grid=y_grid_hiq, reciprocal=True)
 
 k_grid = torch.logspace(-4.1, 4, 1000)
-kvectors = torch.zeros((1000, 3))
-kvectors[:, 0] = k_grid
-
-krn_coul = coulomb.kernel_from_kvectors(kvectors)
-krn_spline = spline.kernel_from_kvectors(kvectors)
-krn_spline_hiq = spline_hiq.kernel_from_kvectors(kvectors)
+krn_coul = coulomb.kernel_from_k_sq(k_grid**2)
+krn_spline = spline.kernel_from_k_sq(k_grid**2)
+krn_spline_hiq = spline_hiq.kernel_from_k_sq(k_grid**2)
 
 fig, ax = plt.subplots(
     1, 1, figsize=(4, 3), sharey=True, sharex=True, constrained_layout=True
@@ -307,11 +293,8 @@ ax.legend()
 # The k-space kernel has a non-trivial shape
 
 k_grid = torch.logspace(-3, 3, 400)
-kvectors_grid = torch.zeros((400, 3))
-kvectors_grid[:, 0] = k_grid
-
-krn_coul = coulomb.kernel_from_kvectors(kvectors_grid)
-krn_spline = spline.kernel_from_kvectors(kvectors_grid)
+krn_coul = coulomb.kernel_from_k_sq(k_grid**2)
+krn_spline = spline.kernel_from_k_sq(k_grid**2)
 
 fig, ax = plt.subplots(
     1, 1, figsize=(4, 3), sharey=True, sharex=True, constrained_layout=True

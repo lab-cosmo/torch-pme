@@ -23,7 +23,7 @@ class Potential(torch.nn.Module):
     better suited to describe the structure within a local cutoff.
 
     Note that a :class:`Potential` class can also be used inside a
-    :class:`KSpaceFilter`, see :func:`Potential.kernel_from_kvectors`.
+    :class:`KSpaceFilter`, see :func:`Potential.kernel_from_k_sq`.
 
     :param smearing: The length scale associated with the switching between
         :math:`V_{\mathrm{SR}}(r)` and :math:`V_{\mathrm{LR}}(r)`
@@ -131,25 +131,26 @@ class Potential(torch.nn.Module):
         )
 
     @torch.jit.export
-    def lr_from_kvectors(self, kvectors: torch.Tensor) -> torch.Tensor:
+    def lr_from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
         r"""
         Computes the Fourier-domain version of the long-range part of the pair potential
-        :math:`\hat{V}_\mathrm{LR}(k)`. The function is expressed in terms of :math:`k`.
-
-        :param kvectors: torch.tensor containing the Fourier domain vectors at which
-            :math:`\hat{V}_\mathrm{LR}` must be evaluated.
+        :math:`\hat{V}_\mathrm{LR}(k)`. The function is expressed in terms of
+        :math:`k^2`, as that avoids, in several important cases, an unnecessary square
+        root operation.
+        :param k_sq: torch.tensor containing the squared norm of the Fourier domain
+            vectors at which :math:`\hat{V}_\mathrm{LR}` must be evaluated.
         """
         raise NotImplementedError(
-            f"lr_from_kvectors is not implemented for {self.__class__.__name__}"
+            f"lr_from_k_sq is not implemented for {self.__class__.__name__}"
         )
 
     @torch.jit.export
-    def kernel_from_kvectors(self, kvectors: torch.Tensor) -> torch.Tensor:
+    def kernel_from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
         """
         Compatibility function with the interface of :class:`KSpaceKernel`, so that
         potentials can be used as kernels for :class:`KSpaceFilter`.
         """
-        return self.lr_from_kvectors(kvectors)
+        return self.lr_from_k_sq(k_sq)
 
     @torch.jit.export
     def self_contribution(self) -> torch.Tensor:
