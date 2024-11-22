@@ -288,7 +288,6 @@ class P3MKSpaceFilter(KSpaceFilter):
         ) * self.kernel.kernel_from_kvectors(self._kvectors)
 
     def _calc_influence(self, k: torch.Tensor) -> torch.Tensor:
-        ONE_TENSOR = torch.tensor(1).to(device=k.device, dtype=k.dtype)
         cell_dimensions = torch.linalg.norm(self.cell, dim=1)
         actual_mesh_spacing = (cell_dimensions / self.ns_mesh).reshape(1, 1, 1, 3)
 
