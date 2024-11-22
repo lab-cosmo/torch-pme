@@ -281,76 +281,10 @@ class P3MKSpaceFilter(KSpaceFilter):
             self._kvectors = generate_kvectors_for_mesh(ns=self.ns_mesh, cell=self.cell)
 
         # always update the kfilter to reduce the risk it'd go out of sync if the is an
-        self._influence = self._calc_influence(self._kvectors)
         # update in the underlaying potential
-        self._kfilter = self.kernel.kernel_from_kvectors(self._kvectors)
-
-    def forward(self, mesh_values: torch.Tensor) -> torch.Tensor:
-        """
-        Applies the k-space filter by Fourier transforming the given
-        ``mesh_values`` tensor, multiplying the result by the filter array
-        (that should have been previously computed with a call to
-        :func:`update`) and Fourier-transforming back
-        to real space.
-
-        If you update the ``cell``, the ``ns_mesh`` or anything inside the ``kernel``
-        object after you initlized the object, you have call :meth:`update` to update
-        the object calling this method.
-
-        .. code-block:: python
-
-            kernel_filter.update(cell)
-            kernel_filter.forward(mesh)
-
-        :param mesh_values: torch.tensor of shape ``(n_channels, nx, ny, nz)``
-            The values of the input function on a real-space mesh. Shape
-            should match the shape of the filter.
-
-        :returns: torch.tensor of shape ``(n_channels, nx, ny, nz)``
-            The real-space mesh containing the transformed function values.
-        """
-        if mesh_values.dim() != 4:
-            raise ValueError(
-                "`mesh_values` needs to be a 4 dimensional tensor, got "
-                f"{mesh_values.dim()}"
-            )
-
-        if mesh_values.device != self._kfilter.device:
-            raise ValueError(
-                "`mesh_values` and the k-space filter are on different devices, got "
-                f"{mesh_values.device} and {self._kfilter.device}"
-            )
-
-        # Applying the Fourier filter involves the following substeps:
-        # 1. Fourier transform the input mesh
-        # 2. multiply by kernel in k-space
-        # 3. transform back
-        # For the Fourier transforms, we use the normalization conditions
-        # that do not introduce any extra factors of 1/n_mesh.
-        # This is why the forward transform (fft) is called with the
-        # normalization option 'backward' (the convention in which 1/n_mesh
-        # is in the backward transformation) and vice versa for the
-        # inverse transform (irfft).
-
-        dims = (1, 2, 3)  # dimensions along which to Fourier transform
-        mesh_hat = torch.fft.rfftn(mesh_values, norm=self._fft_norm, dim=dims)
-
-        if mesh_hat.shape[-3:] != self._kfilter.shape[-3:]:
-            raise ValueError(
-                "The real-space mesh is inconsistent with the k-space grid."
-            )
-
-        filter_hat = mesh_hat * self._influence * self._kfilter
-
-        return torch.fft.irfftn(
-            filter_hat,
-            norm=self._ifft_norm,
-            dim=dims,
-            # NB: we must specify the size of the output
-            # as for certain mesh sizes the inverse FT is not
-            # well-defined
-            s=mesh_values.shape[-3:],
-        )
+        self._kfilter = self._calc_influence(
+            self._kvectors
+        ) * self.kernel.kernel_from_kvectors(self._kvectors)
 
     def _calc_influence(self, k: torch.Tensor) -> torch.Tensor:
         ONE_TENSOR = torch.tensor(1).to(device=k.device, dtype=k.dtype)
@@ -363,7 +297,7 @@ class P3MKSpaceFilter(KSpaceFilter):
             D = torch.ones(k.shape, dtype=k.dtype, device=k.device)
             D2 = torch.ones(k.shape[:3], dtype=k.dtype, device=k.device)
         else:
-            D = self._diff_operator(kh)
+            D = self._diff_operator(kh, actual_mesh_spacing)
             D2 = torch.linalg.norm(D, dim=-1) ** 2
 
         U2 = self._charge_assignment(kh)
@@ -382,7 +316,9 @@ class P3MKSpaceFilter(KSpaceFilter):
             numerator / denominator,
         )
 
-    def _diff_operator(self, kh: torch.Tensor) -> torch.Tensor:
+    def _diff_operator(
+        self, kh: torch.Tensor, actual_mesh_spacing: torch.Tensor
+    ) -> torch.Tensor:
         """
         The approximation to the differential operator ``ik``. The ``i`` is taken
         out and cancels with the prefactor ``-i`` of the reference force function.
@@ -401,7 +337,7 @@ class P3MKSpaceFilter(KSpaceFilter):
         temp = torch.zeros(kh.shape, dtype=kh.dtype, device=kh.device)
         for i, coef in enumerate(COEF[self.diff_order - 1]):
             temp += (coef / (i + 1)) * torch.sin(kh * (i + 1))
-        return temp / (self._actual_mesh_spacing)
+        return temp / (actual_mesh_spacing)
 
     def _charge_assignment(self, kh: torch.Tensor) -> torch.Tensor:
         """
