@@ -76,10 +76,10 @@ class Calculator(torch.nn.Module):
         # Compute the pair potential terms V(r_ij) for each pair of atoms (i,j)
         # contained in the neighbor list
         with profiler.record_function("compute bare potential"):
-            if self.potential.smearing is None:
-                potentials_bare = self.potential.from_dist(neighbor_distances)
-            else:
+            if self.potential._is_range_separated:
                 potentials_bare = self.potential.sr_from_dist(neighbor_distances)
+            else:
+                potentials_bare = self.potential.from_dist(neighbor_distances)
 
         # Multiply the bare potential terms V(r_ij) with the corresponding charges
         # of ``atom j'' to obtain q_j*V(r_ij). Since each atom j can be a neighbor of
@@ -167,8 +167,9 @@ class Calculator(torch.nn.Module):
             neighbor_distances=neighbor_distances,
         )
 
-        if self.potential.smearing is None:
+        if not self.potential._is_range_separated:
             return self.prefactor * potential_sr
+
         # Compute long-range (LR) part using a Fourier / reciprocal space sum
         potential_lr = self._compute_kspace(
             charges=charges,

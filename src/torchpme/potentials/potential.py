@@ -46,12 +46,18 @@ class Potential(torch.nn.Module):
             dtype = torch.get_default_dtype()
         if device is None:
             device = torch.device("cpu")
+
+        if smearing is None:
+            self._is_range_separated = False
+            self.register_buffer(
+                "smearing", torch.tensor(1.0, device=device, dtype=dtype)
+            )
         if smearing is not None:
+            self._is_range_separated = True
             self.register_buffer(
                 "smearing", torch.tensor(smearing, device=device, dtype=dtype)
             )
-        else:
-            self.smearing = None
+
         if exclusion_radius is not None:
             self.register_buffer(
                 "exclusion_radius",
@@ -109,7 +115,7 @@ class Potential(torch.nn.Module):
         :param dist: torch.tensor containing the distances at which the potential is to
             be evaluated.
         """
-        if self.smearing is None:
+        if not self._is_range_separated:
             raise ValueError(
                 "Cannot compute range-separated potential when `smearing` is not specified."
             )

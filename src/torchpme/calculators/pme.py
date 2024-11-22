@@ -61,7 +61,7 @@ class PMECalculator(Calculator):
             prefactor=prefactor,
         )
 
-        if potential.smearing is None:
+        if not potential._is_range_separated:
             raise ValueError(
                 "Must specify smearing to use a potential with EwaldCalculator"
             )

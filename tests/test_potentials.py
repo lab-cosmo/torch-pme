@@ -442,8 +442,38 @@ def test_potentials_jit(potpars):
     assert_close(ks_y, ks_y_jit)
 
 
+def test_combined_potential():
+    """Test for non range-separated potentials."""
+    ipl_1 = InversePowerLawPotential(exponent=1.0, smearing=None, dtype=dtype)
+    ipl_2 = InversePowerLawPotential(exponent=2.0, smearing=None, dtype=dtype)
+
+    ipl_1_from_dist = ipl_1.from_dist(dists)
+    ipl_2_from_dist = ipl_2.from_dist(dists)
+
+    weights = torch.randn(2, dtype=dtype)
+    combined = CombinedPotential(
+        potentials=[ipl_1, ipl_2],
+        initial_weights=weights,
+        learnable_weights=False,
+        dtype=dtype,
+    )
+
+    combined_from_dist = combined.from_dist(dists)
+
+    # Test agreement between generic and specialized implementations
+    atol = 3e-16
+    rtol = 2 * machine_epsilon
+    assert_close(
+        weights[0] * ipl_1_from_dist + weights[1] * ipl_2_from_dist,
+        combined_from_dist,
+        rtol=rtol,
+        atol=atol,
+    )
+
+
 @pytest.mark.parametrize("smearing", smearinges)
-def test_combined_potential(smearing):
+def test_combined_potential_range_separated(smearing):
+    """Test for range-separated potentials."""
     ipl_1 = InversePowerLawPotential(exponent=1.0, smearing=smearing, dtype=dtype)
     ipl_2 = InversePowerLawPotential(exponent=2.0, smearing=smearing, dtype=dtype)
 
@@ -467,7 +497,6 @@ def test_combined_potential(smearing):
         initial_weights=weights,
         learnable_weights=False,
         dtype=dtype,
-        smearing=1.0,
     )
     combined_from_dist = combined.from_dist(dists)
     combined_sr_from_dist = combined.sr_from_dist(dists)
@@ -530,32 +559,22 @@ def test_combined_potentials_jit(smearing):
         r_grid=x_grid, y_grid=y_grid, reciprocal=True, dtype=dtype, smearing=1.0
     )
 
-    combo = CombinedPotential(potentials=[spline, coulomb], dtype=dtype, smearing=1.0)
+    combo = CombinedPotential(potentials=[spline, coulomb], dtype=dtype)
     jitcombo = torch.jit.script(combo)
     mypme = PMECalculator(jitcombo, mesh_spacing=1.0)
-    _ = torch.jit.script(mypme)
+    torch.jit.script(mypme)
 
 
 def test_combined_potential_incompatability():
     coulomb1 = CoulombPotential(smearing=1.0, dtype=dtype)
     coulomb2 = CoulombPotential(dtype=dtype)
-    with pytest.raises(
-        ValueError,
-        match="Cannot combine direct \\(`smearing=None`\\) and range-separated \\(`smearing=float`\\) potentials.",
-    ):
-        _ = CombinedPotential(potentials=[coulomb1, coulomb2], dtype=dtype)
-    with pytest.raises(
-        ValueError,
-        match="You should specify a `smearing` when combining range-separated \\(`smearing=float`\\) potentials.",
-    ):
-        _ = CombinedPotential(potentials=[coulomb1, coulomb1], dtype=dtype)
-    with pytest.raises(
-        ValueError,
-        match="Cannot specify `smearing` when combining direct \\(`smearing=None`\\) potentials.",
-    ):
-        _ = CombinedPotential(
-            potentials=[coulomb2, coulomb2], smearing=1.0, dtype=dtype
-        )
+
+    match = (
+        r"Cannot combine direct \(`smearing=None`\) and range-separated "
+        r"\(`smearing=float`\) potentials."
+    )
+    with pytest.raises(ValueError, match=match):
+        CombinedPotential(potentials=[coulomb1, coulomb2], dtype=dtype)
 
 
 def test_combined_potential_learnable_weights():
@@ -564,7 +583,6 @@ def test_combined_potential_learnable_weights():
     coulomb2 = CoulombPotential(smearing=1.0, dtype=dtype)
     combined = CombinedPotential(
         potentials=[coulomb1, coulomb2],
-        smearing=1.0,
         dtype=dtype,
         initial_weights=weights.clone(),
         learnable_weights=True,

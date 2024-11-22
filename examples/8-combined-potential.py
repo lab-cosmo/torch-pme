@@ -60,15 +60,12 @@ lr_wavelength = 0.5 * smearing
 # %%
 #
 # We now construct the potential as sum of two :class:`InversePowerLawPotential` using
-# :class:`CombinedPotential`. The presence of a numerical `smearing` value is used as an
-# indication that the potential can compute the terms needed for range-separated
-# evaluation, and so one has to set it also for the combined potential, even if it is
-# not used explicitly in the evaluation of the combination.
+# :class:`CombinedPotential`.
 
 pot_1 = InversePowerLawPotential(exponent=1.0, smearing=smearing)
 pot_2 = InversePowerLawPotential(exponent=2.0, smearing=smearing)
 
-potential = CombinedPotential(potentials=[pot_1, pot_2], smearing=smearing)
+potential = CombinedPotential(potentials=[pot_1, pot_2])
 
 # Note also that :class:`CombinedPotential` can be used with any combination of
 # potentials, as long they are all either direct or range separated. For instance, one

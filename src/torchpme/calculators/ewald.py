@@ -67,7 +67,7 @@ class EwaldCalculator(Calculator):
             full_neighbor_list=full_neighbor_list,
             prefactor=prefactor,
         )
-        if potential.smearing is None:
+        if not potential._is_range_separated:
             raise ValueError(
                 "Must specify range radius to use a potential with EwaldCalculator"
             )

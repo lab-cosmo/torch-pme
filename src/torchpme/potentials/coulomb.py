@@ -72,7 +72,7 @@ class CoulombPotential(Potential):
         :param dist: torch.tensor containing the distances at which the potential is to
             be evaluated.
         """
-        if self.smearing is None:
+        if not self._is_range_separated:
             raise ValueError(
                 "Cannot compute long-range contribution without specifying `smearing`."
             )
@@ -86,7 +86,7 @@ class CoulombPotential(Potential):
         :param kvectors: torch.tensor containing the wave vectors k at which the
             Fourier-transformed potential is to be evaluated
         """
-        if self.smearing is None:
+        if not self._is_range_separated:
             raise ValueError(
                 "Cannot compute long-range kernel without specifying `smearing`."
             )
@@ -104,7 +104,7 @@ class CoulombPotential(Potential):
 
     def self_contribution(self) -> torch.Tensor:
         # self-correction for 1/r potential
-        if self.smearing is None:
+        if not self._is_range_separated:
             raise ValueError(
                 "Cannot compute self contribution without specifying `smearing`."
             )
@@ -112,7 +112,7 @@ class CoulombPotential(Potential):
 
     def background_correction(self) -> torch.Tensor:
         # "charge neutrality" correction for 1/r potential
-        if self.smearing is None:
+        if not self._is_range_separated:
             raise ValueError(
                 "Cannot compute background correction without specifying `smearing`."
             )

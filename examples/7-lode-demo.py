@@ -263,7 +263,7 @@ def get_radial_quadrature(order, R):
     return torch.from_numpy(nodes), torch.from_numpy(weights)
 
 
-def get_full_grid(n, R):
+def get_full_grid(n: int, R: float) -> tuple[torch.Tensor, torch.Tensor]:
     lm_nodes, lm_weights = get_theta_phi_quadrature(n)
     r_nodes, r_weights = get_radial_quadrature(n, R)
 
@@ -408,10 +408,10 @@ class LODECalculator(torchpme.Calculator):
 
         cell = torch.eye(3)
         ns = torch.tensor([2, 2, 2])
-        self._MI = torchpme.lib.MeshInterpolator(
+        self._MI: torchpme.lib.MeshInterpolator = torchpme.lib.MeshInterpolator(
             cell=cell, ns_mesh=ns, interpolation_nodes=3, method="P3M"
         )
-        self._KF = torchpme.lib.KSpaceFilter(
+        self._KF: torchpme.lib.KSpaceFilter = torchpme.lib.KSpaceFilter(
             cell=cell,
             ns_mesh=ns,
             kernel=self.potential,
@@ -431,9 +431,9 @@ class LODECalculator(torchpme.Calculator):
             (nodes[:, 1]) / torch.sqrt((weights * nodes[:, 1] ** 2).sum()),  # y
             (nodes[:, 2]) / torch.sqrt((weights * nodes[:, 2] ** 2).sum()),  # z
         ]
-        self._basis = torch.stack(stencils)
-        self._nodes = nodes
-        self._weights = weights
+        self._basis: torch.Tensor = torch.stack(stencils)
+        self._nodes: torch.Tensor = nodes
+        self._weights: torch.Tensor = weights
 
     def forward(
         self,

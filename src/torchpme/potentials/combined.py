@@ -36,44 +36,36 @@ class CombinedPotential(Potential):
         potentials: list[Potential],
         initial_weights: Optional[torch.Tensor] = None,
         learnable_weights: Optional[bool] = True,
-        smearing: Optional[float] = None,
         exclusion_radius: Optional[float] = None,
         dtype: Optional[torch.dtype] = None,
         device: Optional[torch.device] = None,
     ):
-        super().__init__(
-            smearing=smearing,
-            exclusion_radius=exclusion_radius,
-            dtype=dtype,
-            device=device,
-        )
+        all_range_separated = all(pot._is_range_separated for pot in potentials)
+        any_range_separated = any(pot._is_range_separated for pot in potentials)
+
+        if any_range_separated and not all_range_separated:
+            raise ValueError(
+                r"Cannot combine direct (`smearing=None`) and range-separated "
+                r"(`smearing=float`) potentials."
+            )
+
         if dtype is None:
             dtype = torch.get_default_dtype()
         if device is None:
             device = torch.device("cpu")
-        smearings = [pot.smearing for pot in potentials]
-        if not all(smearings) and any(smearings):
-            raise ValueError(
-                r"Cannot combine direct (`smearing=None`) and range-separated (`smearing=float`) potentials."
-            )
 
-        if all(smearings) and not self.smearing:
-            # this is very misleading, but it is the way the original code works,
-            # otherwise mypy complains
-            raise ValueError(
-                r"You should specify a `smearing` when combining range-separated (`smearing=float`) potentials."
-            )
-        if not any(smearings) and self.smearing:
-            # this is very misleading, but it is the way the original code works,
-            # otherwise mypy complai
-            raise ValueError(
-                r"Cannot specify `smearing` when combining direct (`smearing=None`) potentials."
-            )
+        super().__init__(
+            smearing=float(potentials[0].smearing) if all_range_separated else None,
+            exclusion_radius=exclusion_radius,
+            dtype=dtype,
+            device=device,
+        )
 
         if initial_weights is not None:
             if len(initial_weights) != len(potentials):
                 raise ValueError(
-                    "The number of initial weights must match the number of potentials being combined"
+                    "The number of initial weights must match the number of potentials "
+                    "being combined"
                 )
         else:
             initial_weights = torch.ones(len(potentials), dtype=dtype, device=device)
