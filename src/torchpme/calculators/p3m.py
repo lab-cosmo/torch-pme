@@ -69,7 +69,7 @@ class P3MCalculator(Calculator):
                 "Must specify range radius to use a potential with P3MCalculator"
             )
         super().__init__(
-            potential=_P3MCoulombPotential(smearing=smearing, diff_order=diff_order),
+            potential=_P3MSimpleCoulombPotential(smearing=smearing, diff_order=diff_order),
             full_neighbor_list=full_neighbor_list,
             prefactor=prefactor,
         )
