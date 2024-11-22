@@ -13,7 +13,7 @@ class P3MCalculator(PMECalculator):
     Scaling as :math:`\mathcal{O}(NlogN)` with respect to the number of particles
     :math:`N` used as a reference to test faster implementations.
 
-    For getting reasonable values for the ``smaring`` of the potential class and  the
+    For getting reasonable values for the ``smearing`` of the potential class and  the
     ``mesh_spacing`` based on a given accuracy for a specific structure you should use
     :func:`torchpme.utils.tuning.tune_pme`. This function will also find the optimal
     ``cutoff`` for the  **neighborlist**.
