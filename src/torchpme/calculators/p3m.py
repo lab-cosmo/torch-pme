@@ -68,19 +68,22 @@ class P3MCalculator(Calculator):
             raise ValueError(
                 "Must specify range radius to use a potential with P3MCalculator"
             )
-        super().__init__(
-            potential=_P3MSimpleCoulombPotential(smearing=smearing, diff_order=diff_order),
-            full_neighbor_list=full_neighbor_list,
-            prefactor=prefactor,
-        )
-
         self.mesh_spacing: float = mesh_spacing
 
         if interpolation_nodes not in [1, 2, 3, 4, 5]:
             raise ValueError("Only `interpolation_nodes` from 1 to 5 are allowed")
         self.interpolation_nodes: int = interpolation_nodes
 
-        self.potential._update_potential(self.mesh_spacing, self.interpolation_nodes)
+        super().__init__(
+            potential=_P3MSimpleCoulombPotential(
+                self.mesh_spacing,
+                self.interpolation_nodes,
+                smearing=smearing,
+                diff_order=diff_order,
+            ),
+            full_neighbor_list=full_neighbor_list,
+            prefactor=prefactor,
+        )
 
         # Initialize the filter module. Set dummy value for smearing to propper
         # initilize the `KSpaceFilter` below
@@ -220,6 +223,8 @@ class _P3MCoulombPotential(CoulombPotential):
 
     def __init__(
         self,
+        mesh_spacing: float,
+        interpolation_nodes: int,
         smearing: Optional[float] = None,
         exclusion_radius: Optional[float] = None,
         mode: int = 0,
@@ -228,6 +233,8 @@ class _P3MCoulombPotential(CoulombPotential):
         device: Optional[torch.device] = None,
     ):
         super().__init__(smearing, exclusion_radius, dtype, device)
+        self.mesh_spacing = mesh_spacing
+        self.interpolation_nodes = interpolation_nodes
         if mode not in [0, 1, 2, 3]:
             raise ValueError(f"`mode` should be one of [0, 1, 2, 3], but got {mode}")
         self.mode = mode
@@ -240,18 +247,10 @@ class _P3MCoulombPotential(CoulombPotential):
 
         # Dummy variables for initialization
         self._update_cell(torch.eye(3, device=device, dtype=dtype))
-        self._update_potential(1.0, 1)
         self._actual_mesh_spacing: torch.Tensor = torch.tensor(1.0)
 
     def _update_cell(self, cell: torch.Tensor):
         self._cell = cell
-
-    def _update_potential(self, mesh_spacing: float, interpolation_nodes: int):
-        # The mesh spacing here is not the one used in the actual potential.
-        # See the `_actual_mesh_spacing` property below for reference,
-        # which is the actual mesh spacing.
-        self.mesh_spacing = mesh_spacing
-        self.interpolation_nodes = interpolation_nodes
 
     @torch.jit.export
     def kernel_from_kvectors(self, k: torch.Tensor) -> torch.Tensor:
@@ -389,6 +388,8 @@ class _P3MSimpleCoulombPotential(CoulombPotential):
 
     def __init__(
         self,
+        mesh_spacing: float,
+        interpolation_nodes: int,
         smearing: Optional[float] = None,
         exclusion_radius: Optional[float] = None,
         diff_order: int = 2,
@@ -396,7 +397,8 @@ class _P3MSimpleCoulombPotential(CoulombPotential):
         device: Optional[torch.device] = None,
     ):
         super().__init__(smearing, exclusion_radius, dtype, device)
-
+        self._crude_mesh_spacing = mesh_spacing
+        self.interpolation_nodes = interpolation_nodes
         if diff_order not in [1, 2, 3, 4, 5, 6]:
             raise ValueError(
                 f"`diff_order` should be one of [1, 2, 3, 4, 5, 6], but got {diff_order}"
@@ -405,17 +407,9 @@ class _P3MSimpleCoulombPotential(CoulombPotential):
 
         # Dummy variables for initialization
         self._update_cell(torch.eye(3))
-        self._update_potential(1.0, 1)
 
     def _update_cell(self, cell: torch.Tensor):
         self._cell = cell
-
-    def _update_potential(self, mesh_spacing: float, interpolation_nodes: int):
-        # The mesh spacing here is not the one used in the actual potential.
-        # See the `mesh_spacing` property below for reference,
-        # which is the actual mesh spacing.
-        self._crude_mesh_spacing = mesh_spacing
-        self.interpolation_nodes = interpolation_nodes
 
     @property
     def mesh_spacing(self) -> torch.Tensor:
