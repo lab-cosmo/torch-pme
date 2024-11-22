@@ -433,7 +433,7 @@ class _P3MSimpleCoulombPotential(CoulombPotential):
         :param k: torch.tensor containing the wave
             vectors k at which the Fourier-transformed potential is to be evaluated
         """
-        kh = k * (self.mesh_spacing / (2 * torch.pi))
+        kh = k * (self.mesh_spacing.to(device=k.device, dtype=k.dtype) / (2 * torch.pi))
         U2 = self._charge_assignment(kh)
         R = self._reference_force(k)
 
