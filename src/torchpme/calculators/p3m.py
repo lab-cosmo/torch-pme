@@ -69,7 +69,7 @@ class P3MCalculator(Calculator):
                 "Must specify range radius to use a potential with P3MCalculator"
             )
         super().__init__(
-            potential=_P3MSimpleCoulombPotential(smearing=smearing, diff_order=diff_order),
+            potential=_P3MCoulombPotential(smearing=smearing, diff_order=diff_order),
             full_neighbor_list=full_neighbor_list,
             prefactor=prefactor,
         )
@@ -241,19 +241,16 @@ class _P3MCoulombPotential(CoulombPotential):
         # Dummy variables for initialization
         self._update_cell(torch.eye(3, device=device, dtype=dtype))
         self._update_potential(1.0, 1)
+        self._actual_mesh_spacing: torch.Tensor = torch.tensor(1.0)
 
     def _update_cell(self, cell: torch.Tensor):
         self._cell = cell
 
     def _update_potential(self, mesh_spacing: float, interpolation_nodes: int):
         # The mesh spacing here is not the one used in the actual potential.
-        # See the `mesh_spacing` property below for reference,
+        # See the `_actual_mesh_spacing` property below for reference,
         # which is the actual mesh spacing.
         self.mesh_spacing = mesh_spacing
-        cell_dimensions = torch.linalg.norm(self._cell, dim=1)
-        self._actual_mesh_spacing = (
-            cell_dimensions / get_ns_mesh(self._cell, self.mesh_spacing)
-        ).reshape(1, 1, 1, 3)
         self.interpolation_nodes = interpolation_nodes
 
     @torch.jit.export
@@ -275,6 +272,10 @@ class _P3MCoulombPotential(CoulombPotential):
             raise ValueError(
                 "Cannot compute long-range kernel without specifying `smearing`."
             )
+        cell_dimensions = torch.linalg.norm(self._cell, dim=1)
+        self._actual_mesh_spacing = (
+            cell_dimensions / get_ns_mesh(self._cell, self.mesh_spacing)
+        ).reshape(1, 1, 1, 3)
 
         kh = k * self._actual_mesh_spacing.to(device=k.device, dtype=k.dtype)
         if self.mode == 0:
