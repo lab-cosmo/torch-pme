@@ -75,7 +75,7 @@ class P3MCalculator(Calculator):
         self.interpolation_nodes: int = interpolation_nodes
 
         super().__init__(
-            potential=_P3MSimpleCoulombPotential(
+            potential=_P3MCoulombPotential(
                 self.mesh_spacing,
                 self.interpolation_nodes,
                 smearing=smearing,
@@ -271,6 +271,7 @@ class _P3MCoulombPotential(CoulombPotential):
             raise ValueError(
                 "Cannot compute long-range kernel without specifying `smearing`."
             )
+        ONE_TENSOR = torch.tensor(1).to(device=k.device, dtype=k.dtype)
         cell_dimensions = torch.linalg.norm(self._cell, dim=1)
         self._actual_mesh_spacing = (
             cell_dimensions / get_ns_mesh(self._cell, self.mesh_spacing)
@@ -285,14 +286,18 @@ class _P3MCoulombPotential(CoulombPotential):
             D = self._diff_operator(kh)
             D2 = torch.linalg.norm(D, dim=-1) ** 2
 
-        U2 = self._charge_assignment(kh) ** 2
+        U2 = self._charge_assignment(kh)
         R = self._reference_force(k)
 
         # Calculate the kernel
         # See eq.30 of this paper https://doi.org/10.1063/1.3000389 for your main
         # reference, as well as the paragraph below eq.31.
-        numerator = torch.sum(k * D, dim=-1) ** self.mode * U2 * R
-        denominator = D2 ** (2 * self.mode) * U2**2
+        numerator = (
+            U2
+            * R
+            * (ONE_TENSOR if self.mode == 0 else torch.sum(k * D, dim=-1) ** self.mode)
+        )
+        denominator = U2**2 * (ONE_TENSOR if self.mode == 0 else D2 ** (2 * self.mode))
 
         return torch.where(
             denominator == 0,
@@ -323,20 +328,17 @@ class _P3MCoulombPotential(CoulombPotential):
 
     def _charge_assignment(self, kh: torch.Tensor) -> torch.Tensor:
         """
-        The Fourier transformed charge assignment function divided by the volume of one mesh cell.
+        The Fourier transformed charge assignment function divided by the volume of one mesh cell, in a squared form.
         See eq.18 and the paragraph below eq.31 of this paper
         http://dx.doi.org/10.1063/1.477414. Be aware that the volume cancels out
         with the prefactor of the assignment function (see eq.18).
 
         From shape (nx, ny, nz, 3) to shape (nx, ny, nz, nd)
         """
-        return (
-            torch.prod(
-                torch.sinc(kh / (2 * torch.pi)),
-                dim=-1,
-            )
-            ** self.interpolation_nodes
-        )
+        return torch.prod(
+            torch.sinc(kh / (2 * torch.pi)),
+            dim=-1,
+        ) ** (self.interpolation_nodes * 2)
 
     def _reference_force(self, k: torch.Tensor) -> torch.Tensor:
         """
