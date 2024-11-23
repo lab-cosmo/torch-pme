@@ -465,8 +465,8 @@ plt.show()
 # other calculators inside the simulation engine.
 
 # %%
-# A P3M calculator
-# ================
+# A comparison between calculators
+# ================================
 #
 # Even though, as discussed above, for such a small simulation the Ewald method is likely
 # to be the most efficient, it is easy to set up a model that uses the PME, or P3M,
@@ -478,9 +478,12 @@ smearing, ewald_params, cutoff = torchpme.utils.tune_p3m(
     positions=system.positions,
 )
 
-print(f"smearing: {smearing:.3f} Å")
-print("Ewald parameters:", ewald_params)
-print(f"cutoff: {cutoff:.3f} Å")
+print(f"""
+Tuned P3M settings
+smearing: {smearing:.3f} Å
+Ewald parameters: {ewald_params}
+cutoff: {cutoff:.3f} Å
+""")
 
 p3m_calculator = torchpme.metatensor.P3MCalculator(
     torchpme.CoulombPotential(smearing=smearing),
