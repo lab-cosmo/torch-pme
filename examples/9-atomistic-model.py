@@ -1,6 +1,6 @@
 """
-Atomistic Model for running MD
-==============================
+Atomistic model for molecular dynamics
+======================================
 
 .. currentmodule:: torchpme
 
@@ -11,7 +11,7 @@ molecular dynamics (MD) simulation of a non-neutral hydroden plasma in a cubic b
 plasma consists of massive point particles which are interacting pairwise via a Coulomb
 force which we compute using the :class:`EwaldCalculator`.
 
-The tutorial assumes knowledge of torchpme and how to export an metatensor atomistic
+The tutorial assumes knowledge of ``torchpme`` and how to export an metatensor atomistic
 model to run it with the ASE calculator. For learning these details we refer to the
 `metatensor atomistic tutorials
 <https://docs.metatensor.org/latest/examples/atomistic/index.html>`_.
@@ -72,10 +72,7 @@ atoms = ase.Atoms(
 #
 # We now can visualize the system with `chemiscope <https://chemiscope.org>`_.
 
-ax = ase.visualize.plot.plot_atoms(atoms, radii=0.5)
-ax.set_xlabel("$\\AA$")
-ax.set_ylabel("$\\AA$")
-plt.show()
+chemiscope.show([atoms], mode="structure", settings=chemiscope.quick_settings(trajectory=True, structure_settings={"unitCell": True}))
 
 # %%
 #
@@ -111,12 +108,12 @@ def add_charges(system: System) -> None:
 # .. warning::
 #
 #   Having non-charge neutral system is not problematic for this simulation. Even though
-#   any Ewald method requires a charghe neutral system. Charged system will be
-#   neutralized by adding an homogenous background charge. This background charge adds
-#   an additional contribution to the real space interaction which is already accountaed
-#   for by torchpme. For homogenous and isotropic system a nonzero background charge
+#   any Ewald method requires a charge-neutral system, charged system will be
+#   neutralized by adding an homogenous background density. This background charge adds
+#   an additional contribution to the real-space interaction which is already accountaed
+#   for by torchpme. For homogenous and isotropic systems a nonzero background charge
 #   will not have an effect on the simulation but it will for inhomgenous system. For
-#   more information see a reference by `Hub et.al
+#   more information see e.g. `Hub et.al
 #   <http://dx.doi.org/10.1021/ct400626b>`_.
 #
 # We now test the assignmenet by creating a test ``system`` and adding the charges.
@@ -134,8 +131,7 @@ print(system.get_data("charges").values)
 
 # %%
 #
-# As expected the charges are assigned to all atoms based on their atomic number. We
-# found 16 alternating charges.
+# As expected the charges are assigned to all atoms based on their atomic number.
 #
 # The model
 # ---------
@@ -146,8 +142,8 @@ print(system.get_data("charges").values)
 # of the model is inspire by the `Lennard-Jones model
 # <https://github.com/Luthaf/metatensor-lj-test/blob/main/src/metatensor_lj_test/pure.py>`_.
 #
-# Inside the ``forward`` method we computed the (per atom) potential we multiply it by
-# the charges to get the energy per atom.
+# Inside the ``forward`` method we compute the potential at the atomci positions, 
+# which is then multiplied by the formal "charges" to obtain a per-atom energy.
 
 
 class CalculatorModel(torch.nn.Module):
@@ -260,9 +256,10 @@ class CalculatorModel(torch.nn.Module):
 #
 #    We here use the Ewald method and PME because the system only contains 16 atoms. For
 #    such small systems the Ewald method is up to 6 times faster compared to PME. If
-#    your system reaches size pf 1000 atoms it is recommended to use
+#    your system reaches a size of 1000 atoms it is recommended to use
 #    :class:`metatensor.PMECalculator` and the corresponding :func:`tuning method
-#    <torchpme.utils.tune_ewald>`.
+#    <torchpme.utils.tune_ewald>`, :class:`metatensor.P3MCalculator` that implements
+#    the particle-particle/particle-mesh method.
 #
 # Before we initilize the calculator, we have to find the parameters of the grid.
 # Based on our system we will first *tune* the PME parameters for an accurate
@@ -375,7 +372,7 @@ integrator = ase.md.Langevin(
 # Run the simulation
 # ------------------
 #
-# We now ave everything in place run the simulation for 50 steps
+# We now have everything in place run the simulation for 50 steps
 # (:math:`0.5\,\mathrm{ps}`) and collect the potential, kinetic and total energy as well
 # as the temperature and pressure.
 
@@ -449,6 +446,6 @@ plt.show()
 # This atomistic model can also be used in other engines like LAMMPS. See the metatensor
 # atomistic page on `supported simulation engines
 # <https://docs.metatensor.org/latest/atomistic/engines>`_. The presented model can also
-# be used in more complec sitatuations like to compute only the electrostatic potential
-# while other parts of the simulations like the Lennerd-Jones potential are computed by
+# be used in more complex sitatuations, e.g. to compute only the electrostatic potential
+# while other parts of the simulations such as the Lennard-Jones potential are computed by
 # other calculators inside the simulation engine.
