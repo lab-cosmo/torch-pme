@@ -263,27 +263,13 @@ class CalculatorModel(torch.nn.Module):
 #    We here use the Ewald method and PME because the system only contains 16 atoms. For
 #    such small systems the Ewald method is up to 6 times faster compared to PME. If
 #    your system reaches a size of 1000 atoms it is recommended to use
-#    :class:`metatensor.PMECalculator` and the corresponding :func:`tuning method
-#    <torchpme.utils.tune_ewald>`, or :class:`metatensor.P3MCalculator` that implements
-#    the particle-particle/particle-mesh method. See below for an example.
+#    :class:`metatensor.PMECalculator`, or :class:`metatensor.P3MCalculator` that implements
+#    the particle-particle/particle-mesh method. See at the end of this tutorial for an example.
 #
-# Before we initilize the calculator, we have to find the parameters of the grid.
-# Based on our system we will first *tune* the PME parameters for an accurate
-# computation.
+# These are rather tight settings you can try `tune_ewald` to determine automatically
+# parameters with a target accuracy
 
-smearing, ewald_params, cutoff = torchpme.utils.tune_ewald(
-    sum_squared_charges=float(torch.sum(system.get_data("charges").values ** 2)),
-    cell=system.cell,
-    positions=system.positions,
-)
-
-# %%
-#
-# The tuning found the following best values for our system.
-
-print(f"smearing: {smearing:.3f} Å")
-print("Ewald parameters:", ewald_params)
-print(f"cutoff: {cutoff:.3f} Å")
+smearing, ewald_params, cutoff = 8, {"lr_wavelength": 64}, 32.0
 
 # %%
 #
@@ -472,19 +458,28 @@ plt.show()
 # to be the most efficient, it is easy to set up a model that uses the PME, or P3M,
 # calculators in ``torchpme``. For example,
 
-smearing, ewald_params, cutoff = torchpme.utils.tune_p3m(
-    sum_squared_charges=float(torch.sum(system.get_data("charges").values ** 2)),
-    cell=system.cell,
-    positions=system.positions,
+# PME
+smearing, ewald_params, cutoff = (
+    0.5,
+    {"mesh_spacing": 0.25, "interpolation_nodes": 4},
+    8.0,
 )
 
-print(f"""
-Tuned P3M settings
-smearing: {smearing:.3f} Å
-Ewald parameters: {ewald_params}
-cutoff: {cutoff:.3f} Å
-""")
+pme_calculator = torchpme.metatensor.PMECalculator(
+    torchpme.CoulombPotential(smearing=smearing),
+    **ewald_params,
+    prefactor=torchpme.utils.prefactors.eV_A,
+)
 
+pme_model = CalculatorModel(calculator=pme_calculator, cutoff=cutoff)
+
+pme_atomistic_model = MetatensorAtomisticModel(
+    pme_model.eval(), ModelMetadata(), model_capabilities
+)
+
+pme_mta_calculator = MetatensorCalculator(pme_atomistic_model)
+
+# P3M
 p3m_calculator = torchpme.metatensor.P3MCalculator(
     torchpme.CoulombPotential(smearing=smearing),
     **ewald_params,
@@ -507,13 +502,21 @@ atoms.calc = ewald_mta_calculator
 ewald_energy = atoms.get_potential_energy()
 ewald_forces = atoms.get_forces()
 
-# overrides the calculator
+# overrides the calculator and computes PME
+atoms = atoms.copy()
+atoms.calc = pme_mta_calculator
+pme_energy = atoms.get_potential_energy()
+pme_forces = atoms.get_forces()
+
+# ... and P3M
 atoms = atoms.copy()
 atoms.calc = p3m_mta_calculator
 p3m_energy = atoms.get_potential_energy()
 p3m_forces = atoms.get_forces()
 
-print(f"Energy (Ewald): {ewald_energy}\nEnergy (P3M):   {p3m_energy}\n")
-print(f"Forces(Ewald):\n{ewald_forces}\nForces (P3M):\n{p3m_forces}\n")
-
-# %%
+print(
+    f"Energy (Ewald): {ewald_energy}\nEnergy (PME):   {pme_energy}\nEnergy (P3M):   {p3m_energy}\n"
+)
+print(
+    f"Forces(Ewald):\n{ewald_forces}\nForces (PME):\n{pme_forces}\nForces (P3M):\n{p3m_forces}\n"
+)
