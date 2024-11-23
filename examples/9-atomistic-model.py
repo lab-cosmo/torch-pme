@@ -269,7 +269,7 @@ class CalculatorModel(torch.nn.Module):
 # These are rather tight settings you can try `tune_ewald` to determine automatically
 # parameters with a target accuracy
 
-smearing, ewald_params, cutoff = 8, {"lr_wavelength": 64}, 32.0
+smearing, ewald_params, cutoff = 8.0, {"lr_wavelength": 64.0}, 32.0
 
 # %%
 #
