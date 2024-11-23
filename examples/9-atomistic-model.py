@@ -72,7 +72,13 @@ atoms = ase.Atoms(
 #
 # We now can visualize the system with `chemiscope <https://chemiscope.org>`_.
 
-chemiscope.show([atoms], mode="structure", settings=chemiscope.quick_settings(trajectory=True, structure_settings={"unitCell": True}))
+chemiscope.show(
+    [atoms],
+    mode="structure",
+    settings=chemiscope.quick_settings(
+        trajectory=True, structure_settings={"unitCell": True}
+    ),
+)
 
 # %%
 #
@@ -142,7 +148,7 @@ print(system.get_data("charges").values)
 # of the model is inspire by the `Lennard-Jones model
 # <https://github.com/Luthaf/metatensor-lj-test/blob/main/src/metatensor_lj_test/pure.py>`_.
 #
-# Inside the ``forward`` method we compute the potential at the atomci positions, 
+# Inside the ``forward`` method we compute the potential at the atomci positions,
 # which is then multiplied by the formal "charges" to obtain a per-atom energy.
 
 
@@ -258,8 +264,8 @@ class CalculatorModel(torch.nn.Module):
 #    such small systems the Ewald method is up to 6 times faster compared to PME. If
 #    your system reaches a size of 1000 atoms it is recommended to use
 #    :class:`metatensor.PMECalculator` and the corresponding :func:`tuning method
-#    <torchpme.utils.tune_ewald>`, :class:`metatensor.P3MCalculator` that implements
-#    the particle-particle/particle-mesh method.
+#    <torchpme.utils.tune_ewald>`, or :class:`metatensor.P3MCalculator` that implements
+#    the particle-particle/particle-mesh method. See below for an example.
 #
 # Before we initilize the calculator, we have to find the parameters of the grid.
 # Based on our system we will first *tune* the PME parameters for an accurate
@@ -281,7 +287,7 @@ print(f"cutoff: {cutoff:.3f} Å")
 
 # %%
 #
-# We now define the PME calculator with the Coulomb potential.
+# We now define an Ewald calculator with a Coulomb potential.
 
 calculator = torchpme.metatensor.EwaldCalculator(
     torchpme.CoulombPotential(smearing=smearing),
@@ -348,7 +354,8 @@ atomistic_model = MetatensorAtomisticModel(
 # To start the simulation we first set the ``atomistic_model`` as the calculator for our
 # plasma.
 
-atoms.calc = MetatensorCalculator(atomistic_model)
+ewald_mta_calculator = MetatensorCalculator(atomistic_model)
+atoms.calc = ewald_mta_calculator
 
 # %%
 #
@@ -438,10 +445,12 @@ plt.show()
 
 # %%
 #
-# The simulation shows that the total energy is is conserved, the temperature is well
-# controlled and fluctuates around the target temperature of 10,000 K. The metatensor
-# interface also is able to compute the pressure of the simulation via auto
-# differantion, which we plotted as well.
+# Given the presence of a Langevin thermostat, the total energy is not conserved, but
+# the temperature is well-controlled and fluctuates around the target value of 10,000 K.
+# The metatensor interface also is able to compute the pressure of the simulation via auto
+# differentiation, which is plotted as well. If you want to know more about thermostats
+# and constant-temperature molecular dynamics, you can see `this tutorial
+# <https://atomistic-cookbook.org/examples/thermostats/thermostats.html>`_.
 #
 # This atomistic model can also be used in other engines like LAMMPS. See the metatensor
 # atomistic page on `supported simulation engines
@@ -449,3 +458,51 @@ plt.show()
 # be used in more complex sitatuations, e.g. to compute only the electrostatic potential
 # while other parts of the simulations such as the Lennard-Jones potential are computed by
 # other calculators inside the simulation engine.
+
+# %%
+# A P3M calculator
+# ================
+#
+# Even though, as discussed above, for such a small simulation the Ewald method is likely
+# to be the most efficient, it is easy to set up a model that uses the PME, or P3M,
+# calculators in ``torchpme``. For example,
+
+smearing, ewald_params, cutoff = torchpme.utils.tune_p3m(
+    sum_squared_charges=float(torch.sum(system.get_data("charges").values ** 2)),
+    cell=system.cell,
+    positions=system.positions,
+)
+
+print(f"smearing: {smearing:.3f} Å")
+print("Ewald parameters:", ewald_params)
+print(f"cutoff: {cutoff:.3f} Å")
+
+p3m_calculator = torchpme.metatensor.P3MCalculator(
+    torchpme.CoulombPotential(smearing=smearing),
+    **ewald_params,
+    prefactor=torchpme.utils.prefactors.eV_A,
+)
+
+p3m_model = CalculatorModel(calculator=p3m_calculator, cutoff=cutoff)
+
+p3m_atomistic_model = MetatensorAtomisticModel(
+    p3m_model.eval(), ModelMetadata(), model_capabilities
+)
+
+p3m_mta_calculator = MetatensorCalculator(p3m_atomistic_model)
+
+# %%
+# We can then compare the values obtained with the two Ewald engines
+
+# gets the energy from the Ewald calculator
+atoms.calc = ewald_mta_calculator
+ewald_energy = atoms.get_potential_energy()
+ewald_forces = atoms.get_forces()
+
+# overrides the calculator
+atoms.calc = p3m_mta_calculator
+p3m_energy = atoms.get_potential_energy()
+p3m_forces = atoms.get_forces()
+
+print(f"Energy (Ewald): {ewald_energy}\nEnergy (P3M):   {p3m_energy}\n")
+print(f"Forces(Ewald):\n{ewald_forces}\nForces (P3M):\n{p3m_forces}\n")
