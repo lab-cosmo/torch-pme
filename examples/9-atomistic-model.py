@@ -411,8 +411,13 @@ for i_step in range(n_steps):
 for atoms in trajectory:
     atoms.wrap()
 
-viewer_settings = {"bonds": False, "playbackDelay": 70, "unitCell": True}
-chemiscope.show(trajectory, mode="structure", settings={"structure": [viewer_settings]})
+chemiscope.show(
+    trajectory,
+    mode="structure",
+    settings=chemiscope.quick_settings(
+        trajectory=True, structure_settings={"unitCell": True}
+    ),
+)
 
 # %%
 # Analyze the results
@@ -500,9 +505,12 @@ ewald_energy = atoms.get_potential_energy()
 ewald_forces = atoms.get_forces()
 
 # overrides the calculator
+atoms = atoms.copy()
 atoms.calc = p3m_mta_calculator
 p3m_energy = atoms.get_potential_energy()
 p3m_forces = atoms.get_forces()
 
 print(f"Energy (Ewald): {ewald_energy}\nEnergy (P3M):   {p3m_energy}\n")
 print(f"Forces(Ewald):\n{ewald_forces}\nForces (P3M):\n{p3m_forces}\n")
+
+# %%
