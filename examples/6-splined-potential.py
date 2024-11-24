@@ -76,6 +76,7 @@ ax[1].set_ylim(-1e-2, 1e-2)
 ax[0].legend()
 
 # %%
+#
 # Fourier-domain kernel
 # ~~~~~~~~~~~~~~~~~~~~~
 # A core feature of :class:`SplinePotential <torchpme.lib.SplinePotential>`
@@ -199,6 +200,7 @@ ax.set_xlim(1e-4, 1e4)
 
 
 # %%
+#
 # Fourier-domain kernel
 # ~~~~~~~~~~~~~~~~~~~~~
 #

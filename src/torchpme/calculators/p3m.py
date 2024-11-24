@@ -10,12 +10,9 @@ class P3MCalculator(PMECalculator):
     r"""
     Potential using a particle-particle particle-mesh based Ewald (P3M).
 
-    Scaling as :math:`\mathcal{O}(NlogN)` with respect to the number of particles
-    :math:`N` used as a reference to test faster implementations.
-
     For getting reasonable values for the ``smearing`` of the potential class and  the
     ``mesh_spacing`` based on a given accuracy for a specific structure you should use
-    :func:`torchpme.utils.tuning.tune_pme`. This function will also find the optimal
+    :func:`torchpme.utils.tuning.tune_p3m`. This function will also find the optimal
     ``cutoff`` for the  **neighborlist**.
 
     .. hint::
@@ -38,10 +35,6 @@ class P3MCalculator(PMECalculator):
         In general, for ``n`` nodes, the interpolation will be performed by piecewise
         polynomials of degree ``n - 1`` (e.g. ``n = 4`` for cubic interpolation).
         Only the values ``1, 2, 3, 4, 5`` are supported.
-    :param differential_order: int, the order of the approximation of the difference operator.
-        Higher order is more accurate, but also more expensive. For more details, see
-        Appendix C of `that paper<http://dx.doi.org/10.1063/1.477414>`_. The values ``1,
-        2, 3, 4, 5, 6`` are supported.
     :param full_neighbor_list: If set to :py:obj:`True`, a "full" neighbor list
         is expected as input. This means that each atom pair appears twice. If
         set to :py:obj:`False`, a "half" neighbor list is expected.

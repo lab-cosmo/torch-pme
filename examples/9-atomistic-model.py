@@ -266,8 +266,8 @@ class CalculatorModel(torch.nn.Module):
 #    :class:`metatensor.PMECalculator`, or :class:`metatensor.P3MCalculator` that implements
 #    the particle-particle/particle-mesh method. See at the end of this tutorial for an example.
 #
-# These are rather tight settings you can try `tune_ewald` to determine automatically
-# parameters with a target accuracy
+# These are rather tight settings you can try :func:`tune_ewald <utils.tune_ewald>` to
+# determine automatically parameters with a target accuracy
 
 smearing, ewald_params, cutoff = 8.0, {"lr_wavelength": 64.0}, 32.0
 
