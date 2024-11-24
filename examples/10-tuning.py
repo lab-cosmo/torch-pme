@@ -12,6 +12,7 @@ We explain and demonstrate parameter tuning for Ewald and PME
 from time import time
 
 import ase
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
@@ -76,14 +77,15 @@ potential = pme(
 energy = charges.T @ potential
 madelung = (-energy / num_formula_units).flatten().item()
 
-print(madelung, madelung_ref, madelung-madelung_ref)
-
 # this is the estimated error
 error_bounds = torchpme.utils.tuning.pme.PMEErrorBounds(charges, cell, positions)
 
 estimated_error = error_bounds(max_cutoff, smearing, **pme_params).item()
-print(madelung, madelung_ref, madelung-madelung_ref, estimated_error)
-# 
+print(f"""
+Computed madelung constant: {madelung}
+Actual error: {madelung-madelung_ref}
+Estimated error: {estimated_error}
+""")
 
 # %%
 # now set up a testing framework
@@ -116,8 +118,6 @@ def timed_madelung(cutoff, smearing, mesh_spacing, interpolation_nodes):
     return madelung, end - start
 
 
-print(timed_madelung(5.0, 1.0, 0.1, 4))
-
 smearing_grid = torch.logspace(-1, 0.5, 8)
 spacing_grid = torch.logspace(-1, 0.5, 9)
 results = np.zeros((len(smearing_grid), len(spacing_grid)))
@@ -125,36 +125,64 @@ timings = np.zeros((len(smearing_grid), len(spacing_grid)))
 bounds = np.zeros((len(smearing_grid), len(spacing_grid)))
 for ism, smearing in enumerate(smearing_grid):
     for isp, spacing in enumerate(spacing_grid):
-        results[ism, isp], timings[ism, isp] = timed_madelung(8.0, smearing, spacing, 4)        
+        results[ism, isp], timings[ism, isp] = timed_madelung(8.0, smearing, spacing, 4)
         bounds[ism, isp] = error_bounds(8.0, smearing, spacing, 4)
 
 # %%
 # plot
 
-fig, ax = plt.subplots(1, 3, figsize=(9, 3), constrained_layout=True)
+vmin = 1e-12
+vmax = 2
+levels = np.geomspace(vmin, vmax, 30)
+
+fig, ax = plt.subplots(1, 3, figsize=(9, 3), sharey=True, constrained_layout=True)
 contour = ax[0].contourf(
-    spacing_grid, smearing_grid, np.log10(bounds)
+    spacing_grid,
+    smearing_grid,
+    bounds,
+    vmin=vmin,
+    vmax=vmax,
+    levels=levels,
+    norm=mpl.colors.LogNorm(),
+    extend="both",
 )
 ax[0].set_xscale("log")
 ax[0].set_yscale("log")
 ax[0].set_ylabel(r"$\sigma$ / Å")
 ax[0].set_xlabel(r"spacing / Å")
-cbar = fig.colorbar(contour, ax=ax[1], label="log10(error)")
+ax[0].set_title("estimated error")
+cbar = fig.colorbar(contour, ax=ax[1], label="error")
+cbar.ax.set_yscale("log")
 
 contour = ax[1].contourf(
-    spacing_grid, smearing_grid, np.log10(np.abs(results - madelung_ref))
+    spacing_grid,
+    smearing_grid,
+    np.abs(results - madelung_ref),
+    vmin=vmin,
+    vmax=vmax,
+    levels=levels,
+    norm=mpl.colors.LogNorm(),
+    extend="both",
 )
 ax[1].set_xscale("log")
 ax[1].set_yscale("log")
-ax[1].set_ylabel(r"$\sigma$ / Å")
 ax[1].set_xlabel(r"spacing / Å")
+ax[1].set_title("actual error")
 
-contour = ax[2].contourf(spacing_grid, smearing_grid, np.log10(timings))
+contour = ax[2].contourf(
+    spacing_grid,
+    smearing_grid,
+    timings,
+    levels=np.geomspace(1e-3, 2e-2, 20),
+    norm=mpl.colors.LogNorm(),
+)
 ax[2].set_xscale("log")
 ax[2].set_yscale("log")
 ax[2].set_ylabel(r"$\sigma$ / Å")
 ax[2].set_xlabel(r"spacing / Å")
-cbar = fig.colorbar(contour, ax=ax[2], label="log10(time / s)")
+ax[2].set_title("actual timing")
+cbar = fig.colorbar(contour, ax=ax[2], label="time / s")
+cbar.ax.set_yscale("log")
 
 # cbar.ax.set_yscale('log')
 
@@ -191,7 +219,6 @@ cbar = fig.colorbar(contour, ax=ax[0], label="log10(error)")
 contour = ax[1].contourf(spacing_grid, smearing_grid, np.log10(timings))
 ax[1].set_xscale("log")
 ax[1].set_yscale("log")
-ax[1].set_ylabel(r"$\sigma$ / Å")
 ax[1].set_xlabel(r"spacing / Å")
 cbar = fig.colorbar(contour, ax=ax[1], label="log10(time / s)")
 
@@ -221,13 +248,14 @@ def loss(x, target_accuracy):
         mesh_spacing=mesh_spacing,
         interpolation_nodes=4,
     )
-    estimated_error = error_bounds(cutoff=cutoff,
+    estimated_error = error_bounds(
+        cutoff=cutoff,
         smearing=smearing,
         mesh_spacing=mesh_spacing,
         interpolation_nodes=4,
     )
     tgt_loss = max(
-        0, np.log(estimated_error/madelung_ref/ target_accuracy)
+        0, np.log(estimated_error / madelung_ref / target_accuracy)
     )  # relu on the accuracy
     print(x, estimated_error.item(), np.abs(madelung - value), duration)
     return tgt_loss * 10 + duration
@@ -251,4 +279,6 @@ timed_madelung(cutoff=2.905, smearing=0.7578, mesh_spacing=5.524, interpolation_
 # %%
 
 madelung_ref
+# %%
+error_bounds(9, 0.5, 1, 4)
 # %%
