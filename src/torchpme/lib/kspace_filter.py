@@ -212,11 +212,11 @@ class KSpaceFilter(torch.nn.Module):
 
 
 class P3MKSpaceFilter(KSpaceFilter):
-    """
+    r"""
     A specialized implementation of the k-space filter for the P3M method, with a
     cell-dependent Green's function kernel. This class does almost the same thing as
-    :class:`KSpaceFilter`, but with a different, P3M-specialized filter. See `this
-    paper<http://dx.doi.org/10.1063/1.477414>`_ for your reference.
+    :class:`KSpaceFilter`, but with a different, P3M-specialized filter. See `this paper
+    <http://dx.doi.org/10.1063/1.477414>`_ for your reference.
 
     :param cell: torch.tensor of shape ``(3, 3)``, where ``cell[i]`` is the i-th basis
         vector of the unit cell
@@ -236,11 +236,11 @@ class P3MKSpaceFilter(KSpaceFilter):
         "backward", "ortho". See :func:`torch:fft:irfftn`
     :param mode: int, 0 for the electrostatic potential, 1 for the electrostatic energy,
         2 for the dipolar torques, and 3 for the dipolar forces. For more details, see
-        eq.30 of `that paper<https://doi.org/10.1063/1.3000389>`_
+        eq.30 of `that paper <https://doi.org/10.1063/1.3000389>`_.
     :param diff_order: int, the order of the approximation of the difference operator.
         Higher order is more accurate, but also more expensive. For more details, see
-        Appendix C of `this paper<http://dx.doi.org/10.1063/1.477414>`_. The values ``1,
-        2, 3, 4, 5, 6`` are supported.
+        Appendix C of `this paper <http://dx.doi.org/10.1063/1.477414>`_. The values
+        ``1, 2, 3, 4, 5, 6`` are supported.
     """
 
     def __init__(
