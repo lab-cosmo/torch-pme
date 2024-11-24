@@ -260,7 +260,7 @@ class P3MKSpaceFilter(KSpaceFilter):
         self.mode = mode
         if differential_order not in [1, 2, 3, 4, 5, 6]:
             raise ValueError(
-                f"`differential_order` should be one of [1, 2, 3, 4, 5, 6], but got {differential_order}"
+                f"`differential_order` should be one between 1 and 6, but got {differential_order}"
             )
         self.differential_order = differential_order
 
