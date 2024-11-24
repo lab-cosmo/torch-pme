@@ -76,7 +76,14 @@ potential = pme(
 energy = charges.T @ potential
 madelung = (-energy / num_formula_units).flatten().item()
 
-print(madelung, madelung_ref)
+print(madelung, madelung_ref, madelung-madelung_ref)
+
+# this is the estimated error
+error_bounds = torchpme.utils.tuning.pme.PMEErrorBounds(charges, cell, positions)
+
+estimated_error = error_bounds(max_cutoff, smearing, **pme_params).item()
+print(madelung, madelung_ref, madelung-madelung_ref, estimated_error)
+# 
 
 # %%
 # now set up a testing framework
@@ -115,31 +122,39 @@ smearing_grid = torch.logspace(-1, 0.5, 8)
 spacing_grid = torch.logspace(-1, 0.5, 9)
 results = np.zeros((len(smearing_grid), len(spacing_grid)))
 timings = np.zeros((len(smearing_grid), len(spacing_grid)))
+bounds = np.zeros((len(smearing_grid), len(spacing_grid)))
 for ism, smearing in enumerate(smearing_grid):
     for isp, spacing in enumerate(spacing_grid):
-        madelung, timing = timed_madelung(8.0, smearing, spacing, 4)
-        results[ism, isp] = madelung
-        timings[ism, isp] = timing
+        results[ism, isp], timings[ism, isp] = timed_madelung(8.0, smearing, spacing, 4)        
+        bounds[ism, isp] = error_bounds(8.0, smearing, spacing, 4)
 
 # %%
 # plot
 
-fig, ax = plt.subplots(1, 2, figsize=(7, 3), constrained_layout=True)
+fig, ax = plt.subplots(1, 3, figsize=(9, 3), constrained_layout=True)
 contour = ax[0].contourf(
-    spacing_grid, smearing_grid, np.log10(np.abs(results - madelung_ref))
+    spacing_grid, smearing_grid, np.log10(bounds)
 )
 ax[0].set_xscale("log")
 ax[0].set_yscale("log")
 ax[0].set_ylabel(r"$\sigma$ / Å")
 ax[0].set_xlabel(r"spacing / Å")
-cbar = fig.colorbar(contour, ax=ax[0], label="log10(error)")
+cbar = fig.colorbar(contour, ax=ax[1], label="log10(error)")
 
-contour = ax[1].contourf(spacing_grid, smearing_grid, np.log10(timings))
+contour = ax[1].contourf(
+    spacing_grid, smearing_grid, np.log10(np.abs(results - madelung_ref))
+)
 ax[1].set_xscale("log")
 ax[1].set_yscale("log")
 ax[1].set_ylabel(r"$\sigma$ / Å")
 ax[1].set_xlabel(r"spacing / Å")
-cbar = fig.colorbar(contour, ax=ax[1], label="log10(time / s)")
+
+contour = ax[2].contourf(spacing_grid, smearing_grid, np.log10(timings))
+ax[2].set_xscale("log")
+ax[2].set_yscale("log")
+ax[2].set_ylabel(r"$\sigma$ / Å")
+ax[2].set_xlabel(r"spacing / Å")
+cbar = fig.colorbar(contour, ax=ax[2], label="log10(time / s)")
 
 # cbar.ax.set_yscale('log')
 
@@ -206,10 +221,15 @@ def loss(x, target_accuracy):
         mesh_spacing=mesh_spacing,
         interpolation_nodes=4,
     )
+    estimated_error = error_bounds(cutoff=cutoff,
+        smearing=smearing,
+        mesh_spacing=mesh_spacing,
+        interpolation_nodes=4,
+    )
     tgt_loss = max(
-        0, np.log(np.abs(value / madelung - 1) / target_accuracy)
+        0, np.log(estimated_error/madelung_ref/ target_accuracy)
     )  # relu on the accuracy
-    print(x, np.log(np.abs(value / madelung - 1) / target_accuracy), duration)
+    print(x, estimated_error.item(), np.abs(madelung - value), duration)
     return tgt_loss * 10 + duration
 
 
