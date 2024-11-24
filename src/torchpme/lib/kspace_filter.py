@@ -115,29 +115,7 @@ class KSpaceFilter(torch.nn.Module):
         :param ns_mesh: toch.tensor of shape ``(3,)``
             Number of mesh points to use along each of the three axes
         """
-        if cell is not None:
-            if cell.shape != (3, 3):
-                raise ValueError(
-                    f"cell of shape {list(cell.shape)} should be of shape (3, 3)"
-                )
-            self.cell = cell
-
-        if ns_mesh is not None:
-            if ns_mesh.shape != (3,):
-                raise ValueError(
-                    f"shape {list(ns_mesh.shape)} of `ns_mesh` has to be (3,)"
-                )
-            self.ns_mesh = ns_mesh
-
-        if self.cell.device != self.ns_mesh.device:
-            raise ValueError(
-                "`cell` and `ns_mesh` are on different devices, got "
-                f"{self.cell.device} and {self.ns_mesh.device}"
-            )
-
-        if cell is not None or ns_mesh is not None:
-            self._kvectors = generate_kvectors_for_mesh(ns=self.ns_mesh, cell=self.cell)
-            self._k_sq = torch.linalg.norm(self._kvectors, dim=3) ** 2
+        self._prep_kvectors(cell, ns_mesh)
 
         # always update the kfilter to reduce the risk it'd go out of sync if the is an
         # update in the underlaying potential
@@ -210,6 +188,33 @@ class KSpaceFilter(torch.nn.Module):
             s=mesh_values.shape[-3:],
         )
 
+    def _prep_kvectors(
+        self, cell: Optional[torch.Tensor], ns_mesh: Optional[torch.Tensor]
+    ):
+        if cell is not None:
+            if cell.shape != (3, 3):
+                raise ValueError(
+                    f"cell of shape {list(cell.shape)} should be of shape (3, 3)"
+                )
+            self.cell = cell
+
+        if ns_mesh is not None:
+            if ns_mesh.shape != (3,):
+                raise ValueError(
+                    f"shape {list(ns_mesh.shape)} of `ns_mesh` has to be (3,)"
+                )
+            self.ns_mesh = ns_mesh
+
+        if self.cell.device != self.ns_mesh.device:
+            raise ValueError(
+                "`cell` and `ns_mesh` are on different devices, got "
+                f"{self.cell.device} and {self.ns_mesh.device}"
+            )
+
+        if cell is not None or ns_mesh is not None:
+            self._kvectors = generate_kvectors_for_mesh(ns=self.ns_mesh, cell=self.cell)
+            self._k_sq = torch.linalg.norm(self._kvectors, dim=3) ** 2
+
 
 class P3MKSpaceFilter(KSpaceFilter):
     r"""
@@ -273,29 +278,7 @@ class P3MKSpaceFilter(KSpaceFilter):
         ns_mesh: Optional[torch.Tensor] = None,
     ) -> None:
         # Cannot reuse code from `KSpaceFilter` by `super` because of `TorchScript`
-        if cell is not None:
-            if cell.shape != (3, 3):
-                raise ValueError(
-                    f"cell of shape {list(cell.shape)} should be of shape (3, 3)"
-                )
-            self.cell = cell
-
-        if ns_mesh is not None:
-            if ns_mesh.shape != (3,):
-                raise ValueError(
-                    f"shape {list(ns_mesh.shape)} of `ns_mesh` has to be (3,)"
-                )
-            self.ns_mesh = ns_mesh
-
-        if self.cell.device != self.ns_mesh.device:
-            raise ValueError(
-                "`cell` and `ns_mesh` are on different devices, got "
-                f"{self.cell.device} and {self.ns_mesh.device}"
-            )
-
-        if cell is not None or ns_mesh is not None:
-            self._kvectors = generate_kvectors_for_mesh(ns=self.ns_mesh, cell=self.cell)
-            self._k_sq = torch.linalg.norm(self._kvectors, dim=3) ** 2
+        self._prep_kvectors(cell, ns_mesh)
 
         # always update the kfilter to reduce the risk it'd go out of sync if the is an
         # update in the underlaying potential
@@ -303,11 +286,13 @@ class P3MKSpaceFilter(KSpaceFilter):
             self._kvectors
         ) * self.kernel.kernel_from_k_sq(self._k_sq)
 
-    def _compute_influence(self, k: torch.Tensor) -> torch.Tensor:
+    def _compute_influence(self, kvector: torch.Tensor) -> torch.Tensor:
         cell_dimensions = torch.linalg.norm(self.cell, dim=1)
         actual_mesh_spacing = (cell_dimensions / self.ns_mesh).reshape(1, 1, 1, 3)
 
-        kh = k * actual_mesh_spacing.to(device=k.device, dtype=k.dtype)
+        kh = kvector * actual_mesh_spacing.to(
+            device=kvector.device, dtype=kvector.dtype
+        )
         U2 = self._charge_assignment(kh)
         if self.mode == 0:
             # special (much simpler) case for point-charge potentials
@@ -320,8 +305,8 @@ class P3MKSpaceFilter(KSpaceFilter):
         # Calculate (part of) the kernel See eq.30 of this paper
         # https://doi.org/10.1063/1.3000389 for your main reference, as well as the
         # paragraph below eq.31. Be careful that the reference force part is calculated
-        # in the `KSpaceFilter`
-        numerator = torch.sum(k * D, dim=-1) ** self.mode
+        # in the `KSpaceFilter` by calling `kernel_from_k_sq`.
+        numerator = torch.sum(kvector * D, dim=-1) ** self.mode
         denominator = U2 * D_to_4mode
 
         masked = torch.where(denominator == 0, 1.0, denominator)
