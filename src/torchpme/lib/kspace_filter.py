@@ -213,8 +213,34 @@ class KSpaceFilter(torch.nn.Module):
 
 class P3MKSpaceFilter(KSpaceFilter):
     """
-    A specialized implementation of the k-space filter for the
-    P3M method, with a cell-dependent Green's function kernel.
+    A specialized implementation of the k-space filter for the P3M method, with a
+    cell-dependent Green's function kernel. This class does almost the same thing as
+    :class:`KSpaceFilter`, but with a different, P3M-specialized filter. See `this
+    paper<http://dx.doi.org/10.1063/1.477414>`_ for your reference.
+
+    :param cell: torch.tensor of shape ``(3, 3)``, where ``cell[i]`` is the i-th basis
+        vector of the unit cell
+    :param ns_mesh: toch.tensor of shape ``(3,)`` Number of mesh points to use along
+        each of the three axes
+    :param interpolation_nodes: int The number ``n`` of nodes used in the interpolation
+        per coordinate axis. The total number of interpolation nodes in 3D will be
+        ``n^3``. In general, for ``n`` nodes, the interpolation will be performed by
+        piecewise polynomials of degree ``n - 1`` (e.g. ``n = 4`` for cubic
+        interpolation). Only the values ``1, 2, 3, 4, 5`` are supported.
+    :param kernel: KSpaceKernel A KSpaceKernel-derived class providing a ``from_k_sq``
+        method that evaluates :math:`\psi` given the square modulus of the k-space mesh
+        points
+    :param fft_norm: str The normalization applied to the forward FT. Can be "forward",
+        "backward", "ortho". See :func:`torch:fft:rfftn`
+    :param ifft_norm: str The normalization applied to the inverse FT. Can be "forward",
+        "backward", "ortho". See :func:`torch:fft:irfftn`
+    :param mode: int, 0 for the electrostatic potential, 1 for the electrostatic energy,
+        2 for the dipolar torques, and 3 for the dipolar forces. For more details, see
+        eq.30 of `that paper<https://doi.org/10.1063/1.3000389>`_
+    :param diff_order: int, the order of the approximation of the difference operator.
+        Higher order is more accurate, but also more expensive. For more details, see
+        Appendix C of `this paper<http://dx.doi.org/10.1063/1.477414>`_. The values ``1,
+        2, 3, 4, 5, 6`` are supported.
     """
 
     def __init__(
@@ -246,19 +272,7 @@ class P3MKSpaceFilter(KSpaceFilter):
         cell: Optional[torch.Tensor] = None,
         ns_mesh: Optional[torch.Tensor] = None,
     ) -> None:
-        """
-        Update buffers and derived attributes of the instance.
-
-        If neither ``cell`` nor ``ns_mesh`` are passed, only the filter is updated,
-        typically following a change in the underlying potential. If ``cell`` and/or
-        ``ns_mesh`` are given, the instance's attributes required by these will also be
-        updated accordingly.
-
-        :param cell: torch.tensor of shape ``(3, 3)``, where `
-            `cell[i]`` is the i-th basis vector of the unit cell
-        :param ns_mesh: toch.tensor of shape ``(3,)``
-            Number of mesh points to use along each of the three axes
-        """
+        # Cannot reuse code from `KSpaceFilter` by `super` because of `TorchScript`
         if cell is not None:
             if cell.shape != (3, 3):
                 raise ValueError(
@@ -303,6 +317,10 @@ class P3MKSpaceFilter(KSpaceFilter):
         D = self._differential_operator(kh, actual_mesh_spacing)
         D_to_4mode = torch.linalg.norm(D, dim=-1) ** (4 * self.mode)
 
+        # Calculate (part of) the kernel See eq.30 of this paper
+        # https://doi.org/10.1063/1.3000389 for your main reference, as well as the
+        # paragraph below eq.31. Be careful that the reference force part is calculated
+        # in the `KSpaceFilter`
         numerator = torch.sum(k * D, dim=-1) ** self.mode
         denominator = U2 * D_to_4mode
 
@@ -313,9 +331,10 @@ class P3MKSpaceFilter(KSpaceFilter):
         self, kh: torch.Tensor, actual_mesh_spacing: torch.Tensor
     ) -> torch.Tensor:
         """
-        The approximation to the differential operator ``ik``. The ``i`` is taken
-        out and cancels with the prefactor ``-i`` of the reference force function.
-        See the Appendix C of this paper http://dx.doi.org/10.1063/1.477414.
+        The approximation to the differential operator ``ik``. The ``i`` is taken out
+        and cancels with the prefactor ``-i`` of the reference force function (in our
+        code, this is the kernel of `Potential`). See the Appendix C of this paper
+        http://dx.doi.org/10.1063/1.477414.
 
         From shape (nx, ny, nz, 3) to shape (nx, ny, nz, 3)
         """
@@ -334,9 +353,9 @@ class P3MKSpaceFilter(KSpaceFilter):
 
     def _charge_assignment(self, kh: torch.Tensor) -> torch.Tensor:
         """
-        The Fourier transformed charge assignment function divided by the volume of one mesh cell, in a squared form.
-        See eq.18 and the paragraph below eq.31 of this paper
-        http://dx.doi.org/10.1063/1.477414. Be aware that the volume cancels out
+        The Fourier transformed charge assignment function divided by the volume of one
+        mesh cell, in a squared form. See eq.18 and the paragraph below eq.31 of this
+        paper http://dx.doi.org/10.1063/1.477414. Be aware that the volume cancels out
         with the prefactor of the assignment function (see eq.18).
 
         From shape (nx, ny, nz, 3) to shape (nx, ny, nz, nd)
@@ -345,3 +364,5 @@ class P3MKSpaceFilter(KSpaceFilter):
             torch.sinc(kh / (2 * torch.pi)),
             dim=-1,
         ) ** (self.interpolation_nodes * 2)
+
+    update.__doc__ = KSpaceFilter.update.__doc__
