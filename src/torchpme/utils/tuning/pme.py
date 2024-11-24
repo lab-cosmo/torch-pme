@@ -271,3 +271,46 @@ class _Round(torch.autograd.Function):
     @staticmethod
     def backward(ctx, grad_output):
         return grad_output
+
+
+class PMEErrorBounds(torch.nn.Module):
+    def __init__(
+        self, charges: torch.Tensor, cell: torch.Tensor, positions: torch.Tensor
+    ):
+        self.volume = torch.abs(torch.det(cell))
+        self.prefac = 2 * (charges**2).sum() / math.sqrt(len(positions))
+        self.cell = cell
+        self.positions = positions
+
+    def err_kspace(self, smearing, ns_mesh, interpolation_nodes):
+        H = torch.prod(1 / ns_mesh) ** (1 / 3)
+        i_n_factorial = torch.exp(torch.lgamma(interpolation_nodes + 1))
+        RMS_phi = torch.linalg.norm(
+            _compute_RMS_phi(self.cell, interpolation_nodes, ns_mesh, self.positions)
+        )
+
+        return (
+            prefac
+            * torch.pi**0.25
+            * (6 * (1 / 2**0.5 / smearing) / (2 * interpolation_nodes + 1)) ** 0.5
+            / volume ** (2 / 3)
+            * (2**0.5 / smearing * H(ns_mesh)) ** interpolation_nodes
+            / math.factorial(interpolation_nodes)
+            * torch.exp(
+                (interpolation_nodes) * (torch.log(interpolation_nodes / 2) - 1) / 2
+            )
+            * RMS_phi
+        )
+
+    def err_rspace(self, smearing, cutoff):
+        return (
+            self.prefac
+            / torch.sqrt(cutoff * self.volume)
+            * torch.exp(-(cutoff**2) / 2 / smearing**2)
+        )
+
+    def forward(self, cutoff, smearing, mesh_spacing, interpolation_nodes):
+        return torch.sqrt(
+            self.err_rspace(smearing, cutoff) ** 2
+            + self.err_kspace(smearing, ns_mesh, interpolation_nodes) ** 2
+        )
