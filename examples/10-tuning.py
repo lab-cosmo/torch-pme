@@ -189,7 +189,7 @@ v, t = timed_madelung(cutoff=5, smearing=1, mesh_spacing=1, interpolation_nodes=
 print(
     v - madelung_ref,
     t,
-    EB.forward(cutoff=5, smearing=1, mesh_spacing=1, interpolation_nodes=4),
+    EB.forward(cutoff=5, smearing=1, mesh_spacing=1, interpolation_nodes=4).item(),
 )
 
 # %%
