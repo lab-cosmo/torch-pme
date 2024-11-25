@@ -9,7 +9,13 @@ import math
 import pytest
 import torch
 
-from torchpme import Calculator, CoulombPotential, EwaldCalculator, PMECalculator
+from torchpme import (
+    Calculator,
+    CoulombPotential,
+    EwaldCalculator,
+    P3MCalculator,
+    PMECalculator,
+)
 
 AVAILABLE_DEVICES = [torch.device("cpu")] + torch.cuda.is_available() * [
     torch.device("cuda")
@@ -19,7 +25,6 @@ CHARGES_CSCL = torch.tensor([1.0, -1.0])
 SMEARING = 0.1
 LR_WAVELENGTH = SMEARING / 4
 MESH_SPACING = SMEARING / 4
-NUM_NODES_PER_AXIS = 3
 
 
 @pytest.mark.parametrize(
@@ -43,7 +48,13 @@ NUM_NODES_PER_AXIS = 3
             {
                 "potential": CoulombPotential(smearing=SMEARING),
                 "mesh_spacing": MESH_SPACING,
-                "interpolation_nodes": NUM_NODES_PER_AXIS,
+            },
+        ),
+        (
+            P3MCalculator,
+            {
+                "potential": CoulombPotential(smearing=SMEARING),
+                "mesh_spacing": MESH_SPACING,
             },
         ),
     ],
@@ -156,3 +167,34 @@ class TestWorkflow:
         potentials1 = calculator1.forward(*self.cscl_system())
         potentials2 = calculator2.forward(*self.cscl_system())
         assert torch.allclose(potentials1 * prefactor, potentials2)
+
+    def test_not_nan(self, CalculatorClass, params):
+        """Make sure derivatives are not NaN."""
+        device = "cpu"
+
+        calculator = CalculatorClass(**params)
+        system = self.cscl_system(device)
+        system[0].requires_grad = True
+        system[1].requires_grad = True
+        system[2].requires_grad = True
+        system[-1].requires_grad = True
+        energy = calculator.forward(*system).sum()
+
+        # charges
+        assert not torch.isnan(
+            torch.autograd.grad(energy, system[0], retain_graph=True)[0]
+        ).any()
+
+        # neighbor distances
+        assert not torch.isnan(
+            torch.autograd.grad(energy, system[-1], retain_graph=True)[0]
+        ).any()
+
+        # positions, cell
+        if CalculatorClass in [PMECalculator, P3MCalculator]:
+            assert not torch.isnan(
+                torch.autograd.grad(energy, system[1], retain_graph=True)[0]
+            ).any()
+            assert not torch.isnan(
+                torch.autograd.grad(energy, system[2], retain_graph=True)[0]
+            ).any()
