@@ -86,13 +86,13 @@ def tune_pme(
     You can check the values of the parameters
 
     >>> print(smearing)
-    0.6768985898318037
+    0.6700526796270038
 
     >>> print(parameter)
-    {'mesh_spacing': 0.6305733973385922, 'interpolation_nodes': 4}
+    {'mesh_spacing': 0.6332684025633143, 'interpolation_nodes': 4}
 
     >>> print(cutoff)
-    2.243154348782357
+    2.175844455830708
 
     You can give one parameter to the function to tune only other parameters, for
     example, fixing the cutoff to 0.1
@@ -104,10 +104,10 @@ def tune_pme(
     You can check the values of the parameters, now the cutoff is fixed
 
     >>> print(smearing)
-    0.22038829671671745
+    0.20909349851660716
 
     >>> print(parameter)
-    {'mesh_spacing': 0.5006356677116188, 'interpolation_nodes': 4}
+    {'mesh_spacing': 0.16520200966949541, 'interpolation_nodes': 4}
 
     >>> print(cutoff)
     0.6
@@ -143,16 +143,12 @@ def tune_pme(
         def H(ns_mesh):
             return torch.prod(cell_dimensions / ns_mesh) ** (1 / 3)
 
-        def RMS_phi(ns_mesh):
-            return torch.linalg.norm(
-                _compute_RMS_phi(cell, interpolation_nodes, ns_mesh, positions)
-            )
-
         def log_factorial(x):
             return torch.lgamma(x + 1)
 
         def factorial(x):
             return torch.exp(log_factorial(x))
+
         RMS_phi = [None, None, 0.246, 0.404, 0.950, 2.51, 8.42]
         return (
             prefac
