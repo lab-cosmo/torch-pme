@@ -11,7 +11,6 @@ except ImportError:
     ) from None
 
 from .. import calculators as torch_calculators
-from ..potentials.spline import Potential
 
 
 class Calculator(torch.nn.Module):
@@ -24,18 +23,14 @@ class Calculator(torch.nn.Module):
     calculator, you can just define the class and set the static
     member ``_base_calculator`` to the corresponding
     torch calculator.
-
-    :param potential: every calculator requires an instance of a
-        :class:`Potential <torchpme.lib.Potential>` that is used
-        to compute real and k-space terms for a 2-body potential.
     """
 
     _base_calculator: type[torch_calculators.Calculator] = torch_calculators.Calculator
 
-    def __init__(self, potential: Potential, **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__()
 
-        self._calculator = self._base_calculator(potential, **kwargs)
+        self._calculator = self._base_calculator(*args, **kwargs)
 
         # TorchScript requires to initialize all attributes in __init__
         self._device = torch.device("cpu")

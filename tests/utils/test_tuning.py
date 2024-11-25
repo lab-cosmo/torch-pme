@@ -8,9 +8,10 @@ import torch
 from torchpme import (
     CoulombPotential,
     EwaldCalculator,
+    P3MCalculator,
     PMECalculator,
 )
-from torchpme.utils import tune_ewald, tune_pme
+from torchpme.utils import tune_ewald, tune_p3m, tune_pme
 
 sys.path.append(str(Path(__file__).parents[1]))
 from helpers import define_crystal, neighbor_list_torch
@@ -27,6 +28,7 @@ CELL_1 = torch.eye(3, dtype=DTYPE, device=DEVICE)
     [
         (EwaldCalculator, tune_ewald, 1),
         (PMECalculator, tune_pme, 2),
+        (P3MCalculator, tune_p3m, 2),
     ],
 )
 @pytest.mark.parametrize("accuracy", [1e-1, 1e-3, 1e-5])
@@ -55,7 +57,7 @@ def test_parameter_choose(calculator, tune, param_length, accuracy):
 
     # Compute potential and compare against target value using default hypers
     calc = calculator(
-        potential=CoulombPotential(smearing=smearing),
+        potential=(CoulombPotential(smearing=smearing)),
         **params,
     )
     potentials = calc.forward(
@@ -100,7 +102,7 @@ def test_odd_interpolation_nodes():
     torch.testing.assert_close(madelung, madelung_ref, atol=0, rtol=1e-3)
 
 
-@pytest.mark.parametrize("tune", [tune_ewald, tune_pme])
+@pytest.mark.parametrize("tune", [tune_ewald, tune_pme, tune_p3m])
 def test_fix_parameters(tune):
     """Test that the parameters are fixed when they are passed as arguments."""
     pos, charges, cell, _, _ = define_crystal()
@@ -120,7 +122,7 @@ def test_fix_parameters(tune):
     pytest.approx(smearing, 0.1)
 
     kwargs = kwargs_ref.copy()
-    if tune.__name__ == "tune_pme":
+    if tune.__name__ in ["tune_pme", "tune_p3m"]:
         kwargs["mesh_spacing"] = 0.1
     else:
         kwargs["lr_wavelength"] = 0.1
@@ -141,7 +143,7 @@ def test_fix_parameters(tune):
     pytest.approx(sr_cutoff, 1.0)
 
 
-@pytest.mark.parametrize("tune", [tune_ewald, tune_pme])
+@pytest.mark.parametrize("tune", [tune_ewald, tune_pme, tune_p3m])
 def test_non_positive_charge_error(tune):
     pos, _, cell, _, _ = define_crystal()
 
@@ -154,7 +156,7 @@ def test_non_positive_charge_error(tune):
         tune(0.0, cell, pos)
 
 
-@pytest.mark.parametrize("tune", [tune_ewald, tune_pme])
+@pytest.mark.parametrize("tune", [tune_ewald, tune_pme, tune_p3m])
 def test_accuracy_error(tune):
     pos, charges, cell, _, _ = define_crystal()
 
@@ -163,7 +165,7 @@ def test_accuracy_error(tune):
         tune(float(torch.sum(charges**2)), cell, pos, accuracy="foo")
 
 
-@pytest.mark.parametrize("tune", [tune_ewald, tune_pme])
+@pytest.mark.parametrize("tune", [tune_ewald, tune_pme, tune_p3m])
 def test_loss_is_nan_error(tune):
     pos, charges, cell, _, _ = define_crystal()
 
@@ -175,7 +177,7 @@ def test_loss_is_nan_error(tune):
         tune(float(torch.sum(charges**2)), cell, pos, learning_rate=1e1000)
 
 
-@pytest.mark.parametrize("tune", [tune_ewald, tune_pme])
+@pytest.mark.parametrize("tune", [tune_ewald, tune_pme, tune_p3m])
 def test_exponent_not_1_error(tune):
     pos, charges, cell, _, _ = define_crystal()
 
@@ -184,7 +186,7 @@ def test_exponent_not_1_error(tune):
         tune(float(torch.sum(charges**2)), cell, pos, exponent=2)
 
 
-@pytest.mark.parametrize("tune", [tune_ewald, tune_pme])
+@pytest.mark.parametrize("tune", [tune_ewald, tune_pme, tune_p3m])
 def test_invalid_shape_positions(tune):
     match = (
         r"each `positions` must be a tensor with shape \[n_atoms, 3\], got at least "
@@ -199,7 +201,7 @@ def test_invalid_shape_positions(tune):
 
 
 # Tests for invalid shape, dtype and device of cell
-@pytest.mark.parametrize("tune", [tune_ewald, tune_pme])
+@pytest.mark.parametrize("tune", [tune_ewald, tune_pme, tune_p3m])
 def test_invalid_shape_cell(tune):
     match = (
         r"each `cell` must be a tensor with shape \[3, 3\], got at least one tensor "
@@ -213,7 +215,7 @@ def test_invalid_shape_cell(tune):
         )
 
 
-@pytest.mark.parametrize("tune", [tune_ewald, tune_pme])
+@pytest.mark.parametrize("tune", [tune_ewald, tune_pme, tune_p3m])
 def test_invalid_cell(tune):
     match = (
         "provided `cell` has a determinant of 0 and therefore is not valid for "
@@ -227,7 +229,7 @@ def test_invalid_cell(tune):
         )
 
 
-@pytest.mark.parametrize("tune", [tune_ewald, tune_pme])
+@pytest.mark.parametrize("tune", [tune_ewald, tune_pme, tune_p3m])
 def test_invalid_dtype_cell(tune):
     match = (
         r"each `cell` must have the same type torch.float32 as `positions`, "
@@ -241,7 +243,7 @@ def test_invalid_dtype_cell(tune):
         )
 
 
-@pytest.mark.parametrize("tune", [tune_ewald, tune_pme])
+@pytest.mark.parametrize("tune", [tune_ewald, tune_pme, tune_p3m])
 def test_invalid_device_cell(tune):
     match = (
         r"each `cell` must be on the same device cpu as `positions`, "
