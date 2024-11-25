@@ -270,6 +270,19 @@ class P3MKSpaceFilter(KSpaceFilter):
         self.differential_order = differential_order
 
         super().__init__(cell, ns_mesh, kernel, fft_norm, ifft_norm)
+        self.register_buffer(
+            "_diff_coeff",
+            torch.tensor(
+                [  # coefficients for the difference operator
+                    [1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+                    [4 / 3, -1 / 3, 0.0, 0.0, 0.0, 0.0],
+                    [3 / 2, -3 / 5, 1 / 10, 0.0, 0.0, 0.0],
+                    [8 / 5, -4 / 5, 8 / 35, -1 / 35, 0.0, 0.0],
+                    [5 / 3, -20 / 21, 5 / 14, -5 / 63, 1 / 126, 0.0],
+                    [12 / 7, -15 / 14, 10 / 21, -1 / 7, 2 / 77, -1 / 465],
+                ]
+            ),
+        )
 
     @torch.jit.export
     def update(
@@ -285,13 +298,11 @@ class P3MKSpaceFilter(KSpaceFilter):
             self._kvectors
         ) * self.kernel.kernel_from_k_sq(self._k_sq)
 
-    def _compute_influence(self, kvector: torch.Tensor) -> torch.Tensor:
+    def _compute_influence(self, kvectors: torch.Tensor) -> torch.Tensor:
         cell_dimensions = torch.linalg.norm(self.cell, dim=1)
         actual_mesh_spacing = (cell_dimensions / self.ns_mesh).reshape(1, 1, 1, 3)
 
-        kh = kvector * actual_mesh_spacing.to(
-            device=kvector.device, dtype=kvector.dtype
-        )
+        kh = kvectors * actual_mesh_spacing
         U2 = self._charge_assignment(kh)
         if self.mode == 0:
             # special (much simpler) case for point-charge potentials
@@ -305,7 +316,7 @@ class P3MKSpaceFilter(KSpaceFilter):
         # https://doi.org/10.1063/1.3000389 for your main reference, as well as the
         # paragraph below eq.31. Be careful that the reference force part is calculated
         # in the `KSpaceFilter` by calling `kernel_from_k_sq`.
-        numerator = torch.sum(kvector * D, dim=-1) ** self.mode
+        numerator = torch.sum(kvectors * D, dim=-1) ** self.mode
         denominator = U2 * D_to_4mode
 
         masked = torch.where(denominator == 0, 1.0, denominator)
@@ -322,16 +333,10 @@ class P3MKSpaceFilter(KSpaceFilter):
 
         From shape (nx, ny, nz, 3) to shape (nx, ny, nz, 3)
         """
-        COEF: list[list[float]] = [  # coefficients for the difference operator
-            [1.0],
-            [4 / 3, -1 / 3],
-            [3 / 2, -3 / 5, 1 / 10],
-            [8 / 5, -4 / 5, 8 / 35, -1 / 35],
-            [5 / 3, -20 / 21, 5 / 14, -5 / 63, 1 / 126],
-            [12 / 7, -15 / 14, 10 / 21, -1 / 7, 2 / 77, -1 / 465],
-        ]
         temp = torch.zeros(kh.shape, dtype=kh.dtype, device=kh.device)
-        for i, coef in enumerate(COEF[self.differential_order - 1]):
+        for i, coef in enumerate(
+            self._diff_coeff[self.differential_order - 1][: self.differential_order]
+        ):
             temp += (coef / (i + 1)) * torch.sin(kh * (i + 1))
         return temp / (actual_mesh_spacing)
 
