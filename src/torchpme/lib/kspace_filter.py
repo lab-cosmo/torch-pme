@@ -280,8 +280,7 @@ class P3MKSpaceFilter(KSpaceFilter):
         # Cannot reuse code from `KSpaceFilter` by `super` because of `TorchScript`
         self._prep_kvectors(cell, ns_mesh)
 
-        # always update the kfilter to reduce the risk it'd go out of sync if the is an
-        # update in the underlaying potential
+        # always update the kfilter to ensure sync with potential
         self._kfilter = self._compute_influence(
             self._kvectors
         ) * self.kernel.kernel_from_k_sq(self._k_sq)

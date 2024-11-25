@@ -167,3 +167,27 @@ class TestWorkflow:
         potentials1 = calculator1.forward(*self.cscl_system())
         potentials2 = calculator2.forward(*self.cscl_system())
         assert torch.allclose(potentials1 * prefactor, potentials2)
+
+
+    def test_not_nan(self, CalculatorClass, params):
+        """Make sure derivatives are not NaN."""
+        device = "cpu"
+
+        calculator = CalculatorClass(**params)
+        system = self.cscl_system(device)
+        system[0].requires_grad = True
+        system[1].requires_grad = True
+        system[2].requires_grad = True
+        system[-1].requires_grad = True
+        energy = calculator.forward(*system).sum()
+
+        # charges
+        assert not torch.isnan(torch.autograd.grad(energy, system[0], retain_graph=True)[0]).any()
+
+        # neighbor distances
+        assert not torch.isnan(torch.autograd.grad(energy, system[-1], retain_graph=True)[0]).any()
+
+        # positions, cell
+        if CalculatorClass in [PMECalculator, P3MCalculator]:
+            assert not torch.isnan(torch.autograd.grad(energy, system[1], retain_graph=True)[0]).any()
+            assert not torch.isnan(torch.autograd.grad(energy, system[2], retain_graph=True)[0]).any()
