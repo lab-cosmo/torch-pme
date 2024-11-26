@@ -16,6 +16,8 @@ def grid_search(
     positions: torch.Tensor,
     cutoff: Optional[float] = None,
     accuracy: float = 1e-3,
+    neighbor_indices: Optional[torch.Tensor] = None,
+    neighbor_distances: Optional[torch.Tensor] = None,
 ):
     dtype = charges.dtype
     device = charges.device
@@ -23,6 +25,7 @@ def grid_search(
     if method == "ewald":
         tune_func = tune_ewald
         CalculatorClass = EwaldCalculator
+        all_interpolation_nodes = [1]  # dummy list
     elif method == "pme":
         tune_func = tune_pme
         CalculatorClass = PMECalculator
@@ -42,6 +45,8 @@ def grid_search(
         # If you have larger memory, you can try (2, 9)
         ns_actual = torch.exp2(torch.arange(2, 8, dtype=dtype, device=device))
         k_space_params = torch.min(cell_dimensions) / ((ns_actual - 1) / 2)
+    else:
+        raise ValueError  # Just to make linter happy
 
     smearing_opt = []
     params_opt = []
@@ -86,15 +91,21 @@ def grid_search(
                 potential=CoulombPotential(smearing=smearing),
                 **params,
             )
-
-            nl = vesin.torch.NeighborList(cutoff=cutoff, full_list=False)
-            i, j, neighbor_distances = nl.compute(
-                points=positions.to(dtype=torch.float64, device="cpu"),
-                box=cell.to(dtype=torch.float64, device="cpu"),
-                periodic=True,
-                quantities="ijd",
-            )
-            neighbor_indices = torch.stack([i, j], dim=1).to(device=device)
+            if neighbor_indices is None and neighbor_distances is None:
+                nl = vesin.torch.NeighborList(cutoff=cutoff, full_list=False)
+                i, j, neighbor_distances = nl.compute(
+                    points=positions.to(dtype=torch.float64, device="cpu"),
+                    box=cell.to(dtype=torch.float64, device="cpu"),
+                    periodic=True,
+                    quantities="ijd",
+                )
+                neighbor_indices = torch.stack([i, j], dim=1)
+            elif neighbor_indices is None or neighbor_distances is None:
+                raise ValueError(
+                    "If neighbor_indices or neighbor_distances are None, "
+                    "both must be None."
+                )
+            neighbor_indices = neighbor_indices.to(device=device)
             neighbor_distances = neighbor_distances.to(dtype=dtype, device=device)
 
             # warm-up
