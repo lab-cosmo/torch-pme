@@ -23,7 +23,6 @@ def grid_search(
     if method == "ewald":
         tune_func = tune_ewald
         CalculatorClass = EwaldCalculator
-        raise NotImplementedError
     elif method == "pme":
         tune_func = tune_pme
         CalculatorClass = PMECalculator
