@@ -1,7 +1,7 @@
 torch-pme
 =========
 
-.. image:: docs/static/images/torch-pme-icon.svg
+.. image:: docs/src/logo/torch-pme.svg
      :width: 200 px
      :align: left
 
