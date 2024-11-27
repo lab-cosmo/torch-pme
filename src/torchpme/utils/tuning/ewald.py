@@ -8,6 +8,7 @@ from . import (
     _optimize_parameters,
     _validate_parameters,
 )
+from .tuner import Tuner
 
 TWO_PI = 2 * math.pi
 
@@ -128,33 +129,14 @@ def tune_ewald(
         requires_grad=(lr_wavelength is None),
     )
 
-    volume = torch.abs(cell.det())
-    prefac = 2 * sum_squared_charges / math.sqrt(len(positions))
-
-    def err_Fourier(smearing, k_cutoff):
-        return (
-            prefac**0.5
-            / smearing
-            / torch.sqrt(TWO_PI**2 * volume / (TWO_PI / k_cutoff) ** 0.5)
-            * torch.exp(-(TWO_PI**2) * smearing**2 / (TWO_PI / k_cutoff))
-        )
-
-    def err_real(smearing, cutoff):
-        return (
-            prefac
-            / torch.sqrt(cutoff * volume)
-            * torch.exp(-(cutoff**2) / 2 / smearing**2)
-        )
-
-    def loss(smearing, k_cutoff, cutoff):
-        return torch.sqrt(
-            err_Fourier(smearing, k_cutoff) ** 2 + err_real(smearing, cutoff) ** 2
-        )
+    err_bound = EwaldErrorBounds(
+        sum_squared_charges=sum_squared_charges, cell=cell, positions=positions
+    )
 
     params = [smearing_opt, k_cutoff_opt, cutoff_opt]
     _optimize_parameters(
         params=params,
-        loss=loss,
+        loss=err_bound,
         max_steps=max_steps,
         accuracy=accuracy,
         learning_rate=learning_rate,
@@ -165,3 +147,116 @@ def tune_ewald(
         {"lr_wavelength": TWO_PI / float(k_cutoff_opt)},
         float(cutoff_opt),
     )
+
+
+class EwaldErrorBounds(torch.nn.Module):
+    def __init__(
+        self, sum_squared_charges: torch.Tensor, cell: torch.Tensor, positions: torch.Tensor
+    ):
+        super().__init__()
+        self.volume = torch.abs(torch.det(cell))
+        self.prefac = 2 * sum_squared_charges / math.sqrt(len(positions))
+        self.cell = cell
+        self.positions = positions
+
+    def err_kspace(self, smearing, k_cutoff):
+        return (
+            self.prefac**0.5
+            / smearing
+            / torch.sqrt(TWO_PI**2 * self.volume / (TWO_PI / k_cutoff) ** 0.5)
+            * torch.exp(-(TWO_PI**2) * smearing**2 / (TWO_PI / k_cutoff))
+        )
+
+    def err_rspace(self, smearing, cutoff):
+        return (
+            self.prefac
+            / torch.sqrt(cutoff * self.volume)
+            * torch.exp(-(cutoff**2) / 2 / smearing**2)
+        )
+
+    def forward(self, smearing, k_cutoff, cutoff):
+        return torch.sqrt(
+            self.err_kspace(smearing, k_cutoff) ** 2
+            + self.err_rspace(smearing, cutoff) ** 2
+        )
+
+
+class EwaldTuner(Tuner):
+    def __init__(self, max_steps: int = 50000, learning_rate: float = 0.1):
+        super().__init__()
+        self.max_steps = max_steps
+        self.learning_rate = learning_rate
+
+        def err_Fourier(smearing, k_cutoff):
+            return (
+                prefac**0.5
+                / smearing
+                / torch.sqrt(TWO_PI**2 * volume / (TWO_PI / k_cutoff) ** 0.5)
+                * torch.exp(-(TWO_PI**2) * smearing**2 / (TWO_PI / k_cutoff))
+            )
+
+        def err_real(smearing, cutoff):
+            return (
+                prefac
+                / torch.sqrt(cutoff * volume)
+                * torch.exp(-(cutoff**2) / 2 / smearing**2)
+            )
+
+        def loss(smearing, k_cutoff, cutoff):
+            return torch.sqrt(
+                err_Fourier(smearing, k_cutoff) ** 2 + err_real(smearing, cutoff) ** 2
+            )
+
+    def forward(
+        self,
+        sum_squared_charges: float,
+        cell: torch.Tensor,
+        positions: torch.Tensor,
+        smearing: Optional[float] = None,
+        lr_wavelength: Optional[float] = None,
+        cutoff: Optional[float] = None,
+        exponent: int = 1,
+        accuracy: float = 1e-3,
+    ):
+        _validate_parameters(sum_squared_charges, cell, positions, exponent, accuracy)
+
+        params = self._init_params(
+            cell=cell,
+            smearing=smearing,
+            lr_wavelength=lr_wavelength,
+            cutoff=cutoff,
+            accuracy=accuracy,
+        )
+
+        _optimize_parameters(
+            params=params,
+            loss=self._loss,
+            max_steps=self.max_steps,
+            accuracy=accuracy,
+            learning_rate=self.learning_rate,
+        )
+
+        return self._post_process(params)
+
+    def _init_params(self, cell, smearing, lr_wavelength, cutoff, accuracy):
+        smearing_opt, cutoff_opt = _estimate_smearing_cutoff(
+            cell=cell, smearing=smearing, cutoff=cutoff, accuracy=accuracy
+        )
+
+        # We choose a very small initial fourier wavelength, hardcoded for now
+        k_cutoff_opt = torch.tensor(
+            1e-3 if lr_wavelength is None else TWO_PI / lr_wavelength,
+            dtype=cell.dtype,
+            device=cell.device,
+            requires_grad=(lr_wavelength is None),
+        )
+
+        return [smearing_opt, k_cutoff_opt, cutoff_opt]
+
+    def _post_process(self, params):
+        smearing_opt, k_cutoff_opt, cutoff_opt = params
+        return (
+            float(smearing_opt),
+            {"lr_wavelength": TWO_PI / float(k_cutoff_opt)},
+            float(cutoff_opt),
+        )
