@@ -21,7 +21,6 @@ def _optimize_parameters(
                 "The value of the estimated error is now nan, consider using a "
                 "smaller learning rate."
             )
-        print(loss_value)
         loss_value.backward()
         optimizer.step()
         optimizer.zero_grad()
