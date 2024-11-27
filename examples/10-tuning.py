@@ -19,6 +19,7 @@ import torch
 import vesin.torch as vesin
 
 import torchpme
+from torchpme.lib.kvectors import get_ns_mesh
 
 DTYPE = torch.float64
 
@@ -52,6 +53,10 @@ atoms = ase.Atoms("NaCl3Na3Cl", positions, cell=cell)
 
 smearing = 0.5
 pme_params = {"mesh_spacing": 0.5, "interpolation_nodes": 4}
+pme_params_in_ns_mesh = {
+    "ns_mesh": torch.tensor(get_ns_mesh(cell, pme_params["mesh_spacing"])),
+    "interpolation_nodes": torch.tensor(4),
+}
 cutoff = 5.0
 
 max_cutoff = 32.0
@@ -78,14 +83,20 @@ energy = charges.T @ potential
 madelung = (-energy / num_formula_units).flatten().item()
 
 # this is the estimated error
-error_bounds = torchpme.utils.tuning.pme.PMEErrorBounds(charges, cell, positions)
+error_bounds = torchpme.utils.tuning.pme.PMEErrorBounds(
+    (charges**2).sum(), cell, positions
+)
 
-estimated_error = error_bounds(max_cutoff, smearing, **pme_params).item()
-print(f"""
+estimated_error = error_bounds(
+    torch.tensor(max_cutoff), torch.tensor(smearing), **pme_params_in_ns_mesh
+).item()
+print(
+    f"""
 Computed madelung constant: {madelung}
 Actual error: {madelung-madelung_ref}
 Estimated error: {estimated_error}
-""")
+"""
+)
 
 # %%
 # now set up a testing framework
@@ -126,7 +137,12 @@ bounds = np.zeros((len(smearing_grid), len(spacing_grid)))
 for ism, smearing in enumerate(smearing_grid):
     for isp, spacing in enumerate(spacing_grid):
         results[ism, isp], timings[ism, isp] = timed_madelung(8.0, smearing, spacing, 4)
-        bounds[ism, isp] = error_bounds(8.0, smearing, spacing, 4)
+        bounds[ism, isp] = error_bounds(
+            torch.tensor(8.0),
+            torch.tensor(smearing),
+            get_ns_mesh(cell, spacing),
+            torch.tensor(4),
+        )
 
 # %%
 # plot
@@ -224,14 +240,19 @@ cbar = fig.colorbar(contour, ax=ax[1], label="log10(time / s)")
 
 # %%
 
-EB = torchpme.utils.tuning.pme.PMEErrorBounds(charges, cell, positions)
+EB = torchpme.utils.tuning.pme.PMEErrorBounds((charges**2).sum(), cell, positions)
 
 # %%
 v, t = timed_madelung(cutoff=5, smearing=1, mesh_spacing=1, interpolation_nodes=4)
 print(
     v - madelung_ref,
     t,
-    EB.forward(cutoff=5, smearing=1, mesh_spacing=1, interpolation_nodes=4).item(),
+    EB.forward(
+        cutoff=torch.tensor(5),
+        smearing=torch.tensor(1),
+        ns_mesh=get_ns_mesh(cell, 1),
+        interpolation_nodes=torch.tensor(4),
+    ).item(),
 )
 
 # %%
@@ -249,10 +270,10 @@ def loss(x, target_accuracy):
         interpolation_nodes=4,
     )
     estimated_error = error_bounds(
-        cutoff=cutoff,
-        smearing=smearing,
-        mesh_spacing=mesh_spacing,
-        interpolation_nodes=4,
+        cutoff=torch.tensor(cutoff),
+        smearing=torch.tensor(smearing),
+        ns_mesh=get_ns_mesh(cell, mesh_spacing),
+        interpolation_nodes=torch.tensor(4),
     )
     tgt_loss = max(
         0, np.log(estimated_error / madelung_ref / target_accuracy)

@@ -57,33 +57,30 @@ def grid_search(
         for interpolation_nodes in all_interpolation_nodes[::-1]:
             # print(f"Searching for {interpolation_nodes = }, {mesh_spacing = }")
             if method == "ewald":
-                smearing, params, cutoff = tune_func(
-                    torch.sum(charges**2, dim=0),
-                    cell,
-                    positions,
-                    lr_wavelength=k_space_param,
-                    cutoff=cutoff,
-                    accuracy=accuracy,
-                    learning_rate=0.1,
-                    max_steps=10000,
-                )
+                params = {
+                    "lr_wavelength": k_space_param,
+                }
             else:
-                smearing, params, cutoff = tune_func(
-                    torch.sum(charges**2, dim=0),
-                    cell,
-                    positions,
-                    mesh_spacing=k_space_param,
-                    interpolation_nodes=interpolation_nodes,
-                    cutoff=cutoff,
-                    accuracy=accuracy,
-                    learning_rate=0.1,
-                    max_steps=10000,
-                )
-            
+                params = {
+                    "mesh_spacing": k_space_param,
+                    "interpolation_nodes": interpolation_nodes,
+                }
+
+            smearing, params, cutoff = tune_func(
+                torch.sum(charges**2, dim=0),
+                cell,
+                positions,
+                cutoff=cutoff,
+                accuracy=accuracy,
+                learning_rate=0.1,
+                max_steps=10000,
+                **params,
+            )
+
             # print(f"{smearing = }, {cutoff = }")
 
-            if cutoff > 10:
-                # cutoff too large, no hope to find a solution, even for such a fine
+            if smearing > 10:
+                # smearing too large, no hope to find a solution, even for such a fine
                 # mesh, skip
                 break
 
