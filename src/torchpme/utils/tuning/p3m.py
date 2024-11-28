@@ -153,6 +153,7 @@ def tune_p3m(
         smearing=smearing,
         cutoff=cutoff,
         accuracy=accuracy,
+        prefac=2 * sum_squared_charges / math.sqrt(len(positions)),
     )
     # We choose only one mesh as initial guess
     if mesh_spacing is None:
@@ -172,13 +173,13 @@ def tune_p3m(
     err_bounds = P3MErrorBounds(sum_squared_charges, cell, positions)
 
     params = [smearing_opt, ns_mesh_opt, cutoff_opt, interpolation_nodes]
-    _optimize_parameters(
-        params=params,
-        loss=err_bounds,
-        max_steps=max_steps,
-        accuracy=accuracy,
-        learning_rate=learning_rate,
-    )
+    # _optimize_parameters(
+    #     params=params,
+    #     loss=err_bounds,
+    #     max_steps=max_steps,
+    #     accuracy=accuracy,
+    #     learning_rate=learning_rate,
+    # )
 
     return (
         float(smearing_opt),
@@ -201,9 +202,11 @@ class P3MErrorBounds(torch.nn.Module):
         self.cell = cell
         self.positions = positions
 
-    def err_kspace(self, smearing, ns_mesh, interpolation_nodes):
-        mesh_spacing = self.cell_dimensions / ns_mesh
-        h = torch.prod(mesh_spacing) ** (1 / 3)
+    def err_kspace(self, smearing, mesh_spacing, interpolation_nodes):
+        actual_spacing = self.cell_dimensions / (
+            2 * self.cell_dimensions / mesh_spacing + 1
+        )
+        h = torch.prod(actual_spacing) ** (1 / 3)
 
         return (
             self.prefac
@@ -228,8 +231,12 @@ class P3MErrorBounds(torch.nn.Module):
             * torch.exp(-(cutoff**2) / 2 / smearing**2)
         )
 
-    def forward(self, smearing, ns_mesh, cutoff, interpolation_nodes):
+    def forward(self, smearing, mesh_spacing, cutoff, interpolation_nodes):
+        smearing = torch.as_tensor(smearing)
+        mesh_spacing = torch.as_tensor(mesh_spacing)
+        cutoff = torch.as_tensor(cutoff)
+        interpolation_nodes = torch.as_tensor(interpolation_nodes)
         return torch.sqrt(
-            self.err_kspace(smearing, ns_mesh, interpolation_nodes) ** 2
+            self.err_kspace(smearing, mesh_spacing, interpolation_nodes) ** 2
             + self.err_rspace(smearing, cutoff) ** 2
         )

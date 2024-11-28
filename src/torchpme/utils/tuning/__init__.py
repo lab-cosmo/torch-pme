@@ -42,6 +42,7 @@ def _estimate_smearing_cutoff(
     smearing: Optional[float],
     cutoff: Optional[float],
     accuracy: float,
+    prefac: float,
 ) -> tuple[torch.tensor, torch.tensor]:
     dtype = cell.dtype
     device = cell.device
@@ -49,15 +50,22 @@ def _estimate_smearing_cutoff(
     cell_dimensions = torch.linalg.norm(cell, dim=1)
     min_dimension = float(torch.min(cell_dimensions))
     half_cell = min_dimension / 2.0
-
-    smearing_init = torch.tensor(
-        half_cell / 5 if smearing is None else smearing,
-        dtype=dtype,
-        device=device,
-        requires_grad=(smearing is None),
-    )
-
     if cutoff is None:
+        cutoff_init = min(5.0, half_cell)
+    else:
+        cutoff_init = cutoff
+    ratio = math.sqrt(
+        -2
+        * math.log(
+            accuracy
+            / 2
+            / prefac
+            * math.sqrt(cutoff_init * float(torch.abs(cell.det())))
+        )
+    )
+    smearing_init = cutoff_init / ratio if smearing is None else smearing
+
+    """if cutoff is None:
         # solve V_SR(cutoff) == accuracy for cutoff
         def loss(cutoff):
             return (
@@ -73,13 +81,20 @@ def _estimate_smearing_cutoff(
             accuracy=accuracy,
             max_steps=1000,
             learning_rate=0.1,
-        )
+        )"""
+
+    smearing_init = torch.tensor(
+        float(smearing_init) if smearing is None else smearing,
+        dtype=dtype,
+        device=device,
+        requires_grad=False,  # (smearing is None),
+    )
 
     cutoff_init = torch.tensor(
         float(cutoff_init) if cutoff is None else cutoff,
         dtype=dtype,
         device=device,
-        requires_grad=(cutoff is None),
+        requires_grad=False,  # (cutoff is None),
     )
 
     return smearing_init, cutoff_init

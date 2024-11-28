@@ -120,6 +120,7 @@ def tune_pme(
         smearing=smearing,
         cutoff=cutoff,
         accuracy=accuracy,
+        prefac=2 * sum_squared_charges / math.sqrt(len(positions)),
     )
 
     # We choose only one mesh as initial guess
@@ -166,14 +167,16 @@ class PMEErrorBounds(torch.nn.Module):
     ):
         self.volume = torch.abs(torch.det(cell))
         self.prefac = 2 * sum_squared_charges / math.sqrt(len(positions))
+        self.cell_dimensions = torch.linalg.norm(cell, dim=1)
         self.cell = cell
         self.positions = positions
         super().__init__()
 
-    def err_kspace(self, smearing, ns_mesh, interpolation_nodes):
-        cell_dimensions = torch.linalg.norm(self.cell, dim=1)
-        H = torch.prod(cell_dimensions / ns_mesh) ** (1 / 3)
-        print(H)
+    def err_kspace(self, smearing, mesh_spacing, interpolation_nodes):
+        actual_spacing = self.cell_dimensions / (
+            2 * self.cell_dimensions / mesh_spacing + 1
+        )
+        h = torch.prod(actual_spacing) ** (1 / 3)
         i_n_factorial = torch.exp(torch.lgamma(interpolation_nodes + 1))
         RMS_phi = [None, None, 0.246, 0.404, 0.950, 2.51, 8.42]
 
@@ -182,7 +185,7 @@ class PMEErrorBounds(torch.nn.Module):
             * torch.pi**0.25
             * (6 * (1 / 2**0.5 / smearing) / (2 * interpolation_nodes + 1)) ** 0.5
             / self.volume ** (2 / 3)
-            * (2**0.5 / smearing * H) ** interpolation_nodes
+            * (2**0.5 / smearing * h) ** interpolation_nodes
             / i_n_factorial
             * torch.exp(
                 interpolation_nodes * (torch.log(interpolation_nodes / 2) - 1) / 2
@@ -200,8 +203,12 @@ class PMEErrorBounds(torch.nn.Module):
             * torch.exp(-(cutoff**2) / 2 / smearing**2)
         )
 
-    def forward(self, cutoff, smearing, ns_mesh, interpolation_nodes):
+    def forward(self, cutoff, smearing, mesh_spacing, interpolation_nodes):
+        smearing = torch.as_tensor(smearing)
+        mesh_spacing = torch.as_tensor(mesh_spacing)
+        cutoff = torch.as_tensor(cutoff)
+        interpolation_nodes = torch.as_tensor(interpolation_nodes)
         return torch.sqrt(
             self.err_rspace(smearing, cutoff) ** 2
-            + self.err_kspace(smearing, ns_mesh, interpolation_nodes) ** 2
+            + self.err_kspace(smearing, mesh_spacing, interpolation_nodes) ** 2
         )

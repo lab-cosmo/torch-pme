@@ -118,7 +118,11 @@ def tune_ewald(
     _validate_parameters(sum_squared_charges, cell, positions, exponent, accuracy)
 
     smearing_opt, cutoff_opt = _estimate_smearing_cutoff(
-        cell=cell, smearing=smearing, cutoff=cutoff, accuracy=accuracy
+        cell=cell,
+        smearing=smearing,
+        cutoff=cutoff,
+        accuracy=accuracy,
+        prefac=2 * sum_squared_charges / math.sqrt(len(positions)),
     )
 
     # We choose a very small initial fourier wavelength, hardcoded for now
@@ -151,7 +155,10 @@ def tune_ewald(
 
 class EwaldErrorBounds(torch.nn.Module):
     def __init__(
-        self, sum_squared_charges: torch.Tensor, cell: torch.Tensor, positions: torch.Tensor
+        self,
+        sum_squared_charges: torch.Tensor,
+        cell: torch.Tensor,
+        positions: torch.Tensor,
     ):
         super().__init__()
         self.volume = torch.abs(torch.det(cell))
@@ -159,12 +166,12 @@ class EwaldErrorBounds(torch.nn.Module):
         self.cell = cell
         self.positions = positions
 
-    def err_kspace(self, smearing, k_cutoff):
+    def err_kspace(self, smearing, lr_wavelength):
         return (
             self.prefac**0.5
             / smearing
-            / torch.sqrt(TWO_PI**2 * self.volume / (TWO_PI / k_cutoff) ** 0.5)
-            * torch.exp(-(TWO_PI**2) * smearing**2 / (TWO_PI / k_cutoff))
+            / torch.sqrt(TWO_PI**2 * self.volume / (lr_wavelength) ** 0.5)
+            * torch.exp(-(TWO_PI**2) * smearing**2 / (lr_wavelength))
         )
 
     def err_rspace(self, smearing, cutoff):
@@ -174,9 +181,12 @@ class EwaldErrorBounds(torch.nn.Module):
             * torch.exp(-(cutoff**2) / 2 / smearing**2)
         )
 
-    def forward(self, smearing, k_cutoff, cutoff):
+    def forward(self, smearing, lr_wavelength, cutoff):
+        smearing = torch.as_tensor(smearing)
+        lr_wavelength = torch.as_tensor(lr_wavelength)
+        cutoff = torch.as_tensor(cutoff)
         return torch.sqrt(
-            self.err_kspace(smearing, k_cutoff) ** 2
+            self.err_kspace(smearing, lr_wavelength) ** 2
             + self.err_rspace(smearing, cutoff) ** 2
         )
 
