@@ -100,7 +100,6 @@ def grid_search(
                 cutoff=cutoff,
                 **params,
             )
-            print(accuracy, err)
 
             # print(f"{smearing = }, {cutoff = }")
 
