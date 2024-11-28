@@ -68,6 +68,13 @@ def grid_search(
     cutoff_opt = None
     time_opt = torch.inf
 
+    # In case there is no parameter reaching the accuracy, return
+    # the best found so far
+    smearing_err_opt = None
+    params_err_opt = None
+    cutoff_err_opt = None
+    err_opt = torch.inf
+
     smearing, cutoff = _estimate_smearing_cutoff(
         cell,
         smearing=None,
@@ -93,13 +100,17 @@ def grid_search(
                 cutoff=cutoff,
                 **params,
             )
+            print(accuracy, err)
 
             # print(f"{smearing = }, {cutoff = }")
 
             if err > accuracy:
-                # error too large, no hope to find a solution, even for such a fine
-                # mesh, skip
-                break
+                if err < err_opt:
+                    smearing_err_opt = smearing
+                    params_err_opt = params
+                    cutoff_err_opt = cutoff
+                    err_opt = err
+                continue
 
             calculator = CalculatorClass(  # or PMECalculator
                 potential=CoulombPotential(smearing=smearing),
@@ -151,4 +162,7 @@ def grid_search(
                 cutoff_opt = cutoff
                 time_opt = execution_time
 
-    return smearing_opt, params_opt, cutoff_opt
+    if time_opt == torch.inf:
+        return float(smearing_err_opt), params_err_opt, float(cutoff_err_opt)
+
+    return float(smearing_opt), params_opt, float(cutoff_opt)
