@@ -41,7 +41,7 @@ class Tuner(torch.nn.Module):
 
         _optimize_parameters(
             params=params,
-            loss=self._loss,
+            loss=self.loss,
             max_steps=self.max_steps,
             accuracy=accuracy,
             learning_rate=self.learning_rate,
@@ -50,19 +50,9 @@ class Tuner(torch.nn.Module):
         return self._post_process(params)
 
     def _init_params(self, cell, smearing, lr_wavelength, cutoff, accuracy):
-        smearing_opt, cutoff_opt = _estimate_smearing_cutoff(
+        return _estimate_smearing_cutoff(
             cell=cell, smearing=smearing, cutoff=cutoff, accuracy=accuracy
         )
-
-        # We choose a very small initial fourier wavelength, hardcoded for now
-        k_cutoff_opt = torch.tensor(
-            1e-3 if lr_wavelength is None else TWO_PI / lr_wavelength,
-            dtype=cell.dtype,
-            device=cell.device,
-            requires_grad=(lr_wavelength is None),
-        )
-
-        return [smearing_opt, k_cutoff_opt, cutoff_opt]
     
     def _post_process(self, params):
         smearing_opt, k_cutoff_opt, cutoff_opt = params

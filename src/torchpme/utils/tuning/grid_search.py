@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 
+import math
 import time
 from typing import Optional
 
 import torch
 import vesin.torch
 from torchpme import EwaldCalculator, CoulombPotential, PMECalculator, P3MCalculator
-from torchpme.utils import tune_ewald, tune_pme, tune_p3m
+from torchpme.lib.kvectors import get_ns_mesh
+from torchpme.utils import EwaldErrorBounds, P3MErrorBounds, PMEErrorBounds
+from . import _estimate_smearing_cutoff
 
 
 def grid_search(
@@ -23,15 +26,27 @@ def grid_search(
     device = charges.device
 
     if method == "ewald":
-        tune_func = tune_ewald
+        err_func = EwaldErrorBounds(
+            sum_squared_charges=torch.sum(charges**2, dim=0),
+            cell=cell,
+            positions=positions,
+        )
         CalculatorClass = EwaldCalculator
         all_interpolation_nodes = [1]  # dummy list
     elif method == "pme":
-        tune_func = tune_pme
+        err_func = PMEErrorBounds(
+            sum_squared_charges=torch.sum(charges**2, dim=0),
+            cell=cell,
+            positions=positions,
+        )
         CalculatorClass = PMECalculator
         all_interpolation_nodes = [3, 4, 5, 6, 7]
     elif method == "p3m":
-        tune_func = tune_p3m
+        err_func = P3MErrorBounds(
+            sum_squared_charges=torch.sum(charges**2, dim=0),
+            cell=cell,
+            positions=positions,
+        )
         CalculatorClass = P3MCalculator
         all_interpolation_nodes = [2, 3, 4, 5]
     else:
@@ -48,11 +63,18 @@ def grid_search(
     else:
         raise ValueError  # Just to make linter happy
 
-    smearing_opt = []
-    params_opt = []
-    cutoff_opt = []
+    smearing_opt = None
+    params_opt = None
+    cutoff_opt = None
     time_opt = torch.inf
 
+    smearing, cutoff = _estimate_smearing_cutoff(
+        cell,
+        smearing=None,
+        cutoff=5.0,
+        accuracy=accuracy,
+        prefac=2 * (charges**2).sum() / math.sqrt(len(positions)),
+    )
     for k_space_param in k_space_params:
         for interpolation_nodes in all_interpolation_nodes[::-1]:
             # print(f"Searching for {interpolation_nodes = }, {mesh_spacing = }")
@@ -66,21 +88,16 @@ def grid_search(
                     "interpolation_nodes": interpolation_nodes,
                 }
 
-            smearing, params, cutoff = tune_func(
-                torch.sum(charges**2, dim=0),
-                cell,
-                positions,
+            err = err_func(
+                smearing=smearing,
                 cutoff=cutoff,
-                accuracy=accuracy,
-                learning_rate=0.1,
-                max_steps=10000,
                 **params,
             )
 
             # print(f"{smearing = }, {cutoff = }")
 
-            if smearing > 10:
-                # smearing too large, no hope to find a solution, even for such a fine
+            if err > accuracy:
+                # error too large, no hope to find a solution, even for such a fine
                 # mesh, skip
                 break
 
