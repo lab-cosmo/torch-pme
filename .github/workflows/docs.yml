@@ -9,6 +9,8 @@ on:
 
 jobs:
   build:
+    permissions:
+      contents: write
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -17,13 +19,12 @@ jobs:
         with:
           python-version: "3.12"
       - name: install dependencies
-        run: |
-          python -m pip install tox
+        run: python -m pip install tox
       - name: build documentation
         run: tox -e docs
       - name: put documentation in the website
         run: |
-          git clone https://oauth2:${{ secrets.GITHUB_TOKEN }}@github.com/$GITHUB_REPOSITORY --branch gh-pages gh-pages
+          git clone https://github.com/$GITHUB_REPOSITORY --branch gh-pages gh-pages
           rm -rf gh-pages/.git
           cd gh-pages
 
