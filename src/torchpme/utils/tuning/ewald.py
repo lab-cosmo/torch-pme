@@ -96,19 +96,23 @@ def tune_ewald(
     example, fixing the cutoff to 0.1
 
     >>> smearing, parameter, cutoff = tune_ewald(
-    ...     torch.sum(charges**2, dim=0), cell, positions, cutoff=0.1, accuracy=1e-1
+    ...     torch.sum(charges**2, dim=0), cell, positions, cutoff=0.4, accuracy=1e-1
     ... )
 
     You can check the values of the parameters, now the cutoff is fixed
 
-    >>> print(smearing)
-    0.03338293212285428
+    >>> print(round(smearing, 4))
+    0.1402
 
-    >>> print(parameter)
-    {'lr_wavelength': 0.009495381717988971}
+    We can also check the value of the other parameter like the ``lr_wavelength``
+
+    >>> print(round(parameter["lr_wavelength"], 3))
+    0.255
+
+    and finally as requested the value of the cutoff is fixed
 
     >>> print(cutoff)
-    0.1
+    0.4
 
     """
     _validate_parameters(sum_squared_charges, cell, positions, exponent, accuracy)
