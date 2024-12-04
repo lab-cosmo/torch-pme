@@ -16,17 +16,11 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-
       - name: install dependencies
         run: |
           python -m pip install tox
-
       - name: build documentation
         run: tox -e docs
-        env:
-          # Use the CPU only version of torch when building/running the code
-          PIP_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu
-
       - name: put documentation in the website
         run: |
           git clone https://oauth2:${{ secrets.GITHUB_TOKEN }}@github.com/$GITHUB_REPOSITORY --branch gh-pages gh-pages
@@ -41,12 +35,10 @@ jobs:
               rm -rf latest
               mv ../docs/build/html latest
           fi
-
-      # TODO: enable once repo is public
-      # - name: deploy to gh-pages
-      #   if: github.event_name == 'push'
-      #   uses: peaceiris/actions-gh-pages@v4
-      #   with:
-      #     github_token: ${{ secrets.GITHUB_TOKEN }}
-      #     publish_dir: ./gh-pages/
-      #     force_orphan: true
+      - name: deploy to gh-pages
+        if: github.event_name == 'push'
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./gh-pages/
+          force_orphan: true
