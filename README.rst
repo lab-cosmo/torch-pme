@@ -63,6 +63,32 @@ Having a problem with torch-pme? Please let us know by `submitting an issue
 Submit new features or bug fixes through a `pull request
 <https://github.com/lab-cosmo/torch-pme/pulls>`_.
 
+.. marker-cite
+
+Reference
+---------
+
+If you use *torch-pme* for your work, please read and cite our preprint available on
+`arXiv`_.
+
+.. code-block::
+
+   @article{loche_fast_2024,
+      title = {Fast and Flexible Range-Separated Models for Atomistic Machine Learning},
+      author = {Loche, Philip and {Huguenin-Dumittan}, Kevin K. and Honarmand, Melika and Xu, Qianjun and Rumiantsev, Egor and How, Wei Bin and Langer, Marcel F. and Ceriotti, Michele},
+      year = {2024},
+      month = dec,
+      number = {arXiv:2412.03281},
+      eprint = {2412.03281},
+      primaryclass = {physics},
+      publisher = {arXiv},
+      doi = {10.48550/arXiv.2412.03281},
+      urldate = {2024-12-05},
+      archiveprefix = {arXiv}
+      }
+
+.. _`arXiv`: http://arxiv.org/abs/2412.03281
+
 .. marker-contributing
 
 Contributors
