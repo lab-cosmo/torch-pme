@@ -3,6 +3,7 @@
 import math
 import time
 from typing import Optional
+from warnings import warn
 
 import torch
 import vesin.torch
@@ -58,7 +59,7 @@ def grid_search(
         k_space_params = torch.min(cell_dimensions) / ns
     elif method in ["pme", "p3m"]:
         # If you have larger memory, you can try (2, 9)
-        ns_actual = torch.exp2(torch.arange(2, 8, dtype=dtype, device=device))
+        ns_actual = torch.exp2(torch.arange(2, 9, dtype=dtype, device=device))
         k_space_params = torch.min(cell_dimensions) / ((ns_actual - 1) / 2)
     else:
         raise ValueError  # Just to make linter happy
@@ -162,6 +163,10 @@ def grid_search(
                 time_opt = execution_time
 
     if time_opt == torch.inf:
+        warn(
+            "No parameters found within the accuracy. Returning the best found. Accuracy: "
+            + str(accuracy)
+        )
         return float(smearing_err_opt), params_err_opt, float(cutoff_err_opt)
 
     return float(smearing_opt), params_opt, float(cutoff_opt)
