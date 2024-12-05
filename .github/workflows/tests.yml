@@ -7,7 +7,31 @@ on:
     # Check all PR
 
 jobs:
-  tests:
+  min:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            python-version: "3.9"
+          - os: ubuntu-22.04
+            python-version: "3.12"
+          - os: macos-14
+            python-version: "3.12"
+          - os: windows-2022
+            python-version: "3.12"
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+    - run: pip install tox coverage[toml]
+    - name: run Python minimal tests
+      run: tox -e tests-min
+
+  all:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -30,7 +54,6 @@ jobs:
     - run: pip install tox coverage[toml]
     - name: run Python tests
       run: |
-        tox -e tests-min
         tox -e tests
         coverage xml
     - name: upload to codecov.io
