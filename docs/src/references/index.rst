@@ -14,7 +14,7 @@ API reference
 
      .. version:: 0.1.0
 
-The main references for public functions and classes inside ``torch-pme``. For example
+The main references for public functions and classes inside ``torch-pme``. For examples
 refer to the :ref:`userdoc-how-to` section.
 
 .. toctree::

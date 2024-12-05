@@ -13,7 +13,7 @@ This notebook demonstrates the use of some advanced features of
 as in `Grisafi and Ceriotti, J. Chem. Phys. (2019) <http://doi.org/10.1063/1.5128375>`_
 and `Huguenin-Dumittan et al., J. Phys. Chem. Lett. (2023) <10.1021/acs.jpclett.3c02375>`_.
 Note that a compiled-language CPU implementation of LODE features is
-also available in the `rascaline package <https://github.com/Luthaf/rascaline>`_.
+also available in the `featomic package <https://github.com/metatensor/featomic>`_.
 """
 
 # %%
