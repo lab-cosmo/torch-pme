@@ -59,7 +59,7 @@ def grid_search(
         k_space_params = torch.min(cell_dimensions) / ns
     elif method in ["pme", "p3m"]:
         # If you have larger memory, you can try (2, 9)
-        ns_actual = torch.exp2(torch.arange(2, 9, dtype=dtype, device=device))
+        ns_actual = torch.exp2(torch.arange(2, 8, dtype=dtype, device=device))
         k_space_params = torch.min(cell_dimensions) / ((ns_actual - 1) / 2)
     else:
         raise ValueError  # Just to make linter happy
@@ -79,7 +79,7 @@ def grid_search(
     smearing, cutoff = _estimate_smearing_cutoff(
         cell,
         smearing=None,
-        cutoff=5.0,
+        cutoff=cutoff,
         accuracy=accuracy,
         prefac=2 * (charges**2).sum() / math.sqrt(len(positions)),
     )
@@ -105,6 +105,7 @@ def grid_search(
             # print(f"{smearing = }, {cutoff = }")
 
             if err > accuracy:
+                # Not going to test the time
                 if err < err_opt:
                     smearing_err_opt = smearing
                     params_err_opt = params
@@ -164,8 +165,8 @@ def grid_search(
 
     if time_opt == torch.inf:
         warn(
-            "No parameters found within the accuracy. Returning the best found. Accuracy: "
-            + str(accuracy)
+            f"No parameters found within the desired accuracy of {accuracy}. Returning the best found. Accuracy: "
+            + str(err_opt)
         )
         return float(smearing_err_opt), params_err_opt, float(cutoff_err_opt)
 
