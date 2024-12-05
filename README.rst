@@ -28,7 +28,7 @@ C++, making it ideal for high-performance production environments.
 
 For details, tutorials, and examples, please have a look at our `documentation`_.
 
-.. _`documentation`: https://lab-cosmo.github.io/torch-pme/latest
+.. _`documentation`: https://lab-cosmo.github.io/torch-pme
 
 .. marker-installation
 
@@ -39,18 +39,16 @@ You can install *torch-pme* using pip with
 
 .. code-block:: bash
 
-    git clone https://github.com/lab-cosmo/torch-pme
-    cd torch-pme
-    pip install .
+    pip install torch-pme
 
-You can then ``import torchpme`` and use it in your projects!
+and ``import torchpme`` to use it in your projects!
 
-We also provide bindings to `metatensor <https://docs.metatensor.org/latest/>`_ which
+We also provide bindings to `metatensor <https://docs.metatensor.org>`_ which
 can optionally be installed together and used as ``torchpme.metatensor`` via
 
 .. code-block:: bash
 
-    pip install .[metatensor]
+    pip install torch-pme[metatensor]
 
 .. marker-issues
 
