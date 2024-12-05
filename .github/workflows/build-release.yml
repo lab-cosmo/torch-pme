@@ -16,6 +16,7 @@ jobs:
       url: https://pypi.org/project/torch-pme
     permissions:
       id-token: write
+      contents: write
 
     steps:
     - uses: actions/checkout@v4
