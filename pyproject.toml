@@ -24,6 +24,7 @@ classifiers = [
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering",
     "Topic :: Scientific/Engineering :: Physics",
     "Topic :: Scientific/Engineering :: Chemistry",
@@ -60,10 +61,11 @@ examples = [
 metatensor = ["metatensor-torch <0.7,>=0.6"]
 
 [project.urls]
-homepage = "http://torch-pme.readthedocs.io"
-documentation = "http://torch-pme.readthedocs.io"
+homepage = "https://lab-cosmo.github.io/torch-pme"
+documentation = "https://lab-cosmo.github.io/torch-pme"
 repository = "https://github.com/lab-cosmo/torch-pme"
 issues = "https://github.com/lab-cosmo/torch-pme/issues"
+changelog = "https://lab-cosmo.github.io/torch-pme/latest/references/changelog.html"
 
 [tool.coverage.report]
 show_missing = true
