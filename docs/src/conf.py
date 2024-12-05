@@ -16,6 +16,7 @@ import torchpme  # noqa
 suppress_warnings = ["config.cache"]
 
 ROOT = os.path.abspath(os.path.join("..", ".."))
+sys.path.append(os.path.join(ROOT, "docs", "extensions"))
 
 # We use a second (pseudo) sphinx project located in `docs/generate_examples` to run the
 # examples and generate the actual output for our shinx-gallery. This is necessary
@@ -63,6 +64,12 @@ def setup(app):
     generate_examples()
 
 
+rst_prolog = f"""
+.. |version| replace:: {torchpme.__version__}
+
+"""
+
+
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
@@ -72,7 +79,10 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinx_gallery.gen_gallery",
     "sphinx_toggleprompt",
+    "sphinx_design",
     "chemiscope.sphinx",
+    # local extensions
+    "versions_list",
 ]
 
 # List of patterns, relative to source directory, that match files and
