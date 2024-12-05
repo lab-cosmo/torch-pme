@@ -121,7 +121,9 @@ def tune_p3m(
     Example
     -------
     >>> import torch
-    >>> from vesin import NeighborList
+
+    To allow reproducibility, we set the seed to a fixed value
+
     >>> _ = torch.manual_seed(0)
     >>> positions = torch.tensor(
     ...     [[0.0, 0.0, 0.0], [0.5, 0.5, 0.5]], dtype=torch.float64
