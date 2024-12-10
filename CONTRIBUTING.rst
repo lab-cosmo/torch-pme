@@ -2,14 +2,14 @@
 
 Contributing
 ============
-🎉 First off, thanks for taking the time to contribute to metatrain! 🎉
+🎉 First off, thanks for taking the time to contribute to torch-pme! 🎉
 
 If you want to contribute but feel a bit lost, do not hesitate to contact us and ask
 your questions! We will happily mentor you through your first contributions.
 
 Area of contributions
 ---------------------
-The first and best way to contribute to metatrain is to use it and advertise it
+The first and best way to contribute to torch-pme is to use it and advertise it
 to other potential users. Other than that, you can help with:
 
 - documentation: correcting typos, making various documentation clearer;
@@ -38,13 +38,13 @@ on torch-pme:
 Getting the code
 ----------------
 
-The first step when developing metatensor is to `create a fork`_ of the main
+The first step when developing torch-pme is to `create a fork`_ of the main
 repository on github, and then clone it locally:
 
 .. code-block:: bash
 
     git clone <insert/your/fork/url/here>
-    cd metatensor
+    cd torch-pme
 
     # setup the local repository so that the main branch tracks changes in
     # the original repository
