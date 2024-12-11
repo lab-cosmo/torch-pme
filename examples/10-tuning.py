@@ -125,7 +125,7 @@ timings = np.zeros((len(smearing_grid), len(spacing_grid)))
 bounds = np.zeros((len(smearing_grid), len(spacing_grid)))
 for ism, smearing in enumerate(smearing_grid):
     for isp, spacing in enumerate(spacing_grid):
-        results[ism, isp], timings[ism, isp] = timed_madelung(8.0, smearing, spacing, 4)        
+        results[ism, isp], timings[ism, isp] = timed_madelung(8.0, smearing, spacing, 4)
         bounds[ism, isp] = error_bounds(8.0, smearing, spacing, 4)
 
 # %%
@@ -135,13 +135,16 @@ vmin = 1e-12
 vmax = 2
 levels = np.geomspace(vmin, vmax, 30)
 
-fig, ax = plt.subplots(1, 3, figsize=(9, 3), sharey=True, 
-    constrained_layout=True)
+fig, ax = plt.subplots(1, 3, figsize=(9, 3), sharey=True, constrained_layout=True)
 contour = ax[0].contourf(
-    spacing_grid, smearing_grid, bounds,
-    vmin=vmin, vmax=vmax, levels=levels,
+    spacing_grid,
+    smearing_grid,
+    bounds,
+    vmin=vmin,
+    vmax=vmax,
+    levels=levels,
     norm=mpl.colors.LogNorm(),
-    extend='both'
+    extend="both",
 )
 ax[0].set_xscale("log")
 ax[0].set_yscale("log")
@@ -152,18 +155,27 @@ cbar = fig.colorbar(contour, ax=ax[1], label="error")
 cbar.ax.set_yscale("log")
 
 contour = ax[1].contourf(
-    spacing_grid, smearing_grid, np.abs(results - madelung_ref),
-    vmin=vmin, vmax=vmax, levels=levels,
+    spacing_grid,
+    smearing_grid,
+    np.abs(results - madelung_ref),
+    vmin=vmin,
+    vmax=vmax,
+    levels=levels,
     norm=mpl.colors.LogNorm(),
-    extend='both'
+    extend="both",
 )
 ax[1].set_xscale("log")
 ax[1].set_yscale("log")
 ax[1].set_xlabel(r"spacing / Å")
 ax[1].set_title("actual error")
 
-contour = ax[2].contourf(spacing_grid, smearing_grid, 
-timings, levels = np.geomspace(1e-3,1e-2,20), norm=mpl.colors.LogNorm())
+contour = ax[2].contourf(
+    spacing_grid,
+    smearing_grid,
+    timings,
+    levels=np.geomspace(1e-3, 1e-2, 20),
+    norm=mpl.colors.LogNorm(),
+)
 ax[2].set_xscale("log")
 ax[2].set_yscale("log")
 ax[2].set_ylabel(r"$\sigma$ / Å")
@@ -188,11 +200,12 @@ for ism, smearing in enumerate(smearing_grid):
         madelung, timing = timed_madelung(smearing * 8, smearing, spacing, 4)
         results[ism, isp] = madelung
         timings[ism, isp] = timing
-        # bounds[ism, isp] = error_bounds(8.0*smearing, smearing, spacing, 4)        
+        # bounds[ism, isp] = error_bounds(8.0*smearing, smearing, spacing, 4)
         # manually rescale kspace part that is clearly wrong
         bounds[ism, isp] = torch.sqrt(
-           error_bounds.err_kspace(smearing, spacing, 4)**2*1e16+
-           error_bounds.err_rspace(smearing,8.0*smearing)**2)
+            error_bounds.err_kspace(smearing, spacing, 4) ** 2 * 1e16
+            + error_bounds.err_rspace(smearing, 8.0 * smearing) ** 2
+        )
 
 
 # %%
@@ -202,13 +215,16 @@ vmin = 1e-12
 vmax = 2
 levels = np.geomspace(vmin, vmax, 30)
 
-fig, ax = plt.subplots(1, 3, figsize=(9, 3), sharey=True, 
-    constrained_layout=True)
+fig, ax = plt.subplots(1, 3, figsize=(9, 3), sharey=True, constrained_layout=True)
 contour = ax[0].contourf(
-    spacing_grid, smearing_grid, bounds,
-    vmin=vmin, vmax=vmax, levels=levels,
+    spacing_grid,
+    smearing_grid,
+    bounds,
+    vmin=vmin,
+    vmax=vmax,
+    levels=levels,
     norm=mpl.colors.LogNorm(),
-    extend='both'
+    extend="both",
 )
 ax[0].set_xscale("log")
 ax[0].set_yscale("log")
@@ -219,19 +235,28 @@ cbar = fig.colorbar(contour, ax=ax[1], label="error")
 cbar.ax.set_yscale("log")
 
 contour = ax[1].contourf(
-    spacing_grid, smearing_grid, np.abs(results - madelung_ref),
-    vmin=vmin, vmax=vmax, levels=levels,
+    spacing_grid,
+    smearing_grid,
+    np.abs(results - madelung_ref),
+    vmin=vmin,
+    vmax=vmax,
+    levels=levels,
     norm=mpl.colors.LogNorm(),
-    extend='both'
+    extend="both",
 )
 ax[1].set_xscale("log")
 ax[1].set_yscale("log")
 ax[1].set_xlabel(r"spacing / Å")
 ax[1].set_title("actual error")
 
-contour = ax[2].contourf(spacing_grid, smearing_grid, 
-timings, levels = np.geomspace(1e-3,1e-2,20), norm=mpl.colors.LogNorm(),
-extend='both')
+contour = ax[2].contourf(
+    spacing_grid,
+    smearing_grid,
+    timings,
+    levels=np.geomspace(1e-3, 1e-2, 20),
+    norm=mpl.colors.LogNorm(),
+    extend="both",
+)
 ax[2].set_xscale("log")
 ax[2].set_yscale("log")
 ax[2].set_ylabel(r"$\sigma$ / Å")
@@ -270,11 +295,12 @@ def loss(x, target_accuracy):
         interpolation_nodes=4,
     )
     estimated_error = torch.sqrt(
-           error_bounds.err_kspace(smearing, mesh_spacing, 4)**2*1e18+
-           error_bounds.err_rspace(smearing, cutoff)**2)
+        error_bounds.err_kspace(smearing, mesh_spacing, 4) ** 2 * 1e18
+        + error_bounds.err_rspace(smearing, cutoff) ** 2
+    )
 
     tgt_loss = max(
-        0, np.log(estimated_error/madelung_ref/ target_accuracy)
+        0, np.log(estimated_error / madelung_ref / target_accuracy)
     )  # relu on the accuracy
     print(x, estimated_error.item(), np.abs(madelung - value), duration)
     return tgt_loss * 100 + duration
@@ -286,9 +312,10 @@ result = minimize(
     initial_guess,
     args=(1e-8),
     method="Nelder-Mead",
-    options={"disp": True, 
-    "maxiter": 200,
-    "initial_simplex": initial_guess + 2*np.random.normal(size=(4,3))
+    options={
+        "disp": True,
+        "maxiter": 200,
+        "initial_simplex": initial_guess + 2 * np.random.normal(size=(4, 3)),
     },
 )
 
