@@ -10,7 +10,7 @@ potentials as a function of the interatomic distance, as well as the radial Four
 transform of the long-range contribution, that is needed to compute the potential with
 k-space methods.
 
-The most common potentials are the :class:`torchpme.CoulombPotential`` and the
+The most common potentials are the :class:`torchpme.CoulombPotential` and the
 :class:`torchpme.InversePowerLawPotential` but ``torch-pme`` also provides additional
 potentials for more specialized purposes, or to implement long-range architectures that
 go beyond physics-based modeling.
