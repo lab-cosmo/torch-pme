@@ -32,7 +32,8 @@ class MeshInterpolator(torch.nn.Module):
         coordinate axis. The total number of interpolation nodes in 3D will be ``n^3``.
         In general, for ``n`` nodes, the interpolation will be performed by piecewise
         polynomials of degree ``n - 1`` (e.g. ``n = 4`` for cubic interpolation).
-        Only the values ``3, 4, 5, 6, 7`` are supported.
+        For Lagrange interpolation, only the values ``3, 4, 5, 6, 7`` are supported.
+        For P3M interpolation, only the values ``1, 2, 3, 4, 5`` are supported.
     :param method: str
         The interpolation method to use. Either "Lagrange" or "P3M".
     """

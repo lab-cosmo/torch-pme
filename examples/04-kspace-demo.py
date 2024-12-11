@@ -63,8 +63,7 @@ class GaussianSmearingKernel(torchpme.lib.KSpaceKernel):
     def __init__(self, sigma2: float):
         self._sigma2 = sigma2
 
-    def kernel_from_kvectors(self, kvectors: torch.Tensor) -> torch.Tensor:
-        k_sq = torch.linalg.norm(kvectors, dim=-1) ** 2
+    def kernel_from_k_sq(self, k_sq):
         return torch.exp(-k_sq * self._sigma2 * 0.5)
 
 
@@ -205,8 +204,7 @@ class MultiKernel(torchpme.lib.KSpaceKernel):
         super().__init__()
         self._sigma = sigma
 
-    def kernel_from_kvectors(self, kvectors: torch.Tensor) -> torch.Tensor:
-        k_sq = torch.linalg.norm(kvectors, dim=-1) ** 2
+    def kernel_from_k_sq(self, k_sq):
         return torch.stack([torch.exp(-k_sq * s**2 / 2) for s in self._sigma])
 
 

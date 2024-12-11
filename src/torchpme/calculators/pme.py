@@ -68,8 +68,6 @@ class PMECalculator(Calculator):
 
         self.mesh_spacing: float = mesh_spacing
 
-        # Initialize the filter module. Set dummy value for smearing to propper
-        # initilize the `KSpaceFilter` below
         self.kspace_filter: KSpaceFilter = KSpaceFilter(
             cell=torch.eye(3),
             ns_mesh=torch.ones(3, dtype=int),
@@ -94,8 +92,7 @@ class PMECalculator(Calculator):
         positions: torch.Tensor,
     ) -> torch.Tensor:
         # TODO: Kernel function `G` and initialization of `MeshInterpolator` only depend
-        # on `cell`. Caching may save up to 15% but issues with AD should be taken
-        # resolved.
+        # on `cell`. Caching may save up to 15% but issues with AD need to be resolved.
 
         with profiler.record_function("init 0: preparation"):
             # Compute number of times each basis vector of the reciprocal space can be

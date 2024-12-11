@@ -173,7 +173,7 @@ contour = ax[2].contourf(
     spacing_grid,
     smearing_grid,
     timings,
-    levels=np.geomspace(1e-3, 1e-2, 20),
+    levels=np.geomspace(1e-3, 2e-2, 20),
     norm=mpl.colors.LogNorm(),
 )
 ax[2].set_xscale("log")
@@ -194,76 +194,31 @@ smearing_grid = torch.logspace(-1, 0.5, 8)
 spacing_grid = torch.logspace(-1, 0.5, 9)
 results = np.zeros((len(smearing_grid), len(spacing_grid)))
 timings = np.zeros((len(smearing_grid), len(spacing_grid)))
-bounds = np.zeros((len(smearing_grid), len(spacing_grid)))
 for ism, smearing in enumerate(smearing_grid):
     for isp, spacing in enumerate(spacing_grid):
         madelung, timing = timed_madelung(smearing * 8, smearing, spacing, 4)
         results[ism, isp] = madelung
         timings[ism, isp] = timing
-        # bounds[ism, isp] = error_bounds(8.0*smearing, smearing, spacing, 4)
-        # manually rescale kspace part that is clearly wrong
-        bounds[ism, isp] = torch.sqrt(
-            error_bounds.err_kspace(smearing, spacing, 4) ** 2 * 1e16
-            + error_bounds.err_rspace(smearing, 8.0 * smearing) ** 2
-        )
 
 
 # %%
 # plot
 
-vmin = 1e-12
-vmax = 2
-levels = np.geomspace(vmin, vmax, 30)
-
-fig, ax = plt.subplots(1, 3, figsize=(9, 3), sharey=True, constrained_layout=True)
+fig, ax = plt.subplots(1, 2, figsize=(7, 3), constrained_layout=True)
 contour = ax[0].contourf(
-    spacing_grid,
-    smearing_grid,
-    bounds,
-    vmin=vmin,
-    vmax=vmax,
-    levels=levels,
-    norm=mpl.colors.LogNorm(),
-    extend="both",
+    spacing_grid, smearing_grid, np.log10(np.abs(results - madelung_ref))
 )
 ax[0].set_xscale("log")
 ax[0].set_yscale("log")
 ax[0].set_ylabel(r"$\sigma$ / Å")
 ax[0].set_xlabel(r"spacing / Å")
-ax[0].set_title("estimated error")
-cbar = fig.colorbar(contour, ax=ax[1], label="error")
-cbar.ax.set_yscale("log")
+cbar = fig.colorbar(contour, ax=ax[0], label="log10(error)")
 
-contour = ax[1].contourf(
-    spacing_grid,
-    smearing_grid,
-    np.abs(results - madelung_ref),
-    vmin=vmin,
-    vmax=vmax,
-    levels=levels,
-    norm=mpl.colors.LogNorm(),
-    extend="both",
-)
+contour = ax[1].contourf(spacing_grid, smearing_grid, np.log10(timings))
 ax[1].set_xscale("log")
 ax[1].set_yscale("log")
 ax[1].set_xlabel(r"spacing / Å")
-ax[1].set_title("actual error")
-
-contour = ax[2].contourf(
-    spacing_grid,
-    smearing_grid,
-    timings,
-    levels=np.geomspace(1e-3, 1e-2, 20),
-    norm=mpl.colors.LogNorm(),
-    extend="both",
-)
-ax[2].set_xscale("log")
-ax[2].set_yscale("log")
-ax[2].set_ylabel(r"$\sigma$ / Å")
-ax[2].set_xlabel(r"spacing / Å")
-ax[2].set_title("actual timing")
-cbar = fig.colorbar(contour, ax=ax[2], label="time / s")
-cbar.ax.set_yscale("log")
+cbar = fig.colorbar(contour, ax=ax[1], label="log10(time / s)")
 
 # %%
 
@@ -285,25 +240,23 @@ from scipy.optimize import minimize
 
 def loss(x, target_accuracy):
     cutoff, smearing, mesh_spacing = x
-    cutoff = np.abs(cutoff)
-    smearing = np.abs(smearing)
-    mesh_spacing = np.abs(mesh_spacing)
     value, duration = timed_madelung(
         cutoff=cutoff,
         smearing=smearing,
         mesh_spacing=mesh_spacing,
         interpolation_nodes=4,
     )
-    estimated_error = torch.sqrt(
-        error_bounds.err_kspace(smearing, mesh_spacing, 4) ** 2 * 1e18
-        + error_bounds.err_rspace(smearing, cutoff) ** 2
+    estimated_error = error_bounds(
+        cutoff=cutoff,
+        smearing=smearing,
+        mesh_spacing=mesh_spacing,
+        interpolation_nodes=4,
     )
-
     tgt_loss = max(
         0, np.log(estimated_error / madelung_ref / target_accuracy)
     )  # relu on the accuracy
     print(x, estimated_error.item(), np.abs(madelung - value), duration)
-    return tgt_loss * 100 + duration
+    return tgt_loss * 10 + duration
 
 
 initial_guess = [9, 0.3, 5]
@@ -312,11 +265,7 @@ result = minimize(
     initial_guess,
     args=(1e-8),
     method="Nelder-Mead",
-    options={
-        "disp": True,
-        "maxiter": 200,
-        "initial_simplex": initial_guess + 2 * np.random.normal(size=(4, 3)),
-    },
+    options={"disp": True, "maxiter": 200},
 )
 
 
@@ -324,10 +273,10 @@ result = minimize(
 
 result
 # %%
-timed_madelung(cutoff=9, smearing=1.8, mesh_spacing=4, interpolation_nodes=4)
+timed_madelung(cutoff=2.905, smearing=0.7578, mesh_spacing=5.524, interpolation_nodes=4)
 # %%
 
 madelung_ref
 # %%
-error_bounds(9, 1.8, 4, 4)
+error_bounds(9, 0.5, 1, 4)
 # %%

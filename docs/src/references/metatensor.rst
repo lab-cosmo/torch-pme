@@ -22,6 +22,9 @@ Implemented Calculators
 .. autoclass:: torchpme.metatensor.EwaldCalculator
     :members: forward
 
+.. autoclass:: torchpme.metatensor.P3MCalculator
+    :members: forward
+
 .. autoclass:: torchpme.metatensor.PMECalculator
     :members: forward
 
@@ -32,4 +35,5 @@ Examples using the Metatensor Bindings
 
     torchpme.metatensor.Calculator
     torchpme.metatensor.PMECalculator
+    torchpme.metatensor.P3MCalculator
     torchpme.metatensor.EwaldCalculator
