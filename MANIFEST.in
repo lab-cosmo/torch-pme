@@ -10,6 +10,7 @@ prune .github
 prune .tox
 
 exclude CODE_OF_CONDUCT.md
+exclude CONTRIBUTING.rst
 exclude .gitignore
 exclude .codecov.yml
 exclude .readthedocs.yaml

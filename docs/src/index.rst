@@ -29,3 +29,4 @@ Overview
    installation
    examples/index
    references/index
+   contributing
