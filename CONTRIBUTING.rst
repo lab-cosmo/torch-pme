@@ -71,7 +71,7 @@ changes:
 
 Running the tests
 -----------------
-The testsuite is implemented using Python's `unittest`_ framework and should be set-up
+The testsuite is implemented using the `pytest`_ framework and should be set-up
 and run in an isolated virtual environment with `tox`_. All tests can be run with
 
 .. code-block:: bash
@@ -87,13 +87,13 @@ If you wish to test only specific functionalities, for example:
 
 
 You can also use ``tox -e format`` to use tox to do actual formatting instead of just
-testing it. Also, you may want to setup your editor to automatically apply the `black
-<https://black.readthedocs.io/en/stable/>`_ code formatter when saving your files, there
-are plugins to do this with `all major editors
-<https://black.readthedocs.io/en/stable/editor_integration.html>`_.
+testing it. Also, you may want to setup your editor to automatically apply the `ruff`_
+code formatter when saving your files, there are plugins to do this with `all major
+editors <https://docs.astral.sh/ruff/editors/#language-server-protocol>`_.
 
-.. _unittest: https://docs.python.org/3/library/unittest.html
-.. _tox: https://tox.readthedocs.io/en/latest
+.. _pytest: https://pytest.org
+.. _tox: https://tox.readthedocs.io
+.. _ruff: https://docs.astral.sh/ruff/
 
 Contributing to the documentation
 ---------------------------------
