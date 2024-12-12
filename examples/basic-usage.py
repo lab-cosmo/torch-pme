@@ -5,6 +5,9 @@ Basic Usage
 .. currentmodule:: torchpme
 
 This example showcases how the main capabilities of ``torchpme``.
+We build a simple ionic crystal and compute the electrostatic potential and the forces
+for each atom.
+
 To follow this tutorial, it is assumed that torch-pme has been :ref:`installed
 <userdoc-installation>` on your computer.
 
@@ -31,7 +34,7 @@ from torchpme.potentials import CoulombPotential
 # We initially set the ``device`` and ``dtype`` for the calculations. We will use the
 # CPU for this and double precision. If you have a CUDA devide you can also set the
 # device to "cuda" to use the GPU and speed up the calculations. The latter is a
-# requirement for the neighbr list implementation that we are using here.
+# requirement for the neighbor list implementation that we are using here.
 
 device = "cpu"
 dtype = torch.float64
@@ -44,7 +47,8 @@ dtype = torch.float64
 #
 # Throughout this tutorial, we will work with a
 # simple atomic structure in three dimensions, which is a distorted version of the CsCl
-# structure.
+# structure. The goal will be to compute the electrostatic potentials and the forces for
+# each atom.
 #
 # We first generate a single unit cell of CsCl (2 atoms in the cell) where the Cs atoms
 # get a charge of +1 and the Cl atom a charge of -1.
@@ -75,6 +79,12 @@ chemiscope.show(
 # them as individial variables as :class:`torch.Tensor`, which is the required input
 # type for ``torchpme``.
 #
+# For the positions, we explicitly set `requires_grad=True`. This is because we are
+# ultimately interested in computing the forces, which are the gradients of the total
+# (electrostatic) energy with respect to the positions (up to a minus sign).
+# ``tochpme`` can automatically compute such gradients, for which we need to communicate
+# at this point that we will need to take gradients with respect to the positions in
+# the future.
 
 positions = torch.tensor(
     atoms.positions, dtype=dtype, device=device, requires_grad=True
@@ -112,12 +122,15 @@ lr_wavelength = smearing / 2
 
 # %%
 #
-# However, in practice, we would typically use the :func:`torchpme.utils.tune_ewald`
-# function, would result work like this:
+# However, especially for users without much experience on how to choose these
+# hyperparameters, we have built-in tuning functions for each Calculator (see below)
+# such as :func:`torchpme.utils.tune_ewald`, which can automatically find a good set
+# of parameters. These can be used like this:
 #
 # .. code-block:: python
 #
-#    ...
+#   sum_charges_sq = torch.sum(charges**2, dim=0)
+#    smearing, lr_wavelength, rcut = tune_ewald(sum_charges_sq, cell, positions, accuracy=1e-1)
 #
 # Define Potential
 # ----------------
@@ -160,8 +173,19 @@ neighbor_indices = torch.stack([i, j], dim=1)
 # The `Calculator` classes are the main user-facing classes in `torchpme`. These are
 # used to compute atomic potentials $V_i$ for a given set of positions and particle
 # weights (charges). For periodic calculators that are the main focus of this tutorial,
-# it is also required to specify a `cell`.
+# it is also required to specify a `cell`. We have three periodic calculators:
 #
+# 1. EwaldCalculator: uses the Ewald sum. Recommended for structures with <10000 atoms
+#    due to its high accuracy and simplicity. Should be avoided for big structures due
+#    to the slower :math:`\mathcal{O}(N^2)` to :math:`\mathcal{O}(N^{\frac{3}{2}})`
+#    scaling of the computational cost (depending on how the hyperparameters are chosen)
+#    with respect to the number of atoms.
+# 2. PMECalculator: uses the Particle Mesh Ewald (PME) method. Mostly for reference.
+# 3. P3MCalculator: uses the Particle-Particle Particle-Mesh (P3M) method. Recommended
+#    for structures >=10000 atoms due to the efficient :math:`\mathcal{O}(N\log N)`
+#    scaling of the computational cost with the number of atoms.
+#
+# Since our structure is relatively small, we use the EwaldCalculator.
 # We start by the initialization of the class.
 
 calculator = EwaldCalculator(potential=potential, lr_wavelength=lr_wavelength)
@@ -184,7 +208,7 @@ potentials = calculator.forward(
 )
 energy = torch.sum(charges * potentials)
 
-print(energy)
+print("Energy = \n", energy)
 
 # %%
 #
@@ -200,7 +224,7 @@ print(energy)
 energy.backward()
 forces = -positions.grad
 
-print(forces[:3])
+print("Force on first atom = \n", forces[:3])
 
 # %%
 #
@@ -218,11 +242,13 @@ positions_aperiodic.requires_grad = True
 
 # Compute neighbor list but this time without periodic boudary conditions
 i, j, neighbor_distances_aperiodic = nl.compute(
-    points=positions_aperiodic, box=cell, periodic=True, quantities="ijd"
+    points=positions_aperiodic, box=cell, periodic=False, quantities="ijd"
 )
 neighbor_indices_aperiodic = torch.stack([i, j], dim=1)
 
-# Compute aperiodic potential
+# Compute aperiodic potential using the dedicated subroutine that is present
+# in all calculators. For now, we do not provide an explicit calculator for aperiodic
+# systems since the focus in mainly on periodic ones.
 potentials_aperiodic = calculator._compute_rspace(
     charges, neighbor_indices_aperiodic, neighbor_distances_aperiodic
 )
