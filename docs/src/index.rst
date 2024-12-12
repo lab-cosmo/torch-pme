@@ -27,6 +27,7 @@ Overview
 
    about
    installation
+   examples/basic-usage
    examples/index
    references/index
    contributing
