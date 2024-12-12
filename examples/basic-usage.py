@@ -79,12 +79,10 @@ chemiscope.show(
 positions = torch.tensor(
     atoms.positions, dtype=dtype, device=device, requires_grad=True
 )
-cell = torch.tensor(atoms.cell, dtype=dtype, device=device)
+cell = torch.tensor(atoms.cell.array, dtype=dtype, device=device)
 charges = torch.tensor(
     atoms.get_initial_charges(), dtype=dtype, device=device
 ).unsqueeze(1)
-
-num_atoms = len(positions)
 
 # %%
 #
@@ -114,9 +112,10 @@ lr_wavelength = smearing / 2
 
 # %%
 #
-# However, in practice, we would typically use the :func:`torchpme.utils.tune_ewald` function, would result work like 
-# this:
-# code-block:: python
+# However, in practice, we would typically use the :func:`torchpme.utils.tune_ewald`
+# function, would result work like this:
+#
+# .. code-block:: python
 #
 #    ...
 #
@@ -125,6 +124,7 @@ lr_wavelength = smearing / 2
 #
 # We now need to define the potential function with which the atoms interact. Since this
 # is a library for long-range ML, we support three major options:
+#
 # 1. the Coulomb potential (:math:`1/r`)
 # 2. more general inverse power-law potentials (:math:`1/r^p`)
 # 3. an option to build custom potentials using splines
@@ -145,11 +145,6 @@ potential = CoulombPotential(smearing=smearing)
 # for many ML applications, we would otherwise need to repeat this computation multiple
 # times during model training of a neural network etc. By computing it externally and
 # providing it as an input, we can streamline training workflows.
-#
-# Note that we are not directly returning the distances themselves, but rather the
-# 'neighbor shifts' as is indicated by the quantity 'S'. This is because we are
-# typically still interested in taking gradients with respect to the atomic positions.
-# An exact definition can be found in the `vesin` documentation.
 
 nl = NeighborList(cutoff=rcut, full_list=False)
 i, j, neighbor_distances = nl.compute(
@@ -176,7 +171,10 @@ calculator = EwaldCalculator(potential=potential, lr_wavelength=lr_wavelength)
 # Compute Energy
 # --------------
 #
-# We have now all ingredients: we can use the `Calculator` class to, well, actually compute the potentials $V_i$ at the position of the atoms, or the total energy for the given particle weights (charges). The electrostatic potential can then be obtained as
+# We have now all ingredients: we can use the `Calculator` class to, well, actually
+# compute the potentials :math:`V_i` at the position of the atoms, or the total energy for the
+# given particle weights (charges). The electrostatic potential can then be obtained as
+#
 # .. math::
 #
 #   E = \sum_{i=1}^N q_i V_i
