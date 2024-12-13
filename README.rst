@@ -56,6 +56,58 @@ can optionally be installed together and used as ``torchpme.metatensor`` via
 
     pip install torch-pme[metatensor]
 
+.. marker-quickstart
+
+Quickstart
+----------
+
+Here is a simple example get you started with *torch-pme*:
+
+.. code-block:: python
+
+   import torch
+   import torchpme
+
+   # Single charge in a cubic box
+   positions = torch.zeros((1, 3), requires_grad=True)
+   cell = 8 * torch.eye(3)
+   charges = torch.tensor([[1.0]])
+
+   # No neighbors for a single atom; use `vesin` for neighbors if needed
+   neighbor_indices = torch.zeros((0, 2), dtype=torch.int64)
+   neighbor_distances = torch.zeros((0,))
+
+   # Tune P3M parameters (cutoff optional, useful to set for ML with fixed cutoff)
+   smearing, p3m_parameters, _ = torchpme.utils.tune_p3m(
+      sum_squared_charges=1,
+      cell=cell,
+      positions=positions,
+      cutoff=5.0,
+   )
+
+   # Initialize potential and calculator
+   potential = torchpme.CoulombPotential(smearing)
+   calculator = torchpme.P3MCalculator(potential, **p3m_parameters)
+
+   # Compute (per-atom) potentials
+   potentials = calculator.forward(
+      charges=charges,
+      cell=cell,
+      positions=positions,
+      neighbor_indices=neighbor_indices,
+      neighbor_distances=neighbor_distances,
+   )
+
+   # Calculate total energy and forces
+   energy = torch.sum(charges * potentials)
+   energy.backward()
+   forces = -positions.grad
+
+   print("Energy:", energy.item())
+   print("Forces:", forces)
+
+For more examples and details, please refer to the `documentation`_.
+
 .. marker-issues
 
 Having problems or ideas?
