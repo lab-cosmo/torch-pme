@@ -41,6 +41,12 @@ You can install *torch-pme* using pip with
 
     pip install torch-pme
 
+or conda
+
+.. code-block:: bash
+
+    conda install -c conda-forge torch-pme
+
 and ``import torchpme`` to use it in your projects!
 
 We also provide bindings to `metatensor <https://docs.metatensor.org>`_ which
