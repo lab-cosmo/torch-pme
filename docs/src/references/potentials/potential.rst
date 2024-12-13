@@ -1,7 +1,7 @@
 Potential
 #########
 
-.. autoclass:: torchpme.potentials.Potential
+.. autoclass:: torchpme.Potential
     :members:
 
 .. minigallery:: torchpme.Potential

@@ -142,7 +142,7 @@ def test_invalid_shape_charges():
 def test_invalid_dtype_charges():
     calculator = CalculatorTest()
     match = (
-        r"type of `charges` \(torch.float32\) must be same as `positions` "
+        r"type of `charges` \(torch.float64\) must be same as `positions` "
         r"\(torch.float32\)"
     )
     with pytest.raises(ValueError, match=match):
