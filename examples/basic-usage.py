@@ -157,6 +157,10 @@ potential = CoulombPotential(smearing=smearing)
 # for many ML applications, we would otherwise need to repeat this computation multiple
 # times during model training of a neural network etc. By computing it externally and
 # providing it as an input, we can streamline training workflows.
+# We compute the neighbor list using the ``vesin`` package, which also provides a
+# pytorch implementation that retains the computational graph. This will later allow us
+# to automatically compute gradients of the distances with respect to the atomic
+# coordinates. More details can be found in its documentation.
 
 nl = NeighborList(cutoff=rcut, full_list=False)
 i, j, neighbor_distances = nl.compute(
