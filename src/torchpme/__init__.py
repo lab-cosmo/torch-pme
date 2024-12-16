@@ -1,6 +1,7 @@
 import contextlib
 
 from . import calculators, lib, potentials, utils  # noqa
+from ._version import __version__, __version_tuple__  # noqa
 from .calculators import Calculator, EwaldCalculator, P3MCalculator, PMECalculator
 from .potentials import (
     CombinedPotential,
@@ -24,4 +25,3 @@ __all__ = [
     "SplinePotential",
     "CombinedPotential",
 ]
-__version__ = "0.1.0"

@@ -7,6 +7,7 @@ __pycache__
 *DS_Store
 *coverage*
 sg_execution_times.rst
+_version.py
 *.gz
 
 .tox/
