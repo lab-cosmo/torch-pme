@@ -128,20 +128,16 @@ How to Perform a Release
    - Ensure that all `CI tests <https://github.com/lab-cosmo/torch-pme/actions>`_ pass.
    - Optionally, run the tests locally to double-check.
 
-2. **Update the Version String**
-
-   - Update the `__version__` string in ``__init__.py`` to reflect the new version, e.g.,
-     `0.1.1` for a stable release or `0.1.1rc1` for a release candidate.
-
-3. **Update the Changelog**
+2. **Update the Changelog**
 
    - Edit the changelog located in ``docs/src/references/changelog.rst``:
-     - Add a new section for the current version, summarizing the changes.
+     - Add a new section for the new version, summarizing the changes.
      - Leave a placeholder section titled *Unreleased* for future updates.
 
-4. **Merge the PR and Create a Tag**
+3. **Merge the PR and Create a Tag**
 
-   - After the release PR is merged, create a Git tag and push it to GitHub:
+   - After the release PR is merged, create a Git tag and push it to GitHub. For example
+     for a release of version ``0.1.1``:
 
      .. code-block:: bash
 
@@ -149,9 +145,9 @@ How to Perform a Release
         git push origin --tags
 
    - For a release candidate, the tag should include an additional dash, e.g.,
-     `v0.1.1-rc1`.
+     ``v0.1.1-rc1``.
 
-5. **Finalize the GitHub Release**
+4. **Finalize the GitHub Release**
 
    - Once the PR is merged, the CI will automatically:
      - Publish the package to PyPI.
