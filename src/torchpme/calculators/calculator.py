@@ -233,7 +233,7 @@ class Calculator(torch.nn.Module):
 
         if charges.dtype != dtype:
             raise ValueError(
-                f"type of `charges` ({cell.dtype}) must be same as `positions` "
+                f"type of `charges` ({charges.dtype}) must be same as `positions` "
                 f"({dtype})"
             )
 

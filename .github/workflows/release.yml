@@ -1,10 +1,8 @@
-name: Build and Release
+name: Release
 
 on:
   push:
-    branches: [main]
-  pull_request:
-    # Check all PR
+    tags: ["*"]
 
 jobs:
   build:
@@ -15,6 +13,7 @@ jobs:
       url: https://pypi.org/project/torch-pme
     permissions:
       id-token: write
+      contents: write
 
     steps:
     - uses: actions/checkout@v4
@@ -36,3 +35,5 @@ jobs:
           dist/*.tar.gz
           dist/*.whl
         prerelease: ${{ contains(github.ref, '-rc') }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

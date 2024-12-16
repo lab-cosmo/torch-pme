@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Optional
 
 import torch
-from vesin.torch import NeighborList
+from vesin import NeighborList
 
 DTYPE = torch.float64
 SQRT3 = math.sqrt(3)
@@ -239,7 +239,7 @@ def define_crystal(crystal_name="CsCl"):
     return positions, charges, cell, madelung_ref, num_formula_units
 
 
-def neighbor_list_torch(
+def neighbor_list(
     positions: torch.tensor,
     periodic: bool = True,
     box: Optional[torch.tensor] = None,
@@ -259,6 +259,11 @@ def neighbor_list_torch(
     i, j, d, S = nl.compute(
         points=positions, box=box, periodic=periodic, quantities="ijdS"
     )
+
+    i = torch.from_numpy(i.astype(int)).to(device=positions.device)
+    j = torch.from_numpy(j.astype(int))
+    d = torch.from_numpy(d).to(dtype=positions.dtype, device=positions.device)
+    S = torch.from_numpy(S).to(dtype=positions.dtype, device=positions.device)
 
     neighbor_indices = torch.stack([i, j], dim=1)
 
