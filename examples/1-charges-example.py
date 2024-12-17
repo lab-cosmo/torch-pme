@@ -32,8 +32,9 @@ manipulating atomic structures.
 
 import torch
 import vesin.torch
+import vesin.torch.metatensor
 from metatensor.torch import Labels, TensorBlock
-from metatensor.torch.atomistic import System
+from metatensor.torch.atomistic import NeighborListOptions, System
 
 import torchpme
 
@@ -74,11 +75,9 @@ print("cutoff:", cutoff)
 
 nl = vesin.torch.NeighborList(cutoff=cutoff, full_list=False)
 
-i, j, S, D, neighbor_distances = nl.compute(
-    points=positions, box=cell, periodic=True, quantities="ijSDd"
+neighbor_indices, S, D, neighbor_distances = nl.compute(
+    points=positions, box=cell, periodic=True, quantities="PSDd"
 )
-
-neighbor_indices = torch.stack([i, j], dim=1)
 
 # %%
 #
@@ -210,24 +209,14 @@ system = System(types=types, positions=positions, cell=cell, pbc=pbc)
 
 # %%
 #
-# We first add the neighbor list to the ``system``. This requires creating a
-# ``NeighborList`` object to store the *neighbor indices*, *distances*, and *shifts*.
+# We now compute the neighborlist for our ``system`` using the `vesin metatensor
+# interface <https://luthaf.fr/vesin/latest/metatensor.html>`_. This requires creating a
+# :class:`NeighborListOptions <metatensor.torch.atomistic.NeighborListOptions>` to set
+# the cutoff and the type of list.
 
-sample_values = torch.hstack([neighbor_indices, S])
-samples = Labels(
-    names=[
-        "first_atom",
-        "second_atom",
-        "cell_shift_a",
-        "cell_shift_b",
-        "cell_shift_c",
-    ],
-    values=sample_values,
-)
-
-components = Labels(names=["xyz"], values=torch.tensor([[0, 1, 2]]).T)
-properties = Labels(names=["distance"], values=torch.tensor([[0]]))
-neighbors = TensorBlock(D.reshape(-1, 3, 1), samples, [components], properties)
+options = NeighborListOptions(cutoff=4.0, full_list=True, strict=False)
+nl_mts = vesin.torch.metatensor.NeighborList(options, length_unit="Angstrom")
+neighbors = nl_mts.compute(system)
 
 # %%
 #
