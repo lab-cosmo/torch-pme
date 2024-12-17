@@ -1,7 +1,7 @@
 SplinePotential
 ###############
 
-.. autoclass:: torchpme.potentials.SplinePotential
+.. autoclass:: torchpme.SplinePotential
     :members:
 
 .. minigallery:: torchpme.SplinePotential

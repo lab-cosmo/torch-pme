@@ -1,5 +1,8 @@
-torch-pme
-#########
+Welcome to the torch-pme Documentation!
+#######################################
+
+Overview
+--------
 
 .. include:: ../../README.rst
     :start-after: marker-introduction
@@ -15,10 +18,16 @@ torch-pme
 
 .. _`vesin`: https://luthaf.fr/vesin
 
+.. include:: ../../README.rst
+    :start-after: marker-cite
+    :end-before: marker-contributing
+
 .. toctree::
    :hidden:
 
    about
    installation
+   examples/basic-usage
    examples/index
    references/index
+   contributing

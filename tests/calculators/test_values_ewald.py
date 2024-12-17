@@ -21,7 +21,7 @@ from helpers import (
     COULOMB_TEST_FRAMES,
     compute_distances,
     define_crystal,
-    neighbor_list_torch,
+    neighbor_list,
 )
 
 DTYPE = torch.float64
@@ -127,7 +127,7 @@ def test_madelung(crystal_name, scaling_factor, calc_name):
         rtol = 9e-4
 
     # Compute neighbor list
-    neighbor_indices, neighbor_distances = neighbor_list_torch(
+    neighbor_indices, neighbor_distances = neighbor_list(
         positions=pos, periodic=True, box=cell, cutoff=sr_cutoff
     )
 
@@ -178,7 +178,7 @@ def test_wigner(crystal_name, scaling_factor):
     madelung_ref /= scaling_factor
 
     # Compute neighbor list
-    neighbor_indices, neighbor_distances = neighbor_list_torch(
+    neighbor_indices, neighbor_distances = neighbor_list(
         positions=positions, periodic=True, box=cell
     )
 
@@ -272,14 +272,24 @@ def test_random_structure(
             prefactor=torchpme.utils.prefactors.eV_A,
         )
 
-    positions.requires_grad = True
-
-    neighbor_indices, neighbor_distances = neighbor_list_torch(
+    neighbor_indices, neighbor_shifts = neighbor_list(
         positions=positions,
         periodic=True,
         box=cell,
         cutoff=cutoff,
         full_neighbor_list=full_neighbor_list,
+        neighbor_shifts=True,
+    )
+
+    # Use manual distance calculation to avoiding issues with the torchscript version of
+    # vesin on Windows. See https://github.com/Luthaf/vesin/issues/21 for more details.
+    positions.requires_grad = True
+
+    neighbor_distances = compute_distances(
+        positions=positions,
+        neighbor_indices=neighbor_indices,
+        cell=cell,
+        neighbor_shifts=neighbor_shifts,
     )
 
     calc.to(dtype=DTYPE)
@@ -303,21 +313,12 @@ def test_random_structure(
     forces_target = torch.tensor(frame.get_forces(), dtype=DTYPE) / scaling_factor**2
     torch.testing.assert_close(forces, forces_target @ ortho, atol=0.0, rtol=5e-3)
 
-    neighbor_indices, neighbor_shifts = neighbor_list_torch(
-        positions=positions,
-        periodic=True,
-        box=cell,
-        cutoff=cutoff,
-        full_neighbor_list=full_neighbor_list,
-        neighbor_shifts=True,
-    )
-
     # Compute stress
     def energy_wrt_strain(strain):
         strained_R = positions + torch.einsum("ab,ib->ia", strain, positions)
         strained_cell = cell + torch.einsum("ab,Ab->Aa", strain, cell)
 
-        d = compute_distances(
+        neighbor_distances = compute_distances(
             strained_R,
             neighbor_indices,
             cell=strained_cell,
@@ -330,7 +331,7 @@ def test_random_structure(
                 cell=strained_cell,
                 positions=strained_R,
                 neighbor_indices=neighbor_indices,
-                neighbor_distances=d,
+                neighbor_distances=neighbor_distances,
             )
         ).sum()
 

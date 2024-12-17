@@ -1,3 +1,5 @@
+# mypy: ignore-errors
+
 import os
 import subprocess
 import sys
@@ -14,6 +16,7 @@ import torchpme  # noqa
 suppress_warnings = ["config.cache"]
 
 ROOT = os.path.abspath(os.path.join("..", ".."))
+sys.path.append(os.path.join(ROOT, "docs", "extensions"))
 
 # We use a second (pseudo) sphinx project located in `docs/generate_examples` to run the
 # examples and generate the actual output for our shinx-gallery. This is necessary
@@ -60,7 +63,11 @@ def generate_examples():
 def setup(app):
     generate_examples()
 
-    app.add_css_file("css/torch-pme.css")
+
+rst_prolog = f"""
+.. |version| replace:: {torchpme.__version__}
+
+"""
 
 
 # Add any Sphinx extension module names here, as strings. They can be
@@ -72,7 +79,10 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinx_gallery.gen_gallery",
     "sphinx_toggleprompt",
+    "sphinx_design",
     "chemiscope.sphinx",
+    # local extensions
+    "versions_list",
 ]
 
 # List of patterns, relative to source directory, that match files and
@@ -96,10 +106,10 @@ autodoc_typehints_format = "short"
 
 intersphinx_mapping = {
     "ase": ("https://wiki.fysik.dtu.dk/ase/", None),
-    "python": ("https://docs.python.org/3", None),
-    "numpy": ("https://numpy.org/doc/stable/", None),
-    "torch": ("https://pytorch.org/docs/stable/", None),
     "metatensor": ("https://docs.metatensor.org/latest/", None),
+    "numpy": ("https://numpy.org/doc/stable/", None),
+    "python": ("https://docs.python.org/3", None),
+    "torch": ("https://pytorch.org/docs/stable/", None),
     "vesin": ("https://luthaf.fr/vesin/latest/", None),
 }
 
@@ -127,9 +137,14 @@ html_theme_options = {
 # so a file named "default.css" will overwrite the builtin "default.css".
 
 html_static_path = ["../static"]
-html_favicon = "../static/images/torch-pme-icon.png"
-html_logo = "../static/images/torch-pme-icon.svg"
-html_title = "torch-pme"
+html_favicon = "logo/torch-pme-64.png"
+
+html_theme_options = {
+    "light_logo": "images/torch-pme.png",
+    "dark_logo": "images/torch-pme-dark.png",
+    "sidebar_hide_name": True,
+}
+
 
 # font-awesome logos (used in the footer)
 html_css_files = [

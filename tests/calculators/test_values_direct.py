@@ -8,7 +8,7 @@ import torch
 from torchpme import Calculator, CoulombPotential
 
 sys.path.append(str(Path(__file__).parents[1]))
-from helpers import neighbor_list_torch
+from helpers import neighbor_list
 
 DTYPE = torch.float64
 
@@ -184,7 +184,7 @@ def test_coulomb_exact(
     positions = scaling_factor * (positions @ orthogonal_transformation)
 
     # Choose a large cutoff that covers all atoms
-    neighbor_indices, neighbor_distances = neighbor_list_torch(
+    neighbor_indices, neighbor_distances = neighbor_list(
         positions=positions,
         periodic=False,
         cutoff=scaling_factor * 10,

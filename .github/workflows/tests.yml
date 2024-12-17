@@ -7,40 +7,61 @@ on:
     # Check all PR
 
 jobs:
-  tests:
+  min:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         include:
-          # - os: ubuntu-22.04
-          #  python-version: "3.9"
+          - os: ubuntu-22.04
+            python-version: "3.9"
           - os: ubuntu-22.04
             python-version: "3.12"
-          # - os: macos-14
-          #  python-version: "3.12"
-          # - os: windows-2022
-          #  python-version: "3.12"
+          - os: macos-14
+            python-version: "3.12"
+          - os: windows-2022
+            python-version: "3.12"
 
     steps:
     - uses: actions/checkout@v4
-
+      with:
+        fetch-depth: 0
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
     - run: pip install tox coverage[toml]
+    - name: run Python minimal tests
+      run: tox -e tests-min
 
+  all:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            python-version: "3.9"
+          - os: ubuntu-22.04
+            python-version: "3.12"
+          - os: macos-14
+            python-version: "3.12"
+          - os: windows-2022
+            python-version: "3.12"
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+    - run: pip install tox coverage[toml]
     - name: run Python tests
       run: |
-        tox -e tests-min
         tox -e tests
         coverage xml
-      env:
-        # Use the CPU only version of torch when building/running the code
-        PIP_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu
-
     - name: upload to codecov.io
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v5
       with:
         fail_ci_if_error: true
         files: tests/coverage.xml

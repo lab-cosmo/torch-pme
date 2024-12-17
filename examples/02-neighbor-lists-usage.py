@@ -70,9 +70,7 @@ charges = np.tile(charges_unitcell, 2 * 2 * 2)
 # We now slightly displace the atoms from their initial positions randomly based on a
 # Gaussian distribution with a width of 0.1 Å to create non-zero forces.
 
-rng = np.random.default_rng(42)
-displacement = rng.normal(loc=0.0, scale=0.1, size=(len(atoms), 3))
-atoms.positions += displacement
+atoms.rattle(stdev=0.1)
 
 chemiscope.show(
     frames=[atoms],

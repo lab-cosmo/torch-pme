@@ -1,26 +1,24 @@
-# This workflow builds and checks the package for release
 name: Build
 
 on:
-  pull_request:
+  push:
     branches: [main]
+  pull_request:
+    # Check all PR
 
 jobs:
   build:
+    name: tests
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v4
-    - name: Set up Python
-      if: ${{ false }}
+      with:
+        fetch-depth: 0
+    - name: setup Python
       uses: actions/setup-python@v5
       with:
         python-version: "3.12"
-    - run: pip install tox
-
-    - name: Test build integrity
-      if: ${{ false }}
+    - run: python -m pip install tox
+    - name: Build package
       run: tox -e build
-      env:
-        # Use the CPU only version of torch when building/running the code
-        PIP_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu

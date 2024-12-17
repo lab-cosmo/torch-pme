@@ -1,8 +1,5 @@
 [build-system]
-requires = [
-    "setuptools",
-    "wheel",
-]
+requires = ["setuptools", "setuptools_scm>=8", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -21,14 +18,14 @@ classifiers = [
     "Operating System :: POSIX",
     "Operating System :: MacOS :: MacOS X",
     "Operating System :: Microsoft :: Windows",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
     "Topic :: Scientific/Engineering",
-    "Topic :: Scientific/Engineering :: Physics",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
     "Topic :: Scientific/Engineering :: Chemistry",
-    "Topic :: Scientific/Engineering :: Mathematics",
-    "Framework :: PyTorch",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 keywords = [
     "PyTorch",
@@ -60,10 +57,14 @@ examples = [
 metatensor = ["metatensor-torch <0.7,>=0.6"]
 
 [project.urls]
-homepage = "http://torch-pme.readthedocs.io"
-documentation = "http://torch-pme.readthedocs.io"
+homepage = "https://lab-cosmo.github.io/torch-pme"
+documentation = "https://lab-cosmo.github.io/torch-pme"
 repository = "https://github.com/lab-cosmo/torch-pme"
 issues = "https://github.com/lab-cosmo/torch-pme/issues"
+changelog = "https://lab-cosmo.github.io/torch-pme/latest/references/changelog.html"
+
+[tool.check-manifest]
+ignore = ["src/torchpme/_version.py"]
 
 [tool.coverage.report]
 show_missing = true
@@ -77,7 +78,7 @@ data_file = 'tests/.coverage'
 output = 'tests/coverage.xml'
 
 [tool.ruff]
-exclude = ["docs/src/examples/**"]
+exclude = ["docs/src/examples/**", "src/torchpme/_version.py"]
 line-length = 88
 
 [tool.ruff.lint]
@@ -122,6 +123,9 @@ known-first-party = ["torchpme"]
 [tool.ruff.format]
 docstring-code-format = true
 
+[tool.setuptools_scm]
+version_file = "src/torchpme/_version.py"
+
 [tool.mypy]
 exclude = ["docs/src/examples"]
 follow_imports = 'skip'
@@ -140,6 +144,3 @@ filterwarnings = [
 
 [tool.setuptools.packages.find]
 where = ["src"]
-
-[tool.setuptools.dynamic]
-version = {attr = "torchpme.__version__"}

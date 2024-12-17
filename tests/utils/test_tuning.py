@@ -14,7 +14,7 @@ from torchpme import (
 from torchpme.utils import tune_ewald, tune_p3m, tune_pme
 
 sys.path.append(str(Path(__file__).parents[1]))
-from helpers import define_crystal, neighbor_list_torch
+from helpers import define_crystal, neighbor_list
 
 DTYPE = torch.float32
 DEVICE = "cpu"
@@ -51,7 +51,7 @@ def test_parameter_choose(calculator, tune, param_length, accuracy):
     assert len(params) == param_length
 
     # Compute neighbor list
-    neighbor_indices, neighbor_distances = neighbor_list_torch(
+    neighbor_indices, neighbor_distances = neighbor_list(
         positions=pos, periodic=True, box=cell, cutoff=sr_cutoff
     )
 
@@ -84,7 +84,7 @@ def test_odd_interpolation_nodes():
         learning_rate=0.75,
     )
 
-    neighbor_indices, neighbor_distances = neighbor_list_torch(
+    neighbor_indices, neighbor_distances = neighbor_list(
         positions=pos, periodic=True, box=cell, cutoff=sr_cutoff
     )
 
