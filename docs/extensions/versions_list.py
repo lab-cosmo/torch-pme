@@ -2,7 +2,6 @@ import docutils
 from packaging.version import parse as version_parse
 from sphinx.util.docutils import SphinxDirective
 
-
 DOC_ROOT = "https://lab-cosmo.github.io/torch-pme"
 
 
