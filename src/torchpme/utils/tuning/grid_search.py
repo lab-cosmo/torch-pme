@@ -7,10 +7,16 @@ from warnings import warn
 
 import torch
 import vesin.torch
-from torchpme import EwaldCalculator, CoulombPotential, PMECalculator, P3MCalculator
-from torchpme.lib.kvectors import get_ns_mesh
+
+from torchpme import (
+    CoulombPotential,
+    EwaldCalculator,
+    P3MCalculator,
+    PMECalculator,
+)
 from torchpme.utils import EwaldErrorBounds, P3MErrorBounds, PMEErrorBounds
-from . import _estimate_smearing_cutoff
+
+from . import _estimate_smearing_cutoff, _validate_parameters
 
 
 def grid_search(
@@ -18,13 +24,47 @@ def grid_search(
     charges: torch.Tensor,
     cell: torch.Tensor,
     positions: torch.Tensor,
-    cutoff: Optional[float] = None,
+    cutoff: float,
+    exponent: int = 1,
     accuracy: float = 1e-3,
     neighbor_indices: Optional[torch.Tensor] = None,
     neighbor_distances: Optional[torch.Tensor] = None,
 ):
+    r"""
+    Find the optimal parameters for calculators.
+
+    The steps are:
+    1. Find the ``smearing`` parameter for the :py:class:`CoulombPotential` that leads
+    to a real space error of half the desired accuracy.
+    2. Grid search for the kspace parameters, i.e. the ``lr_wavelength`` for Ewald and
+    the ``mesh_spacing`` and ``interpolation_nodes`` for PME and P3M.
+    For each combination of parameters, calculate the error. If the error is smaller
+    than the desired accuracy, use this combination for test runs to get the calculation
+    time needed. Return the combination that leads to the shortest calculation time. If
+    the desired accuracy is never reached, return the combination that leads to the
+    smallest error and throw a warning.
+
+    :param charges: torch.Tensor, atomic (pseudo-)charges
+    :param cell: torch.Tensor, periodic supercell for the system
+    :param positions: torch.Tensor, Cartesian coordinates of the particles within
+        the supercell.
+    :param cutoff: float, cutoff distance for the neighborlist
+    :param exponent :math:`p` in :math:`1/r^p` potentials
+    :param accuracy: Recomended values for a balance between the accuracy and speed is
+        :math:`10^{-3}`. For more accurate results, use :math:`10^{-6}`.
+    :param neighbor_indices: torch.Tensor with the ``i,j`` indices of neighbors for
+        which the potential should be computed in real space.
+    :param neighbor_distances: torch.Tensor with the pair distances of the neighbors
+        for which the potential should be computed in real space.
+
+    :return: Tuple containing a float of the optimal smearing for the :py:class:
+    `CoulombPotential`, a dictionary with the parameters for the calculator of the
+    chosen method and a float of the optimal cutoff value for the neighborlist
+    computation.
+    """
     dtype = charges.dtype
     device = charges.device
+    _validate_parameters(charges, cell, positions, exponent, accuracy)
 
     if method == "ewald":
         err_func = EwaldErrorBounds(
@@ -58,7 +98,6 @@ def grid_search(
         ns = torch.arange(1, 15, dtype=torch.long, device=device)
         k_space_params = torch.min(cell_dimensions) / ns
     elif method in ["pme", "p3m"]:
-        # If you have larger memory, you can try (2, 9)
         ns_actual = torch.exp2(torch.arange(2, 8, dtype=dtype, device=device))
         k_space_params = torch.min(cell_dimensions) / ((ns_actual - 1) / 2)
     else:
@@ -85,15 +124,14 @@ def grid_search(
     )
     for k_space_param in k_space_params:
         for interpolation_nodes in all_interpolation_nodes[::-1]:
-            # print(f"Searching for {interpolation_nodes = }, {mesh_spacing = }")
             if method == "ewald":
                 params = {
-                    "lr_wavelength": k_space_param,
+                    "lr_wavelength": float(k_space_param),
                 }
             else:
                 params = {
-                    "mesh_spacing": k_space_param,
-                    "interpolation_nodes": interpolation_nodes,
+                    "mesh_spacing": float(k_space_param),
+                    "interpolation_nodes": int(interpolation_nodes),
                 }
 
             err = err_func(
@@ -102,10 +140,9 @@ def grid_search(
                 **params,
             )
 
-            # print(f"{smearing = }, {cutoff = }")
-
             if err > accuracy:
-                # Not going to test the time
+                # Not going to test the time, record the parameters if the error is
+                # better.
                 if err < err_opt:
                     smearing_err_opt = smearing
                     params_err_opt = params
@@ -113,7 +150,7 @@ def grid_search(
                     err_opt = err
                 continue
 
-            calculator = CalculatorClass(  # or PMECalculator
+            calculator = CalculatorClass(
                 potential=CoulombPotential(smearing=smearing),
                 **params,
             )
@@ -164,10 +201,12 @@ def grid_search(
                 time_opt = execution_time
 
     if time_opt == torch.inf:
+        # Never found a parameter that reached the accuracy
         warn(
-            f"No parameters found within the desired accuracy of {accuracy}. Returning the best found. Accuracy: "
-            + str(err_opt)
+            f"No parameters found within the desired accuracy of {accuracy}."
+            f"Returning the best found. Accuracy: {str(err_opt)}",
+            stacklevel=1,
         )
-        return float(smearing_err_opt), params_err_opt, float(cutoff_err_opt)
+        return smearing_err_opt, params_err_opt, cutoff_err_opt
 
-    return float(smearing_opt), params_opt, float(cutoff_opt)
+    return smearing_opt, params_opt, cutoff_opt

@@ -162,6 +162,21 @@ def tune_pme(
 
 
 class PMEErrorBounds(torch.nn.Module):
+    r"""
+    Error bounds for :class:`torchpme.PMECalculator`.
+    For the error formulas are given `elsewhere <https://doi.org/10.1063/1.470043>`_.
+    Note the difference notation between the parameters in the reference and ours:
+
+    .. math::
+
+        \alpha = \left(\sqrt{2}\,\mathrm{smearing} \right)^{-1}
+
+    :param sum_squared_charges: accumulated squared charges, must be positive
+    :param cell: single tensor of shape (3, 3), describing the bounding
+    :param positions: single tensor of shape (``len(charges), 3``) containing the
+        Cartesian positions of all point charges in the system.
+    """
+
     def __init__(
         self, sum_squared_charges: float, cell: torch.Tensor, positions: torch.Tensor
     ):
@@ -204,6 +219,21 @@ class PMEErrorBounds(torch.nn.Module):
         )
 
     def forward(self, cutoff, smearing, mesh_spacing, interpolation_nodes):
+        r"""
+        Calculate the error bound of PME.
+
+        :param smearing: if its value is given, it will not be tuned, see
+            :class:`torchpme.PMECalculator` for details
+        :param mesh_spacing: if its value is given, it will not be tuned, see
+            :class:`torchpme.PMECalculator` for details
+        :param cutoff: if its value is given, it will not be tuned, see
+            :class:`torchpme.PMECalculator` for details
+        :param interpolation_nodes: The number ``n`` of nodes used in the interpolation
+            per coordinate axis. The total number of interpolation nodes in 3D will be
+            ``n^3``. In general, for ``n`` nodes, the interpolation will be performed by
+            piecewise polynomials of degree ``n - 1`` (e.g. ``n = 4`` for cubic
+            interpolation). Only the values ``3, 4, 5, 6, 7`` are supported.
+        """
         smearing = torch.as_tensor(smearing)
         mesh_spacing = torch.as_tensor(mesh_spacing)
         cutoff = torch.as_tensor(cutoff)

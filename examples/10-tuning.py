@@ -22,7 +22,7 @@ import torchpme
 
 DTYPE = torch.float64
 
-get_ipython().run_line_magic("matplotlib", "inline")
+get_ipython().run_line_magic("matplotlib", "inline")  # noqa
 
 # %%
 
@@ -78,7 +78,9 @@ energy = charges.T @ potential
 madelung = (-energy / num_formula_units).flatten().item()
 
 # this is the estimated error
-error_bounds = torchpme.utils.tuning.pme.PMEErrorBounds((charges**2).sum(), cell, positions)
+error_bounds = torchpme.utils.tuning.pme.PMEErrorBounds(
+    (charges**2).sum(), cell, positions
+)
 
 estimated_error = error_bounds(max_cutoff, smearing, **pme_params).item()
 print(f"""
@@ -234,51 +236,4 @@ print(
     EB.forward(cutoff=5, smearing=1, mesh_spacing=1, interpolation_nodes=4).item(),
 )
 
-# %%
-
-
-from scipy.optimize import minimize
-
-
-def loss(x, target_accuracy):
-    cutoff, smearing, mesh_spacing = x
-    value, duration = timed_madelung(
-        cutoff=cutoff,
-        smearing=smearing,
-        mesh_spacing=mesh_spacing,
-        interpolation_nodes=4,
-    )
-    estimated_error = error_bounds(
-        cutoff=cutoff,
-        smearing=smearing,
-        mesh_spacing=mesh_spacing,
-        interpolation_nodes=4,
-    )
-    tgt_loss = max(
-        0, np.log(estimated_error / madelung_ref / target_accuracy)
-    )  # relu on the accuracy
-    print(x, estimated_error.item(), np.abs(madelung - value), duration)
-    return tgt_loss * 10 + duration
-
-
-initial_guess = [9, 0.3, 5]
-result = minimize(
-    loss,
-    initial_guess,
-    args=(1e-8),
-    method="Nelder-Mead",
-    options={"disp": True, "maxiter": 200},
-)
-
-
-# %%
-
-result
-# %%
-timed_madelung(cutoff=2.905, smearing=0.7578, mesh_spacing=5.524, interpolation_nodes=4)
-# %%
-
-madelung_ref
-# %%
-error_bounds(9, 0.5, 1, 4)
 # %%

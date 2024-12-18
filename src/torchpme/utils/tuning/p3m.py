@@ -173,13 +173,13 @@ def tune_p3m(
     err_bounds = P3MErrorBounds(sum_squared_charges, cell, positions)
 
     params = [smearing_opt, ns_mesh_opt, cutoff_opt, interpolation_nodes]
-    # _optimize_parameters(
-    #     params=params,
-    #     loss=err_bounds,
-    #     max_steps=max_steps,
-    #     accuracy=accuracy,
-    #     learning_rate=learning_rate,
-    # )
+    _optimize_parameters(
+        params=params,
+        loss=err_bounds,
+        max_steps=max_steps,
+        accuracy=accuracy,
+        learning_rate=learning_rate,
+    )
 
     return (
         float(smearing_opt),
@@ -192,6 +192,23 @@ def tune_p3m(
 
 
 class P3MErrorBounds(torch.nn.Module):
+    r"""
+    "
+    Error bounds for :class:`torchpme.calculators.pme.P3MCalculator`.
+
+    For the error formulas are given `here <https://doi.org/10.1063/1.477415>`_.
+    Note the difference notation between the parameters in the reference and ours:
+
+    .. math::
+
+        \alpha = \left(\sqrt{2}\,\mathrm{smearing} \right)^{-1}
+
+    :param sum_squared_charges: accumulated squared charges, must be positive
+    :param cell: single tensor of shape (3, 3), describing the bounding
+    :param positions: single tensor of shape (``len(charges), 3``) containing the
+        Cartesian positions of all point charges in the system.
+    """
+
     def __init__(
         self, sum_squared_charges: float, cell: torch.Tensor, positions: torch.Tensor
     ):
@@ -232,6 +249,18 @@ class P3MErrorBounds(torch.nn.Module):
         )
 
     def forward(self, smearing, mesh_spacing, cutoff, interpolation_nodes):
+        r"""
+        Calculate the error bound of P3M.
+
+        :param smearing: see :class:`torchpme.P3MCalculator` for details
+        :param mesh_spacing: see :class:`torchpme.P3MCalculator` for details
+        :param cutoff: see :class:`torchpme.P3MCalculator` for details
+        :param interpolation_nodes: The number ``n`` of nodes used in the interpolation
+            per coordinate axis. The total number of interpolation nodes in 3D will be
+            ``n^3``. In general, for ``n`` nodes, the interpolation will be performed by
+            piecewise polynomials of degree ``n`` (e.g. ``n = 3`` for cubic
+            interpolation). Only the values ``1, 2, 3, 4, 5`` are supported.
+        """
         smearing = torch.as_tensor(smearing)
         mesh_spacing = torch.as_tensor(mesh_spacing)
         cutoff = torch.as_tensor(cutoff)
