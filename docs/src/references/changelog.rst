@@ -34,7 +34,7 @@ Added
 Fixed
 #####
 
-* ``_validate_compute_parameters`` now checks if the cell is zero if the potential is range-separated
+* All calculators now check if the cell is zero if the potential is range-separated
 
 .. Changed
 .. #######
