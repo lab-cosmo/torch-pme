@@ -105,6 +105,24 @@ def test_invalid_device_cell():
         )
 
 
+def test_zero_cell():
+    calculator = Calculator(
+        potential=CoulombPotential(smearing=1, exclusion_radius=None)
+    )
+    match = (
+        r"provided `cell` has a determinant of 0 and therefore is not valid for "
+        r"periodic calculation"
+    )
+    with pytest.raises(ValueError, match=match):
+        calculator.forward(
+            positions=POSITIONS_1,
+            charges=CHARGES_1,
+            cell=torch.zeros([3, 3], dtype=DTYPE, device=DEVICE),
+            neighbor_indices=NEIGHBOR_INDICES,
+            neighbor_distances=NEIGHBOR_DISTANCES,
+        )
+
+
 # Tests for invalid shape, dtype and device of charges
 def test_invalid_dim_charges():
     calculator = CalculatorTest()

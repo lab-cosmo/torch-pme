@@ -1,3 +1,5 @@
+from typing import Optional
+
 import torch
 from torch import profiler
 
@@ -158,6 +160,7 @@ class Calculator(torch.nn.Module):
             positions=positions,
             neighbor_indices=neighbor_indices,
             neighbor_distances=neighbor_distances,
+            smearing=self.potential.smearing,
         )
 
         # Compute short-range (SR) part using a real space sum
@@ -185,6 +188,7 @@ class Calculator(torch.nn.Module):
         positions: torch.Tensor,
         neighbor_indices: torch.Tensor,
         neighbor_distances: torch.Tensor,
+        smearing: Optional[float],
     ) -> None:
         device = positions.device
         dtype = positions.dtype
@@ -213,6 +217,14 @@ class Calculator(torch.nn.Module):
             raise ValueError(
                 f"device of `cell` ({cell.device}) must be same as `positions` "
                 f"({device})"
+            )
+
+        if smearing is not None and torch.equal(
+            cell.det(), torch.tensor(0.0, dtype=cell.dtype, device=cell.device)
+        ):
+            raise ValueError(
+                "provided `cell` has a determinant of 0 and therefore is not valid for "
+                "periodic calculation"
             )
 
         # check shape, dtype & device of `charges`

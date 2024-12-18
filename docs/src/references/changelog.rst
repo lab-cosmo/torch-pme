@@ -31,8 +31,10 @@ Added
 
 * First release outside of the lab.
 
-.. Fixed
-.. #####
+Fixed
+#####
+
+* All calculators now check if the cell is zero if the potential is range-separated
 
 .. Changed
 .. #######
