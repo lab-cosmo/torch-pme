@@ -219,10 +219,8 @@ class Calculator(torch.nn.Module):
                 f"({device})"
             )
 
-        determinant = torch.linalg.det(cell)
-
-        if smearing is not None and torch.isclose(
-            determinant, torch.tensor(0.0, dtype=cell.dtype, device=cell.device)
+        if smearing is not None and torch.equal(
+            cell.det(), torch.tensor(0.0, dtype=cell.dtype, device=cell.device)
         ):
             raise ValueError(
                 "provided `cell` has a determinant of 0 and therefore is not valid for "
