@@ -31,8 +31,10 @@ Added
 
 * First release outside of the lab.
 
-.. Fixed
-.. #####
+Fixed
+#####
+
+* ``_validate_compute_parameters`` now checks if the cell is zero if the potential is range-separated
 
 .. Changed
 .. #######
