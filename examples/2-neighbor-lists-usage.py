@@ -114,8 +114,8 @@ print("cutoff:", cutoff)
 # the default (NumPy) version of the vesin neighbor list.
 
 nl = vesin.NeighborList(cutoff=cutoff, full_list=False)
-i, j, S = nl.compute(
-    points=atoms.positions, box=atoms.cell.array, periodic=True, quantities="ijS"
+neighbor_indices, S = nl.compute(
+    points=atoms.positions, box=atoms.cell.array, periodic=True, quantities="PS"
 )
 
 # %%
@@ -158,9 +158,7 @@ def distances(
 
 positions.requires_grad = True
 
-i = torch.from_numpy(i.astype(int))
-j = torch.from_numpy(j.astype(int))
-neighbor_indices = torch.stack([i, j], dim=1)
+neighbor_indices = torch.from_numpy(neighbor_indices.astype(int))
 neighbor_shifts = torch.from_numpy(S)
 
 
@@ -227,9 +225,9 @@ positions_new.requires_grad = True
 # and create new distances in a similar manner as above.
 
 nl = vesin.torch.NeighborList(cutoff=1.0, full_list=False)
-i, j, d = nl.compute(points=positions_new, box=cell, periodic=True, quantities="ijd")
-
-neighbor_indices_new = torch.stack([i, j], dim=1)
+neighbor_indices_new, d = nl.compute(
+    points=positions_new, box=cell, periodic=True, quantities="Pd"
+)
 
 # %%
 #

@@ -3,4 +3,4 @@ coverage[toml]
 pytest
 pytest-cov
 scipy
-vesin >= 0.2.0
+vesin >= 0.3.0
