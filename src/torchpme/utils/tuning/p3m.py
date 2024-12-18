@@ -153,6 +153,7 @@ def tune_p3m(
         smearing=smearing,
         cutoff=cutoff,
         accuracy=accuracy,
+        prefac=2 * sum_squared_charges / math.sqrt(len(positions)),
     )
     # We choose only one mesh as initial guess
     if mesh_spacing is None:
@@ -166,22 +167,71 @@ def tune_p3m(
         ns_mesh_opt = get_ns_mesh(cell, mesh_spacing)
 
     cell_dimensions = torch.linalg.norm(cell, dim=1)
-    volume = torch.abs(cell.det())
-    prefac = 2 * sum_squared_charges / math.sqrt(len(positions))
 
     interpolation_nodes = torch.tensor(interpolation_nodes, device=cell.device)
 
-    def err_Fourier(smearing, ns_mesh):
-        spacing = cell_dimensions / ns_mesh
-        h = torch.prod(spacing) ** (1 / 3)
+    err_bounds = P3MErrorBounds(sum_squared_charges, cell, positions)
+
+    params = [smearing_opt, ns_mesh_opt, cutoff_opt, interpolation_nodes]
+    _optimize_parameters(
+        params=params,
+        loss=err_bounds,
+        max_steps=max_steps,
+        accuracy=accuracy,
+        learning_rate=learning_rate,
+    )
+
+    return (
+        float(smearing_opt),
+        {
+            "mesh_spacing": float(torch.min(cell_dimensions / ((ns_mesh_opt - 1) / 2))),
+            "interpolation_nodes": int(interpolation_nodes),
+        },
+        float(cutoff_opt),
+    )
+
+
+class P3MErrorBounds(torch.nn.Module):
+    r"""
+    "
+    Error bounds for :class:`torchpme.calculators.pme.P3MCalculator`.
+
+    For the error formulas are given `here <https://doi.org/10.1063/1.477415>`_.
+    Note the difference notation between the parameters in the reference and ours:
+
+    .. math::
+
+        \alpha = \left(\sqrt{2}\,\mathrm{smearing} \right)^{-1}
+
+    :param sum_squared_charges: accumulated squared charges, must be positive
+    :param cell: single tensor of shape (3, 3), describing the bounding
+    :param positions: single tensor of shape (``len(charges), 3``) containing the
+        Cartesian positions of all point charges in the system.
+    """
+
+    def __init__(
+        self, sum_squared_charges: float, cell: torch.Tensor, positions: torch.Tensor
+    ):
+        super().__init__()
+        self.volume = torch.abs(torch.det(cell))
+        self.prefac = 2 * sum_squared_charges / math.sqrt(len(positions))
+        self.cell_dimensions = torch.linalg.norm(cell, dim=1)
+        self.cell = cell
+        self.positions = positions
+
+    def err_kspace(self, smearing, mesh_spacing, interpolation_nodes):
+        actual_spacing = self.cell_dimensions / (
+            2 * self.cell_dimensions / mesh_spacing + 1
+        )
+        h = torch.prod(actual_spacing) ** (1 / 3)
 
         return (
-            prefac
-            / volume ** (2 / 3)
+            self.prefac
+            / self.volume ** (2 / 3)
             * (h * (1 / 2**0.5 / smearing)) ** interpolation_nodes
             * torch.sqrt(
                 (1 / 2**0.5 / smearing)
-                * volume ** (1 / 3)
+                * self.volume ** (1 / 3)
                 * math.sqrt(2 * torch.pi)
                 * sum(
                     A_COEF[m][interpolation_nodes]
@@ -191,32 +241,31 @@ def tune_p3m(
             )
         )
 
-    def err_real(smearing, cutoff):
+    def err_rspace(self, smearing, cutoff):
         return (
-            prefac
-            / torch.sqrt(cutoff * volume)
+            self.prefac
+            / torch.sqrt(cutoff * self.volume)
             * torch.exp(-(cutoff**2) / 2 / smearing**2)
         )
 
-    def loss(smearing, ns_mesh, cutoff):
+    def forward(self, smearing, mesh_spacing, cutoff, interpolation_nodes):
+        r"""
+        Calculate the error bound of P3M.
+
+        :param smearing: see :class:`torchpme.P3MCalculator` for details
+        :param mesh_spacing: see :class:`torchpme.P3MCalculator` for details
+        :param cutoff: see :class:`torchpme.P3MCalculator` for details
+        :param interpolation_nodes: The number ``n`` of nodes used in the interpolation
+            per coordinate axis. The total number of interpolation nodes in 3D will be
+            ``n^3``. In general, for ``n`` nodes, the interpolation will be performed by
+            piecewise polynomials of degree ``n`` (e.g. ``n = 3`` for cubic
+            interpolation). Only the values ``1, 2, 3, 4, 5`` are supported.
+        """
+        smearing = torch.as_tensor(smearing)
+        mesh_spacing = torch.as_tensor(mesh_spacing)
+        cutoff = torch.as_tensor(cutoff)
+        interpolation_nodes = torch.as_tensor(interpolation_nodes)
         return torch.sqrt(
-            err_Fourier(smearing, ns_mesh) ** 2 + err_real(smearing, cutoff) ** 2
+            self.err_kspace(smearing, mesh_spacing, interpolation_nodes) ** 2
+            + self.err_rspace(smearing, cutoff) ** 2
         )
-
-    params = [smearing_opt, ns_mesh_opt, cutoff_opt]
-    _optimize_parameters(
-        params=params,
-        loss=loss,
-        max_steps=max_steps,
-        accuracy=accuracy,
-        learning_rate=learning_rate,
-    )
-
-    return (
-        float(smearing_opt),
-        {
-            "mesh_spacing": float(torch.min(cell_dimensions / ns_mesh_opt)),
-            "interpolation_nodes": int(interpolation_nodes),
-        },
-        float(cutoff_opt),
-    )

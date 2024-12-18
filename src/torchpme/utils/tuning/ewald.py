@@ -117,7 +117,11 @@ def tune_ewald(
     _validate_parameters(sum_squared_charges, cell, positions, exponent, accuracy)
 
     smearing_opt, cutoff_opt = _estimate_smearing_cutoff(
-        cell=cell, smearing=smearing, cutoff=cutoff, accuracy=accuracy
+        cell=cell,
+        smearing=smearing,
+        cutoff=cutoff,
+        accuracy=accuracy,
+        prefac=2 * sum_squared_charges / math.sqrt(len(positions)),
     )
 
     # We choose a very small initial fourier wavelength, hardcoded for now
@@ -128,33 +132,14 @@ def tune_ewald(
         requires_grad=(lr_wavelength is None),
     )
 
-    volume = torch.abs(cell.det())
-    prefac = 2 * sum_squared_charges / math.sqrt(len(positions))
-
-    def err_Fourier(smearing, k_cutoff):
-        return (
-            prefac**0.5
-            / smearing
-            / torch.sqrt(TWO_PI**2 * volume / (TWO_PI / k_cutoff) ** 0.5)
-            * torch.exp(-(TWO_PI**2) * smearing**2 / (TWO_PI / k_cutoff))
-        )
-
-    def err_real(smearing, cutoff):
-        return (
-            prefac
-            / torch.sqrt(cutoff * volume)
-            * torch.exp(-(cutoff**2) / 2 / smearing**2)
-        )
-
-    def loss(smearing, k_cutoff, cutoff):
-        return torch.sqrt(
-            err_Fourier(smearing, k_cutoff) ** 2 + err_real(smearing, cutoff) ** 2
-        )
+    err_bound = EwaldErrorBounds(
+        sum_squared_charges=sum_squared_charges, cell=cell, positions=positions
+    )
 
     params = [smearing_opt, k_cutoff_opt, cutoff_opt]
     _optimize_parameters(
         params=params,
-        loss=loss,
+        loss=err_bound,
         max_steps=max_steps,
         accuracy=accuracy,
         learning_rate=learning_rate,
@@ -165,3 +150,69 @@ def tune_ewald(
         {"lr_wavelength": TWO_PI / float(k_cutoff_opt)},
         float(cutoff_opt),
     )
+
+
+class EwaldErrorBounds(torch.nn.Module):
+    r"""
+    Error bounds for :class:`torchpme.calculators.ewald.EwaldCalculator`.
+
+    The error formulas are given `online
+    <https://www2.icp.uni-stuttgart.de/~icp/mediawiki/images/4/4d/Script_Longrange_Interactions.pdf>`_
+    (now not available, need to be updated later). Note the difference notation between
+    the parameters in the reference and ours:
+
+    .. math::
+
+        \alpha &= \left( \sqrt{2}\,\mathrm{smearing} \right)^{-1}
+
+        K &= \frac{2 \pi}{\mathrm{lr\_wavelength}}
+
+        r_c &= \mathrm{cutoff}
+
+    :param sum_squared_charges: accumulated squared charges, must be positive
+    :param cell: single tensor of shape (3, 3), describing the bounding
+    :param positions: single tensor of shape (``len(charges), 3``) containing the
+        Cartesian positions of all point charges in the system.
+    """
+
+    def __init__(
+        self,
+        sum_squared_charges: torch.Tensor,
+        cell: torch.Tensor,
+        positions: torch.Tensor,
+    ):
+        super().__init__()
+        self.volume = torch.abs(torch.det(cell))
+        self.prefac = 2 * sum_squared_charges / math.sqrt(len(positions))
+        self.cell = cell
+        self.positions = positions
+
+    def err_kspace(self, smearing, lr_wavelength):
+        return (
+            self.prefac**0.5
+            / smearing
+            / torch.sqrt(TWO_PI**2 * self.volume / (lr_wavelength) ** 0.5)
+            * torch.exp(-(TWO_PI**2) * smearing**2 / (lr_wavelength))
+        )
+
+    def err_rspace(self, smearing, cutoff):
+        return (
+            self.prefac
+            / torch.sqrt(cutoff * self.volume)
+            * torch.exp(-(cutoff**2) / 2 / smearing**2)
+        )
+
+    def forward(self, smearing, lr_wavelength, cutoff):
+        r"""
+        Calculate the error bound of Ewald.
+        :param smearing: see :class:`torchpme.EwaldCalculator` for details
+        :param lr_wavelength: see :class:`torchpme.EwaldCalculator` for details
+        :param cutoff: see :class:`torchpme.EwaldCalculator` for details
+        """
+        smearing = torch.as_tensor(smearing)
+        lr_wavelength = torch.as_tensor(lr_wavelength)
+        cutoff = torch.as_tensor(cutoff)
+        return torch.sqrt(
+            self.err_kspace(smearing, lr_wavelength) ** 2
+            + self.err_rspace(smearing, cutoff) ** 2
+        )
