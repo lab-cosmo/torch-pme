@@ -43,17 +43,11 @@ def _estimate_smearing_cutoff(
     cutoff: Optional[float],
     accuracy: float,
     prefac: float,
-) -> tuple[torch.tensor, torch.tensor]:
-    dtype = cell.dtype
-    device = cell.device
-
+) -> tuple[float, float]:
     cell_dimensions = torch.linalg.norm(cell, dim=1)
     min_dimension = float(torch.min(cell_dimensions))
     half_cell = min_dimension / 2.0
-    if cutoff is None:
-        cutoff_init = min(5.0, half_cell)
-    else:
-        cutoff_init = cutoff
+    cutoff_init = min(5.0, half_cell) if cutoff is None else cutoff
     ratio = math.sqrt(
         -2
         * math.log(
@@ -65,53 +59,16 @@ def _estimate_smearing_cutoff(
     )
     smearing_init = cutoff_init / ratio if smearing is None else smearing
 
-    """if cutoff is None:
-        # solve V_SR(cutoff) == accuracy for cutoff
-        def loss(cutoff):
-            return (
-                torch.erfc(cutoff / math.sqrt(2) / smearing_init) / cutoff - accuracy
-            ) ** 2
-
-        cutoff_init = torch.tensor(
-            half_cell, dtype=dtype, device=device, requires_grad=True
-        )
-        _optimize_parameters(
-            params=[cutoff_init],
-            loss=loss,
-            accuracy=accuracy,
-            max_steps=1000,
-            learning_rate=0.1,
-        )"""
-
-    smearing_init = torch.tensor(
-        float(smearing_init) if smearing is None else smearing,
-        dtype=dtype,
-        device=device,
-        requires_grad=False,  # (smearing is None),
-    )
-
-    cutoff_init = torch.tensor(
-        float(cutoff_init) if cutoff is None else cutoff,
-        dtype=dtype,
-        device=device,
-        requires_grad=False,  # (cutoff is None),
-    )
-
-    return smearing_init, cutoff_init
+    return float(smearing_init), float(cutoff_init)
 
 
 def _validate_parameters(
-    sum_squared_charges: float,
+    charges: torch.Tensor,
     cell: torch.Tensor,
     positions: torch.Tensor,
     exponent: int,
     accuracy: float,
 ) -> None:
-    if sum_squared_charges <= 0:
-        raise ValueError(
-            f"sum of squared charges must be positive, got {sum_squared_charges}"
-        )
-
     if exponent != 1:
         raise NotImplementedError("Only exponent = 1 is supported")
 
@@ -148,6 +105,35 @@ def _validate_parameters(
         raise ValueError(
             "provided `cell` has a determinant of 0 and therefore is not valid for "
             "periodic calculation"
+        )
+
+    if charges.dtype != dtype:
+        raise ValueError(
+            f"each `charges` must have the same type {dtype} as `positions`, got at least "
+            "one tensor of type "
+            f"{charges.dtype}"
+        )
+
+    if charges.device != device:
+        raise ValueError(
+            f"each `charges` must be on the same device {device} as `positions`, got at "
+            "least one tensor with device "
+            f"{charges.device}"
+        )
+
+    if charges.dim() != 2:
+        raise ValueError(
+            "`charges` must be a 2-dimensional tensor, got "
+            f"tensor with {charges.dim()} dimension(s) and shape "
+            f"{list(charges.shape)}"
+        )
+
+    if list(charges.shape) != [len(positions), charges.shape[1]]:
+        raise ValueError(
+            "`charges` must be a tensor with shape [n_atoms, n_channels], with "
+            "`n_atoms` being the same as the variable `positions`. Got tensor with "
+            f"shape {list(charges.shape)} where positions contains "
+            f"{len(positions)} atoms"
         )
 
     if not isinstance(accuracy, float):
