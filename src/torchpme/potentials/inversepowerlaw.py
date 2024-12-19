@@ -1,7 +1,7 @@
 from typing import Optional
 
 import torch
-from torch.special import gammainc, gammaincc, gammaln
+from torch.special import gammaln
 
 from .potential import Potential
 
@@ -15,6 +15,27 @@ def gamma(x: torch.Tensor) -> torch.Tensor:
     https://discuss.pytorch.org/t/is-there-a-gamma-function-in-pytorch/17122
     """
     return torch.exp(gammaln(x))
+
+
+# Auxilary function for stable Fourier transform implementation
+def gammainc_upper_over_powerlaw(exponent, zz):
+    if exponent == 1:
+        return torch.exp(-zz) / zz
+    if exponent == 2:
+        return torch.sqrt(torch.pi / zz) * torch.erfc(torch.sqrt(zz))
+    if exponent == 3:
+        return -torch.expi(-zz)
+    if exponent == 4:
+        return 2 * (
+            torch.exp(-zz) - torch.sqrt(torch.pi * zz) * torch.erfc(torch.sqrt(zz))
+        )
+    if exponent == 5:
+        return torch.exp(-zz) + zz * torch.expi(-zz)
+    if exponent == 6:
+        return (
+            (2 - 4 * zz) * torch.exp(-zz)
+            + 4 * torch.sqrt(torch.pi) * zz**1.5 * torch.erfc(torch.sqrt(zz))
+        ) / 3
 
 
 class InversePowerLawPotential(Potential):
@@ -46,7 +67,7 @@ class InversePowerLawPotential(Potential):
 
     def __init__(
         self,
-        exponent: float,
+        exponent: int,
         smearing: Optional[float] = None,
         exclusion_radius: Optional[float] = None,
         dtype: Optional[torch.dtype] = None,
@@ -103,7 +124,7 @@ class InversePowerLawPotential(Potential):
         x = 0.5 * dist**2 / smearing**2
         peff = exponent / 2
         prefac = 1.0 / (2 * smearing**2) ** peff
-        return prefac * gammainc(peff, x) / x**peff
+        return self.from_dist(dist) - prefac * gammainc_upper_over_powerlaw(exponent, x)
 
     @torch.jit.export
     def lr_from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
@@ -136,7 +157,7 @@ class InversePowerLawPotential(Potential):
         return torch.where(
             k_sq == 0,
             0.0,
-            prefac * gammaincc(peff, masked) / masked**peff * gamma(peff),
+            prefac * gammainc_upper_over_powerlaw(exponent, masked),
         )
 
     def self_contribution(self) -> torch.Tensor:
