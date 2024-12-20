@@ -8,11 +8,12 @@ from . import (
     _estimate_smearing_cutoff,
     _optimize_parameters,
     _validate_parameters,
+    TuningErrorBounds,
 )
 
 
 def tune_pme(
-    sum_squared_charges: float,
+    charges: float,
     cell: torch.Tensor,
     positions: torch.Tensor,
     smearing: Optional[float] = None,
@@ -41,9 +42,9 @@ def tune_pme(
     fixed and one wants to optimize only the ``smearing`` and the ``mesh_spacing`` with
     respect to the minimal error and fixed cutoff.
 
-    :param sum_squared_charges: accumulated squared charges, must be positive
+    :param charges: charges, tensor of size (``n_atoms``)
     :param cell: single tensor of shape (3, 3), describing the bounding
-    :param positions: single tensor of shape (``len(charges), 3``) containing the
+    :param positions: single tensor of shape (``n_atoms, 3``) containing the
         Cartesian positions of all point charges in the system.
     :param smearing: if its value is given, it will not be tuned, see
         :class:`torchpme.PMECalculator` for details
@@ -80,7 +81,7 @@ def tune_pme(
     >>> charges = torch.tensor([[1.0], [-1.0]], dtype=torch.float64)
     >>> cell = torch.eye(3, dtype=torch.float64)
     >>> smearing, parameter, cutoff = tune_pme(
-    ...     torch.sum(charges**2, dim=0), cell, positions, accuracy=1e-1
+    ...     charges, cell, positions, accuracy=1e-1
     ... )
 
     You can check the values of the parameters
@@ -98,7 +99,7 @@ def tune_pme(
     example, fixing the cutoff to 0.1
 
     >>> smearing, parameter, cutoff = tune_pme(
-    ...     torch.sum(charges**2, dim=0), cell, positions, cutoff=0.6, accuracy=1e-1
+    ...     charges, cell, positions, cutoff=0.6, accuracy=1e-1
     ... )
 
     You can check the values of the parameters, now the cutoff is fixed
@@ -113,14 +114,18 @@ def tune_pme(
     0.6
 
     """
-    _validate_parameters(sum_squared_charges, cell, positions, exponent, accuracy)
+    _validate_parameters(charges, cell, positions, exponent, accuracy)
+
+    err_bound = PMEErrorBounds(
+        charges, cell=cell, positions=positions
+    )
 
     smearing_opt, cutoff_opt = _estimate_smearing_cutoff(
         cell=cell,
         smearing=smearing,
         cutoff=cutoff,
         accuracy=accuracy,
-        prefac=2 * sum_squared_charges / math.sqrt(len(positions)),
+        prefac=err_bound.prefac,
     )
 
     # We choose only one mesh as initial guess
@@ -137,10 +142,6 @@ def tune_pme(
     cell_dimensions = torch.linalg.norm(cell, dim=1)
 
     interpolation_nodes = torch.tensor(interpolation_nodes, device=cell.device)
-
-    err_bound = PMEErrorBounds(
-        sum_squared_charges=sum_squared_charges, cell=cell, positions=positions
-    )
 
     params = [cutoff_opt, smearing_opt, ns_mesh_opt, interpolation_nodes]
     _optimize_parameters(
@@ -161,7 +162,7 @@ def tune_pme(
     )
 
 
-class PMEErrorBounds(torch.nn.Module):
+class PMEErrorBounds(TuningErrorBounds):
     r"""
     Error bounds for :class:`torchpme.PMECalculator`.
     For the error formulas are given `elsewhere <https://doi.org/10.1063/1.470043>`_.
@@ -171,21 +172,21 @@ class PMEErrorBounds(torch.nn.Module):
 
         \alpha = \left(\sqrt{2}\,\mathrm{smearing} \right)^{-1}
 
-    :param sum_squared_charges: accumulated squared charges, must be positive
+    :param charges: atomic charges
     :param cell: single tensor of shape (3, 3), describing the bounding
     :param positions: single tensor of shape (``len(charges), 3``) containing the
         Cartesian positions of all point charges in the system.
     """
 
     def __init__(
-        self, sum_squared_charges: float, cell: torch.Tensor, positions: torch.Tensor
+        self, charges: torch.Tensor, cell: torch.Tensor, positions: torch.Tensor
     ):
+        super().__init__(charges, cell, positions)
+
         self.volume = torch.abs(torch.det(cell))
-        self.prefac = 2 * sum_squared_charges / math.sqrt(len(positions))
+        self.sum_squared_charges = (charges**2).sum()
+        self.prefac = 2 * self.sum_squared_charges / math.sqrt(len(positions))
         self.cell_dimensions = torch.linalg.norm(cell, dim=1)
-        self.cell = cell
-        self.positions = positions
-        super().__init__()
 
     def err_kspace(self, smearing, mesh_spacing, interpolation_nodes):
         actual_spacing = self.cell_dimensions / (
@@ -218,7 +219,7 @@ class PMEErrorBounds(torch.nn.Module):
             * torch.exp(-(cutoff**2) / 2 / smearing**2)
         )
 
-    def forward(self, cutoff, smearing, mesh_spacing, interpolation_nodes):
+    def error(self, cutoff, smearing, mesh_spacing, interpolation_nodes):
         r"""
         Calculate the error bound of PME.
 
@@ -234,6 +235,7 @@ class PMEErrorBounds(torch.nn.Module):
             piecewise polynomials of degree ``n - 1`` (e.g. ``n = 4`` for cubic
             interpolation). Only the values ``3, 4, 5, 6, 7`` are supported.
         """
+
         smearing = torch.as_tensor(smearing)
         mesh_spacing = torch.as_tensor(mesh_spacing)
         cutoff = torch.as_tensor(cutoff)

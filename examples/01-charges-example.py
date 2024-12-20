@@ -44,6 +44,7 @@ import torchpme
 
 symbols = ("Cs", "Cl")
 types = torch.tensor([55, 17])
+charges = torch.tensor([[1.0], [-1.0]], dtype=torch.float64)
 positions = torch.tensor([(0, 0, 0), (0.5, 0.5, 0.5)], dtype=torch.float64)
 cell = torch.eye(3, dtype=torch.float64)
 pbc = torch.tensor([True, True, True])
@@ -56,7 +57,7 @@ pbc = torch.tensor([True, True, True])
 # of 1 or -1 in units of elementary charges.
 
 smearing, pme_params, cutoff = torchpme.utils.tune_pme(
-    sum_squared_charges=2.0, cell=cell, positions=positions
+    charges=charges, cell=cell, positions=positions
 )
 
 # %%
