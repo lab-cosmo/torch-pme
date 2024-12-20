@@ -163,10 +163,9 @@ potential = CoulombPotential(smearing=smearing)
 # coordinates. More details can be found in its documentation.
 
 nl = NeighborList(cutoff=rcut, full_list=False)
-i, j, neighbor_distances = nl.compute(
-    points=positions, box=cell, periodic=True, quantities="ijd"
+neighbor_indices, neighbor_distances = nl.compute(
+    points=positions, box=cell, periodic=True, quantities="Pd"
 )
-neighbor_indices = torch.stack([i, j], dim=1)
 
 # %%
 #
@@ -259,10 +258,9 @@ positions_aperiodic.requires_grad = True
 #
 # Compute neighbor list but this time without periodic boudary conditions
 
-i, j, neighbor_distances_aperiodic = nl.compute(
-    points=positions_aperiodic, box=cell, periodic=False, quantities="ijd"
+neighbor_indices_aperiodic, neighbor_distances_aperiodic = nl.compute(
+    points=positions_aperiodic, box=cell, periodic=False, quantities="Pd"
 )
-neighbor_indices_aperiodic = torch.stack([i, j], dim=1)
 
 # %%
 #

@@ -2,15 +2,15 @@ torch-pme
 =========
 
 .. image:: https://raw.githubusercontent.com/lab-cosmo/torch-pme/refs/heads/main/docs/src/logo/torch-pme.svg
-     :width: 200 px
-     :align: left
+   :width: 200 px
+   :align: left
 
 |tests| |codecov| |docs|
 
 .. marker-introduction
 
 ``torch-pme`` enables efficient, auto-differentiable computation of long-range
-interactions in PyTorch. Auto-differentiation is supported for particle *positions*,
+interactions in *PyTorch*. Auto-differentiation is supported for particle *positions*,
 *charges*, and *cell* parameters, allowing not only the automatic computation of forces
 but also enabling general applications in machine learning tasks. The library offers
 classes for Particle-Particle Particle-Mesh Ewald (P3M), Particle Mesh Ewald (``PME``),
@@ -22,9 +22,15 @@ Optimized for both CPU and GPU devices, ``torch-pme`` is fully `TorchScriptable`
 allowing it to be converted into a format that runs independently of Python, such as in
 C++, making it ideal for high-performance production environments.
 
+We also provide an experimental implementation for *JAX* in `jax-pme`_.
+
 .. _`TorchScriptable`: https://pytorch.org/docs/stable/jit.html
+.. _`jax-pme`: https://github.com/lab-cosmo/jax-pme
 
 .. marker-documentation
+
+Documentation
+-------------
 
 For details, tutorials, and examples, please have a look at our `documentation`_.
 
@@ -113,7 +119,7 @@ For more examples and details, please refer to the `documentation`_.
 Having problems or ideas?
 -------------------------
 
-Having a problem with torch-pme? Please let us know by `submitting an issue
+Having a problem with *torch-pme*? Please let us know by `submitting an issue
 <https://github.com/lab-cosmo/torch-pme/issues>`_.
 
 Submit new features or bug fixes through a `pull request
@@ -150,7 +156,7 @@ If you use *torch-pme* for your work, please read and cite our preprint availabl
 Contributors
 ------------
 
-Thanks goes to all people that make torch-pme possible:
+Thanks goes to all people that make *torch-pme* possible:
 
 .. image:: https://contrib.rocks/image?repo=lab-cosmo/torch-pme
    :target: https://github.com/lab-cosmo/torch-pme/graphs/contributors

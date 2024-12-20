@@ -256,16 +256,15 @@ def neighbor_list(
         cutoff = cutoff_torch.item()
 
     nl = NeighborList(cutoff=cutoff, full_list=full_neighbor_list)
-    i, j, d, S = nl.compute(
-        points=positions, box=box, periodic=periodic, quantities="ijdS"
+    neighbor_indices, d, S = nl.compute(
+        points=positions, box=box, periodic=periodic, quantities="PdS"
     )
 
-    i = torch.from_numpy(i.astype(int)).to(device=positions.device)
-    j = torch.from_numpy(j.astype(int))
+    neighbor_indices = torch.from_numpy(neighbor_indices.astype(int)).to(
+        device=positions.device
+    )
     d = torch.from_numpy(d).to(dtype=positions.dtype, device=positions.device)
     S = torch.from_numpy(S).to(dtype=positions.dtype, device=positions.device)
-
-    neighbor_indices = torch.stack([i, j], dim=1)
 
     if not neighbor_shifts:
         return neighbor_indices, d

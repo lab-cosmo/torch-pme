@@ -179,13 +179,13 @@ for i_atoms, atoms in enumerate(frames):
     cell = torch.from_numpy(atoms.cell.array)
     charges = torch.from_numpy(atoms.get_initial_charges()).reshape(-1, 1)
 
-    i, j, d = nl.compute(points=positions, box=cell, periodic=True, quantities="ijd")
+    p, d = nl.compute(points=positions, box=cell, periodic=True, quantities="Pd")
 
     l_positions.append(positions)
     l_cell.append(cell)
     l_charges.append(charges)
 
-    l_neighbor_indices.append(torch.vstack([i, j]).T)
+    l_neighbor_indices.append(p)
     l_neighbor_distances.append(d)
 
     l_ref_energy[i_atoms] = atoms.get_potential_energy()
