@@ -19,6 +19,9 @@ def gamma(x: torch.Tensor) -> torch.Tensor:
 
 # Auxilary function for stable Fourier transform implementation
 def gammainc_upper_over_powerlaw(exponent, zz):
+    if exponent not in [1, 2, 3, 4, 5, 6]:
+        raise ValueError(f"Unsupported exponent: {exponent}")
+
     if exponent == 1:
         return torch.exp(-zz) / zz
     if exponent == 2:
@@ -79,8 +82,8 @@ class InversePowerLawPotential(Potential):
         if device is None:
             device = torch.device("cpu")
 
-        if exponent <= 0 or exponent > 3:
-            raise ValueError(f"`exponent` p={exponent} has to satisfy 0 < p <= 3")
+        # function call to check the validity of the exponent
+        gammainc_upper_over_powerlaw(exponent, torch.tensor(1.0, dtype=dtype, device=device))
         self.register_buffer(
             "exponent", torch.tensor(exponent, dtype=dtype, device=device)
         )
