@@ -24,7 +24,7 @@ CELL_1 = torch.eye(3, dtype=DTYPE, device=DEVICE)
 
 
 @pytest.mark.parametrize(
-    ("calculator", "method", "param_length"),
+    ("calculator", "tuner", "param_length"),
     [
         (EwaldCalculator, "ewald", 1),
         (PMECalculator, "pme", 2),
@@ -32,7 +32,7 @@ CELL_1 = torch.eye(3, dtype=DTYPE, device=DEVICE)
     ],
 )
 @pytest.mark.parametrize("accuracy", [1e-1, 1e-3, 1e-5])
-def test_parameter_choose(calculator, method, param_length, accuracy):
+def test_parameter_choose(calculator, tuner, param_length, accuracy):
     """
     Check that the Madelung constants obtained from the Ewald sum calculator matches
     the reference values and that all branches of the from_accuracy method are covered.
@@ -40,13 +40,8 @@ def test_parameter_choose(calculator, method, param_length, accuracy):
     # Get input parameters and adjust to account for scaling
     pos, charges, cell, madelung_ref, num_units = define_crystal()
 
-    smearing, params, sr_cutoff = grid_search(
-        method=method,
-        charges=charges,
-        cell=cell,
-        positions=pos,
-        cutoff=DEFAULT_CUTOFF,
-        accuracy=accuracy,
+    smearing, params, sr_cutoff = tuner(charges, cell, pos, DEFAULT_CUTOFF).tune(
+        accuracy
     )
 
     assert len(params) == param_length

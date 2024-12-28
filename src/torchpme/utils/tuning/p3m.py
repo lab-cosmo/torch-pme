@@ -1,15 +1,14 @@
 import math
 from typing import Optional
 
+import numpy as np
 import torch
 
-from ...lib import get_ns_mesh
+from torchpme import P3MCalculator
 from . import (
-    _estimate_smearing_cutoff,
-    _optimize_parameters,
-    _validate_parameters,
     TuningErrorBounds,
 )
+from .grid_search import GridSearchBase
 
 # Coefficients for the P3M Fourier error,
 # see Table II of http://dx.doi.org/10.1063/1.477415
@@ -67,129 +66,6 @@ A_COEF = [
     ],
     [None, None, None, None, None, None, None, 4_887_769_399 / 37_838_389_248],
 ]
-
-
-def tune_p3m(
-    sum_squared_charges: float,
-    cell: torch.Tensor,
-    positions: torch.Tensor,
-    smearing: Optional[float] = None,
-    mesh_spacing: Optional[float] = None,
-    cutoff: Optional[float] = None,
-    interpolation_nodes: int = 4,
-    exponent: int = 1,
-    accuracy: float = 1e-3,
-    max_steps: int = 50000,
-    learning_rate: float = 5e-3,
-) -> tuple[float, dict[str, float], float]:
-    r"""
-    Find the optimal parameters for :class:`torchpme.calculators.pme.PMECalculator`.
-
-    For the error formulas are given `here <https://doi.org/10.1063/1.477415>`_.
-    Note the difference notation between the parameters in the reference and ours:
-
-    .. math::
-
-        \alpha = \left(\sqrt{2}\,\mathrm{smearing} \right)^{-1}
-
-    .. hint::
-
-        Tuning uses an initial guess for the optimization, which can be applied by
-        setting ``max_steps = 0``. This can be useful if fast tuning is required. These
-        values typically result in accuracies around :math:`10^{-2}`.
-
-    :param sum_squared_charges: accumulated squared charges, must be positive
-    :param cell: single tensor of shape (3, 3), describing the bounding
-    :param positions: single tensor of shape (``len(charges), 3``) containing the
-        Cartesian positions of all point charges in the system.
-    :param interpolation_nodes: The number ``n`` of nodes used in the interpolation per
-        coordinate axis. The total number of interpolation nodes in 3D will be ``n^3``.
-        In general, for ``n`` nodes, the interpolation will be performed by piecewise
-        polynomials of degree ``n`` (e.g. ``n = 3`` for cubic interpolation). Only
-        the values ``1, 2, 3, 4, 5`` are supported.
-    :param exponent: exponent :math:`p` in :math:`1/r^p` potentials
-    :param accuracy: Recomended values for a balance between the accuracy and speed is
-        :math:`10^{-3}`. For more accurate results, use :math:`10^{-6}`.
-    :param max_steps: maximum number of gradient descent steps
-    :param learning_rate: learning rate for gradient descent
-    :param verbose: whether to print the progress of gradient descent
-
-    :return: Tuple containing a float of the optimal smearing for the :py:class:
-        `CoulombPotential`, a dictionary with the parameters for
-        :py:class:`PMECalculator` and a float of the optimal cutoff value for the
-        neighborlist computation.
-
-    Example
-    -------
-    >>> import torch
-
-    To allow reproducibility, we set the seed to a fixed value
-
-    >>> _ = torch.manual_seed(0)
-    >>> positions = torch.tensor(
-    ...     [[0.0, 0.0, 0.0], [0.5, 0.5, 0.5]], dtype=torch.float64
-    ... )
-    >>> charges = torch.tensor([[1.0], [-1.0]], dtype=torch.float64)
-    >>> cell = torch.eye(3, dtype=torch.float64)
-    >>> smearing, parameter, cutoff = tune_p3m(
-    ...     torch.sum(charges**2, dim=0), cell, positions, accuracy=1e-1
-    ... )
-
-    You can check the values of the parameters
-
-    >>> print(smearing)
-    0.5084014996119913
-
-    >>> print(parameter)
-    {'mesh_spacing': 0.546694745583215, 'interpolation_nodes': 4}
-
-    >>> print(cutoff)
-    2.6863848597963442
-
-    """
-    _validate_parameters(sum_squared_charges, cell, positions, exponent, accuracy)
-
-    smearing_opt, cutoff_opt = _estimate_smearing_cutoff(
-        cell=cell,
-        smearing=smearing,
-        cutoff=cutoff,
-        accuracy=accuracy,
-        prefac=2 * sum_squared_charges / math.sqrt(len(positions)),
-    )
-    # We choose only one mesh as initial guess
-    if mesh_spacing is None:
-        ns_mesh_opt = torch.tensor(
-            [1, 1, 1],
-            device=cell.device,
-            dtype=cell.dtype,
-            requires_grad=True,
-        )
-    else:
-        ns_mesh_opt = get_ns_mesh(cell, mesh_spacing)
-
-    cell_dimensions = torch.linalg.norm(cell, dim=1)
-
-    interpolation_nodes = torch.tensor(interpolation_nodes, device=cell.device)
-
-    err_bounds = P3MErrorBounds(sum_squared_charges, cell, positions)
-
-    params = [smearing_opt, ns_mesh_opt, cutoff_opt, interpolation_nodes]
-    _optimize_parameters(
-        params=params,
-        loss=err_bounds,
-        max_steps=max_steps,
-        accuracy=accuracy,
-        learning_rate=learning_rate,
-    )
-
-    return (
-        float(smearing_opt),
-        {
-            "mesh_spacing": float(torch.min(cell_dimensions / ((ns_mesh_opt - 1) / 2))),
-            "interpolation_nodes": int(interpolation_nodes),
-        },
-        float(cutoff_opt),
-    )
 
 
 class P3MErrorBounds(TuningErrorBounds):
@@ -272,3 +148,33 @@ class P3MErrorBounds(TuningErrorBounds):
             self.err_kspace(smearing, mesh_spacing, interpolation_nodes) ** 2
             + self.err_rspace(smearing, cutoff) ** 2
         )
+
+
+class P3MTuner(GridSearchBase):
+    ErrorBounds = P3MErrorBounds
+    CalculatorClass = P3MCalculator
+    GridSearchParams = {
+        "interpolation_nodes": [2, 3, 4, 5],
+        "mesh_spacing": 1 / ((np.exp2(np.arange(2, 8)) - 1) / 2),
+    }
+
+    def __init__(
+        self,
+        charges: torch.Tensor,
+        cell: torch.Tensor,
+        positions: torch.Tensor,
+        cutoff: float,
+        exponent: int = 1,
+        neighbor_indices: Optional[torch.Tensor] = None,
+        neighbor_distances: Optional[torch.Tensor] = None,
+    ):
+        super().__init__(
+            charges,
+            cell,
+            positions,
+            cutoff,
+            exponent,
+            neighbor_indices,
+            neighbor_distances,
+        )
+        self.GridSearchParams["mesh_spacing"] *= float(torch.min(self._cell_dimensions))

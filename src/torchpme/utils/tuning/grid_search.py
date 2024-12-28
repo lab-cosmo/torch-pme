@@ -2,21 +2,158 @@
 
 import math
 import time
+from itertools import product
 from typing import Optional
 from warnings import warn
 
 import torch
 import vesin.torch
 
-from torchpme import (
-    CoulombPotential,
-    EwaldCalculator,
-    P3MCalculator,
-    PMECalculator,
+from ...calculators import (
+    Calculator,
 )
-from torchpme.utils import EwaldErrorBounds, P3MErrorBounds, PMEErrorBounds
+from ...potentials import CoulombPotential
+from . import (
+    TuningErrorBounds,
+)
 
 from . import _estimate_smearing_cutoff, _validate_parameters
+
+
+class GridSearchBase:
+    ErrorBounds: TuningErrorBounds
+    CalculatorClass: Calculator
+    GridSearchParams: dict[str, torch.Tensor]  # {"all_interpolation_nodes": ..., ...}
+
+    def __init__(
+        self,
+        charges: torch.Tensor,
+        cell: torch.Tensor,
+        positions: torch.Tensor,
+        cutoff: float,
+        exponent: int = 1,
+        neighbor_indices: Optional[torch.Tensor] = None,
+        neighbor_distances: Optional[torch.Tensor] = None,
+    ):
+        _validate_parameters(charges, cell, positions, exponent, 1e-1)
+        self.charges = charges
+        self.cell = cell
+        self.positions = positions
+        self.cutoff = cutoff
+        self.dtype = charges.dtype
+        self.device = charges.device
+        self.err_func = self.ErrorBounds(charges, cell, positions)
+        self._cell_dimensions = torch.linalg.norm(cell, dim=1)
+
+        self._prefac = 2 * (charges**2).sum() / math.sqrt(len(positions))
+
+        if neighbor_indices is None and neighbor_distances is None:
+            nl = vesin.torch.NeighborList(cutoff=cutoff, full_list=False)
+            i, j, neighbor_distances = nl.compute(
+                points=self.positions.to(dtype=torch.float64, device="cpu"),
+                box=self.cell.to(dtype=torch.float64, device="cpu"),
+                periodic=True,
+                quantities="ijd",
+            )
+            neighbor_indices = torch.stack([i, j], dim=1)
+        elif neighbor_indices is None or neighbor_distances is None:
+            raise ValueError(
+                "If neighbor_indices or neighbor_distances are None, "
+                "both must be None."
+            )
+        self.neighbor_indices = neighbor_indices.to(device=self.device)
+        self.neighbor_distances = neighbor_distances.to(
+            dtype=self.dtype, device=self.device
+        )
+
+    def tune(
+        self,
+        accuracy: float = 1e-3,
+    ):
+        smearing_opt = None
+        params_opt = None
+        cutoff_opt = None
+        time_opt = torch.inf
+
+        # In case there is no parameter reaching the accuracy, return
+        # the best found so far
+        smearing_err_opt = None
+        params_err_opt = None
+        cutoff_err_opt = None
+        err_opt = torch.inf
+
+        smearing, cutoff = _estimate_smearing_cutoff(
+            self.cell,
+            smearing=None,
+            cutoff=self.cutoff,
+            accuracy=accuracy,
+            prefac=self._prefac,
+        )
+        for param_values in product(*self.GridSearchParams.values()):
+            params = dict(zip(self.GridSearchParams.keys(), param_values))
+            err = self.err_func(
+                smearing=smearing,
+                cutoff=cutoff,
+                **params,
+            )
+
+            if err > accuracy:
+                # Not going to test the time, record the parameters if the error is
+                # better.
+                if err < err_opt:
+                    smearing_err_opt = smearing
+                    params_err_opt = params
+                    cutoff_err_opt = cutoff
+                    err_opt = err
+                continue
+
+            execution_time = self._timing(smearing, params)
+            if execution_time < time_opt:
+                smearing_opt = smearing
+                params_opt = params
+                cutoff_opt = cutoff
+                time_opt = execution_time
+
+        if time_opt == torch.inf:
+            # Never found a parameter that reached the accuracy
+            warn(
+                f"No parameters found within the desired accuracy of {accuracy}."
+                f"Returning the best found. Accuracy: {str(err_opt)}",
+                stacklevel=1,
+            )
+            return smearing_err_opt, params_err_opt, cutoff_err_opt
+
+        return smearing_opt, params_opt, cutoff_opt
+
+    def _timing(self, smearing: float, params: dict):
+        calculator = self.CalculatorClass(
+            potential=CoulombPotential(smearing=smearing),
+            **params,
+        )
+        # warm-up
+        for _ in range(5):
+            calculator.forward(
+                positions=self.positions,
+                charges=self.charges,
+                cell=self.cell,
+                neighbor_indices=self.neighbor_indices,
+                neighbor_distances=self.neighbor_distances,
+            )
+
+        # measure time
+        t0 = time.time()
+        calculator.forward(
+            positions=self.positions,
+            charges=self.charges,
+            cell=self.cell,
+            neighbor_indices=self.neighbor_indices,
+            neighbor_distances=self.neighbor_distances,
+        )
+        if self.device is torch.device("cuda"):
+            torch.cuda.synchronize()
+        execution_time = time.time() - t0
+
+        return execution_time
 
 
 def grid_search(
@@ -62,151 +199,4 @@ def grid_search(
     chosen method and a float of the optimal cutoff value for the neighborlist
     computation.
     """
-    dtype = charges.dtype
-    device = charges.device
-    _validate_parameters(charges, cell, positions, exponent, accuracy)
-
-    if method == "ewald":
-        err_func = EwaldErrorBounds(
-            charges=charges,
-            cell=cell,
-            positions=positions,
-        )
-        CalculatorClass = EwaldCalculator
-        all_interpolation_nodes = [1]  # dummy list
-    elif method == "pme":
-        err_func = PMEErrorBounds(
-            charges=charges,
-            cell=cell,
-            positions=positions,
-        )
-        CalculatorClass = PMECalculator
-        all_interpolation_nodes = [3, 4, 5, 6, 7]
-    elif method == "p3m":
-        err_func = P3MErrorBounds(
-            charges=charges,
-            cell=cell,
-            positions=positions,
-        )
-        CalculatorClass = P3MCalculator
-        all_interpolation_nodes = [2, 3, 4, 5]
-    else:
-        raise ValueError(f"Invalid method {method}. Choose ewald or pme.")
-
-    cell_dimensions = torch.linalg.norm(cell, dim=1)
-    if method == "ewald":
-        ns = torch.arange(1, 15, dtype=torch.long, device=device)
-        k_space_params = torch.min(cell_dimensions) / ns
-    elif method in ["pme", "p3m"]:
-        ns_actual = torch.exp2(torch.arange(2, 8, dtype=dtype, device=device))
-        k_space_params = torch.min(cell_dimensions) / ((ns_actual - 1) / 2)
-    else:
-        raise ValueError  # Just to make linter happy
-
-    smearing_opt = None
-    params_opt = None
-    cutoff_opt = None
-    time_opt = torch.inf
-
-    # In case there is no parameter reaching the accuracy, return
-    # the best found so far
-    smearing_err_opt = None
-    params_err_opt = None
-    cutoff_err_opt = None
-    err_opt = torch.inf
-
-    smearing, cutoff = _estimate_smearing_cutoff(
-        cell,
-        smearing=None,
-        cutoff=cutoff,
-        accuracy=accuracy,
-        prefac=2 * (charges**2).sum() / math.sqrt(len(positions)),
-    )
-    for k_space_param in k_space_params:
-        for interpolation_nodes in all_interpolation_nodes[::-1]:
-            if method == "ewald":
-                params = {
-                    "lr_wavelength": float(k_space_param),
-                }
-            else:
-                params = {
-                    "mesh_spacing": float(k_space_param),
-                    "interpolation_nodes": int(interpolation_nodes),
-                }
-
-            err = err_func(
-                smearing=smearing,
-                cutoff=cutoff,
-                **params,
-            )
-
-            if err > accuracy:
-                # Not going to test the time, record the parameters if the error is
-                # better.
-                if err < err_opt:
-                    smearing_err_opt = smearing
-                    params_err_opt = params
-                    cutoff_err_opt = cutoff
-                    err_opt = err
-                continue
-
-            calculator = CalculatorClass(
-                potential=CoulombPotential(smearing=smearing),
-                **params,
-            )
-            if neighbor_indices is None and neighbor_distances is None:
-                nl = vesin.torch.NeighborList(cutoff=cutoff, full_list=False)
-                i, j, neighbor_distances = nl.compute(
-                    points=positions.to(dtype=torch.float64, device="cpu"),
-                    box=cell.to(dtype=torch.float64, device="cpu"),
-                    periodic=True,
-                    quantities="ijd",
-                )
-                neighbor_indices = torch.stack([i, j], dim=1)
-            elif neighbor_indices is None or neighbor_distances is None:
-                raise ValueError(
-                    "If neighbor_indices or neighbor_distances are None, "
-                    "both must be None."
-                )
-            neighbor_indices = neighbor_indices.to(device=device)
-            neighbor_distances = neighbor_distances.to(dtype=dtype, device=device)
-
-            # warm-up
-            for _ in range(5):
-                calculator.forward(
-                    positions=positions,
-                    charges=charges,
-                    cell=cell,
-                    neighbor_indices=neighbor_indices,
-                    neighbor_distances=neighbor_distances,
-                )
-
-            # measure time
-            t0 = time.time()
-            calculator.forward(
-                positions=positions,
-                charges=charges,
-                cell=cell,
-                neighbor_indices=neighbor_indices,
-                neighbor_distances=neighbor_distances,
-            )
-            if device is torch.device("cuda"):
-                torch.cuda.synchronize()
-            execution_time = time.time() - t0
-
-            if execution_time < time_opt:
-                smearing_opt = smearing
-                params_opt = params
-                cutoff_opt = cutoff
-                time_opt = execution_time
-
-    if time_opt == torch.inf:
-        # Never found a parameter that reached the accuracy
-        warn(
-            f"No parameters found within the desired accuracy of {accuracy}."
-            f"Returning the best found. Accuracy: {str(err_opt)}",
-            stacklevel=1,
-        )
-        return smearing_err_opt, params_err_opt, cutoff_err_opt
-
-    return smearing_opt, params_opt, cutoff_opt
+    pass
