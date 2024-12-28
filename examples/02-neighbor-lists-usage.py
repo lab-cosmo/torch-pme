@@ -93,9 +93,9 @@ cell = torch.from_numpy(atoms.cell.array)
 
 sum_squared_charges = float(torch.sum(charges**2))
 
-smearing, pme_params, cutoff = torchpme.utils.tune_pme(
-    sum_squared_charges=sum_squared_charges, cell=cell, positions=positions
-)
+smearing, pme_params, cutoff = torchpme.utils.tuning.pme.PMETuner(
+    charges=charges, cell=cell, positions=positions, cutoff=4.4
+).tune()
 
 # %%
 #

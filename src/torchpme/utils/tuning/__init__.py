@@ -12,7 +12,6 @@ def _optimize_parameters(
     accuracy: float,
     learning_rate: float,
 ) -> None:
-
     print("optimize ", params)
     optimizer = torch.optim.Adam(params, lr=learning_rate)
 
@@ -143,6 +142,7 @@ def _validate_parameters(
 
 
 class TuningErrorBounds(torch.nn.Module):
+    """Base class for error bounds."""
 
     def __init__(
         self,

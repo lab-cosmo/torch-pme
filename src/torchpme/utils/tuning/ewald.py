@@ -4,11 +4,11 @@ from typing import Optional
 import numpy as np
 import torch
 
+from ...calculators import EwaldCalculator
 from . import (
     TuningErrorBounds,
 )
 from .grid_search import GridSearchBase
-from ...calculators import EwaldCalculator
 
 TWO_PI = 2 * math.pi
 
@@ -82,6 +82,12 @@ class EwaldErrorBounds(TuningErrorBounds):
 
 
 class EwaldTuner(GridSearchBase):
+    """
+    Class for finding the optimal parameters for EwaldCalculator using a grid search.
+
+    For details of the parameters see :class:`torchpme.utils.tuning.GridSearchBase`.
+    """
+
     ErrorBounds = EwaldErrorBounds
     CalculatorClass = EwaldCalculator
     GridSearchParams = {"lr_wavelength": 1 / np.arange(1, 15)}
@@ -108,3 +114,5 @@ class EwaldTuner(GridSearchBase):
         self.GridSearchParams["lr_wavelength"] *= float(
             torch.min(self._cell_dimensions)
         )
+
+    __doc__ = GridSearchBase.__doc__

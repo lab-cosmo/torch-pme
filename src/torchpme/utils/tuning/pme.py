@@ -5,6 +5,7 @@ import numpy as np
 import torch
 
 from torchpme import PMECalculator
+
 from . import (
     TuningErrorBounds,
 )
@@ -84,7 +85,6 @@ class PMEErrorBounds(TuningErrorBounds):
             piecewise polynomials of degree ``n - 1`` (e.g. ``n = 4`` for cubic
             interpolation). Only the values ``3, 4, 5, 6, 7`` are supported.
         """
-
         smearing = torch.as_tensor(smearing)
         mesh_spacing = torch.as_tensor(mesh_spacing)
         cutoff = torch.as_tensor(cutoff)
@@ -96,11 +96,17 @@ class PMEErrorBounds(TuningErrorBounds):
 
 
 class PMETuner(GridSearchBase):
+    """
+    Class for finding the optimal parameters for PMECalculator using a grid search.
+
+    For details of the parameters see :class:`torchpme.utils.tuning.GridSearchBase`.
+    """
+
     ErrorBounds = PMEErrorBounds
     CalculatorClass = PMECalculator
     GridSearchParams = {
         "interpolation_nodes": [3, 4, 5, 6, 7],
-        "ns_mesh": 1 / ((np.exp2(np.arange(2, 8)) - 1) / 2),
+        "mesh_spacing": 1 / ((np.exp2(np.arange(2, 8)) - 1) / 2),
     }
 
     def __init__(
@@ -122,4 +128,6 @@ class PMETuner(GridSearchBase):
             neighbor_indices,
             neighbor_distances,
         )
-        self.GridSearchParams["ns_mesh"] *= float(torch.min(self._cell_dimensions))
+        self.GridSearchParams["mesh_spacing"] *= float(torch.min(self._cell_dimensions))
+
+    __doc__ = GridSearchBase.__doc__

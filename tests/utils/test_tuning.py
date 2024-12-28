@@ -10,7 +10,9 @@ from torchpme import (
     P3MCalculator,
     PMECalculator,
 )
-from torchpme.utils.tuning.grid_search import grid_search
+from torchpme.utils.tuning.ewald import EwaldTuner
+from torchpme.utils.tuning.p3m import P3MTuner
+from torchpme.utils.tuning.pme import PMETuner
 
 sys.path.append(str(Path(__file__).parents[1]))
 from helpers import define_crystal, neighbor_list
@@ -26,9 +28,9 @@ CELL_1 = torch.eye(3, dtype=DTYPE, device=DEVICE)
 @pytest.mark.parametrize(
     ("calculator", "tuner", "param_length"),
     [
-        (EwaldCalculator, "ewald", 1),
-        (PMECalculator, "pme", 2),
-        (P3MCalculator, "p3m", 2),
+        (EwaldCalculator, EwaldTuner, 1),
+        (PMECalculator, PMETuner, 2),
+        (P3MCalculator, P3MTuner, 2),
     ],
 )
 @pytest.mark.parametrize("accuracy", [1e-1, 1e-3, 1e-5])
@@ -67,35 +69,6 @@ def test_parameter_choose(calculator, tuner, param_length, accuracy):
     madelung = -torch.sum(energies) / num_units
 
     torch.testing.assert_close(madelung, madelung_ref, atol=0, rtol=accuracy)
-
-
-"""def test_odd_interpolation_nodes():
-    pos, charges, cell, madelung_ref, num_units = define_crystal()
-
-    smearing, params, sr_cutoff = tune_pme(
-        sum_squared_charges=float(torch.sum(charges**2)),
-        cell=cell,
-        positions=pos,
-        interpolation_nodes=5,
-        learning_rate=0.75,
-    )
-
-    neighbor_indices, neighbor_distances = neighbor_list(
-        positions=pos, periodic=True, box=cell, cutoff=sr_cutoff
-    )
-
-    calc = PMECalculator(potential=CoulombPotential(smearing=smearing), **params)
-    potentials = calc.forward(
-        positions=pos,
-        charges=charges,
-        cell=cell,
-        neighbor_indices=neighbor_indices,
-        neighbor_distances=neighbor_distances,
-    )
-    energies = potentials * charges
-    madelung = -torch.sum(energies) / num_units
-
-    torch.testing.assert_close(madelung, madelung_ref, atol=0, rtol=1e-3)"""
 
 
 '''@pytest.mark.parametrize("tune", [tune_ewald, tune_pme, tune_p3m])
@@ -139,30 +112,32 @@ def test_fix_parameters(tune):
     pytest.approx(sr_cutoff, 1.0)'''
 
 
-def test_accuracy_error():
+@pytest.mark.parametrize("tuner", [EwaldTuner, PMETuner, P3MTuner])
+def test_accuracy_error(tuner):
     pos, charges, cell, _, _ = define_crystal()
 
     match = "'foo' is not a float."
     with pytest.raises(ValueError, match=match):
-        grid_search("ewald", charges, cell, pos, DEFAULT_CUTOFF, accuracy="foo")
+        tuner(charges, cell, pos, DEFAULT_CUTOFF).tune(accuracy="foo")
 
 
-def test_exponent_not_1_error():
+@pytest.mark.parametrize("tuner", [EwaldTuner, PMETuner, P3MTuner])
+def test_exponent_not_1_error(tuner):
     pos, charges, cell, _, _ = define_crystal()
 
     match = "Only exponent = 1 is supported"
     with pytest.raises(NotImplementedError, match=match):
-        grid_search("ewald", charges, cell, pos, DEFAULT_CUTOFF, exponent=2)
+        tuner(charges, cell, pos, DEFAULT_CUTOFF, exponent=2)
 
 
-def test_invalid_shape_positions():
+@pytest.mark.parametrize("tuner", [EwaldTuner, PMETuner, P3MTuner])
+def test_invalid_shape_positions(tuner):
     match = (
         r"each `positions` must be a tensor with shape \[n_atoms, 3\], got at least "
         r"one tensor with shape \[4, 5\]"
     )
     with pytest.raises(ValueError, match=match):
-        grid_search(
-            "ewald",
+        tuner(
             CHARGES_1,
             CELL_1,
             torch.ones((4, 5), dtype=DTYPE, device=DEVICE),
@@ -171,14 +146,14 @@ def test_invalid_shape_positions():
 
 
 # Tests for invalid shape, dtype and device of cell
-def test_invalid_shape_cell():
+@pytest.mark.parametrize("tuner", [EwaldTuner, PMETuner, P3MTuner])
+def test_invalid_shape_cell(tuner):
     match = (
         r"each `cell` must be a tensor with shape \[3, 3\], got at least one tensor "
         r"with shape \[2, 2\]"
     )
     with pytest.raises(ValueError, match=match):
-        grid_search(
-            "ewald",
+        tuner(
             CHARGES_1,
             torch.ones([2, 2], dtype=DTYPE, device=DEVICE),
             POSITIONS_1,
@@ -186,23 +161,24 @@ def test_invalid_shape_cell():
         )
 
 
-def test_invalid_cell():
+@pytest.mark.parametrize("tuner", [EwaldTuner, PMETuner, P3MTuner])
+def test_invalid_cell(tuner):
     match = (
         "provided `cell` has a determinant of 0 and therefore is not valid for "
         "periodic calculation"
     )
     with pytest.raises(ValueError, match=match):
-        grid_search("ewald", CHARGES_1, torch.zeros(3, 3), POSITIONS_1, DEFAULT_CUTOFF)
+        tuner(CHARGES_1, torch.zeros(3, 3), POSITIONS_1, DEFAULT_CUTOFF)
 
 
-def test_invalid_dtype_cell():
+@pytest.mark.parametrize("tuner", [EwaldTuner, PMETuner, P3MTuner])
+def test_invalid_dtype_cell(tuner):
     match = (
         r"each `cell` must have the same type torch.float32 as `positions`, "
         r"got at least one tensor of type torch.float64"
     )
     with pytest.raises(ValueError, match=match):
-        grid_search(
-            "ewald",
+        tuner(
             CHARGES_1,
             torch.eye(3, dtype=torch.float64, device=DEVICE),
             POSITIONS_1,
@@ -210,14 +186,14 @@ def test_invalid_dtype_cell():
         )
 
 
-def test_invalid_device_cell():
+@pytest.mark.parametrize("tuner", [EwaldTuner, PMETuner, P3MTuner])
+def test_invalid_device_cell(tuner):
     match = (
         r"each `cell` must be on the same device cpu as `positions`, "
         r"got at least one tensor with device meta"
     )
     with pytest.raises(ValueError, match=match):
-        grid_search(
-            "ewald",
+        tuner(
             CHARGES_1,
             torch.eye(3, dtype=DTYPE, device="meta"),
             POSITIONS_1,

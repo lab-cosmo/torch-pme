@@ -15,15 +15,30 @@ from ...calculators import (
 from ...potentials import CoulombPotential
 from . import (
     TuningErrorBounds,
+    _estimate_smearing_cutoff,
+    _validate_parameters,
 )
-
-from . import _estimate_smearing_cutoff, _validate_parameters
 
 
 class GridSearchBase:
-    ErrorBounds: TuningErrorBounds
-    CalculatorClass: Calculator
-    GridSearchParams: dict[str, torch.Tensor]  # {"all_interpolation_nodes": ..., ...}
+    r"""
+    Base class for finding the optimal parameters for calculators using a grid search.
+
+    :param charges: torch.Tensor, atomic (pseudo-)charges
+    :param cell: torch.Tensor, periodic supercell for the system
+    :param positions: torch.Tensor, Cartesian coordinates of the particles within
+        the supercell.
+    :param cutoff: float, cutoff distance for the neighborlist
+    :param exponent :math:`p` in :math:`1/r^p` potentials
+    :param neighbor_indices: torch.Tensor with the ``i,j`` indices of neighbors for
+        which the potential should be computed in real space.
+    :param neighbor_distances: torch.Tensor with the pair distances of the neighbors
+        for which the potential should be computed in real space.
+    """
+
+    ErrorBounds: type[TuningErrorBounds]
+    CalculatorClass: type[Calculator]
+    GridSearchParams: dict[str, torch.Tensor]  # {"interpolation_nodes": ..., ...}
 
     def __init__(
         self,
@@ -70,6 +85,28 @@ class GridSearchBase:
         self,
         accuracy: float = 1e-3,
     ):
+        r"""
+        The steps are: 1. Find the ``smearing`` parameter for the
+        :py:class:`CoulombPotential` that leads to a real space error of half the
+        desired accuracy. 2. Grid search for the kspace parameters, i.e. the
+        ``lr_wavelength`` for Ewald and the ``mesh_spacing`` and ``interpolation_nodes``
+        for PME and P3M. For each combination of parameters, calculate the error. If the
+        error is smaller than the desired accuracy, use this combination for test runs
+        to get the calculation time needed. Return the combination that leads to the
+        shortest calculation time. If the desired accuracy is never reached, return the
+        combination that leads to the smallest error and throw a warning.
+
+        :param accuracy: Recomended values for a balance between the accuracy and speed
+            is :math:`10^{-3}`. For more accurate results, use :math:`10^{-6}`.
+
+        :return: Tuple containing a float of the optimal smearing for the :py:class:
+        `CoulombPotential`, a dictionary with the parameters for the calculator of the
+        chosen method and a float of the optimal cutoff value for the neighborlist
+        computation.
+        """
+        if not isinstance(accuracy, float):
+            raise ValueError(f"'{accuracy}' is not a float.")
+
         smearing_opt = None
         params_opt = None
         cutoff_opt = None
@@ -151,52 +188,5 @@ class GridSearchBase:
         )
         if self.device is torch.device("cuda"):
             torch.cuda.synchronize()
-        execution_time = time.time() - t0
 
-        return execution_time
-
-
-def grid_search(
-    method: str,
-    charges: torch.Tensor,
-    cell: torch.Tensor,
-    positions: torch.Tensor,
-    cutoff: float,
-    exponent: int = 1,
-    accuracy: float = 1e-3,
-    neighbor_indices: Optional[torch.Tensor] = None,
-    neighbor_distances: Optional[torch.Tensor] = None,
-):
-    r"""
-    Find the optimal parameters for calculators.
-
-    The steps are:
-    1. Find the ``smearing`` parameter for the :py:class:`CoulombPotential` that leads
-    to a real space error of half the desired accuracy.
-    2. Grid search for the kspace parameters, i.e. the ``lr_wavelength`` for Ewald and
-    the ``mesh_spacing`` and ``interpolation_nodes`` for PME and P3M.
-    For each combination of parameters, calculate the error. If the error is smaller
-    than the desired accuracy, use this combination for test runs to get the calculation
-    time needed. Return the combination that leads to the shortest calculation time. If
-    the desired accuracy is never reached, return the combination that leads to the
-    smallest error and throw a warning.
-
-    :param charges: torch.Tensor, atomic (pseudo-)charges
-    :param cell: torch.Tensor, periodic supercell for the system
-    :param positions: torch.Tensor, Cartesian coordinates of the particles within
-        the supercell.
-    :param cutoff: float, cutoff distance for the neighborlist
-    :param exponent :math:`p` in :math:`1/r^p` potentials
-    :param accuracy: Recomended values for a balance between the accuracy and speed is
-        :math:`10^{-3}`. For more accurate results, use :math:`10^{-6}`.
-    :param neighbor_indices: torch.Tensor with the ``i,j`` indices of neighbors for
-        which the potential should be computed in real space.
-    :param neighbor_distances: torch.Tensor with the pair distances of the neighbors
-        for which the potential should be computed in real space.
-
-    :return: Tuple containing a float of the optimal smearing for the :py:class:
-    `CoulombPotential`, a dictionary with the parameters for the calculator of the
-    chosen method and a float of the optimal cutoff value for the neighborlist
-    computation.
-    """
-    pass
+        return time.time() - t0

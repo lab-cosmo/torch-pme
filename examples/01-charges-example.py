@@ -56,9 +56,9 @@ pbc = torch.tensor([True, True, True])
 # The ``sum_squared_charges`` is equal to ``2.0`` becaue each atom either has a charge
 # of 1 or -1 in units of elementary charges.
 
-smearing, pme_params, cutoff = torchpme.utils.tune_pme(
-    charges=charges, cell=cell, positions=positions
-)
+smearing, pme_params, cutoff = torchpme.utils.tuning.pme.PMETuner(
+    charges=charges, cell=cell, positions=positions, cutoff=4.4
+).tune()
 
 # %%
 #

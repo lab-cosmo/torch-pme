@@ -5,6 +5,7 @@ import numpy as np
 import torch
 
 from torchpme import P3MCalculator
+
 from . import (
     TuningErrorBounds,
 )
@@ -151,6 +152,12 @@ class P3MErrorBounds(TuningErrorBounds):
 
 
 class P3MTuner(GridSearchBase):
+    """
+    Class for finding the optimal parameters for P3MCalculator using a grid search.
+
+    For details of the parameters see :class:`torchpme.utils.tuning.GridSearchBase`.
+    """
+
     ErrorBounds = P3MErrorBounds
     CalculatorClass = P3MCalculator
     GridSearchParams = {
@@ -178,3 +185,5 @@ class P3MTuner(GridSearchBase):
             neighbor_distances,
         )
         self.GridSearchParams["mesh_spacing"] *= float(torch.min(self._cell_dimensions))
+
+    __doc__ = GridSearchBase.__doc__
