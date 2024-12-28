@@ -8,6 +8,7 @@ from . import (
     _estimate_smearing_cutoff,
     _optimize_parameters,
     _validate_parameters,
+    TuningErrorBounds,
 )
 
 # Coefficients for the P3M Fourier error,
@@ -191,7 +192,7 @@ def tune_p3m(
     )
 
 
-class P3MErrorBounds(torch.nn.Module):
+class P3MErrorBounds(TuningErrorBounds):
     r"""
     "
     Error bounds for :class:`torchpme.calculators.pme.P3MCalculator`.
@@ -203,18 +204,20 @@ class P3MErrorBounds(torch.nn.Module):
 
         \alpha = \left(\sqrt{2}\,\mathrm{smearing} \right)^{-1}
 
-    :param sum_squared_charges: accumulated squared charges, must be positive
+    :param charges: atomic charges
     :param cell: single tensor of shape (3, 3), describing the bounding
     :param positions: single tensor of shape (``len(charges), 3``) containing the
         Cartesian positions of all point charges in the system.
     """
 
     def __init__(
-        self, sum_squared_charges: float, cell: torch.Tensor, positions: torch.Tensor
+        self, charges: torch.Tensor, cell: torch.Tensor, positions: torch.Tensor
     ):
-        super().__init__()
+        super().__init__(charges, cell, positions)
+
         self.volume = torch.abs(torch.det(cell))
-        self.prefac = 2 * sum_squared_charges / math.sqrt(len(positions))
+        self.sum_squared_charges = (charges**2).sum()
+        self.prefac = 2 * self.sum_squared_charges / math.sqrt(len(positions))
         self.cell_dimensions = torch.linalg.norm(cell, dim=1)
         self.cell = cell
         self.positions = positions

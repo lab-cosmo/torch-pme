@@ -12,7 +12,7 @@ def _optimize_parameters(
     accuracy: float,
     learning_rate: float,
 ) -> None:
-    
+
     print("optimize ", params)
     optimizer = torch.optim.Adam(params, lr=learning_rate)
 
@@ -141,6 +141,7 @@ def _validate_parameters(
     if not isinstance(accuracy, float):
         raise ValueError(f"'{accuracy}' is not a float.")
 
+
 class TuningErrorBounds(torch.nn.Module):
 
     def __init__(
@@ -149,19 +150,22 @@ class TuningErrorBounds(torch.nn.Module):
         cell: torch.Tensor,
         positions: torch.Tensor,
     ):
-         self._charges = charges
-         self._cell = cell
-         self._positions = positions
+        super().__init__()
+        self._charges = charges
+        self._cell = cell
+        self._positions = positions
 
     def timing(self, **kwargs):
         input = self.cell
-        return torch.zeros(1, dtype=input.dtype, 
-                           layout=input.layout, device=input.device)
+        return torch.zeros(
+            1, dtype=input.dtype, layout=input.layout, device=input.device
+        )
 
     def error(self, **kwargs):
         input = self.cell
-        return torch.zeros(1, dtype=input.dtype, 
-                           layout=input.layout, device=input.device)
+        return torch.zeros(
+            1, dtype=input.dtype, layout=input.layout, device=input.device
+        )
 
     def forward(self, **kwargs):
         return self.error(**kwargs)

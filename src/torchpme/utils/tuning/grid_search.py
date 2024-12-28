@@ -68,7 +68,7 @@ def grid_search(
 
     if method == "ewald":
         err_func = EwaldErrorBounds(
-            sum_squared_charges=torch.sum(charges**2, dim=0),
+            charges=charges,
             cell=cell,
             positions=positions,
         )
@@ -76,7 +76,7 @@ def grid_search(
         all_interpolation_nodes = [1]  # dummy list
     elif method == "pme":
         err_func = PMEErrorBounds(
-            sum_squared_charges=torch.sum(charges**2, dim=0),
+            charges=charges,
             cell=cell,
             positions=positions,
         )
@@ -84,7 +84,7 @@ def grid_search(
         all_interpolation_nodes = [3, 4, 5, 6, 7]
     elif method == "p3m":
         err_func = P3MErrorBounds(
-            sum_squared_charges=torch.sum(charges**2, dim=0),
+            charges=charges,
             cell=cell,
             positions=positions,
         )

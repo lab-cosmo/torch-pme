@@ -7,6 +7,7 @@ from . import (
     _estimate_smearing_cutoff,
     _optimize_parameters,
     _validate_parameters,
+    TuningErrorBounds,
 )
 
 TWO_PI = 2 * math.pi
@@ -152,7 +153,7 @@ def tune_ewald(
     )
 
 
-class EwaldErrorBounds(torch.nn.Module):
+class EwaldErrorBounds(TuningErrorBounds):
     r"""
     Error bounds for :class:`torchpme.calculators.ewald.EwaldCalculator`.
 
@@ -169,7 +170,7 @@ class EwaldErrorBounds(torch.nn.Module):
 
         r_c &= \mathrm{cutoff}
 
-    :param sum_squared_charges: accumulated squared charges, must be positive
+    :param charges: atomic charges
     :param cell: single tensor of shape (3, 3), describing the bounding
     :param positions: single tensor of shape (``len(charges), 3``) containing the
         Cartesian positions of all point charges in the system.
@@ -177,13 +178,15 @@ class EwaldErrorBounds(torch.nn.Module):
 
     def __init__(
         self,
-        sum_squared_charges: torch.Tensor,
+        charges: torch.Tensor,
         cell: torch.Tensor,
         positions: torch.Tensor,
     ):
-        super().__init__()
+        super().__init__(charges, cell, positions)
+
         self.volume = torch.abs(torch.det(cell))
-        self.prefac = 2 * sum_squared_charges / math.sqrt(len(positions))
+        self.sum_squared_charges = (charges**2).sum()
+        self.prefac = 2 * self.sum_squared_charges / math.sqrt(len(positions))
         self.cell = cell
         self.positions = positions
 
