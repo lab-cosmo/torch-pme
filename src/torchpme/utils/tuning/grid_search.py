@@ -18,6 +18,7 @@ from . import (
     _validate_parameters,
 )
 
+
 class GridSearchBase:
     r"""
     Base class for finding the optimal parameters for calculators using a grid search.
@@ -60,9 +61,17 @@ class GridSearchBase:
         self.device = charges.device
         self.err_func = self.ErrorBounds(charges, cell, positions)
         self._cell_dimensions = torch.linalg.norm(cell, dim=1)
-        self.time_func = self.Timings(charges, cell, positions, cutoff, 
-                                      neighbor_indices, neighbor_distances, 
-                                      4, 2, True)
+        self.time_func = self.Timings(
+            charges,
+            cell,
+            positions,
+            cutoff,
+            neighbor_indices,
+            neighbor_distances,
+            4,
+            2,
+            True,
+        )
 
         self._prefac = 2 * (charges**2).sum() / math.sqrt(len(positions))
 

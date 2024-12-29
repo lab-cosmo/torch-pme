@@ -88,9 +88,7 @@ estimated_error = error_bounds(
 
 # and this is how long it took to run with these parameters (est.)
 
-timings = TuningTimings(charges, cell, positions, 
-                        cutoff=max_cutoff, 
-                        run_backward=True)
+timings = TuningTimings(charges, cell, positions, cutoff=max_cutoff, run_backward=True)
 estimated_timing = timings(pme)
 
 print(f"""

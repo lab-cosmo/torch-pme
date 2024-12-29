@@ -1,7 +1,7 @@
 import math
+import time
 from typing import Optional
 
-import time
 import torch
 import vesin.torch
 
@@ -121,7 +121,7 @@ class TuningErrorBounds(torch.nn.Module):
 
     def forward(self, *args, **kwargs):
         return self.error(*args, **kwargs)
-    
+
 
 class TuningTimings(torch.nn.Module):
     """Base class for error bounds."""
@@ -172,7 +172,6 @@ class TuningTimings(torch.nn.Module):
         Estimate the execution time of a given calculator for the structure
         to be used as benchmark.
         """
-
         for _ in range(self._n_warmup):
             result = calculator.forward(
                 positions=self._positions,
@@ -194,14 +193,14 @@ class TuningTimings(torch.nn.Module):
                 positions.requires_grad_(True)
                 cell.requires_grad_(True)
                 charges.requires_grad_(True)
-            execution_time -= time.time()            
+            execution_time -= time.time()
             result = calculator.forward(
                 positions=positions,
                 charges=charges,
                 cell=cell,
                 neighbor_indices=self._neighbor_indices,
                 neighbor_distances=self._neighbor_distances,
-                )
+            )
             value = result.sum()
             if self._run_backward:
                 value.backward(retain_graph=True)
