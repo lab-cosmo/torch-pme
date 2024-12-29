@@ -155,17 +155,5 @@ class TuningErrorBounds(torch.nn.Module):
         self._cell = cell
         self._positions = positions
 
-    def timing(self, **kwargs):
-        input = self.cell
-        return torch.zeros(
-            1, dtype=input.dtype, layout=input.layout, device=input.device
-        )
-
-    def error(self, **kwargs):
-        input = self.cell
-        return torch.zeros(
-            1, dtype=input.dtype, layout=input.layout, device=input.device
-        )
-
     def forward(self, **kwargs):
         return self.error(**kwargs)

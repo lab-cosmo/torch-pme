@@ -68,6 +68,7 @@ class EwaldErrorBounds(TuningErrorBounds):
     def forward(self, smearing, lr_wavelength, cutoff):
         r"""
         Calculate the error bound of Ewald.
+
         :param smearing: see :class:`torchpme.EwaldCalculator` for details
         :param lr_wavelength: see :class:`torchpme.EwaldCalculator` for details
         :param cutoff: see :class:`torchpme.EwaldCalculator` for details
