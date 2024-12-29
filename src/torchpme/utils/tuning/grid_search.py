@@ -12,7 +12,7 @@ import vesin.torch
 from ...calculators import (
     Calculator,
 )
-from ...potentials import CoulombPotential
+from ...potentials import InversePowerLawPotential
 from . import (
     TuningErrorBounds,
     _estimate_smearing_cutoff,
@@ -29,7 +29,8 @@ class GridSearchBase:
     :param positions: torch.Tensor, Cartesian coordinates of the particles within
         the supercell.
     :param cutoff: float, cutoff distance for the neighborlist
-    :param exponent :math:`p` in :math:`1/r^p` potentials
+    :param exponent :math:`p` in :math:`1/r^p` potentials, currently only :math:`p=1` is
+        supported
     :param neighbor_indices: torch.Tensor with the ``i,j`` indices of neighbors for
         which the potential should be computed in real space.
     :param neighbor_distances: torch.Tensor with the pair distances of the neighbors
@@ -50,11 +51,12 @@ class GridSearchBase:
         neighbor_indices: Optional[torch.Tensor] = None,
         neighbor_distances: Optional[torch.Tensor] = None,
     ):
-        _validate_parameters(charges, cell, positions, exponent, 1e-1)
+        _validate_parameters(charges, cell, positions, exponent)
         self.charges = charges
         self.cell = cell
         self.positions = positions
         self.cutoff = cutoff
+        self.exponent = exponent
         self.dtype = charges.dtype
         self.device = charges.device
         self.err_func = self.ErrorBounds(charges, cell, positions)
@@ -164,7 +166,10 @@ class GridSearchBase:
 
     def _timing(self, smearing: float, params: dict):
         calculator = self.CalculatorClass(
-            potential=CoulombPotential(smearing=smearing),
+            potential=InversePowerLawPotential(
+                exponent=self.exponent,  # but only exponent = 1 is supported
+                smearing=smearing,
+            ),
             **params,
         )
         # warm-up

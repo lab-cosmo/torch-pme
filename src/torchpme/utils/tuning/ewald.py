@@ -115,5 +115,3 @@ class EwaldTuner(GridSearchBase):
         self.GridSearchParams["lr_wavelength"] *= float(
             torch.min(self._cell_dimensions)
         )
-
-    __doc__ = GridSearchBase.__doc__

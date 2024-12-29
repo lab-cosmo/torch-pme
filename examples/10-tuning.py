@@ -19,11 +19,11 @@ import torch
 import vesin.torch as vesin
 
 import torchpme
+from torchpme.utils.tuning.pme import PMEErrorBounds
 
 DTYPE = torch.float64
 
-get_ipython().run_line_magic("matplotlib", "inline")  # noqa
-
+# get_ipython().run_line_magic("matplotlib", "inline")  # type: ignore # noqa
 # %%
 
 positions = torch.tensor(
@@ -64,7 +64,8 @@ neighbor_distances = d
 
 
 pme = torchpme.PMECalculator(
-    potential=torchpme.CoulombPotential(smearing=smearing), **pme_params
+    potential=torchpme.CoulombPotential(smearing=smearing),
+    **pme_params,  # type: ignore[arg-type]
 )
 potential = pme(
     charges=charges,
@@ -78,11 +79,11 @@ energy = charges.T @ potential
 madelung = (-energy / num_formula_units).flatten().item()
 
 # this is the estimated error
-error_bounds = torchpme.utils.tuning.pme.PMEErrorBounds(
-    (charges**2).sum(), cell, positions
-)
+error_bounds = PMEErrorBounds(charges, cell, positions)
 
-estimated_error = error_bounds(max_cutoff, smearing, **pme_params).item()
+estimated_error = error_bounds(
+    cutoff=max_cutoff, smearing=smearing, **pme_params
+).item()
 print(f"""
 Computed madelung constant: {madelung}
 Actual error: {madelung-madelung_ref}

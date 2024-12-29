@@ -1,41 +1,7 @@
 import math
-import warnings
-from typing import Callable, Optional
+from typing import Optional
 
 import torch
-
-
-def _optimize_parameters(
-    params: list[torch.Tensor],
-    loss: Callable,
-    max_steps: int,
-    accuracy: float,
-    learning_rate: float,
-) -> None:
-    print("optimize ", params)
-    optimizer = torch.optim.Adam(params, lr=learning_rate)
-
-    for _ in range(max_steps):
-        loss_value = loss(*params)
-        if torch.isnan(loss_value) or torch.isinf(loss_value):
-            raise ValueError(
-                "The value of the estimated error is now nan, consider using a "
-                "smaller learning rate."
-            )
-        loss_value.backward()
-        optimizer.step()
-        optimizer.zero_grad()
-
-        if loss_value <= accuracy:
-            break
-
-    if loss_value > accuracy:
-        warnings.warn(
-            "The searching for the parameters is ended, but the error is "
-            f"{float(loss_value):.3e}, larger than the given accuracy {accuracy}. "
-            "Consider increase max_step and",
-            stacklevel=2,
-        )
 
 
 def _estimate_smearing_cutoff(
@@ -68,7 +34,6 @@ def _validate_parameters(
     cell: torch.Tensor,
     positions: torch.Tensor,
     exponent: int,
-    accuracy: float,
 ) -> None:
     if exponent != 1:
         raise NotImplementedError("Only exponent = 1 is supported")
@@ -137,9 +102,6 @@ def _validate_parameters(
             f"{len(positions)} atoms"
         )
 
-    if not isinstance(accuracy, float):
-        raise ValueError(f"'{accuracy}' is not a float.")
-
 
 class TuningErrorBounds(torch.nn.Module):
     """Base class for error bounds."""
@@ -155,5 +117,5 @@ class TuningErrorBounds(torch.nn.Module):
         self._cell = cell
         self._positions = positions
 
-    def forward(self, **kwargs):
-        return self.error(**kwargs)
+    def forward(self, *args, **kwargs):
+        return self.error(*args, **kwargs)

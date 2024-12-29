@@ -129,5 +129,3 @@ class PMETuner(GridSearchBase):
             neighbor_distances,
         )
         self.GridSearchParams["mesh_spacing"] *= float(torch.min(self._cell_dimensions))
-
-    __doc__ = GridSearchBase.__doc__
