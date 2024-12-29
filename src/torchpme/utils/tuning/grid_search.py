@@ -1,13 +1,11 @@
 #!/usr/bin/env python3
 
 import math
-import time
 from itertools import product
 from typing import Optional
 from warnings import warn
 
 import torch
-import vesin.torch
 
 from ...calculators import (
     Calculator,
@@ -15,10 +13,10 @@ from ...calculators import (
 from ...potentials import InversePowerLawPotential
 from . import (
     TuningErrorBounds,
+    TuningTimings,
     _estimate_smearing_cutoff,
     _validate_parameters,
 )
-
 
 class GridSearchBase:
     r"""
@@ -38,6 +36,7 @@ class GridSearchBase:
     """
 
     ErrorBounds: type[TuningErrorBounds]
+    Timings: type[TuningTimings] = TuningTimings
     CalculatorClass: type[Calculator]
     GridSearchParams: dict[str, torch.Tensor]  # {"interpolation_nodes": ..., ...}
 
@@ -61,27 +60,11 @@ class GridSearchBase:
         self.device = charges.device
         self.err_func = self.ErrorBounds(charges, cell, positions)
         self._cell_dimensions = torch.linalg.norm(cell, dim=1)
+        self.time_func = self.Timings(charges, cell, positions, cutoff, 
+                                      neighbor_indices, neighbor_distances, 
+                                      4, 2, True)
 
         self._prefac = 2 * (charges**2).sum() / math.sqrt(len(positions))
-
-        if neighbor_indices is None and neighbor_distances is None:
-            nl = vesin.torch.NeighborList(cutoff=cutoff, full_list=False)
-            i, j, neighbor_distances = nl.compute(
-                points=self.positions.to(dtype=torch.float64, device="cpu"),
-                box=self.cell.to(dtype=torch.float64, device="cpu"),
-                periodic=True,
-                quantities="ijd",
-            )
-            neighbor_indices = torch.stack([i, j], dim=1)
-        elif neighbor_indices is None or neighbor_distances is None:
-            raise ValueError(
-                "If neighbor_indices or neighbor_distances are None, "
-                "both must be None."
-            )
-        self.neighbor_indices = neighbor_indices.to(device=self.device)
-        self.neighbor_distances = neighbor_distances.to(
-            dtype=self.dtype, device=self.device
-        )
 
     def tune(
         self,
@@ -172,26 +155,5 @@ class GridSearchBase:
             ),
             **params,
         )
-        # warm-up
-        for _ in range(5):
-            calculator.forward(
-                positions=self.positions,
-                charges=self.charges,
-                cell=self.cell,
-                neighbor_indices=self.neighbor_indices,
-                neighbor_distances=self.neighbor_distances,
-            )
 
-        # measure time
-        t0 = time.time()
-        calculator.forward(
-            positions=self.positions,
-            charges=self.charges,
-            cell=self.cell,
-            neighbor_indices=self.neighbor_indices,
-            neighbor_distances=self.neighbor_distances,
-        )
-        if self.device is torch.device("cuda"):
-            torch.cuda.synchronize()
-
-        return time.time() - t0
+        return self.time_func(calculator)

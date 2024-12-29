@@ -19,6 +19,7 @@ import torch
 import vesin.torch as vesin
 
 import torchpme
+from torchpme.utils.tuning import TuningTimings
 from torchpme.utils.tuning.pme import PMEErrorBounds
 
 DTYPE = torch.float64
@@ -84,10 +85,19 @@ error_bounds = PMEErrorBounds(charges, cell, positions)
 estimated_error = error_bounds(
     cutoff=max_cutoff, smearing=smearing, **pme_params
 ).item()
+
+# and this is how long it took to run with these parameters (est.)
+
+timings = TuningTimings(charges, cell, positions, 
+                        cutoff=max_cutoff, 
+                        run_backward=True)
+estimated_timing = timings(pme)
+
 print(f"""
 Computed madelung constant: {madelung}
 Actual error: {madelung-madelung_ref}
 Estimated error: {estimated_error}
+Timing: {estimated_timing} seconds
 """)
 
 # %%
