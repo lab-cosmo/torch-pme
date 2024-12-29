@@ -134,8 +134,8 @@ class TuningTimings(torch.nn.Module):
         cutoff: float,
         neighbor_indices: Optional[torch.Tensor] = None,
         neighbor_distances: Optional[torch.Tensor] = None,
-        n_repeat: Optional[int] = 4,
-        n_warmup: Optional[int] = 2,
+        n_repeat: int = 4,
+        n_warmup: int = 2,
         run_backward: Optional[bool] = True,
     ):
         super().__init__()
