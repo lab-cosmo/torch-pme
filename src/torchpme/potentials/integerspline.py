@@ -2,9 +2,9 @@ from typing import Optional
 
 import torch
 from torch.special import gammaln, gammainc
-from scipy.special import exp1
 
 from .potential import Potential
+from .spline import SplinePotential
 
 
 def gamma(x: torch.Tensor) -> torch.Tensor:
@@ -17,32 +17,7 @@ def gamma(x: torch.Tensor) -> torch.Tensor:
     """
     return torch.exp(gammaln(x))
 
-
-# Auxilary function for stable Fourier transform implementation
-def gammaincc_over_powerlaw(exponent: torch.Tensor, z: torch.Tensor) -> torch.Tensor:
-    if exponent not in [1, 2, 3, 4, 5, 6]:
-        raise ValueError(f"Unsupported exponent: {exponent}")
-
-    if exponent == 1:
-        return torch.exp(-z) / z
-    if exponent == 2:
-        return torch.sqrt(torch.pi / z) * torch.erfc(torch.sqrt(z))
-    if exponent == 3:
-        return exp1(z)
-    if exponent == 4:
-        return 2 * (
-            torch.exp(-z) - torch.sqrt(torch.pi * z) * torch.erfc(torch.sqrt(z))
-        )
-    if exponent == 5:
-        return torch.exp(-z) - z * exp1(z)
-    if exponent == 6:
-        return (
-            (2 - 4 * z) * torch.exp(-z)
-            + 4 * torch.sqrt(torch.pi) * z**1.5 * torch.erfc(torch.sqrt(z))
-        ) / 3
-
-
-class InversePowerLawPotential(Potential):
+class InversePowerLawPotentialSpline(Potential):
     """
     Inverse power-law potentials of the form :math:`1/r^p`.
 
@@ -72,6 +47,7 @@ class InversePowerLawPotential(Potential):
     def __init__(
         self,
         exponent: int,
+        r_grid: torch.Tensor,
         smearing: Optional[float] = None,
         exclusion_radius: Optional[float] = None,
         dtype: Optional[torch.dtype] = None,
@@ -82,9 +58,7 @@ class InversePowerLawPotential(Potential):
             dtype = torch.get_default_dtype()
         if device is None:
             device = torch.device("cpu")
-
-        # function call to check the validity of the exponent
-        gammaincc_over_powerlaw(exponent, torch.tensor(1.0, dtype=dtype, device=device))
+        self.r_grid = r_grid
         self.register_buffer(
             "exponent", torch.tensor(exponent, dtype=dtype, device=device)
         )
@@ -133,36 +107,12 @@ class InversePowerLawPotential(Potential):
     @torch.jit.export
     def lr_from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
         r"""
-        Fourier transform of the LR part potential in terms of :math:`\mathbf{k^2}`.
-
-        :param k_sq: torch.tensor containing the squared lengths (2-norms) of the wave
-            vectors k at which the Fourier-transformed potential is to be evaluated
+        TODO: Fourier transform of the LR part potential in terms of :math:`\mathbf{k^2}`.
         """
-        if self.smearing is None:
-            raise ValueError(
-                "Cannot compute long-range kernel without specifying `smearing`."
-            )
-
-        exponent = self.exponent
-        smearing = self.smearing
-
-        peff = (3 - exponent) / 2
-        prefac = torch.pi**1.5 / gamma(exponent / 2) * (2 * smearing**2) ** peff
-        x = 0.5 * smearing**2 * k_sq
-
-        # The k=0 term often needs to be set separately since for exponents p<=3
-        # dimension, there is a divergence to +infinity. Setting this value manually
-        # to zero physically corresponds to the addition of a uniform background charge
-        # to make the system charge-neutral. For p>3, on the other hand, the
-        # Fourier-transformed LR potential does not diverge as k->0, and one
-        # could instead assign the correct limit. This is not implemented for now
-        # for consistency reasons.
-        masked = torch.where(x == 0, 1.0, x)  # avoid NaNs in backwards, see Coulomb
-        return torch.where(
-            k_sq == 0,
-            0.0,
-            prefac * gammaincc_over_powerlaw(exponent,masked)
+        spline = SplinePotential(
+            self.r_grid, self.lr_from_dist(self.r_grid)
         )
+        return spline.lr_from_k_sq(k_sq)
 
     def self_contribution(self) -> torch.Tensor:
         # self-correction for 1/r^p potential
