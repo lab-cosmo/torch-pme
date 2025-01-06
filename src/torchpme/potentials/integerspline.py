@@ -1,7 +1,7 @@
 from typing import Optional
 
 import torch
-from torch.special import gammaln, gammainc
+from torch.special import gammainc, gammaln
 
 from .potential import Potential
 from .spline import SplinePotential
@@ -16,6 +16,7 @@ def gamma(x: torch.Tensor) -> torch.Tensor:
     https://discuss.pytorch.org/t/is-there-a-gamma-function-in-pytorch/17122
     """
     return torch.exp(gammaln(x))
+
 
 class InversePowerLawPotentialSpline(Potential):
     """
@@ -102,16 +103,12 @@ class InversePowerLawPotentialSpline(Potential):
         x = 0.5 * dist**2 / smearing**2
         peff = exponent / 2
         prefac = 1.0 / (2 * smearing**2) ** peff
-        return prefac * gammainc(peff, x) / x ** peff
+        return prefac * gammainc(peff, x) / x**peff
 
     @torch.jit.export
     def lr_from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
-        r"""
-        TODO: Fourier transform of the LR part potential in terms of :math:`\mathbf{k^2}`.
-        """
-        spline = SplinePotential(
-            self.r_grid, self.lr_from_dist(self.r_grid)
-        )
+        r"""TODO: Fourier transform of the LR part potential in terms of :math:`\mathbf{k^2}`."""
+        spline = SplinePotential(self.r_grid, self.lr_from_dist(self.r_grid))
         return spline.lr_from_k_sq(k_sq)
 
     def self_contribution(self) -> torch.Tensor:
