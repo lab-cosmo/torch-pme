@@ -1,0 +1,85 @@
+cff-version: 1.2.0
+message: "If you use torch-pme for your work, please read and cite it as below."
+title: >-
+  Fast and flexible range-separated models for atomistic machine learning
+abstract: |
+  Most atomistic machine learning (ML) models rely on a locality ansatz, and decompose the energy into a sum of short-ranged, atom-centered contributions. This leads to clear limitations when trying to describe problems that are dominated by long-range physical effects - most notably electrostatics. Many approaches have been proposed to overcome these limitations, but efforts to make them efficient and widely available are hampered by the need to incorporate an ad hoc implementation of methods to treat long-range interactions. We develop a framework aiming to bring some of the established algorithms to evaluate non-bonded interactions - including Ewald summation, classical particle-mesh Ewald (PME), and particle-particle/particle-mesh (P3M) Ewald - into atomistic ML. We provide a reference implementation for PyTorch as well as an experimental one for JAX. Beyond Coulomb and more general long-range potentials, we introduce purified descriptors which disregard the immediate neighborhood of each atom, and are more suitable for general long-ranged ML applications. Our implementations are fast, feature-rich, and modular: They provide an accurate evaluation of physical long-range forces that can be used in the construction of (semi)empirical baseline potentials; they exploit the availability of automatic differentiation to seamlessly combine long-range models with conventional, local ML schemes; and they are sufficiently flexible to implement more complex architectures that use physical interactions as building blocks. We benchmark and demonstrate our torch-pme and jax-pme libraries to perform molecular dynamics simulations, to train range-separated ML potentials, and to evaluate long-range equivariant descriptors of atomic structures.
+type: preprint
+database: arXiv.org
+date-accessed: 2024-12-05T12:43:16Z
+repository: arXiv
+url: http://arxiv.org/abs/2412.03281
+keywords: 
+  - Physics - Chemical Physics
+authors: 
+  - family-names: Loche
+    given-names: Philip
+  - family-names: Huguenin-Dumittan
+    given-names: Kevin K.
+  - family-names: Honarmand
+    given-names: Melika
+  - family-names: Xu
+    given-names: Qianjun
+  - family-names: Rumiantsev
+    given-names: Egor
+  - family-names: How
+    given-names: Wei Bin
+  - family-names: Langer
+    given-names: Marcel F.
+  - family-names: Ceriotti
+    given-names: Michele
+editors: 
+  - family-names: Loche
+    given-names: Philip
+  - family-names: Huguenin-Dumittan
+    given-names: Kevin K.
+  - family-names: Honarmand
+    given-names: Melika
+  - family-names: Xu
+    given-names: Qianjun
+  - family-names: Rumiantsev
+    given-names: Egor
+  - family-names: How
+    given-names: Wei Bin
+  - family-names: Langer
+    given-names: Marcel F.
+  - family-names: Ceriotti
+    given-names: Michele
+recipients: 
+  - family-names: Loche
+    given-names: Philip
+  - family-names: Huguenin-Dumittan
+    given-names: Kevin K.
+  - family-names: Honarmand
+    given-names: Melika
+  - family-names: Xu
+    given-names: Qianjun
+  - family-names: Rumiantsev
+    given-names: Egor
+  - family-names: How
+    given-names: Wei Bin
+  - family-names: Langer
+    given-names: Marcel F.
+  - family-names: Ceriotti
+    given-names: Michele
+translators: 
+  - family-names: Loche
+    given-names: Philip
+  - family-names: Huguenin-Dumittan
+    given-names: Kevin K.
+  - family-names: Honarmand
+    given-names: Melika
+  - family-names: Xu
+    given-names: Qianjun
+  - family-names: Rumiantsev
+    given-names: Egor
+  - family-names: How
+    given-names: Wei Bin
+  - family-names: Langer
+    given-names: Marcel F.
+  - family-names: Ceriotti
+    given-names: Michele
+date-published: 2024-12-04
+identifiers: 
+  - type: doi
+    value: 10.48550/arXiv.2412.03281
