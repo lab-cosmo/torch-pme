@@ -167,7 +167,7 @@ def tune_ewald(
     -------
     >>> import torch
     >>> positions = torch.tensor(
-    ...     [[0.0, 0.0, 0.0], [0.5, 0.5, 0.5]], dtype=torch.float64
+    ...     [[0.0, 0.0, 0.0], [0.4, 0.4, 0.4]], dtype=torch.float64
     ... )
     >>> charges = torch.tensor([[1.0], [-1.0]], dtype=torch.float64)
     >>> cell = torch.eye(3, dtype=torch.float64)
@@ -181,7 +181,7 @@ def tune_ewald(
     1.7140874893066034
 
     >>> print(parameter)
-    {'lr_wavelength': 0.5}
+    {'lr_wavelength': 0.25}
 
     >>> print(cutoff)
     4.4

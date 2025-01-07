@@ -53,15 +53,12 @@ class GridSearchBase:
         neighbor_distances: Optional[torch.Tensor] = None,
     ):
         self._validate_parameters(charges, cell, positions, exponent)
-        self.charges = charges
         self.cell = cell
-        self.positions = positions
         self.cutoff = cutoff
         self.exponent = exponent
-        self.dtype = charges.dtype
-        self.device = charges.device
-        self.err_func = self.ErrorBounds(charges, cell, positions)
+
         self._cell_dimensions = torch.linalg.norm(cell, dim=1)
+        self.err_func = self.ErrorBounds(charges, cell, positions)
         self.time_func = self.Timings(
             charges,
             cell,
