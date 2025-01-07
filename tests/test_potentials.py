@@ -573,3 +573,34 @@ def test_combined_potential_learnable_weights():
     loss.backward()
     optimizer.step()
     assert torch.allclose(combined.weights, weights - 0.1)
+
+
+@pytest.mark.parametrize("device", ["cpu", "cuda"])
+@pytest.mark.parametrize(
+    "potential_class", [CoulombPotential, InversePowerLawPotential, SplinePotential]
+)
+def test_potential_device(potential_class, device):
+    if device == "cuda" and not torch.cuda.is_available():
+        pytest.skip("CUDA is not available")
+
+    smearing = 1.0
+    exponent = 1.0
+    dtype = torch.float64
+
+    if potential_class == InversePowerLawPotential:
+        potential = potential_class(
+            exponent=exponent, smearing=smearing, dtype=dtype, device=device
+        )
+    elif potential_class == SplinePotential:
+        x_grid = torch.linspace(0, 20, 100, device=device, dtype=dtype)
+        y_grid = torch.exp(-(x_grid**2) * 0.5)
+        potential = potential_class(
+            r_grid=x_grid, y_grid=y_grid, reciprocal=False, dtype=dtype, device=device
+        )
+    else:
+        potential = potential_class(smearing=smearing, dtype=dtype, device=device)
+
+    dists = torch.linspace(0.1, 10.0, 100, device=device, dtype=dtype)
+    potential_lr = potential.lr_from_dist(dists)
+
+    assert potential_lr.device.type == device
