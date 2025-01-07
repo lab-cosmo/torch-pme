@@ -91,7 +91,7 @@ class EwaldTuner(GridSearchBase):
 
     ErrorBounds = EwaldErrorBounds
     CalculatorClass = EwaldCalculator
-    GridSearchParams = {"lr_wavelength": 1 / np.arange(1, 15)}
+    TemplateGridSearchParams = {"lr_wavelength": 1 / np.arange(1, 15)}
 
     def __init__(
         self,
@@ -115,6 +115,7 @@ class EwaldTuner(GridSearchBase):
         self.GridSearchParams["lr_wavelength"] *= float(
             torch.min(self._cell_dimensions)
         )
+        self.GridSearchParams["lr_wavelength"] = self.GridSearchParams["lr_wavelength"].tolist()
 
 
 def tune_ewald(
@@ -171,7 +172,7 @@ def tune_ewald(
     >>> charges = torch.tensor([[1.0], [-1.0]], dtype=torch.float64)
     >>> cell = torch.eye(3, dtype=torch.float64)
     >>> smearing, parameter, cutoff = tune_ewald(
-    ...     torch.sum(charges**2, dim=0), cell, positions, accuracy=1e-1
+    ...     charges, cell, positions, cutoff=4.4, accuracy=1e-1
     ... )
 
     You can check the values of the parameters
@@ -180,7 +181,7 @@ def tune_ewald(
     1.7140874893066034
 
     >>> print(parameter)
-    {'lr_wavelength': 0.25}
+    {'lr_wavelength': 0.5}
 
     >>> print(cutoff)
     4.4

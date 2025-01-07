@@ -160,9 +160,10 @@ class P3MTuner(GridSearchBase):
 
     ErrorBounds = P3MErrorBounds
     CalculatorClass = P3MCalculator
-    GridSearchParams = {
+    TemplateGridSearchParams = {
         "interpolation_nodes": [2, 3, 4, 5],
-        "mesh_spacing": 1 / ((np.exp2(np.arange(2, 8)) - 1) / 2),
+        "mesh_spacing": 1
+        / ((np.exp2(np.arange(2, 8)) - 1) / 2),  # will be converted into a list later
     }
 
     def __init__(
@@ -185,6 +186,7 @@ class P3MTuner(GridSearchBase):
             neighbor_distances,
         )
         self.GridSearchParams["mesh_spacing"] *= float(torch.min(self._cell_dimensions))
+        self.GridSearchParams["mesh_spacing"] = self.GridSearchParams["mesh_spacing"].tolist()
 
 
 def tune_p3m(
@@ -248,7 +250,7 @@ def tune_p3m(
     1.7140874893066034
 
     >>> print(parameter)
-    {'interpolation_nodes': 5, 'mesh_spacing': 0.2857142857142857}
+    {'interpolation_nodes': 2, 'mesh_spacing': 0.2857142857142857}
 
     >>> print(cutoff)
     4.4
