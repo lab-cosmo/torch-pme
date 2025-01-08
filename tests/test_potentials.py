@@ -151,7 +151,7 @@ def test_exact_lr(exponent, smearing):
     assert_close(potential_lr_from_dist, potential_exact, rtol=rtol, atol=atol)
 
 
-@pytest.mark.parametrize("exponent", [1, 2])
+@pytest.mark.parametrize("exponent", [1, 2, 3])
 @pytest.mark.parametrize("smearing", smearinges)
 def test_exact_fourier(exponent, smearing):
     """
@@ -174,7 +174,7 @@ def test_exact_fourier(exponent, smearing):
     elif exponent == 2:
         fourier_exact = 2 * PI**2 / ks * erfc(smearing * ks / SQRT2)
     elif exponent == 3:
-        fourier_exact = -2 * PI * expi(-0.5 * smearing**2 * ks_sq)
+        fourier_exact = -2 * PI * torch.tensor(expi(-0.5 * smearing**2 * ks_sq.numpy()))
 
     # Compare results. Large tolerance due to singular division
     rtol = 1e-14
@@ -605,3 +605,34 @@ def test_potential_device_dtype(potential_class, device, dtype):
 
     assert potential_lr.device.type == device
     assert potential_lr.dtype == dtype
+
+
+@pytest.mark.parametrize("exponent", [4, 5, 6])
+@pytest.mark.parametrize("smearing", smearinges)
+def test_inverserp_vs_spline(exponent, smearing):
+    """
+    Compare values from InversePowerLawPotential and InversePowerLawPotentialSpline
+    with exponents 4, 5, 6.
+    """
+    ks_sq_grad1 = ks_sq.clone().requires_grad_(True)
+    ks_sq_grad2 = ks_sq.clone().requires_grad_(True)
+    # Create InversePowerLawPotential
+    ipl = InversePowerLawPotential(exponent=exponent, smearing=smearing, dtype=dtype)
+    ipl_fourier = ipl.lr_from_k_sq(ks_sq_grad1)
+
+    # Create PotentialSpline
+    r_grid = torch.logspace(-5, 2, 1000, dtype=dtype)
+    y_grid = ipl.lr_from_dist(r_grid)
+    spline = SplinePotential(r_grid=r_grid, y_grid=y_grid, dtype=dtype)
+    spline_fourier = spline.lr_from_k_sq(ks_sq_grad2)
+
+    # Test agreement between InversePowerLawPotential and SplinePotential
+    atol = 3e-5
+    rtol = 2 * machine_epsilon
+
+    assert_close(ipl_fourier, spline_fourier, rtol=rtol, atol=atol)
+    # Check that gradients are the same
+    atol = 1e-2
+    ipl_fourier.sum().backward()
+    spline_fourier.sum().backward()
+    assert_close(ks_sq_grad1.grad, ks_sq_grad2.grad, rtol=rtol, atol=atol)
