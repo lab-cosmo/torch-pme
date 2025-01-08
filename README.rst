@@ -67,7 +67,7 @@ can optionally be installed together and used as ``torchpme.metatensor`` via
 Quickstart
 ----------
 
-Here is a simple example get you started with *torch-pme*:
+Here is a simple example to get started with *torch-pme*:
 
 .. code-block:: python
 
