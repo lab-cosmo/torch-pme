@@ -30,7 +30,7 @@ dtype = torch.float64
 # Electron mass m_e = 9.1094 * 1e-31 kg
 # TODO: for the moment, InversePowerLawPotential only works for exponent 0<p<3
 # ps = [1.0, 2.0, 3.0, 6.0] + [0.12345, 0.54321, 2.581304, 4.835909, 6.674311, 9.109431]
-ps = [1.0, 2.0, 3.0] + [0.12345, 0.54321, 2.581304]
+ps = [1, 2, 3]
 
 # Define range of smearing parameters covering relevant values
 smearinges = [0.1, 0.5, 1.0, 1.56]
@@ -83,7 +83,7 @@ def test_sr_lr_split(exponent, smearing):
     assert_close(potential_from_dist, potential_from_sum, rtol=rtol, atol=atol)
 
 
-@pytest.mark.parametrize("exponent", [1.0, 2.0, 3.0])
+@pytest.mark.parametrize("exponent", [1, 2, 3])
 @pytest.mark.parametrize("smearing", smearinges)
 def test_exact_sr(exponent, smearing):
     """
@@ -103,11 +103,11 @@ def test_exact_sr(exponent, smearing):
     # Compute exact analytical expression obtained for relevant exponents
     potential_1 = erfc(dists / SQRT2 / smearing) / dists
     potential_2 = torch.exp(-0.5 * dists_sq / smearing**2) / dists_sq
-    if exponent == 1.0:
+    if exponent == 1:
         potential_exact = potential_1
-    elif exponent == 2.0:
+    elif exponent == 2:
         potential_exact = potential_2
-    elif exponent == 3.0:
+    elif exponent == 3:
         prefac = SQRT2 / torch.sqrt(PI) / smearing
         potential_exact = potential_1 / dists_sq + prefac * potential_2
 
@@ -117,7 +117,7 @@ def test_exact_sr(exponent, smearing):
     assert_close(potential_sr_from_dist, potential_exact, rtol=rtol, atol=atol)
 
 
-@pytest.mark.parametrize("exponent", [1.0, 2.0, 3.0])
+@pytest.mark.parametrize("exponent", [1, 2, 3])
 @pytest.mark.parametrize("smearing", smearinges)
 def test_exact_lr(exponent, smearing):
     """
@@ -137,11 +137,11 @@ def test_exact_lr(exponent, smearing):
     # Compute exact analytical expression obtained for relevant exponents
     potential_1 = erf(dists / SQRT2 / smearing) / dists
     potential_2 = torch.exp(-0.5 * dists_sq / smearing**2) / dists_sq
-    if exponent == 1.0:
+    if exponent == 1:
         potential_exact = potential_1
-    elif exponent == 2.0:
+    elif exponent == 2:
         potential_exact = 1 / dists_sq - potential_2
-    elif exponent == 3.0:
+    elif exponent == 3:
         prefac = SQRT2 / torch.sqrt(PI) / smearing
         potential_exact = potential_1 / dists_sq - prefac * potential_2
 
@@ -151,7 +151,7 @@ def test_exact_lr(exponent, smearing):
     assert_close(potential_lr_from_dist, potential_exact, rtol=rtol, atol=atol)
 
 
-@pytest.mark.parametrize("exponent", [1.0, 2.0])
+@pytest.mark.parametrize("exponent", [1, 2])
 @pytest.mark.parametrize("smearing", smearinges)
 def test_exact_fourier(exponent, smearing):
     """
@@ -169,11 +169,11 @@ def test_exact_fourier(exponent, smearing):
     fourier_from_class = ipl.lr_from_k_sq(ks_sq)
 
     # Compute exact analytical expression obtained for relevant exponents
-    if exponent == 1.0:
+    if exponent == 1:
         fourier_exact = 4 * PI / ks_sq * torch.exp(-0.5 * smearing**2 * ks_sq)
-    elif exponent == 2.0:
+    elif exponent == 2:
         fourier_exact = 2 * PI**2 / ks * erfc(smearing * ks / SQRT2)
-    elif exponent == 3.0:
+    elif exponent == 3:
         fourier_exact = -2 * PI * expi(-0.5 * smearing**2 * ks_sq)
 
     # Compare results. Large tolerance due to singular division
@@ -183,7 +183,7 @@ def test_exact_fourier(exponent, smearing):
 
 
 @pytest.mark.parametrize("smearing", smearinges)
-@pytest.mark.parametrize("exponent", ps[:-1])  # for p=9.11, the results are unstable
+@pytest.mark.parametrize("exponent", ps[:-1])
 def test_lr_value_at_zero(exponent, smearing):
     """
     The LR part of the potential should no longer have a singularity as r-->0. Instead,
@@ -213,18 +213,18 @@ def test_lr_value_at_zero(exponent, smearing):
 
 
 def test_exponent_out_of_range():
-    match = r"`exponent` p=.* has to satisfy 0 < p <= 3"
+    match = r"Unsupported exponent: .*"
     with pytest.raises(ValueError, match=match):
         InversePowerLawPotential(exponent=-1.0, smearing=0.0)
 
     with pytest.raises(ValueError, match=match):
-        InversePowerLawPotential(exponent=4, smearing=0.0)
+        InversePowerLawPotential(exponent=7, smearing=0.0)
 
 
 @pytest.mark.parametrize("potential", [CoulombPotential, InversePowerLawPotential])
 def test_range_none(potential):
     if potential is InversePowerLawPotential:
-        pot = potential(exponent=2.0)
+        pot = potential(exponent=2)
     else:
         pot = potential()
 
@@ -250,16 +250,16 @@ def test_no_impl():
     with pytest.raises(
         NotImplementedError, match="from_dist is not implemented for NoImplPotential"
     ):
-        mypot.from_dist(torch.tensor([1, 2.0, 3.0]))
+        mypot.from_dist(torch.tensor([1, 2, 3]))
     with pytest.raises(
         NotImplementedError, match="lr_from_dist is not implemented for NoImplPotential"
     ):
-        mypot.lr_from_dist(torch.tensor([1, 2.0, 3.0]))
+        mypot.lr_from_dist(torch.tensor([1, 2, 3]))
     with pytest.raises(
         NotImplementedError,
         match="lr_from_k_sq is not implemented for NoImplPotential",
     ):
-        mypot.lr_from_k_sq(torch.tensor([1, 2.0, 3.0]))
+        mypot.lr_from_k_sq(torch.tensor([1, 2, 3]))
     with pytest.raises(
         NotImplementedError,
         match="self_contribution is not implemented for NoImplPotential",
@@ -274,7 +274,7 @@ def test_no_impl():
         ValueError,
         match="Cannot compute cutoff function when `exclusion_radius` is not set",
     ):
-        mypot.f_cutoff(torch.tensor([1, 2.0, 3.0]))
+        mypot.f_cutoff(torch.tensor([1, 2, 3]))
 
 
 @pytest.mark.parametrize("exclusion_radius", [0.5, 1.0, 2.0])
@@ -294,7 +294,7 @@ def test_inverserp_coulomb(smearing):
     """
     # Compute LR part of Coulomb potential using the potentials class working for any
     # exponent
-    ipl = InversePowerLawPotential(exponent=1.0, smearing=smearing, dtype=dtype)
+    ipl = InversePowerLawPotential(exponent=1, smearing=smearing, dtype=dtype)
     coul = CoulombPotential(smearing=smearing, dtype=dtype)
 
     ipl_from_dist = ipl.from_dist(dists)
@@ -439,8 +439,8 @@ def test_potentials_jit(potpars):
 
 @pytest.mark.parametrize("smearing", smearinges)
 def test_combined_potential(smearing):
-    ipl_1 = InversePowerLawPotential(exponent=1.0, smearing=smearing, dtype=dtype)
-    ipl_2 = InversePowerLawPotential(exponent=2.0, smearing=smearing, dtype=dtype)
+    ipl_1 = InversePowerLawPotential(exponent=1, smearing=smearing, dtype=dtype)
+    ipl_2 = InversePowerLawPotential(exponent=2, smearing=smearing, dtype=dtype)
 
     ipl_1_from_dist = ipl_1.from_dist(dists)
     ipl_1_sr_from_dist = ipl_1.sr_from_dist(dists)
@@ -585,7 +585,7 @@ def test_potential_device_dtype(potential_class, device, dtype):
         pytest.skip("CUDA is not available")
 
     smearing = 1.0
-    exponent = 1.0
+    exponent = 2
 
     if potential_class is InversePowerLawPotential:
         potential = potential_class(
