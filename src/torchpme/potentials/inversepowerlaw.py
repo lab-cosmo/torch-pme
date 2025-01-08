@@ -56,7 +56,7 @@ def gammaincc_over_powerlaw(exponent: torch.Tensor, z: torch.Tensor) -> torch.Te
     if exponent == 6:
         return (
             (2 - 4 * z) * torch.exp(-z)
-            + 4 * torch.sqrt(torch.pi) * z**1.5 * torch.erfc(torch.sqrt(z))
+            + 4 * torch.sqrt(torch.pi * z**3) * torch.erfc(torch.sqrt(z))
         ) / 3
     raise ValueError(f"Unsupported exponent: {exponent}")
 
