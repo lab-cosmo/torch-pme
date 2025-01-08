@@ -129,6 +129,6 @@ class EwaldCalculator(Calculator):
         ivolume = torch.abs(cell.det()).pow(-1)
         charge_tot = torch.sum(charges, dim=0)
         prefac = self.potential.background_correction()
-        energy -= 2 * prefac * charge_tot * ivolume if charge_tot != 0 else 0
+        energy -= 2 * prefac * charge_tot * ivolume
         # Compensate for double counting of pairs (i,j) and (j,i)
         return energy / 2

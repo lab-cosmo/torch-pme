@@ -257,7 +257,7 @@ def neighbor_list(
 
     nl = NeighborList(cutoff=cutoff, full_list=full_neighbor_list)
     neighbor_indices, d, S = nl.compute(
-        points=positions, box=box, periodic=periodic, quantities="pdS"
+        points=positions, box=box, periodic=periodic, quantities="PdS"
     )
 
     neighbor_indices = torch.from_numpy(neighbor_indices.astype(int)).to(

@@ -25,7 +25,12 @@ class CustomE1(torch.autograd.Function):
     @staticmethod
     def forward(ctx, input):
         ctx.save_for_backward(input)
-        return exp1(input)
+        if input.is_cuda:
+            input_cpu = input.cpu()
+            result = torch.tensor(exp1(input_cpu.numpy()), device=input.device)
+        else:
+            result = torch.tensor(exp1(input.numpy()))
+        return result
 
     @staticmethod
     def backward(ctx, grad_output):
@@ -36,9 +41,6 @@ class CustomE1(torch.autograd.Function):
 # Auxilary function for stable Fourier transform implementation
 def gammaincc_over_powerlaw(exponent: torch.Tensor, z: torch.Tensor) -> torch.Tensor:
     """Function to compute the regularized incomplete gamma function complement for integer exponents."""
-    if exponent not in [1, 2, 3, 4, 5, 6]:
-        raise ValueError(f"Unsupported exponent: {exponent}")
-
     if exponent == 1:
         return torch.exp(-z) / z
     if exponent == 2:
@@ -56,7 +58,7 @@ def gammaincc_over_powerlaw(exponent: torch.Tensor, z: torch.Tensor) -> torch.Te
             (2 - 4 * z) * torch.exp(-z)
             + 4 * torch.sqrt(torch.pi) * z**1.5 * torch.erfc(torch.sqrt(z))
         ) / 3
-    return None
+    raise ValueError(f"Unsupported exponent: {exponent}")
 
 
 class InversePowerLawPotential(Potential):

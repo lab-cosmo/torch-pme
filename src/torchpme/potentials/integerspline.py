@@ -59,7 +59,7 @@ class InversePowerLawPotentialSpline(Potential):
             dtype = torch.get_default_dtype()
         if device is None:
             device = torch.device("cpu")
-        self.r_grid = r_grid
+        self.r_grid = r_grid.to(dtype=dtype, device=device)
         self.register_buffer(
             "exponent", torch.tensor(exponent, dtype=dtype, device=device)
         )
@@ -108,7 +108,12 @@ class InversePowerLawPotentialSpline(Potential):
     @torch.jit.export
     def lr_from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
         r"""TODO: Fourier transform of the LR part potential in terms of :math:`\mathbf{k^2}`."""
-        spline = SplinePotential(self.r_grid, self.lr_from_dist(self.r_grid))
+        spline = SplinePotential(
+            self.r_grid,
+            self.lr_from_dist(self.r_grid),
+            device=self.r_grid.device,
+            dtype=self.r_grid.dtype,
+        )
         return spline.lr_from_k_sq(k_sq)
 
     def self_contribution(self) -> torch.Tensor:
