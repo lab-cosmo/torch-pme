@@ -224,7 +224,7 @@ positions_new.requires_grad = True
 #
 # and create new distances in a similar manner as above.
 
-nl = vesin.torch.NeighborList(cutoff=1.0, full_list=False)
+nl = vesin.torch.NeighborList(cutoff=cutoff, full_list=False)
 neighbor_indices_new, d = nl.compute(
     points=positions_new, box=cell, periodic=True, quantities="Pd"
 )

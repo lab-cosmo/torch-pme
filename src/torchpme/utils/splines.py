@@ -198,7 +198,7 @@ def compute_second_derivatives(
     d2y = _solve_tridiagonal(a, b, c, d)
 
     # Converts back to the original dtype
-    return d2y.to(x_points.dtype)
+    return d2y.to(dtype=x_points.dtype, device=x_points.device)
 
 
 def compute_spline_ft(
