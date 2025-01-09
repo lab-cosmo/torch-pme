@@ -463,16 +463,16 @@ jit_value.backward()
 
 print(
     f"""
-Delta-Value: {value-jit_value}
+Delta-Value: {value - jit_value}
 
 Delta-Position gradients:
-{positions.grad.T-jit_positions.grad.T}
+{positions.grad.T - jit_positions.grad.T}
 
 Delta-Cell gradients:
-{cell.grad-jit_cell.grad}
+{cell.grad - jit_cell.grad}
 
 Delta-Charges gradients:
-{charges.grad.T-jit_charges.grad.T}
+{charges.grad.T - jit_charges.grad.T}
 """
 )
 

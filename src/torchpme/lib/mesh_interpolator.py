@@ -432,8 +432,7 @@ class MeshInterpolator(torch.nn.Module):
         """
         if mesh_vals.dim() != 4:
             raise ValueError(
-                f"`mesh_vals` of dimension {mesh_vals.dim()} has to be of "
-                "dimension 4"
+                f"`mesh_vals` of dimension {mesh_vals.dim()} has to be of dimension 4"
             )
 
         return (
