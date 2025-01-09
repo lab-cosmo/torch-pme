@@ -20,7 +20,7 @@ MESH_SPACING = SMEARING / 4
 
 
 @pytest.mark.parametrize(
-    "CalculatorClass, params",
+    ("CalculatorClass", "params"),
     [
         (
             torchpme.metatensor.Calculator,
