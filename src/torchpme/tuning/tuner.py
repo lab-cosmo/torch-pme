@@ -1,7 +1,7 @@
-from ...calculators import EwaldCalculator, PMECalculator, P3MCalculator
-from ...potentials import CoulombPotential
-from . import TunerBase
-from .error_bounds import EwaldErrorBounds, PMEErrorBounds, P3MErrorBounds
+from ..calculators import EwaldCalculator, P3MCalculator, PMECalculator
+from ..potentials import CoulombPotential
+from .base import TunerBase
+from .error_bounds import EwaldErrorBounds, P3MErrorBounds, PMEErrorBounds
 
 
 class GridSearchTuner(TunerBase):

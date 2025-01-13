@@ -1,11 +1,13 @@
+from itertools import product
 from typing import Optional
+
 import torch
 
-from ...calculators import EwaldCalculator
+from ..calculators import PMECalculator
 from .tuner import GridSearchTuner
 
 
-def tune_ewald(
+def tune_pme(
     charges: torch.Tensor,
     cell: torch.Tensor,
     positions: torch.Tensor,
@@ -13,25 +15,21 @@ def tune_ewald(
     exponent: int = 1,
     neighbor_indices: Optional[torch.Tensor] = None,
     neighbor_distances: Optional[torch.Tensor] = None,
-    ns_lo: int = 1,
-    ns_hi: int = 14,
+    nodes_lo: int = 3,
+    nodes_hi: int = 7,
+    mesh_lo: int = 2,
+    mesh_hi: int = 7,
     accuracy: float = 1e-3,
 ):
     r"""
-    Find the optimal parameters for :class:`torchpme.EwaldCalculator`.
+    Find the optimal parameters for :class:`torchpme.PMECalculator`.
 
-    The error formulas are given `online
-    <https://www2.icp.uni-stuttgart.de/~icp/mediawiki/images/4/4d/Script_Longrange_Interactions.pdf>`_
-    (now not available, need to be updated later). Note the difference notation between
-    the parameters in the reference and ours:
+    For the error formulas are given `elsewhere <https://doi.org/10.1063/1.470043>`_.
+    Note the difference notation between the parameters in the reference and ours:
 
     .. math::
 
-        \alpha &= \left( \sqrt{2}\,\mathrm{smearing} \right)^{-1}
-
-        K &= \frac{2 \pi}{\mathrm{lr\_wavelength}}
-
-        r_c &= \mathrm{cutoff}
+        \alpha = \left(\sqrt{2}\,\mathrm{smearing} \right)^{-1}
 
     :param charges: torch.Tensor, atomic (pseudo-)charges
     :param cell: torch.Tensor, periodic supercell for the system
@@ -49,18 +47,22 @@ def tune_ewald(
 
     :return: Tuple containing a float of the optimal smearing for the :class:
         `CoulombPotential`, a dictionary with the parameters for
-        :class:`EwaldCalculator` and a float of the optimal cutoff value for the
+        :class:`PMECalculator` and a float of the optimal cutoff value for the
         neighborlist computation.
 
     Example
     -------
     >>> import torch
+
+    To allow reproducibility, we set the seed to a fixed value
+
+    >>> _ = torch.manual_seed(0)
     >>> positions = torch.tensor(
-    ...     [[0.0, 0.0, 0.0], [0.4, 0.4, 0.4]], dtype=torch.float64
+    ...     [[0.0, 0.0, 0.0], [0.5, 0.5, 0.5]], dtype=torch.float64
     ... )
     >>> charges = torch.tensor([[1.0], [-1.0]], dtype=torch.float64)
     >>> cell = torch.eye(3, dtype=torch.float64)
-    >>> smearing, parameter, cutoff = tune_ewald(
+    >>> smearing, parameter, cutoff = tune_pme(
     ...     charges, cell, positions, cutoff=4.4, accuracy=1e-1
     ... )
 
@@ -70,14 +72,23 @@ def tune_ewald(
     1.7140874893066034
 
     >>> print(parameter)
-    {'lr_wavelength': 0.25}
+    {'interpolation_nodes': 3, 'mesh_spacing': 0.2857142857142857}
 
     >>> print(cutoff)
     4.4
 
     """
+    min_dimension = float(torch.min(torch.linalg.norm(cell, dim=1)))
+    params = [
+        {
+            "interpolation_nodes": interpolation_nodes,
+            "mesh_spacing": 2 * min_dimension / (2**mesh_spacing - 1),
+        }
+        for interpolation_nodes, mesh_spacing in product(
+            range(nodes_lo, nodes_hi + 1), range(mesh_lo, mesh_hi + 1)
+        )
+    ]
 
-    params = [{"lr_wavelength": ns} for ns in range(ns_lo, ns_hi + 1)]
     tuner = GridSearchTuner(
         charges,
         cell,
@@ -86,7 +97,7 @@ def tune_ewald(
         exponent=exponent,
         neighbor_indices=neighbor_indices,
         neighbor_distances=neighbor_distances,
-        calculator=EwaldCalculator,
+        calculator=PMECalculator,
         params=params,
     )
     smearing = tuner.estimate_smearing(accuracy)

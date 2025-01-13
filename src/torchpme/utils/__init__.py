@@ -1,4 +1,4 @@
-from . import prefactors, tuning, splines  # noqa
+from . import prefactors, splines  # noqa
 from .splines import CubicSpline, CubicSplineReciprocal
 
 __all__ = [

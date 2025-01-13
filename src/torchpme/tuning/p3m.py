@@ -3,7 +3,7 @@ from typing import Optional
 
 import torch
 
-from ...calculators import P3MCalculator
+from ..calculators import P3MCalculator
 from .tuner import GridSearchTuner
 
 

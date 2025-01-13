@@ -1,7 +1,7 @@
 import math
 import torch
 
-from . import TuningErrorBounds
+from .base import TuningErrorBounds
 
 TWO_PI = 2 * math.pi
 
