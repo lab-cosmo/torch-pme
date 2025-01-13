@@ -105,9 +105,9 @@ def tune_pme(
 
     if any(err < accuracy for err in errs):
         # There are multiple errors below the accuracy, return the one with the shortest
-        # calculation time
-        masks = [err < accuracy for err in errs]
-        return smearing, params[timings.index(min(timings[masks]))]
+        # calculation time. The timing of those parameters leading to an higher error
+        # than the accuracy are set to infinity
+        return smearing, params[timings.index(min(timings))]
     else:
         # No parameter meets the requirement, return the one with the smallest error
         return smearing, params[errs.index(min(errs))]

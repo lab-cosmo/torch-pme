@@ -1,5 +1,5 @@
 from ...calculators import EwaldCalculator, PMECalculator, P3MCalculator
-from ...potentials import InversePowerLawPotential
+from ...potentials import CoulombPotential
 from . import TunerBase
 from .error_bounds import EwaldErrorBounds, PMEErrorBounds, P3MErrorBounds
 
@@ -31,8 +31,8 @@ class GridSearchTuner(TunerBase):
 
     def _timing(self, smearing: float, k_space_params: dict):
         calculator = self.calculator(
-            potential=InversePowerLawPotential(
-                exponent=self.exponent,  # but only exponent = 1 is supported
+            potential=CoulombPotential(
+                # exponent=self.exponent,  # but only exponent = 1 is supported
                 smearing=smearing,
             ),
             **k_space_params,
