@@ -526,8 +526,7 @@ def test_combined_potentials_jit(smearing):
     )
 
     combo = CombinedPotential(potentials=[spline, coulomb], dtype=dtype, smearing=1.0)
-    jitcombo = torch.jit.script(combo)
-    mypme = PMECalculator(jitcombo, mesh_spacing=1.0)
+    mypme = PMECalculator(combo, mesh_spacing=1.0, dtype=dtype)
     _ = torch.jit.script(mypme)
 
 

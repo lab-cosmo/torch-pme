@@ -38,19 +38,17 @@ class CoulombPotential(Potential):
         device: Optional[torch.device] = None,
     ):
         super().__init__(smearing, exclusion_radius, dtype, device)
-        if dtype is None:
-            dtype = torch.get_default_dtype()
-        if device is None:
-            device = torch.device("cpu")
 
         # constants used in the forwward
         self.register_buffer(
             "_rsqrt2",
-            torch.rsqrt(torch.tensor(2.0, dtype=dtype, device=device)),
+            torch.rsqrt(torch.tensor(2.0, dtype=self.dtype, device=self.device)),
         )
         self.register_buffer(
             "_sqrt_2_on_pi",
-            torch.sqrt(torch.tensor(2.0 / torch.pi, dtype=dtype, device=device)),
+            torch.sqrt(
+                torch.tensor(2.0 / torch.pi, dtype=self.dtype, device=self.device)
+            ),
         )
 
     def from_dist(self, dist: torch.Tensor) -> torch.Tensor:

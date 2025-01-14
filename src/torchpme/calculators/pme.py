@@ -1,3 +1,5 @@
+from typing import Optional
+
 import torch
 from torch import profiler
 
@@ -54,11 +56,15 @@ class PMECalculator(Calculator):
         interpolation_nodes: int = 4,
         full_neighbor_list: bool = False,
         prefactor: float = 1.0,
+        dtype: Optional[torch.dtype] = None,
+        device: Optional[torch.device] = None,
     ):
         super().__init__(
             potential=potential,
             full_neighbor_list=full_neighbor_list,
             prefactor=prefactor,
+            dtype=dtype,
+            device=device,
         )
 
         if potential.smearing is None:
@@ -69,8 +75,8 @@ class PMECalculator(Calculator):
         self.mesh_spacing: float = mesh_spacing
 
         self.kspace_filter: KSpaceFilter = KSpaceFilter(
-            cell=torch.eye(3),
-            ns_mesh=torch.ones(3, dtype=int),
+            cell=torch.eye(3, dtype=self.dtype, device=self.device),
+            ns_mesh=torch.ones(3, dtype=int, device=self.device),
             kernel=self.potential,
             fft_norm="backward",
             ifft_norm="forward",
@@ -79,8 +85,8 @@ class PMECalculator(Calculator):
         self.interpolation_nodes: int = interpolation_nodes
 
         self.mesh_interpolator: MeshInterpolator = MeshInterpolator(
-            cell=torch.eye(3),
-            ns_mesh=torch.ones(3, dtype=int),
+            cell=torch.eye(3, dtype=self.dtype, device=self.device),
+            ns_mesh=torch.ones(3, dtype=int, device=self.device),
             interpolation_nodes=self.interpolation_nodes,
             method="Lagrange",  # convention for classic PME
         )

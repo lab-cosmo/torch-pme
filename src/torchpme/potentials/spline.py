@@ -66,16 +66,12 @@ class SplinePotential(Potential):
             dtype=dtype,
             device=device,
         )
-        if dtype is None:
-            dtype = torch.get_default_dtype()
-        if device is None:
-            device = torch.device("cpu")
 
         if len(y_grid) != len(r_grid):
             raise ValueError("Length of radial grid and value array mismatch.")
 
-        r_grid = r_grid.to(dtype=dtype, device=device)
-        y_grid = y_grid.to(dtype=dtype, device=device)
+        r_grid = r_grid.to(dtype=self.dtype, device=self.device)
+        y_grid = y_grid.to(dtype=self.dtype, device=self.device)
 
         if reciprocal:
             if torch.min(r_grid) <= 0.0:
@@ -93,7 +89,7 @@ class SplinePotential(Potential):
             else:
                 k_grid = r_grid.clone()
         else:
-            k_grid = k_grid.to(dtype=dtype, device=device)
+            k_grid = k_grid.to(dtype=self.dtype, device=self.device)
 
         if yhat_grid is None:
             # computes automatically!
@@ -104,7 +100,7 @@ class SplinePotential(Potential):
                 compute_second_derivatives(r_grid, y_grid),
             )
         else:
-            yhat_grid = yhat_grid.to(dtype=dtype, device=device)
+            yhat_grid = yhat_grid.to(dtype=self.dtype, device=self.device)
 
         # the function is defined for k**2, so we define the grid accordingly
         if reciprocal:
@@ -115,13 +111,15 @@ class SplinePotential(Potential):
             self._krn_spline = CubicSpline(k_grid**2, yhat_grid)
 
         if y_at_zero is None:
-            self._y_at_zero = self._spline(torch.zeros(1, dtype=dtype, device=device))
+            self._y_at_zero = self._spline(
+                torch.zeros(1, dtype=self.dtype, device=self.device)
+            )
         else:
             self._y_at_zero = y_at_zero
 
         if yhat_at_zero is None:
             self._yhat_at_zero = self._krn_spline(
-                torch.zeros(1, dtype=dtype, device=device)
+                torch.zeros(1, dtype=self.dtype, device=self.device)
             )
         else:
             self._yhat_at_zero = yhat_at_zero

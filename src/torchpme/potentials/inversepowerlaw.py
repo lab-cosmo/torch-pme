@@ -53,15 +53,11 @@ class InversePowerLawPotential(Potential):
         device: Optional[torch.device] = None,
     ):
         super().__init__(smearing, exclusion_radius, dtype, device)
-        if dtype is None:
-            dtype = torch.get_default_dtype()
-        if device is None:
-            device = torch.device("cpu")
 
         if exponent <= 0 or exponent > 3:
             raise ValueError(f"`exponent` p={exponent} has to satisfy 0 < p <= 3")
         self.register_buffer(
-            "exponent", torch.tensor(exponent, dtype=dtype, device=device)
+            "exponent", torch.tensor(exponent, dtype=self.dtype, device=self.device)
         )
 
     @torch.jit.export

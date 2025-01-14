@@ -33,13 +33,23 @@ class Calculator(torch.nn.Module):
         potential: Potential,
         full_neighbor_list: bool = False,
         prefactor: float = 1.0,
+        dtype: Optional[torch.dtype] = None,
+        device: Optional[torch.device] = None,
     ):
         super().__init__()
-        # TorchScript requires to initialize all attributes in __init__
-        self._device = torch.device("cpu")
-        self._dtype = torch.float32
 
+        self.device = "cpu" if device is None else device
+        self.dtype = torch.get_default_dtype() if dtype is None else dtype
         self.potential = potential
+
+        assert self.dtype == self.potential.dtype, (
+            f"Potential and Calculator must have the same dtype, got {self.dtype} and "
+            f"{self.potential.dtype}"
+        )
+        assert self.device == self.potential.device, (
+            f"Potential and Calculator must have the same device, got {self.device} and "
+            f"{self.potential.device}"
+        )
 
         self.full_neighbor_list = full_neighbor_list
 

@@ -1,3 +1,5 @@
+from typing import Optional
+
 import torch
 
 from ..lib import generate_kvectors_for_ewald
@@ -61,11 +63,15 @@ class EwaldCalculator(Calculator):
         lr_wavelength: float,
         full_neighbor_list: bool = False,
         prefactor: float = 1.0,
+        dtype: Optional[torch.dtype] = None,
+        device: Optional[torch.device] = None,
     ):
         super().__init__(
             potential=potential,
             full_neighbor_list=full_neighbor_list,
             prefactor=prefactor,
+            dtype=dtype,
+            device=device,
         )
         if potential.smearing is None:
             raise ValueError(
