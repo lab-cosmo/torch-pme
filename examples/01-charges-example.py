@@ -37,7 +37,7 @@ from metatensor.torch import Labels, TensorBlock
 from metatensor.torch.atomistic import NeighborListOptions, System
 
 import torchpme
-from torchpme.utils.tuning.pme import PMETuner
+from torchpme.tuning import tune_pme
 
 # %%
 #
@@ -57,9 +57,10 @@ pbc = torch.tensor([True, True, True])
 # The ``sum_squared_charges`` is equal to ``2.0`` becaue each atom either has a charge
 # of 1 or -1 in units of elementary charges.
 
-smearing, pme_params, cutoff = PMETuner(
-    charges=charges, cell=cell, positions=positions, cutoff=4.4
-).tune()
+cutoff = 4.4
+smearing, pme_params = tune_pme(
+    charges=charges, cell=cell, positions=positions, cutoff=cutoff
+)
 
 # %%
 #

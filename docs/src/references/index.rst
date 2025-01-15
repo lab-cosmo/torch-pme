@@ -25,4 +25,5 @@ refer to the :ref:`userdoc-how-to` section.
     metatensor
     lib/index
     utils/index
+    tuning/index
     changelog

@@ -1,12 +1,22 @@
 import math
-import torch
 
+import torch
 
 TWO_PI = 2 * math.pi
 
 
 class TuningErrorBounds(torch.nn.Module):
-    """Base class for error bounds."""
+    """
+    Base class for error bounds. This class calculates the real space error and the
+    Fourier space error based on the error formula. This class is used in the tuning
+    process. It can also be used with the :class:`torchpme.tuning.tuner.TunerBase` to
+    build up a custom parameter tuner.
+
+    :param charges: atomic charges
+    :param cell: single tensor of shape (3, 3), describing the bounding
+    :param positions: single tensor of shape (``len(charges), 3``) containing the
+        Cartesian positions of all point charges in the system.
+    """
 
     def __init__(
         self,
@@ -21,7 +31,7 @@ class TuningErrorBounds(torch.nn.Module):
 
     def forward(self, *args, **kwargs):
         return self.error(*args, **kwargs)
-    
+
 
 class EwaldErrorBounds(TuningErrorBounds):
     r"""
@@ -60,7 +70,17 @@ class EwaldErrorBounds(TuningErrorBounds):
         self.cell = cell
         self.positions = positions
 
-    def err_kspace(self, smearing, lr_wavelength):
+    def err_kspace(
+        self, smearing: torch.Tensor, lr_wavelength: torch.Tensor
+    ) -> torch.Tensor:
+        """
+        The Fourier space error of Ewald.
+
+        :param smearing: see :class:`torchpme.EwaldCalculator` for details
+        :param lr_wavelength: see :class:`torchpme.EwaldCalculator` for details
+        """
+        smearing = torch.as_tensor(smearing)
+        lr_wavelength = torch.as_tensor(lr_wavelength)
         return (
             self.prefac**0.5
             / smearing
@@ -68,14 +88,22 @@ class EwaldErrorBounds(TuningErrorBounds):
             * torch.exp(-(TWO_PI**2) * smearing**2 / (lr_wavelength))
         )
 
-    def err_rspace(self, smearing, cutoff):
+    def err_rspace(self, smearing: torch.Tensor, cutoff: torch.Tensor) -> torch.Tensor:
+        """
+        The real space error of Ewald.
+
+        :param smearing: see :class:`torchpme.EwaldCalculator` for details
+        :param lr_wavelength: see :class:`torchpme.EwaldCalculator` for details
+        """
         return (
             self.prefac
             / torch.sqrt(cutoff * self.volume)
             * torch.exp(-(cutoff**2) / 2 / smearing**2)
         )
 
-    def forward(self, smearing, lr_wavelength, cutoff):
+    def forward(
+        self, smearing: float, lr_wavelength: float, cutoff: float
+    ) -> torch.Tensor:
         r"""
         Calculate the error bound of Ewald.
 
@@ -180,7 +208,19 @@ class P3MErrorBounds(TuningErrorBounds):
         self.cell = cell
         self.positions = positions
 
-    def err_kspace(self, smearing, mesh_spacing, interpolation_nodes):
+    def err_kspace(
+        self,
+        smearing: torch.Tensor,
+        mesh_spacing: torch.Tensor,
+        interpolation_nodes: torch.Tensor,
+    ) -> torch.Tensor:
+        """
+        The Fourier space error of P3M.
+
+        :param smearing: see :class:`torchpme.P3MCalculator` for details
+        :param mesh_spacing: see :class:`torchpme.P3MCalculator` for details
+        :param interpolation_nodes: see :class:`torchpme.P3MCalculator` for details
+        """
         actual_spacing = self.cell_dimensions / (
             2 * self.cell_dimensions / mesh_spacing + 1
         )
@@ -202,25 +242,33 @@ class P3MErrorBounds(TuningErrorBounds):
             )
         )
 
-    def err_rspace(self, smearing, cutoff):
+    def err_rspace(self, smearing: torch.Tensor, cutoff: torch.Tensor) -> torch.Tensor:
+        """
+        The real space error of P3M.
+
+        :param smearing: see :class:`torchpme.P3MCalculator` for details
+        :param cutoff: see :class:`torchpme.P3MCalculator` for details
+        """
         return (
             self.prefac
             / torch.sqrt(cutoff * self.volume)
             * torch.exp(-(cutoff**2) / 2 / smearing**2)
         )
 
-    def forward(self, smearing, mesh_spacing, cutoff, interpolation_nodes):
+    def forward(
+        self,
+        smearing: float,
+        mesh_spacing: float,
+        cutoff: float,
+        interpolation_nodes: float,
+    ) -> torch.Tensor:
         r"""
         Calculate the error bound of P3M.
 
         :param smearing: see :class:`torchpme.P3MCalculator` for details
         :param mesh_spacing: see :class:`torchpme.P3MCalculator` for details
         :param cutoff: see :class:`torchpme.P3MCalculator` for details
-        :param interpolation_nodes: The number ``n`` of nodes used in the interpolation
-            per coordinate axis. The total number of interpolation nodes in 3D will be
-            ``n^3``. In general, for ``n`` nodes, the interpolation will be performed by
-            piecewise polynomials of degree ``n`` (e.g. ``n = 3`` for cubic
-            interpolation). Only the values ``1, 2, 3, 4, 5`` are supported.
+        :param interpolation_nodes: see :class:`torchpme.P3MCalculator` for details
         """
         smearing = torch.as_tensor(smearing)
         mesh_spacing = torch.as_tensor(mesh_spacing)
@@ -230,7 +278,7 @@ class P3MErrorBounds(TuningErrorBounds):
             self.err_kspace(smearing, mesh_spacing, interpolation_nodes) ** 2
             + self.err_rspace(smearing, cutoff) ** 2
         )
-    
+
 
 class PMEErrorBounds(TuningErrorBounds):
     r"""
@@ -258,7 +306,19 @@ class PMEErrorBounds(TuningErrorBounds):
         self.prefac = 2 * self.sum_squared_charges / math.sqrt(len(positions))
         self.cell_dimensions = torch.linalg.norm(cell, dim=1)
 
-    def err_kspace(self, smearing, mesh_spacing, interpolation_nodes):
+    def err_kspace(
+        self,
+        smearing: torch.Tensor,
+        mesh_spacing: torch.Tensor,
+        interpolation_nodes: torch.Tensor,
+    ) -> torch.Tensor:
+        """
+        The Fourier space error of PME.
+
+        :param smearing: see :class:`torchpme.PMECalculator` for details
+        :param mesh_spacing: see :class:`torchpme.PMECalculator` for details
+        :param interpolation_nodes: see :class:`torchpme.PMECalculator` for details
+        """
         actual_spacing = self.cell_dimensions / (
             2 * self.cell_dimensions / mesh_spacing + 1
         )
@@ -279,7 +339,13 @@ class PMEErrorBounds(TuningErrorBounds):
             * RMS_phi[interpolation_nodes - 1]
         )
 
-    def err_rspace(self, smearing, cutoff):
+    def err_rspace(self, smearing: torch.Tensor, cutoff: torch.Tensor) -> torch.Tensor:
+        """
+        The real space error of PME.
+
+        :param smearing: see :class:`torchpme.PMECalculator` for details
+        :param cutoff: see :class:`torchpme.PMECalculator` for details
+        """
         smearing = torch.as_tensor(smearing)
         cutoff = torch.as_tensor(cutoff)
 
@@ -289,7 +355,13 @@ class PMEErrorBounds(TuningErrorBounds):
             * torch.exp(-(cutoff**2) / 2 / smearing**2)
         )
 
-    def error(self, cutoff, smearing, mesh_spacing, interpolation_nodes):
+    def error(
+        self,
+        cutoff: float,
+        smearing: float,
+        mesh_spacing: float,
+        interpolation_nodes: float,
+    ) -> torch.Tensor:
         r"""
         Calculate the error bound of PME.
 
@@ -313,4 +385,3 @@ class PMEErrorBounds(TuningErrorBounds):
             self.err_rspace(smearing, cutoff) ** 2
             + self.err_kspace(smearing, mesh_spacing, interpolation_nodes) ** 2
         )
-

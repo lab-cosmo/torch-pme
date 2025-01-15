@@ -46,7 +46,7 @@ import vesin
 import vesin.torch
 
 import torchpme
-from torchpme.utils.tuning.pme import PMETuner
+from torchpme.tuning import tune_pme
 
 # %%
 #
@@ -93,10 +93,10 @@ charges = torch.from_numpy(charges).unsqueeze(1)
 cell = torch.from_numpy(atoms.cell.array)
 
 sum_squared_charges = float(torch.sum(charges**2))
-
-smearing, pme_params, cutoff = PMETuner(
-    charges=charges, cell=cell, positions=positions, cutoff=4.4
-).tune()
+cutoff = 4.4
+smearing, pme_params = tune_pme(
+    charges=charges, cell=cell, positions=positions, cutoff=cutoff
+)
 
 # %%
 #

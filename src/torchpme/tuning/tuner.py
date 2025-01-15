@@ -11,6 +11,23 @@ from .error_bounds import EwaldErrorBounds, P3MErrorBounds, PMEErrorBounds
 
 
 class TunerBase:
+    """
+    Base class defining the interface for a parameter tuner.
+
+    This class provides a framework for tuning the parameters of a calculator. The class
+    itself supports estimating the ``smearing`` from the real space cutoff based on the
+    real space error formula. The :func:`TunerBase.tune` defines the interface for a
+    sophisticated tuning process, which takes a value of the desired accuracy.
+
+    :param charges: atomic charges
+    :param cell: single tensor of shape (3, 3), describing the bounding
+    :param positions: single tensor of shape (``len(charges), 3``) containing the
+        Cartesian positions of all point charges in the system.
+    :param cutoff: real space cutoff, serves as a hyperparameter here.
+    :param calculator: the calculator to be tuned
+    :param exponent: exponent of the potential, only exponent = 1 is supported
+    """
+
     def __init__(
         self,
         charges: torch.Tensor,
@@ -18,35 +35,19 @@ class TunerBase:
         positions: torch.Tensor,
         cutoff: float,
         calculator: type[Calculator],
-        params: list[dict],
         exponent: int = 1,
-        neighbor_indices: Optional[torch.Tensor] = None,
-        neighbor_distances: Optional[torch.Tensor] = None,
     ):
         self._validate_parameters(charges, cell, positions, exponent)
         self.charges = charges
         self.cell = cell
         self.positions = positions
         self.cutoff = cutoff
-        self.exponent = calculator.exponent
+        self.calculator = calculator
+        self.exponent = exponent
         self._dtype = cell.dtype
         self._device = cell.device
 
-        self.calculator = calculator
-        self.params = params
-
         self._prefac = 2 * float((charges**2).sum()) / math.sqrt(len(positions))
-        self.time_func = TuningTimings(
-            charges,
-            cell,
-            positions,
-            cutoff,
-            neighbor_indices,
-            neighbor_distances,
-            4,
-            2,
-            True,
-        )
 
     def tune(self, accuracy: float = 1e-3):
         raise NotImplementedError
@@ -131,7 +132,13 @@ class TunerBase:
         self,
         accuracy: float,
     ) -> float:
-        """Estimate the smearing based on the error formula of the real space."""
+        """
+        Estimate the smearing based on the error formula of the real space. The
+        smearing is set as leading to a real space error of ``accuracy/4``.
+
+        :param accuracy: a float, the desired accuracy
+        :return: a float, the estimated smearing
+        """
         ratio = math.sqrt(
             -2
             * math.log(
@@ -147,7 +154,68 @@ class TunerBase:
 
 
 class GridSearchTuner(TunerBase):
-    def tune(self, accuracy: float = 1e-3):
+    """
+    Tuner using grid search.
+
+    The tuner uses the error formula to estimate the error of a given parameter set.
+    If the error is smaller than the accuracy, the timing is measured and returned.
+    If the error is larger than the accuracy, the timing is set to infinity and the
+    parameter is skipped.
+
+    :param charges: atomic charges
+    :param cell: single tensor of shape (3, 3), describing the bounding
+    :param positions: single tensor of shape (``len(charges), 3``) containing the
+        Cartesian positions of all point charges in the system.
+    :param cutoff: real space cutoff, serves as a hyperparameter here.
+    :param calculator: the calculator to be tuned
+    :param params: list of Fourier space parameter sets for which the error is estimated
+    :param exponent: exponent of the potential, only exponent = 1 is supported
+    :param neighbor_indices: torch.Tensor with the ``i,j`` indices of neighbors for
+        which the potential should be computed in real space.
+    :param neighbor_distances: torch.Tensor with the pair distances of the neighbors
+        for which the potential should be computed in real space.
+    """
+
+    def __init__(
+        self,
+        charges: torch.Tensor,
+        cell: torch.Tensor,
+        positions: torch.Tensor,
+        cutoff: float,
+        calculator: type[Calculator],
+        params: list[dict],
+        exponent: int = 1,
+        neighbor_indices: Optional[torch.Tensor] = None,
+        neighbor_distances: Optional[torch.Tensor] = None,
+    ):
+        super().__init__(
+            charges,
+            cell,
+            positions,
+            cutoff,
+            calculator,
+            exponent,
+        )
+        self.params = params
+        self.time_func = TuningTimings(
+            charges,
+            cell,
+            positions,
+            cutoff,
+            neighbor_indices,
+            neighbor_distances,
+            True,
+        )
+
+    def tune(self, accuracy: float = 1e-3) -> tuple[list[float], list[float]]:
+        """
+        Estimate the error and timing for each parameter set. Only parameters for
+        which the error is smaller than the accuracy are timed, the others' timing is
+        set to infinity.
+
+        :param accuracy: a float, the desired accuracy
+        :return: a list of errors and a list of timings
+        """
         if self.calculator is EwaldCalculator:
             error_bounds = EwaldErrorBounds(self.charges, self.cell, self.positions)
         elif self.calculator is PMECalculator:
@@ -184,7 +252,26 @@ class GridSearchTuner(TunerBase):
 
 
 class TuningTimings(torch.nn.Module):
-    """Base class for error bounds."""
+    """
+    Class for timing a calculator.
+
+    The class estimates the average execution time of a given calculater after several
+    warmup runs. The class takes the information of the structure that one wants to
+    benchmark on, and the configuration of the timing process as inputs.
+
+    :param charges: atomic charges
+    :param cell: single tensor of shape (3, 3), describing the bounding
+    :param positions: single tensor of shape (``len(charges), 3``) containing the
+        Cartesian positions of all point charges in the system.
+    :param cutoff: real space cutoff, serves as a hyperparameter here.
+    :param neighbor_indices: torch.Tensor with the ``i,j`` indices of neighbors for
+        which the potential should be computed in real space.
+    :param neighbor_distances: torch.Tensor with the pair distances of the neighbors for
+        which the potential should be computed in real space.
+    :param n_repeat: number of times to repeat to estimate the average timing
+    :param n_warmup: number of warmup runs
+    :param run_backward: whether to run the backward pass
+    """
 
     def __init__(
         self,
@@ -231,6 +318,9 @@ class TuningTimings(torch.nn.Module):
         """
         Estimate the execution time of a given calculator for the structure
         to be used as benchmark.
+
+        :param calculator: the calculator to be tuned
+        :return: a float, the average execution time
         """
         for _ in range(self._n_warmup):
             result = calculator.forward(

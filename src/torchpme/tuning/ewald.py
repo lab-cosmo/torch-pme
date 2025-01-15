@@ -20,7 +20,7 @@ def tune_ewald(
     ns_lo: int = 1,
     ns_hi: int = 14,
     accuracy: float = 1e-3,
-):
+) -> tuple[float, dict[str, float]]:
     r"""
     Find the optimal parameters for :class:`torchpme.EwaldCalculator`.
 
@@ -39,22 +39,21 @@ def tune_ewald(
 
     :param charges: torch.Tensor, atomic (pseudo-)charges
     :param cell: torch.Tensor, periodic supercell for the system
-    :param positions: torch.Tensor, Cartesian coordinates of the particles within
-        the supercell.
+    :param positions: torch.Tensor, Cartesian coordinates of the particles within the
+        supercell.
     :param cutoff: float, cutoff distance for the neighborlist
-    :param exponent :math:`p` in :math:`1/r^p` potentials, currently only :math:`p=1` is
-        supported
+    :param exponent: :math:`p` in :math:`1/r^p` potentials, currently only :math:`p=1`
+        is supported
     :param neighbor_indices: torch.Tensor with the ``i,j`` indices of neighbors for
         which the potential should be computed in real space.
-    :param neighbor_distances: torch.Tensor with the pair distances of the neighbors
-        for which the potential should be computed in real space.
+    :param neighbor_distances: torch.Tensor with the pair distances of the neighbors for
+        which the potential should be computed in real space.
     :param accuracy: Recomended values for a balance between the accuracy and speed is
         :math:`10^{-3}`. For more accurate results, use :math:`10^{-6}`.
 
     :return: Tuple containing a float of the optimal smearing for the :class:
-        `CoulombPotential`, a dictionary with the parameters for
-        :class:`EwaldCalculator` and a float of the optimal cutoff value for the
-        neighborlist computation.
+        `CoulombPotential`, and a dictionary with the parameters for
+        :class:`EwaldCalculator`.
 
     Example
     -------
@@ -64,7 +63,7 @@ def tune_ewald(
     ... )
     >>> charges = torch.tensor([[1.0], [-1.0]], dtype=torch.float64)
     >>> cell = torch.eye(3, dtype=torch.float64)
-    >>> smearing, parameter, cutoff = tune_ewald(
+    >>> smearing, parameter = tune_ewald(
     ...     charges, cell, positions, cutoff=4.4, accuracy=1e-1
     ... )
 
@@ -74,13 +73,11 @@ def tune_ewald(
     1.7140874893066034
 
     >>> print(parameter)
-    {'lr_wavelength': 0.25}
-
-    >>> print(cutoff)
-    4.4
+    {'lr_wavelength': 0.3333333333333333}
 
     """
-    params = [{"lr_wavelength": ns} for ns in range(ns_lo, ns_hi + 1)]
+    min_dimension = float(torch.min(torch.linalg.norm(cell, dim=1)))
+    params = [{"lr_wavelength": min_dimension / ns} for ns in range(ns_lo, ns_hi + 1)]
     tuner = GridSearchTuner(
         charges,
         cell,

@@ -39,7 +39,7 @@ def tune_pme(
     :param positions: torch.Tensor, Cartesian coordinates of the particles within
         the supercell.
     :param cutoff: float, cutoff distance for the neighborlist
-    :param exponent :math:`p` in :math:`1/r^p` potentials, currently only :math:`p=1` is
+    :param exponent: :math:`p` in :math:`1/r^p` potentials, currently only :math:`p=1` is
         supported
     :param neighbor_indices: torch.Tensor with the ``i,j`` indices of neighbors for
         which the potential should be computed in real space.
@@ -75,19 +75,16 @@ def tune_pme(
     1.7140874893066034
 
     >>> print(parameter)
-    {'interpolation_nodes': 3, 'mesh_spacing': 0.2857142857142857}
-
-    >>> print(cutoff)
-    4.4
+    {'interpolation_nodes': 4, 'mesh_spacing': 0.6666666666666666}
 
     """
     min_dimension = float(torch.min(torch.linalg.norm(cell, dim=1)))
     params = [
         {
             "interpolation_nodes": interpolation_nodes,
-            "mesh_spacing": 2 * min_dimension / (2**mesh_spacing - 1),
+            "mesh_spacing": 2 * min_dimension / (2**ns - 1),
         }
-        for interpolation_nodes, mesh_spacing in product(
+        for interpolation_nodes, ns in product(
             range(nodes_lo, nodes_hi + 1), range(mesh_lo, mesh_hi + 1)
         )
     ]
