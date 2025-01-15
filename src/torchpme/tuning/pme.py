@@ -1,3 +1,4 @@
+import math
 from itertools import product
 from typing import Optional
 
@@ -5,6 +6,8 @@ import torch
 
 from ..calculators import PMECalculator
 from .tuner import GridSearchTuner
+
+TWO_PI = 2 * math.pi
 
 
 def tune_pme(
@@ -108,6 +111,5 @@ def tune_pme(
         # calculation time. The timing of those parameters leading to an higher error
         # than the accuracy are set to infinity
         return smearing, params[timings.index(min(timings))]
-    else:
-        # No parameter meets the requirement, return the one with the smallest error
-        return smearing, params[errs.index(min(errs))]
+    # No parameter meets the requirement, return the one with the smallest error
+    return smearing, params[errs.index(min(errs))]

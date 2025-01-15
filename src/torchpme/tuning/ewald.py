@@ -1,8 +1,12 @@
+import math
 from typing import Optional
+
 import torch
 
 from ..calculators import EwaldCalculator
 from .tuner import GridSearchTuner
+
+TWO_PI = 2 * math.pi
 
 
 def tune_ewald(
@@ -76,7 +80,6 @@ def tune_ewald(
     4.4
 
     """
-
     params = [{"lr_wavelength": ns} for ns in range(ns_lo, ns_hi + 1)]
     tuner = GridSearchTuner(
         charges,
@@ -97,6 +100,5 @@ def tune_ewald(
         # calculation time. The timing of those parameters leading to an higher error
         # than the accuracy are set to infinity
         return smearing, params[timings.index(min(timings))]
-    else:
-        # No parameter meets the requirement, return the one with the smallest error
-        return smearing, params[errs.index(min(errs))]
+    # No parameter meets the requirement, return the one with the smallest error
+    return smearing, params[errs.index(min(errs))]

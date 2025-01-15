@@ -1,9 +1,27 @@
 import math
 import torch
 
-from .base import TuningErrorBounds
 
 TWO_PI = 2 * math.pi
+
+
+class TuningErrorBounds(torch.nn.Module):
+    """Base class for error bounds."""
+
+    def __init__(
+        self,
+        charges: torch.Tensor,
+        cell: torch.Tensor,
+        positions: torch.Tensor,
+    ):
+        super().__init__()
+        self._charges = charges
+        self._cell = cell
+        self._positions = positions
+
+    def forward(self, *args, **kwargs):
+        return self.error(*args, **kwargs)
+    
 
 class EwaldErrorBounds(TuningErrorBounds):
     r"""
@@ -72,7 +90,7 @@ class EwaldErrorBounds(TuningErrorBounds):
             self.err_kspace(smearing, lr_wavelength) ** 2
             + self.err_rspace(smearing, cutoff) ** 2
         )
-    
+
 
 # Coefficients for the P3M Fourier error,
 # see Table II of http://dx.doi.org/10.1063/1.477415

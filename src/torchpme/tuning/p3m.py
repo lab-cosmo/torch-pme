@@ -1,3 +1,4 @@
+import math
 from itertools import product
 from typing import Optional
 
@@ -5,6 +6,65 @@ import torch
 
 from ..calculators import P3MCalculator
 from .tuner import GridSearchTuner
+
+TWO_PI = 2 * math.pi
+
+# Coefficients for the P3M Fourier error,
+# see Table II of http://dx.doi.org/10.1063/1.477415
+A_COEF = [
+    [None, 2 / 3, 1 / 50, 1 / 588, 1 / 4320, 1 / 23_232, 691 / 68_140_800, 1 / 345_600],
+    [
+        None,
+        None,
+        5 / 294,
+        7 / 1440,
+        3 / 1936,
+        7601 / 13_628_160,
+        13 / 57_600,
+        3617 / 35_512_320,
+    ],
+    [
+        None,
+        None,
+        None,
+        21 / 3872,
+        7601 / 2_271_360,
+        143 / 69_120,
+        47_021 / 35_512_320,
+        745_739 / 838_397_952,
+    ],
+    [
+        None,
+        None,
+        None,
+        None,
+        143 / 28_800,
+        517_231 / 106_536_960,
+        9_694_607 / 2_095_994_880,
+        56_399_353 / 12_773_376_000,
+    ],
+    [
+        None,
+        None,
+        None,
+        None,
+        None,
+        106_640_677 / 11_737_571_328,
+        733_191_589 / 59_609_088_000,
+        25_091_609 / 1_560_084_480,
+    ],
+    [
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        326_190_917 / 11_700_633_600,
+        1_755_948_832_039 / 36_229_939_200_000,
+    ],
+    [None, None, None, None, None, None, None, 4_887_769_399 / 37_838_389_248],
+]
 
 
 def tune_p3m(
@@ -108,6 +168,5 @@ def tune_p3m(
         # calculation time. The timing of those parameters leading to an higher error
         # than the accuracy are set to infinity
         return smearing, params[timings.index(min(timings))]
-    else:
-        # No parameter meets the requirement, return the one with the smallest error
-        return smearing, params[errs.index(min(errs))]
+    # No parameter meets the requirement, return the one with the smallest error
+    return smearing, params[errs.index(min(errs))]
