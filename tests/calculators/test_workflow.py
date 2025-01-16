@@ -214,3 +214,15 @@ class TestWorkflow:
             CalculatorClass(
                 **params, dtype=params["potential"].dtype, device=torch.device("meta")
             )
+
+    def test_potential_and_calculator_incompatability(
+        self, CalculatorClass, params, device
+    ):
+        """Test that the calculator raises an error if the potential and calculator are incompatible."""
+        params = params.copy()
+        params["potential"].device = device
+        params["potential"] = torch.jit.script(params["potential"])
+        with pytest.raises(
+            AssertionError, match="Potential must be an instance of Potential, got.*"
+        ):
+            CalculatorClass(**params)

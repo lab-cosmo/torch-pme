@@ -24,11 +24,16 @@ changelog <https://keepachangelog.com/en/1.1.0/>`_ format. This project follows
 `Unreleased <https://github.com/lab-cosmo/torch-pme/>`_
 -------------------------------------------------------
 
+Added
+#####
+
+* Added ``dtype`` and ``device`` for ``Calculator`` classses
+
 Fixed
 #####
 
-* Added ``dtype`` and ``device`` for ``Calculator`` classses and ensured their
-  consistency with ``Potential`` classes
+* Ensured consistency of ``dtype`` and ``device`` in the ``Potential`` and
+  ``Calculator`` classses
 * Fixed consistency of ``dtype`` and ``device`` in the ``SplinePotential`` class
 * Fix inconsistent ``cutoff`` in neighbor list example
 * All calculators now check if the cell is zero if the potential is range-separated
