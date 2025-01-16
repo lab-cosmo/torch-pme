@@ -158,7 +158,7 @@ def tune_p3m(
         neighbor_indices=neighbor_indices,
         neighbor_distances=neighbor_distances,
         calculator=P3MCalculator,
-        error_bounds=P3MErrorBounds,
+        error_bounds=P3MErrorBounds(charges=charges, cell=cell, positions=positions),
         params=params,
     )
     smearing = tuner.estimate_smearing(accuracy)

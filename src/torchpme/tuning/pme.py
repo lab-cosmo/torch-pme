@@ -65,7 +65,7 @@ def tune_pme(
     ... )
     >>> charges = torch.tensor([[1.0], [-1.0]], dtype=torch.float64)
     >>> cell = torch.eye(3, dtype=torch.float64)
-    >>> smearing, parameter, cutoff = tune_pme(
+    >>> smearing, parameter = tune_pme(
     ...     charges, cell, positions, cutoff=4.4, accuracy=1e-1
     ... )
 
@@ -98,7 +98,7 @@ def tune_pme(
         neighbor_indices=neighbor_indices,
         neighbor_distances=neighbor_distances,
         calculator=PMECalculator,
-        error_bounds=PMEErrorBounds,
+        error_bounds=PMEErrorBounds(charges=charges, cell=cell, positions=positions),
         params=params,
     )
     smearing = tuner.estimate_smearing(accuracy)

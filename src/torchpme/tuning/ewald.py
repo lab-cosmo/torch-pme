@@ -87,7 +87,7 @@ def tune_ewald(
         neighbor_indices=neighbor_indices,
         neighbor_distances=neighbor_distances,
         calculator=EwaldCalculator,
-        error_bounds=EwaldErrorBounds(charges, cell, positions),
+        error_bounds=EwaldErrorBounds(charges=charges, cell=cell, positions=positions),
         params=params,
     )
     smearing = tuner.estimate_smearing(accuracy)
