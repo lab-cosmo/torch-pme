@@ -5,7 +5,7 @@ from typing import Optional
 import torch
 
 from ..calculators import P3MCalculator
-from .tuner import GridSearchTuner
+from .tuner import GridSearchTuner, TuningErrorBounds
 
 TWO_PI = 2 * math.pi
 
@@ -158,6 +158,7 @@ def tune_p3m(
         neighbor_indices=neighbor_indices,
         neighbor_distances=neighbor_distances,
         calculator=P3MCalculator,
+        error_bounds=P3MErrorBounds,
         params=params,
     )
     smearing = tuner.estimate_smearing(accuracy)
@@ -170,3 +171,105 @@ def tune_p3m(
         return smearing, params[timings.index(min(timings))]
     # No parameter meets the requirement, return the one with the smallest error
     return smearing, params[errs.index(min(errs))]
+
+
+class P3MErrorBounds(TuningErrorBounds):
+    r"""
+    "
+    Error bounds for :class:`torchpme.calculators.pme.P3MCalculator`.
+
+    For the error formulas are given `here <https://doi.org/10.1063/1.477415>`_.
+    Note the difference notation between the parameters in the reference and ours:
+
+    .. math::
+
+        \alpha = \left(\sqrt{2}\,\mathrm{smearing} \right)^{-1}
+
+    :param charges: atomic charges
+    :param cell: single tensor of shape (3, 3), describing the bounding
+    :param positions: single tensor of shape (``len(charges), 3``) containing the
+        Cartesian positions of all point charges in the system.
+    """
+
+    def __init__(
+        self, charges: torch.Tensor, cell: torch.Tensor, positions: torch.Tensor
+    ):
+        super().__init__(charges, cell, positions)
+
+        self.volume = torch.abs(torch.det(cell))
+        self.sum_squared_charges = (charges**2).sum()
+        self.prefac = 2 * self.sum_squared_charges / math.sqrt(len(positions))
+        self.cell_dimensions = torch.linalg.norm(cell, dim=1)
+        self.cell = cell
+        self.positions = positions
+
+    def err_kspace(
+        self,
+        smearing: torch.Tensor,
+        mesh_spacing: torch.Tensor,
+        interpolation_nodes: torch.Tensor,
+    ) -> torch.Tensor:
+        """
+        The Fourier space error of P3M.
+
+        :param smearing: see :class:`torchpme.P3MCalculator` for details
+        :param mesh_spacing: see :class:`torchpme.P3MCalculator` for details
+        :param interpolation_nodes: see :class:`torchpme.P3MCalculator` for details
+        """
+        actual_spacing = self.cell_dimensions / (
+            2 * self.cell_dimensions / mesh_spacing + 1
+        )
+        h = torch.prod(actual_spacing) ** (1 / 3)
+
+        return (
+            self.prefac
+            / self.volume ** (2 / 3)
+            * (h * (1 / 2**0.5 / smearing)) ** interpolation_nodes
+            * torch.sqrt(
+                (1 / 2**0.5 / smearing)
+                * self.volume ** (1 / 3)
+                * math.sqrt(2 * torch.pi)
+                * sum(
+                    A_COEF[m][interpolation_nodes]
+                    * (h * (1 / 2**0.5 / smearing)) ** (2 * m)
+                    for m in range(interpolation_nodes)
+                )
+            )
+        )
+
+    def err_rspace(self, smearing: torch.Tensor, cutoff: torch.Tensor) -> torch.Tensor:
+        """
+        The real space error of P3M.
+
+        :param smearing: see :class:`torchpme.P3MCalculator` for details
+        :param cutoff: see :class:`torchpme.P3MCalculator` for details
+        """
+        return (
+            self.prefac
+            / torch.sqrt(cutoff * self.volume)
+            * torch.exp(-(cutoff**2) / 2 / smearing**2)
+        )
+
+    def forward(
+        self,
+        smearing: float,
+        mesh_spacing: float,
+        cutoff: float,
+        interpolation_nodes: float,
+    ) -> torch.Tensor:
+        r"""
+        Calculate the error bound of P3M.
+
+        :param smearing: see :class:`torchpme.P3MCalculator` for details
+        :param mesh_spacing: see :class:`torchpme.P3MCalculator` for details
+        :param cutoff: see :class:`torchpme.P3MCalculator` for details
+        :param interpolation_nodes: see :class:`torchpme.P3MCalculator` for details
+        """
+        smearing = torch.as_tensor(smearing)
+        mesh_spacing = torch.as_tensor(mesh_spacing)
+        cutoff = torch.as_tensor(cutoff)
+        interpolation_nodes = torch.as_tensor(interpolation_nodes)
+        return torch.sqrt(
+            self.err_kspace(smearing, mesh_spacing, interpolation_nodes) ** 2
+            + self.err_rspace(smearing, cutoff) ** 2
+        )

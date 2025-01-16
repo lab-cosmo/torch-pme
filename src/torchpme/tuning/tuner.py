@@ -5,9 +5,36 @@ from typing import Optional
 import torch
 import vesin.torch
 
-from ..calculators import Calculator, EwaldCalculator, P3MCalculator, PMECalculator
+from ..calculators import Calculator
 from ..potentials import CoulombPotential
-from .error_bounds import EwaldErrorBounds, P3MErrorBounds, PMEErrorBounds
+
+
+class TuningErrorBounds(torch.nn.Module):
+    """
+    Base class for error bounds. This class calculates the real space error and the
+    Fourier space error based on the error formula. This class is used in the tuning
+    process. It can also be used with the :class:`torchpme.tuning.tuner.TunerBase` to
+    build up a custom parameter tuner.
+
+    :param charges: atomic charges
+    :param cell: single tensor of shape (3, 3), describing the bounding
+    :param positions: single tensor of shape (``len(charges), 3``) containing the
+        Cartesian positions of all point charges in the system.
+    """
+
+    def __init__(
+        self,
+        charges: torch.Tensor,
+        cell: torch.Tensor,
+        positions: torch.Tensor,
+    ):
+        super().__init__()
+        self._charges = charges
+        self._cell = cell
+        self._positions = positions
+
+    def forward(self, *args, **kwargs):
+        return self.error(*args, **kwargs)
 
 
 class TunerBase:
@@ -183,6 +210,7 @@ class GridSearchTuner(TunerBase):
         positions: torch.Tensor,
         cutoff: float,
         calculator: type[Calculator],
+        error_bounds: type[TuningErrorBounds],
         params: list[dict],
         exponent: int = 1,
         neighbor_indices: Optional[torch.Tensor] = None,
@@ -196,6 +224,7 @@ class GridSearchTuner(TunerBase):
             calculator,
             exponent,
         )
+        self.error_bounds = error_bounds
         self.params = params
         self.time_func = TuningTimings(
             charges,
@@ -216,20 +245,11 @@ class GridSearchTuner(TunerBase):
         :param accuracy: a float, the desired accuracy
         :return: a list of errors and a list of timings
         """
-        if self.calculator is EwaldCalculator:
-            error_bounds = EwaldErrorBounds(self.charges, self.cell, self.positions)
-        elif self.calculator is PMECalculator:
-            error_bounds = PMEErrorBounds(self.charges, self.cell, self.positions)
-        elif self.calculator is P3MCalculator:
-            error_bounds = P3MErrorBounds(self.charges, self.cell, self.positions)
-        else:
-            raise NotImplementedError
-
         smearing = self.estimate_smearing(accuracy)
         param_errors = []
         param_timings = []
         for param in self.params:
-            error = error_bounds(smearing=smearing, cutoff=self.cutoff, **param)
+            error = self.error_bounds(smearing=smearing, cutoff=self.cutoff, **param)  #  type: ignore[call-arg]
             param_errors.append(float(error))
             if error > accuracy:
                 param_timings.append(float("inf"))

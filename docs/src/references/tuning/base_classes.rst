@@ -10,6 +10,6 @@ Base Classes
 .. autoclass:: torchpme.tuning.tuner.TuningTimings
     :members:
 
-.. autoclass:: torchpme.tuning.error_bounds.TuningErrorBounds
+.. autoclass:: torchpme.tuning.tuner.TuningErrorBounds
     :members:
 
