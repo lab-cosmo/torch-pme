@@ -93,7 +93,7 @@ estimated_timing = timings(pme)
 
 print(f"""
 Computed madelung constant: {madelung}
-Actual error: {madelung-madelung_ref}
+Actual error: {madelung - madelung_ref}
 Estimated error: {estimated_error}
 Timing: {estimated_timing} seconds
 """)

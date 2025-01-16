@@ -255,8 +255,7 @@ class TuningTimings(torch.nn.Module):
             neighbor_indices = torch.stack([i, j], dim=1)
         elif neighbor_indices is None or neighbor_distances is None:
             raise ValueError(
-                "If neighbor_indices or neighbor_distances are None, "
-                "both must be None."
+                "If neighbor_indices or neighbor_distances are None, both must be None."
             )
         self._neighbor_indices = neighbor_indices.to(device=self._device)
         self._neighbor_distances = neighbor_distances.to(

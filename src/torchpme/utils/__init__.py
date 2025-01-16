@@ -1,6 +1,8 @@
 import torch
+
 from . import prefactors, splines  # noqa
 from .splines import CubicSpline, CubicSplineReciprocal
+
 
 def _validate_parameters(
     charges: torch.Tensor,
@@ -40,9 +42,7 @@ def _validate_parameters(
             f"with shape {list(cell.shape)}"
         )
 
-    if torch.equal(
-        cell.det(), torch.full([], 0, dtype=cell.dtype, device=cell.device)
-    ):
+    if torch.equal(cell.det(), torch.full([], 0, dtype=cell.dtype, device=cell.device)):
         raise ValueError(
             "provided `cell` has a determinant of 0 and therefore is not valid for "
             "periodic calculation"
@@ -76,6 +76,7 @@ def _validate_parameters(
             f"shape {list(charges.shape)} where positions contains "
             f"{len(positions)} atoms"
         )
+
 
 __all__ = [
     "CubicSpline",

@@ -5,7 +5,7 @@ The tuning is based on the following error formulas:
 
 .. math::
       \Delta F_\mathrm{real}
-        \approx \frac{Q^2}{\sqrt{N}} 
+        \approx \frac{Q^2}{\sqrt{N}}
                 \frac{2}{\sqrt{r_{\text{cutoff}} V}}
                 e^{-r_{\text{cutoff}}^2 / 2 \sigma^2}
 
