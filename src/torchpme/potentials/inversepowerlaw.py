@@ -96,15 +96,11 @@ class InversePowerLawPotential(Potential):
         device: Optional[torch.device] = None,
     ):
         super().__init__(smearing, exclusion_radius, dtype, device)
-        if dtype is None:
-            dtype = torch.get_default_dtype()
-        if device is None:
-            device = torch.device("cpu")
 
         # function call to check the validity of the exponent
         gammaincc_over_powerlaw(exponent, torch.tensor(1.0, dtype=dtype, device=device))
         self.register_buffer(
-            "exponent", torch.tensor(exponent, dtype=dtype, device=device)
+            "exponent", torch.tensor(exponent, dtype=self.dtype, device=self.device)
         )
 
     @torch.jit.export

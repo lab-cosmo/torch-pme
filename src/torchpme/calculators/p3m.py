@@ -1,3 +1,5 @@
+from typing import Optional
+
 import torch
 
 from ..lib.kspace_filter import P3MKSpaceFilter
@@ -40,6 +42,8 @@ class P3MCalculator(PMECalculator):
         set to :py:obj:`False`, a "half" neighbor list is expected.
     :param prefactor: electrostatics prefactor; see :ref:`prefactors` for details and
         common values.
+    :param dtype: type used for the internal buffers and parameters
+    :param device: device used for the internal buffers and parameters
 
     For an **example** on the usage for any calculator refer to :ref:`userdoc-how-to`.
     """
@@ -51,6 +55,8 @@ class P3MCalculator(PMECalculator):
         interpolation_nodes: int = 4,
         full_neighbor_list: bool = False,
         prefactor: float = 1.0,
+        dtype: Optional[torch.dtype] = None,
+        device: Optional[torch.device] = None,
     ):
         self.mesh_spacing: float = mesh_spacing
 
@@ -62,6 +68,8 @@ class P3MCalculator(PMECalculator):
             potential=potential,
             full_neighbor_list=full_neighbor_list,
             prefactor=prefactor,
+            dtype=dtype,
+            device=device,
         )
 
         self.kspace_filter: P3MKSpaceFilter = P3MKSpaceFilter(

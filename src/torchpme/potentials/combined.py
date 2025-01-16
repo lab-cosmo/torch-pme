@@ -47,10 +47,7 @@ class CombinedPotential(Potential):
             dtype=dtype,
             device=device,
         )
-        if dtype is None:
-            dtype = torch.get_default_dtype()
-        if device is None:
-            device = torch.device("cpu")
+
         smearings = [pot.smearing for pot in potentials]
         if not all(smearings) and any(smearings):
             raise ValueError(
@@ -76,7 +73,9 @@ class CombinedPotential(Potential):
                     "The number of initial weights must match the number of potentials being combined"
                 )
         else:
-            initial_weights = torch.ones(len(potentials), dtype=dtype, device=device)
+            initial_weights = torch.ones(
+                len(potentials), dtype=self.dtype, device=self.device
+            )
         # for torchscript
         self.potentials = torch.nn.ModuleList(potentials)
         if learnable_weights:
