@@ -19,7 +19,7 @@ import torch
 import vesin.torch as vesin
 
 import torchpme
-from torchpme.tuning.error_bounds import PMEErrorBounds
+from torchpme.tuning.pme import PMEErrorBounds
 from torchpme.tuning.tuner import TuningTimings
 
 DTYPE = torch.float64
@@ -235,7 +235,7 @@ cbar = fig.colorbar(contour, ax=ax[1], label="log10(time / s)")
 
 # %%
 
-EB = torchpme.tuning.error_bounds.PMEErrorBounds((charges**2).sum(), cell, positions)
+EB = torchpme.tuning.pme.PMEErrorBounds((charges**2).sum(), cell, positions)
 
 # %%
 v, t = timed_madelung(cutoff=5, smearing=1, mesh_spacing=1, interpolation_nodes=4)
