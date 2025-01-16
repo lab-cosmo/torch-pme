@@ -54,6 +54,21 @@ class TunerBase:
     :param cutoff: real space cutoff, serves as a hyperparameter here.
     :param calculator: the calculator to be tuned
     :param exponent: exponent of the potential, only exponent = 1 is supported
+
+    Example
+    -------
+    >>> import torch
+    >>> import torchpme
+    >>> positions = torch.tensor(
+    ...     [[0.0, 0.0, 0.0], [0.4, 0.4, 0.4]], dtype=torch.float64
+    ... )
+    >>> charges = torch.tensor([[1.0], [-1.0]], dtype=torch.float64)
+    >>> cell = torch.eye(3, dtype=torch.float64)
+    >>> tuner = TunerBase(charges, cell, positions, 4.4, torchpme.EwaldCalculator)
+    >>> smearing = tuner.estimate_smearing(1e-3)
+    >>> print(smearing)
+    1.1069526756106463
+
     """
 
     def __init__(

@@ -103,6 +103,10 @@ def tune_p3m(
         which the potential should be computed in real space.
     :param neighbor_distances: torch.Tensor with the pair distances of the neighbors
         for which the potential should be computed in real space.
+    :param nodes_lo: Minimum number of interpolation nodes
+    :param nodes_hi: Maximum number of interpolation nodes
+    :param mesh_lo: Minimum number of mesh points per axis
+    :param mesh_hi: Maximum number of mesh points per axis
     :param accuracy: Recomended values for a balance between the accuracy and speed is
         :math:`10^{-3}`. For more accurate results, use :math:`10^{-6}`.
 
@@ -123,20 +127,9 @@ def tune_p3m(
     ... )
     >>> charges = torch.tensor([[1.0], [-1.0]], dtype=torch.float64)
     >>> cell = torch.eye(3, dtype=torch.float64)
-    >>> smearing, parameter, cutoff = tune_p3m(
+    >>> smearing, parameter = tune_p3m(
     ...     charges, cell, positions, cutoff=4.4, accuracy=1e-1
     ... )
-
-    You can check the values of the parameters
-
-    >>> print(smearing)
-    1.7140874893066034
-
-    >>> print(parameter)
-    {'interpolation_nodes': 3, 'mesh_spacing': 0.6666666666666666}
-
-    >>> print(cutoff)
-    4.4
 
     """
     _validate_parameters(charges, cell, positions, exponent)
@@ -191,6 +184,23 @@ class P3MErrorBounds(TuningErrorBounds):
     :param cell: single tensor of shape (3, 3), describing the bounding
     :param positions: single tensor of shape (``len(charges), 3``) containing the
         Cartesian positions of all point charges in the system.
+
+    Example
+    -------
+    >>> import torch
+    >>> positions = torch.tensor(
+    ...     [[0.0, 0.0, 0.0], [0.4, 0.4, 0.4]], dtype=torch.float64
+    ... )
+    >>> charges = torch.tensor([[1.0], [-1.0]], dtype=torch.float64)
+    >>> cell = torch.eye(3, dtype=torch.float64)
+    >>> error_bounds = P3MErrorBounds(charges, cell, positions)
+    >>> print(
+    ...     error_bounds(
+    ...         smearing=1.0, mesh_spacing=0.5, cutoff=4.4, interpolation_nodes=3
+    ...     )
+    ... )
+    tensor(0.0005, dtype=torch.float64)
+
     """
 
     def __init__(
@@ -257,7 +267,7 @@ class P3MErrorBounds(TuningErrorBounds):
         smearing: float,
         mesh_spacing: float,
         cutoff: float,
-        interpolation_nodes: float,
+        interpolation_nodes: int,
     ) -> torch.Tensor:
         r"""
         Calculate the error bound of P3M.
