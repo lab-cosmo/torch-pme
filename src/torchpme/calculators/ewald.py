@@ -55,6 +55,8 @@ class EwaldCalculator(Calculator):
         :obj:`False`, a "half" neighbor list is expected.
     :param prefactor: electrostatics prefactor; see :ref:`prefactors` for details and
         common values.
+    :param dtype: type used for the internal buffers and parameters
+    :param device: device used for the internal buffers and parameters
     """
 
     def __init__(

@@ -26,6 +26,8 @@ class Calculator(torch.nn.Module):
         will come from a full (True) or half (False, default) neighbor list.
     :param prefactor: electrostatics prefactor; see :ref:`prefactors` for details and
         common values.
+    :param dtype: type used for the internal buffers and parameters
+    :param device: device used for the internal buffers and parameters
     """
 
     def __init__(
@@ -37,6 +39,10 @@ class Calculator(torch.nn.Module):
         device: Optional[torch.device] = None,
     ):
         super().__init__()
+
+        assert isinstance(potential, Potential), (
+            f"Potential must be an instance of Potential, got {type(potential)}"
+        )
 
         self.device = "cpu" if device is None else device
         self.dtype = torch.get_default_dtype() if dtype is None else dtype
