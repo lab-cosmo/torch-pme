@@ -5,6 +5,7 @@ from typing import Optional
 import torch
 
 from ..calculators import P3MCalculator
+from ..utils import _validate_parameters
 from .tuner import GridSearchTuner, TuningErrorBounds
 
 TWO_PI = 2 * math.pi
@@ -138,6 +139,7 @@ def tune_p3m(
     4.4
 
     """
+    _validate_parameters(charges, cell, positions, exponent)
     min_dimension = float(torch.min(torch.linalg.norm(cell, dim=1)))
     params = [
         {

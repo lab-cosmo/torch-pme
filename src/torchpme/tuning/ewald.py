@@ -4,6 +4,7 @@ from typing import Optional
 import torch
 
 from ..calculators import EwaldCalculator
+from ..utils import _validate_parameters
 from .tuner import GridSearchTuner, TuningErrorBounds
 
 TWO_PI = 2 * math.pi
@@ -76,6 +77,7 @@ def tune_ewald(
     {'lr_wavelength': 0.3333333333333333}
 
     """
+    _validate_parameters(charges, cell, positions, exponent)
     min_dimension = float(torch.min(torch.linalg.norm(cell, dim=1)))
     params = [{"lr_wavelength": min_dimension / ns} for ns in range(ns_lo, ns_hi + 1)]
     tuner = GridSearchTuner(

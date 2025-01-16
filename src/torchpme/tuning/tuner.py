@@ -7,6 +7,7 @@ import vesin.torch
 
 from ..calculators import Calculator
 from ..potentials import CoulombPotential
+from ..utils import _validate_parameters
 
 
 class TuningErrorBounds(torch.nn.Module):
@@ -64,7 +65,7 @@ class TunerBase:
         calculator: type[Calculator],
         exponent: int = 1,
     ):
-        self._validate_parameters(charges, cell, positions, exponent)
+        _validate_parameters(charges, cell, positions, exponent)
         self.charges = charges
         self.cell = cell
         self.positions = positions
@@ -79,82 +80,6 @@ class TunerBase:
     def tune(self, accuracy: float = 1e-3):
         raise NotImplementedError
 
-    @staticmethod
-    def _validate_parameters(
-        charges: torch.Tensor,
-        cell: torch.Tensor,
-        positions: torch.Tensor,
-        exponent: int,
-    ) -> None:
-        if exponent != 1:
-            raise NotImplementedError("Only exponent = 1 is supported")
-
-        if list(positions.shape) != [len(positions), 3]:
-            raise ValueError(
-                "each `positions` must be a tensor with shape [n_atoms, 3], got at least "
-                f"one tensor with shape {list(positions.shape)}"
-            )
-
-        # check shape, dtype and device of cell
-        dtype = positions.dtype
-        if cell.dtype != dtype:
-            raise ValueError(
-                f"each `cell` must have the same type {dtype} as `positions`, got at least "
-                "one tensor of type "
-                f"{cell.dtype}"
-            )
-
-        device = positions.device
-        if cell.device != device:
-            raise ValueError(
-                f"each `cell` must be on the same device {device} as `positions`, got at "
-                "least one tensor with device "
-                f"{cell.device}"
-            )
-
-        if list(cell.shape) != [3, 3]:
-            raise ValueError(
-                "each `cell` must be a tensor with shape [3, 3], got at least one tensor "
-                f"with shape {list(cell.shape)}"
-            )
-
-        if torch.equal(
-            cell.det(), torch.full([], 0, dtype=cell.dtype, device=cell.device)
-        ):
-            raise ValueError(
-                "provided `cell` has a determinant of 0 and therefore is not valid for "
-                "periodic calculation"
-            )
-
-        if charges.dtype != dtype:
-            raise ValueError(
-                f"each `charges` must have the same type {dtype} as `positions`, got at least "
-                "one tensor of type "
-                f"{charges.dtype}"
-            )
-
-        if charges.device != device:
-            raise ValueError(
-                f"each `charges` must be on the same device {device} as `positions`, got at "
-                "least one tensor with device "
-                f"{charges.device}"
-            )
-
-        if charges.dim() != 2:
-            raise ValueError(
-                "`charges` must be a 2-dimensional tensor, got "
-                f"tensor with {charges.dim()} dimension(s) and shape "
-                f"{list(charges.shape)}"
-            )
-
-        if list(charges.shape) != [len(positions), charges.shape[1]]:
-            raise ValueError(
-                "`charges` must be a tensor with shape [n_atoms, n_channels], with "
-                "`n_atoms` being the same as the variable `positions`. Got tensor with "
-                f"shape {list(charges.shape)} where positions contains "
-                f"{len(positions)} atoms"
-            )
-
     def estimate_smearing(
         self,
         accuracy: float,
@@ -166,6 +91,8 @@ class TunerBase:
         :param accuracy: a float, the desired accuracy
         :return: a float, the estimated smearing
         """
+        if not isinstance(accuracy, float):
+            raise ValueError(f"'{accuracy}' is not a float.")
         ratio = math.sqrt(
             -2
             * math.log(
@@ -245,6 +172,8 @@ class GridSearchTuner(TunerBase):
         :param accuracy: a float, the desired accuracy
         :return: a list of errors and a list of timings
         """
+        if not isinstance(accuracy, float):
+            raise ValueError(f"'{accuracy}' is not a float.")
         smearing = self.estimate_smearing(accuracy)
         param_errors = []
         param_timings = []
