@@ -42,20 +42,18 @@ class Potential(torch.nn.Module):
         device: Optional[torch.device] = None,
     ):
         super().__init__()
-        if dtype is None:
-            dtype = torch.get_default_dtype()
-        if device is None:
-            device = torch.device("cpu")
+        self.dtype = torch.get_default_dtype() if dtype is None else dtype
+        self.device = "cpu" if device is None else device
         if smearing is not None:
             self.register_buffer(
-                "smearing", torch.tensor(smearing, device=device, dtype=dtype)
+                "smearing", torch.tensor(smearing, device=self.device, dtype=self.dtype)
             )
         else:
             self.smearing = None
         if exclusion_radius is not None:
             self.register_buffer(
                 "exclusion_radius",
-                torch.tensor(exclusion_radius, device=device, dtype=dtype),
+                torch.tensor(exclusion_radius, device=self.device, dtype=self.dtype),
             )
         else:
             self.exclusion_radius = None

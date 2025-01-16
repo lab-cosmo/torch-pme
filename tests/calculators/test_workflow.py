@@ -17,9 +17,7 @@ from torchpme import (
     PMECalculator,
 )
 
-AVAILABLE_DEVICES = [torch.device("cpu")] + torch.cuda.is_available() * [
-    torch.device("cuda")
-]
+AVAILABLE_DEVICES = ["cpu"] + torch.cuda.is_available() * ["cuda"]
 MADELUNG_CSCL = torch.tensor(2 * 1.7626 / math.sqrt(3))
 CHARGES_CSCL = torch.tensor([1.0, -1.0])
 SMEARING = 0.1
@@ -27,8 +25,9 @@ LR_WAVELENGTH = SMEARING / 4
 MESH_SPACING = SMEARING / 4
 
 
+@pytest.mark.parametrize("device", AVAILABLE_DEVICES)
 @pytest.mark.parametrize(
-    "CalculatorClass, params",
+    ("CalculatorClass", "params"),
     [
         (
             Calculator,
@@ -79,49 +78,47 @@ class TestWorkflow:
             neighbor_distances.to(device=device),
         )
 
-    def test_smearing_non_positive(self, CalculatorClass, params):
+    def test_smearing_non_positive(self, CalculatorClass, params, device):
         params = params.copy()
         match = r"`smearing` .* has to be positive"
         if type(CalculatorClass) in [EwaldCalculator, PMECalculator]:
             params["smearing"] = 0
             with pytest.raises(ValueError, match=match):
-                CalculatorClass(**params)
+                CalculatorClass(**params, device=device)
             params["smearing"] = -0.1
             with pytest.raises(ValueError, match=match):
-                CalculatorClass(**params)
+                CalculatorClass(**params, device=device)
 
-    def test_interpolation_order_error(self, CalculatorClass, params):
+    def test_interpolation_order_error(self, CalculatorClass, params, device):
         params = params.copy()
         if type(CalculatorClass) in [PMECalculator]:
             match = "Only `interpolation_nodes` from 1 to 5"
             params["interpolation_nodes"] = 10
             with pytest.raises(ValueError, match=match):
-                CalculatorClass(**params)
+                CalculatorClass(**params, device=device)
 
-    def test_lr_wavelength_non_positive(self, CalculatorClass, params):
+    def test_lr_wavelength_non_positive(self, CalculatorClass, params, device):
         params = params.copy()
         match = r"`lr_wavelength` .* has to be positive"
         if type(CalculatorClass) in [EwaldCalculator]:
             params["lr_wavelength"] = 0
             with pytest.raises(ValueError, match=match):
-                CalculatorClass(**params)
+                CalculatorClass(**params, device=device)
             params["lr_wavelength"] = -0.1
             with pytest.raises(ValueError, match=match):
-                CalculatorClass(**params)
+                CalculatorClass(**params, device=device)
 
-    def test_dtype_device(self, CalculatorClass, params):
+    def test_dtype_device(self, CalculatorClass, params, device):
         """Test that the output dtype and device are the same as the input."""
-        device = "cpu"
         dtype = torch.float64
-
+        params = params.copy()
         positions = torch.tensor([[0.0, 0.0, 0.0]], dtype=dtype, device=device)
         charges = torch.ones((1, 2), dtype=dtype, device=device)
         cell = torch.eye(3, dtype=dtype, device=device)
         neighbor_indices = torch.tensor([[0, 0]], device=device)
         neighbor_distances = torch.tensor([0.1], device=device)
-
-        calculator = CalculatorClass(**params)
-
+        params["potential"].device = device
+        calculator = CalculatorClass(**params, device=device)
         potential = calculator.forward(
             charges=charges,
             cell=cell,
@@ -138,41 +135,48 @@ class TestWorkflow:
         descriptor = calculator.forward(*self.cscl_system(device))
         assert type(descriptor) is torch.Tensor
 
-    @pytest.mark.parametrize("device", AVAILABLE_DEVICES)
     def test_operation_as_python(self, CalculatorClass, params, device):
         """Run `check_operation` as a normal python script"""
-        calculator = CalculatorClass(**params)
+        params = params.copy()
+        params["potential"].device = device
+        calculator = CalculatorClass(**params, device=device)
         self.check_operation(calculator=calculator, device=device)
 
-    @pytest.mark.parametrize("device", AVAILABLE_DEVICES)
     def test_operation_as_torch_script(self, CalculatorClass, params, device):
         """Run `check_operation` as a compiled torch script module."""
-        calculator = CalculatorClass(**params)
+        params = params.copy()
+        params["potential"].device = device
+        calculator = CalculatorClass(**params, device=device)
         scripted = torch.jit.script(calculator)
         self.check_operation(calculator=scripted, device=device)
 
-    def test_save_load(self, CalculatorClass, params):
-        calculator = CalculatorClass(**params)
+    def test_save_load(self, CalculatorClass, params, device):
+        params = params.copy()
+        params["potential"].device = device
+        calculator = CalculatorClass(**params, device=device)
         scripted = torch.jit.script(calculator)
         with io.BytesIO() as buffer:
             torch.jit.save(scripted, buffer)
             buffer.seek(0)
             torch.jit.load(buffer)
 
-    def test_prefactor(self, CalculatorClass, params):
+    def test_prefactor(self, CalculatorClass, params, device):
         """Test if the prefactor is applied correctly."""
+        params = params.copy()
+        params["potential"].device = device
         prefactor = 2.0
-        calculator1 = CalculatorClass(**params)
-        calculator2 = CalculatorClass(**params, prefactor=prefactor)
+        calculator1 = CalculatorClass(**params, device=device)
+        calculator2 = CalculatorClass(**params, prefactor=prefactor, device=device)
         potentials1 = calculator1.forward(*self.cscl_system())
         potentials2 = calculator2.forward(*self.cscl_system())
         assert torch.allclose(potentials1 * prefactor, potentials2)
 
-    def test_not_nan(self, CalculatorClass, params):
+    def test_not_nan(self, CalculatorClass, params, device):
         """Make sure derivatives are not NaN."""
-        device = "cpu"
+        params = params.copy()
+        params["potential"].device = device
 
-        calculator = CalculatorClass(**params)
+        calculator = CalculatorClass(**params, device=device)
         system = self.cscl_system(device)
         system[0].requires_grad = True
         system[1].requires_grad = True
@@ -198,3 +202,27 @@ class TestWorkflow:
             assert not torch.isnan(
                 torch.autograd.grad(energy, system[2], retain_graph=True)[0]
             ).any()
+
+    def test_dtype_and_device_incompatability(self, CalculatorClass, params, device):
+        """Test that the calculator raises an error if the dtype and device are incompatible."""
+        params = params.copy()
+        params["potential"].device = device
+        params["potential"].dtype = torch.float64
+        with pytest.raises(AssertionError, match=".*dtype.*"):
+            CalculatorClass(**params, dtype=torch.float32, device=device)
+        with pytest.raises(AssertionError, match=".*device.*"):
+            CalculatorClass(
+                **params, dtype=params["potential"].dtype, device=torch.device("meta")
+            )
+
+    def test_potential_and_calculator_incompatability(
+        self, CalculatorClass, params, device
+    ):
+        """Test that the calculator raises an error if the potential and calculator are incompatible."""
+        params = params.copy()
+        params["potential"].device = device
+        params["potential"] = torch.jit.script(params["potential"])
+        with pytest.raises(
+            AssertionError, match="Potential must be an instance of Potential, got.*"
+        ):
+            CalculatorClass(**params)

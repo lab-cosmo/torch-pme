@@ -1,3 +1,5 @@
+from typing import Optional
+
 import torch
 
 from ..lib import generate_kvectors_for_ewald
@@ -53,6 +55,8 @@ class EwaldCalculator(Calculator):
         :obj:`False`, a "half" neighbor list is expected.
     :param prefactor: electrostatics prefactor; see :ref:`prefactors` for details and
         common values.
+    :param dtype: type used for the internal buffers and parameters
+    :param device: device used for the internal buffers and parameters
     """
 
     def __init__(
@@ -61,11 +65,15 @@ class EwaldCalculator(Calculator):
         lr_wavelength: float,
         full_neighbor_list: bool = False,
         prefactor: float = 1.0,
+        dtype: Optional[torch.dtype] = None,
+        device: Optional[torch.device] = None,
     ):
         super().__init__(
             potential=potential,
             full_neighbor_list=full_neighbor_list,
             prefactor=prefactor,
+            dtype=dtype,
+            device=device,
         )
         if potential.smearing is None:
             raise ValueError(
