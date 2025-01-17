@@ -1,20 +1,11 @@
 from typing import Optional
 
 import torch
-from torch.special import gammainc, gammaincc, gammaln
+from torch.special import gammainc
+
+from torchpme.lib import gamma, gammaincc_over_powerlaw
 
 from .potential import Potential
-
-
-def gamma(x: torch.Tensor) -> torch.Tensor:
-    """
-    (Complete) Gamma function.
-
-    pytorch has not implemented the commonly used (complete) Gamma function. We define
-    it in a custom way to make autograd work as in
-    https://discuss.pytorch.org/t/is-there-a-gamma-function-in-pytorch/17122
-    """
-    return torch.exp(gammaln(x))
 
 
 class InversePowerLawPotential(Potential):
@@ -46,7 +37,7 @@ class InversePowerLawPotential(Potential):
 
     def __init__(
         self,
-        exponent: float,
+        exponent: int,
         smearing: Optional[float] = None,
         exclusion_radius: Optional[float] = None,
         dtype: Optional[torch.dtype] = None,
@@ -54,8 +45,8 @@ class InversePowerLawPotential(Potential):
     ):
         super().__init__(smearing, exclusion_radius, dtype, device)
 
-        if exponent <= 0 or exponent > 3:
-            raise ValueError(f"`exponent` p={exponent} has to satisfy 0 < p <= 3")
+        # function call to check the validity of the exponent
+        gammaincc_over_powerlaw(exponent, torch.tensor(1.0, dtype=dtype, device=device))
         self.register_buffer(
             "exponent", torch.tensor(exponent, dtype=self.dtype, device=self.device)
         )
@@ -130,9 +121,7 @@ class InversePowerLawPotential(Potential):
         # for consistency reasons.
         masked = torch.where(x == 0, 1.0, x)  # avoid NaNs in backwards, see Coulomb
         return torch.where(
-            k_sq == 0,
-            0.0,
-            prefac * gammaincc(peff, masked) / masked**peff * gamma(peff),
+            k_sq == 0, 0.0, prefac * gammaincc_over_powerlaw(exponent, masked)
         )
 
     def self_contribution(self) -> torch.Tensor:
@@ -145,7 +134,11 @@ class InversePowerLawPotential(Potential):
         return 1 / gamma(phalf + 1) / (2 * self.smearing**2) ** phalf
 
     def background_correction(self) -> torch.Tensor:
-        # "charge neutrality" correction for 1/r^p potential
+        # "charge neutrality" correction for 1/r^p potential diverges for exponent p = 3
+        # and is not needed for p > 3 , so we set it to zero (see in
+        # https://doi.org/10.48550/arXiv.2412.03281 SI section)
+        if self.exponent >= 3:
+            return torch.tensor(0.0, dtype=self.dtype, device=self.device)
         if self.smearing is None:
             raise ValueError(
                 "Cannot compute background correction without specifying `smearing`."
