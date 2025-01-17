@@ -37,7 +37,7 @@ class PotentialDipole(torch.nn.Module):
     @torch.jit.export
     def f_cutoff(self, vector: torch.Tensor) -> torch.Tensor:
         r"""TODO: Add docstring"""
-        r_mag = torch.norm(vector, dim=1, keepdim=True)
+        r_mag = torch.norm(vector, dim=1)
         if self.exclusion_radius is None:
             raise ValueError(
                 "Cannot compute cutoff function when `exclusion_radius` is not set"
@@ -74,6 +74,29 @@ class PotentialDipole(torch.nn.Module):
     @torch.jit.export
     def lr_from_dist(self, vector: torch.Tensor) -> torch.Tensor:
         r"""TODO: Add docstring"""
+        if self.smearing is None:
+            raise ValueError(
+                "Cannot compute long-range contribution without specifying `smearing`."
+            )
+        alpha = 1 / (2 * self.smearing**2)
+        r_mag = torch.norm(vector, dim=1, keepdim=True)
+        scalar_potential = (
+            1.0 / (r_mag**3)
+            - torch.erfc(torch.sqrt(alpha) * r_mag) / r_mag**3
+            - 2 * torch.sqrt(alpha / torch.pi) * torch.exp(-alpha * r_mag**2) / r_mag**2
+        )
+        r_outer = torch.einsum("bi,bj->bij", vector, vector)
+        return scalar_potential.unsqueeze(-1) * torch.eye(3).to(r_outer).unsqueeze(
+            0
+        ) - r_outer * (
+            3.0 / (r_mag**5)
+            - 3.0 * torch.erfc(torch.sqrt(alpha) * r_mag) / r_mag**5
+            - 2
+            * torch.sqrt(alpha / torch.pi)
+            * (2 * alpha + 3 / r_mag**2)
+            * torch.exp(-alpha * r_mag**2)
+            / r_mag**2
+        ).unsqueeze(-1)
 
     def lr_from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
         raise NotImplementedError("TODO: Implement smearing for `lr_from_k_sq`")
