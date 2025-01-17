@@ -1,6 +1,6 @@
 from scipy import constants
 
-from torchpme.utils import prefactors
+from torchpme import prefactors
 
 
 def test_units():

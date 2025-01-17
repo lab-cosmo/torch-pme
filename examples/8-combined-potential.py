@@ -26,7 +26,7 @@ import torch
 from vesin.torch import NeighborList
 
 from torchpme import CombinedPotential, EwaldCalculator, InversePowerLawPotential
-from torchpme.utils.prefactors import eV_A
+from torchpme.prefactors import eV_A
 
 # %%
 # Combined potentials

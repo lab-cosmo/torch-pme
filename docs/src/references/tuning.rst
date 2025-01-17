@@ -12,8 +12,11 @@ than the given accuracy. Because these methods are gradient-based, be sure to pa
 attention to the ``learning_rate`` and ``max_steps`` parameter. A good choice of these
 two parameters can enhance the optimization speed and performance.
 
-.. autoclass:: torchpme.utils.tune_ewald
+.. autoclass:: torchpme.tuning.tune_ewald
     :members:
 
-.. autoclass:: torchpme.utils.tune_pme
+.. autoclass:: torchpme.tuning.tune_pme
+    :members:
+
+.. autoclass:: torchpme.tuning.tune_p3m
     :members:
