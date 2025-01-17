@@ -22,7 +22,8 @@ refer to the :ref:`userdoc-how-to` section.
 
     potentials/index
     calculators/index
+    tuning
+    prefactors
     metatensor
     lib/index
-    utils/index
     changelog

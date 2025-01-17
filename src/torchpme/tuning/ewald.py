@@ -3,7 +3,7 @@ from typing import Optional
 
 import torch
 
-from . import (
+from ._utils import (
     _estimate_smearing_cutoff,
     _optimize_parameters,
     _validate_parameters,

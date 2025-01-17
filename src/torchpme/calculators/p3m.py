@@ -14,13 +14,13 @@ class P3MCalculator(PMECalculator):
 
     For getting reasonable values for the ``smearing`` of the potential class and  the
     ``mesh_spacing`` based on a given accuracy for a specific structure you should use
-    :func:`torchpme.utils.tuning.tune_p3m`. This function will also find the optimal
+    :func:`torchpme.tuning.tune_p3m`. This function will also find the optimal
     ``cutoff`` for the  **neighborlist**.
 
     .. hint::
 
         For a training exercise it is recommended only run a tuning procedure with
-        :func:`torchpme.utils.tuning.tune_p3m` for the largest system in your dataset.
+        :func:`torchpme.tuning.tune_p3m` for the largest system in your dataset.
 
     :param potential: A :py:class:`Potential` object that implements the evaluation
         of short and long-range potential terms. The ``smearing`` parameter

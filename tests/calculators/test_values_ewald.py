@@ -254,7 +254,7 @@ def test_random_structure(
             CoulombPotential(smearing=smearing),
             lr_wavelength=0.5 * smearing,
             full_neighbor_list=full_neighbor_list,
-            prefactor=torchpme.utils.prefactors.eV_A,
+            prefactor=torchpme.prefactors.eV_A,
         )
 
     elif calc_name == "pme":
@@ -262,14 +262,14 @@ def test_random_structure(
             CoulombPotential(smearing=smearing),
             mesh_spacing=smearing / 8.0,
             full_neighbor_list=full_neighbor_list,
-            prefactor=torchpme.utils.prefactors.eV_A,
+            prefactor=torchpme.prefactors.eV_A,
         )
     elif calc_name == "p3m":
         calc = P3MCalculator(
             CoulombPotential(smearing=smearing),
             mesh_spacing=smearing / 8.0,
             full_neighbor_list=full_neighbor_list,
-            prefactor=torchpme.utils.prefactors.eV_A,
+            prefactor=torchpme.prefactors.eV_A,
         )
 
     neighbor_indices, neighbor_shifts = neighbor_list(
