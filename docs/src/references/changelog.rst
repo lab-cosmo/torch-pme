@@ -29,6 +29,12 @@ Added
 
 * Added ``dtype`` and ``device`` for ``Calculator`` classses
 
+Changed
+#######
+
+* Removed ``utils`` module. ``utils.tuning`` and ``utils.prefactor`` are now in the root
+  of the package. ``utils.splines`` is now in the ``lib`` module.
+
 Fixed
 #####
 

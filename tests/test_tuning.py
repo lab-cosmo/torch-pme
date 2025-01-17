@@ -11,7 +11,7 @@ from torchpme import (
     P3MCalculator,
     PMECalculator,
 )
-from torchpme.utils import tune_ewald, tune_p3m, tune_pme
+from torchpme.tuning import tune_ewald, tune_p3m, tune_pme
 
 sys.path.append(str(Path(__file__).parents[1]))
 from helpers import define_crystal, neighbor_list

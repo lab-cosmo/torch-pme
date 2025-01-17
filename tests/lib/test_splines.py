@@ -2,7 +2,7 @@ import pytest
 import torch
 from torch.testing import assert_close
 
-from torchpme.utils.splines import (
+from torchpme.lib.splines import (
     CubicSpline,
     CubicSplineReciprocal,
     compute_second_derivatives,

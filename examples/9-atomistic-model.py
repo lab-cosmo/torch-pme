@@ -266,7 +266,7 @@ class CalculatorModel(torch.nn.Module):
 #    :class:`metatensor.PMECalculator`, or :class:`metatensor.P3MCalculator` that implements
 #    the particle-particle/particle-mesh method. See at the end of this tutorial for an example.
 #
-# These are rather tight settings you can try :func:`tune_ewald <utils.tune_ewald>` to
+# These are rather tight settings you can try :func:`tune_ewald <tuning.tune_ewald>` to
 # determine automatically parameters with a target accuracy
 
 smearing, ewald_params, cutoff = 8.0, {"lr_wavelength": 64.0}, 32.0
@@ -278,7 +278,7 @@ smearing, ewald_params, cutoff = 8.0, {"lr_wavelength": 64.0}, 32.0
 calculator = torchpme.metatensor.EwaldCalculator(
     torchpme.CoulombPotential(smearing=smearing),
     **ewald_params,
-    prefactor=torchpme.utils.prefactors.eV_A,
+    prefactor=torchpme.prefactors.eV_A,
 )
 
 # %%
@@ -468,7 +468,7 @@ smearing, ewald_params, cutoff = (
 pme_calculator = torchpme.metatensor.PMECalculator(
     torchpme.CoulombPotential(smearing=smearing),
     **ewald_params,
-    prefactor=torchpme.utils.prefactors.eV_A,
+    prefactor=torchpme.prefactors.eV_A,
 )
 
 pme_model = CalculatorModel(calculator=pme_calculator, cutoff=cutoff)
@@ -483,7 +483,7 @@ pme_mta_calculator = MetatensorCalculator(pme_atomistic_model)
 p3m_calculator = torchpme.metatensor.P3MCalculator(
     torchpme.CoulombPotential(smearing=smearing),
     **ewald_params,
-    prefactor=torchpme.utils.prefactors.eV_A,
+    prefactor=torchpme.prefactors.eV_A,
 )
 
 p3m_model = CalculatorModel(calculator=p3m_calculator, cutoff=cutoff)

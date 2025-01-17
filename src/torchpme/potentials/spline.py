@@ -2,7 +2,7 @@ from typing import Optional
 
 import torch
 
-from ..utils.splines import (
+from ..lib import (
     CubicSpline,
     CubicSplineReciprocal,
     compute_second_derivatives,

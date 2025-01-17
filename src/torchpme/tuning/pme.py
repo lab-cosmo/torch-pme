@@ -3,8 +3,8 @@ from typing import Optional
 
 import torch
 
-from ...lib import get_ns_mesh
-from . import (
+from ..lib import get_ns_mesh
+from ._utils import (
     _estimate_smearing_cutoff,
     _optimize_parameters,
     _validate_parameters,
