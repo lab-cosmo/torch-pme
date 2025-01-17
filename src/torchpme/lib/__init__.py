@@ -4,6 +4,7 @@ from .kvectors import (
     generate_kvectors_for_mesh,
     get_ns_mesh,
 )
+from .math import CustomExp1, gamma, gammaincc_over_powerlaw, torch_exp1
 from .mesh_interpolator import MeshInterpolator
 
 __all__ = [
@@ -16,4 +17,8 @@ __all__ = [
     "generate_kvectors_for_ewald",
     "generate_kvectors_for_mesh",
     "get_ns_mesh",
+    "gamma",
+    "CustomExp1",
+    "gammaincc_over_powerlaw",
+    "torch_exp1",
 ]
