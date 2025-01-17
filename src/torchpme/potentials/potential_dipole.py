@@ -56,9 +56,10 @@ class PotentialDipole(torch.nn.Module):
         r_outer = torch.einsum(
             "bi,bj->bij", vector, vector
         )  # outer product shape (batch, 3, 3)
-        tensor_potential = (3.0 / (r_mag**5)).unsqueeze(-1) * r_outer
-        return scalar_potential, tensor_potential
-    
+        return scalar_potential.unsqueeze(-1) * torch.eye(3).to(r_outer).unsqueeze(
+            0
+        ) - 3.0 * r_outer / (r_mag**5).unsqueeze(-1)
+
     @torch.jit.export
     def sr_from_dist(self, vector: torch.Tensor) -> torch.Tensor:
         r"""TODO: Add docstring"""
@@ -69,13 +70,10 @@ class PotentialDipole(torch.nn.Module):
         if self.exclusion_radius is None:
             return self.from_dist(vector) - self.lr_from_dist(vector)
         return -self.lr_from_dist(vector) * self.f_cutoff(vector)
-    
+
     @torch.jit.export
     def lr_from_dist(self, vector: torch.Tensor) -> torch.Tensor:
         r"""TODO: Add docstring"""
-
-    def lr_from_dist(self, dist: torch.Tensor) -> torch.Tensor:
-        raise NotImplementedError("TODO: Implement smearing for `lr_from_dist`")
 
     def lr_from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
         raise NotImplementedError("TODO: Implement smearing for `lr_from_k_sq`")

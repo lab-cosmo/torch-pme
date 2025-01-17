@@ -21,6 +21,6 @@ def test_magnetostatics():
     )
     result = torch.einsum("ij,ij->i", pot, dipoles).sum()
     expected_result = torch.tensor(-0.2656)
-    assert torch.isclose(
-        result, expected_result, atol=1e-4
-    ), f"Expected {expected_result}, but got {result}"
+    assert torch.isclose(result, expected_result, atol=1e-4), (
+        f"Expected {expected_result}, but got {result}"
+    )

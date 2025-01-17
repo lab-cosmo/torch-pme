@@ -35,9 +35,7 @@ class CalculatorDipole(torch.nn.Module):
         # contained in the neighbor list
         with profiler.record_function("compute bare potential"):
             if self.potential.smearing is None:
-                potentials_bare_scalar, potentials_bare_tensor = (
-                    self.potential.from_dist(neighbor_vectors)
-                )
+                potentials_bare = self.potential.from_dist(neighbor_vectors)
             else:
                 raise NotImplementedError(
                     "TODO: Implement smearing for `compute_rspace`"
@@ -49,8 +47,8 @@ class CalculatorDipole(torch.nn.Module):
         atom_is = neighbor_indices[:, 0]
         atom_js = neighbor_indices[:, 1]
         with profiler.record_function("compute real potential"):
-            contributions_is = dipoles[atom_js] * potentials_bare_scalar - torch.einsum(
-                "ij,ijk->ik", dipoles[atom_js], potentials_bare_tensor
+            contributions_is = torch.einsum(
+                "ij,ijk->ik", dipoles[atom_js], potentials_bare
             )
 
         # For each atom i, add up all contributions of the form q_j*V(r_ij) for j
@@ -61,10 +59,8 @@ class CalculatorDipole(torch.nn.Module):
             # If we are using a half neighbor list, we need to add the contributions
             # from the "inverse" pairs (j, i) to the atoms i
             if not self.full_neighbor_list:
-                contributions_js = dipoles[
-                    atom_is
-                ] * potentials_bare_scalar - torch.einsum(
-                    "ij,ijk->ik", dipoles[atom_is], potentials_bare_tensor
+                contributions_js = torch.einsum(
+                    "ij,ijk->ik", dipoles[atom_is], potentials_bare
                 )
                 potential.index_add_(0, atom_js, contributions_js)
 
