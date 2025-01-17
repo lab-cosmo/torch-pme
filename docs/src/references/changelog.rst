@@ -32,6 +32,8 @@ Added
 Fixed
 #####
 
+* Refactor the ``InversePowerLawPotential`` class to restrict the exponent to integer
+  values
 * Ensured consistency of ``dtype`` and ``device`` in the ``Potential`` and
   ``Calculator`` classses
 * Fixed consistency of ``dtype`` and ``device`` in the ``SplinePotential`` class
