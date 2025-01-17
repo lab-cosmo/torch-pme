@@ -8,8 +8,6 @@ from ..calculators import PMECalculator
 from ..utils import _validate_parameters
 from .tuner import GridSearchTuner, TuningErrorBounds
 
-TWO_PI = 2 * math.pi
-
 
 def tune_pme(
     charges: torch.Tensor,

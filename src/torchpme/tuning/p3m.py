@@ -8,8 +8,6 @@ from ..calculators import P3MCalculator
 from ..utils import _validate_parameters
 from .tuner import GridSearchTuner, TuningErrorBounds
 
-TWO_PI = 2 * math.pi
-
 # Coefficients for the P3M Fourier error,
 # see Table II of http://dx.doi.org/10.1063/1.477415
 A_COEF = [

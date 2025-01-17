@@ -7,8 +7,6 @@ from ..calculators import EwaldCalculator
 from ..utils import _validate_parameters
 from .tuner import GridSearchTuner, TuningErrorBounds
 
-TWO_PI = 2 * math.pi
-
 
 def tune_ewald(
     charges: torch.Tensor,
@@ -162,8 +160,8 @@ class EwaldErrorBounds(TuningErrorBounds):
         return (
             self.prefac**0.5
             / smearing
-            / torch.sqrt(TWO_PI**2 * self.volume / (lr_wavelength) ** 0.5)
-            * torch.exp(-(TWO_PI**2) * smearing**2 / (lr_wavelength))
+            / torch.sqrt((2 * torch.pi) ** 2 * self.volume / (lr_wavelength) ** 0.5)
+            * torch.exp(-((2 * torch.pi) ** 2) * smearing**2 / (lr_wavelength))
         )
 
     def err_rspace(self, smearing: torch.Tensor, cutoff: torch.Tensor) -> torch.Tensor:
