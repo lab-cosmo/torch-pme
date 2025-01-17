@@ -186,7 +186,10 @@ class InversePowerLawPotential(Potential):
         return 1 / gamma(phalf + 1) / (2 * self.smearing**2) ** phalf
 
     def background_correction(self) -> torch.Tensor:
-        # "charge neutrality" correction for 1/r^p potential
+        # "charge neutrality" correction for 1/r^p potential diverges for exponent p = 3
+        # and is not needed for p > 3 , so we set it to zero (see in
+        # https://doi.org/10.48550/arXiv.2412.03281 SI section)
+        if self.exponent >= 3: return self.smearing * 0.0
         if self.smearing is None:
             raise ValueError(
                 "Cannot compute background correction without specifying `smearing`."
