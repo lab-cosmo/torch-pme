@@ -2,7 +2,7 @@ import numpy as np
 import torch
 from scipy.special import exp1
 
-from torchpme.potentials.inversepowerlaw import torch_exp1
+from torchpme.lib import torch_exp1
 
 
 def finite_difference_derivative(func, x, h=1e-5):
