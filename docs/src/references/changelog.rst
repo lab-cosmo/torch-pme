@@ -27,6 +27,7 @@ changelog <https://keepachangelog.com/en/1.1.0/>`_ format. This project follows
 Added
 #####
 
+* Added a PyTorch implementation of the exponential integral function
 * Added ``dtype`` and ``device`` for ``Calculator`` classses
 
 Changed
