@@ -2,7 +2,7 @@ import numpy as np
 import torch
 from scipy.special import exp1
 
-from torchpme.lib import torch_exp1
+from torchpme.lib import exp1 as torch_exp1
 
 
 def finite_difference_derivative(func, x, h=1e-5):
@@ -10,10 +10,11 @@ def finite_difference_derivative(func, x, h=1e-5):
 
 
 def test_torch_exp1_consistency_with_scipy():
-    x = torch.rand(1000, dtype=torch.float64)
-    torch_result = torch_exp1(x)
-    scipy_result = exp1(x.numpy())
-    assert np.allclose(torch_result.numpy(), scipy_result, atol=1e-6)
+    random_tensor = torch.FloatTensor(100000).uniform_(0, 1000)
+    random_array = random_tensor.numpy()
+    scipy_result = exp1(random_array)
+    torch_result = torch_exp1(random_tensor)
+    assert np.allclose(scipy_result, torch_result.numpy(), atol=1e-15)
 
 
 def test_torch_exp1_derivative():
