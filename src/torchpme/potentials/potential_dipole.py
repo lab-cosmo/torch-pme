@@ -99,15 +99,36 @@ class PotentialDipole(torch.nn.Module):
         ).unsqueeze(-1)
 
     def lr_from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
-        raise NotImplementedError("TODO: Implement smearing for `lr_from_k_sq`")
+        r"""TODO: Add docstring"""
+        if self.smearing is None:
+            raise ValueError(
+                "Cannot compute long-range kernel without specifying `smearing`."
+            )
+
+        # avoid NaNs in backward, see
+        # https://github.com/jax-ml/jax/issues/1052
+        # https://github.com/tensorflow/probability/blob/main/discussion/where-nan.pdf
+        masked = torch.where(k_sq == 0, 1.0, k_sq)
+        return torch.where(
+            k_sq == 0,
+            0.0,
+            4 * torch.pi * torch.exp(-0.5 * self.smearing**2 * masked) / masked,
+        )
 
     def self_contribution(self) -> torch.Tensor:
-        raise NotImplementedError("TODO: Implement smearing for `self_contribution`")
+        if self.smearing is None:
+            raise ValueError(
+                "Cannot compute long-range contribution without specifying `smearing`."
+            )
+        alpha = 1 / (2 * self.smearing**2)
+        return 2 * torch.pi / 3 * torch.sqrt((alpha / torch.pi) ** 3)
 
     def background_correction(self) -> torch.Tensor:
-        raise NotImplementedError(
-            "TODO: Implement smearing for `background_correction`"
-        )
+        if self.smearing is None:
+            raise ValueError(
+                "Cannot compute background correction without specifying `smearing`."
+            )
+        return self.smearing * 0.0
 
     self_contribution.__doc__ = Potential.self_contribution.__doc__
     background_correction.__doc__ = Potential.background_correction.__doc__
