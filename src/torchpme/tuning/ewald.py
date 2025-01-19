@@ -2,6 +2,7 @@ import math
 from typing import Optional
 
 import torch
+import vesin.torch
 
 from ..calculators import EwaldCalculator
 from ..utils import _validate_parameters
@@ -19,22 +20,22 @@ def tune_ewald(
     ns_lo: int = 1,
     ns_hi: int = 14,
     accuracy: float = 1e-3,
+    dtype: Optional[torch.dtype] = None,
+    device: Optional[torch.device] = None,
 ) -> tuple[float, dict[str, float]]:
     r"""
     Find the optimal parameters for :class:`torchpme.EwaldCalculator`.
 
-    The error formulas are given `online
-    <https://www2.icp.uni-stuttgart.de/~icp/mediawiki/images/4/4d/Script_Longrange_Interactions.pdf>`_
-    (now not available, need to be updated later). Note the difference notation between
-    the parameters in the reference and ours:
+    .. note::
 
-    .. math::
-
-        \alpha &= \left( \sqrt{2}\,\mathrm{smearing} \right)^{-1}
-
-        K &= \frac{2 \pi}{\mathrm{lr\_wavelength}}
-
-        r_c &= \mathrm{cutoff}
+        The :func:`torchpme.tuning.ewald.EwaldErrorBounds.forward` method takes floats
+        as the input, in order to be in consistency with the rest of the package --
+        these parameters are always ``float`` but not ``torch.Tensor``. This design,
+        however, prevents the utilization of ``torch.autograd`` and other ``torch``
+        features. To take advantage of these features, one can use the
+        :func:`torchpme.tuning.ewald.EwaldErrorBounds.err_rspace` and
+        :func:`torchpme.tuning.ewald.EwaldErrorBounds.err_kspace`, which takes
+        ``torch.Tensor`` as parameters.
 
     :param charges: torch.Tensor, atomic (pseudo-)charges
     :param cell: torch.Tensor, periodic supercell for the system
@@ -72,25 +73,41 @@ def tune_ewald(
     _validate_parameters(charges, cell, positions, exponent)
     min_dimension = float(torch.min(torch.linalg.norm(cell, dim=1)))
     params = [{"lr_wavelength": min_dimension / ns} for ns in range(ns_lo, ns_hi + 1)]
+    if neighbor_indices is None and neighbor_distances is None:
+        nl = vesin.torch.NeighborList(cutoff=cutoff, full_list=False)
+        i, j, neighbor_distances = nl.compute(
+            points=positions.to(dtype=torch.float64, device="cpu"),
+            box=cell.to(dtype=torch.float64, device="cpu"),
+            periodic=True,
+            quantities="ijd",
+        )
+        neighbor_indices = torch.stack([i, j], dim=1)
+    elif neighbor_indices is None or neighbor_distances is None:
+        raise ValueError(
+            "If neighbor_indices or neighbor_distances are None, both must be None."
+        )
+
     tuner = GridSearchTuner(
-        charges,
-        cell,
-        positions,
-        cutoff,
+        charges=charges,
+        cell=cell,
+        positions=positions,
+        cutoff=cutoff,
         exponent=exponent,
         neighbor_indices=neighbor_indices,
         neighbor_distances=neighbor_distances,
         calculator=EwaldCalculator,
         error_bounds=EwaldErrorBounds(charges=charges, cell=cell, positions=positions),
         params=params,
+        dtype=dtype,
+        device=device,
     )
     smearing = tuner.estimate_smearing(accuracy)
     errs, timings = tuner.tune(accuracy)
 
+    # There are multiple errors below the accuracy, return the one with the shortest
+    # calculation time. The timing of those parameters leading to an higher error than
+    # the accuracy are set to infinity
     if any(err < accuracy for err in errs):
-        # There are multiple errors below the accuracy, return the one with the shortest
-        # calculation time. The timing of those parameters leading to an higher error
-        # than the accuracy are set to infinity
         return smearing, params[timings.index(min(timings))]
     # No parameter meets the requirement, return the one with the smallest error
     return smearing, params[errs.index(min(errs))]
@@ -100,18 +117,9 @@ class EwaldErrorBounds(TuningErrorBounds):
     r"""
     Error bounds for :class:`torchpme.calculators.ewald.EwaldCalculator`.
 
-    The error formulas are given `online
-    <https://www2.icp.uni-stuttgart.de/~icp/mediawiki/images/4/4d/Script_Longrange_Interactions.pdf>`_
-    (now not available, need to be updated later). Note the difference notation between
-    the parameters in the reference and ours:
-
-    .. math::
-
-        \alpha &= \left( \sqrt{2}\,\mathrm{smearing} \right)^{-1}
-
-        K &= \frac{2 \pi}{\mathrm{lr\_wavelength}}
-
-        r_c &= \mathrm{cutoff}
+        .. math::
+            \text{Error}_{\text{total}} = \sqrt{\text{Error}_{\text{real space}}^2 +
+            \text{Error}_{\text{Fourier space}}^2
 
     :param charges: atomic charges
     :param cell: single tensor of shape (3, 3), describing the bounding

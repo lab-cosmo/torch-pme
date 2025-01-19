@@ -40,9 +40,10 @@ class Calculator(torch.nn.Module):
     ):
         super().__init__()
 
-        assert isinstance(potential, Potential), (
-            f"Potential must be an instance of Potential, got {type(potential)}"
-        )
+        if not isinstance(potential, Potential):
+            raise TypeError(
+                f"Potential must be an instance of Potential, got {type(potential)}"
+            )
 
         self.device = "cpu" if device is None else device
         self.dtype = torch.get_default_dtype() if dtype is None else dtype

@@ -3,10 +3,9 @@ import time
 from typing import Optional
 
 import torch
-import vesin.torch
 
 from ..calculators import Calculator
-from ..potentials import CoulombPotential
+from ..potentials import InversePowerLawPotential
 from ..utils import _validate_parameters
 
 
@@ -36,6 +35,9 @@ class TuningErrorBounds(torch.nn.Module):
 
     def forward(self, *args, **kwargs):
         return self.error(*args, **kwargs)
+
+    def error(self, *args, **kwargs):
+        raise NotImplementedError
 
 
 class TunerBase:
@@ -79,6 +81,8 @@ class TunerBase:
         cutoff: float,
         calculator: type[Calculator],
         exponent: int = 1,
+        dtype: Optional[torch.dtype] = None,
+        device: Optional[torch.device] = None,
     ):
         _validate_parameters(charges, cell, positions, exponent)
         self.charges = charges
@@ -87,8 +91,8 @@ class TunerBase:
         self.cutoff = cutoff
         self.calculator = calculator
         self.exponent = exponent
-        self._dtype = cell.dtype
-        self._device = cell.device
+        self.device = "cpu" if device is None else device
+        self.dtype = torch.get_default_dtype() if dtype is None else dtype
 
         self._prefac = 2 * float((charges**2).sum()) / math.sqrt(len(positions))
 
@@ -138,11 +142,11 @@ class GridSearchTuner(TunerBase):
     :param cutoff: real space cutoff, serves as a hyperparameter here.
     :param calculator: the calculator to be tuned
     :param params: list of Fourier space parameter sets for which the error is estimated
-    :param exponent: exponent of the potential, only exponent = 1 is supported
     :param neighbor_indices: torch.Tensor with the ``i,j`` indices of neighbors for
         which the potential should be computed in real space.
     :param neighbor_distances: torch.Tensor with the pair distances of the neighbors
         for which the potential should be computed in real space.
+    :param exponent: exponent of the potential, only exponent = 1 is supported
     """
 
     def __init__(
@@ -154,17 +158,21 @@ class GridSearchTuner(TunerBase):
         calculator: type[Calculator],
         error_bounds: type[TuningErrorBounds],
         params: list[dict],
+        neighbor_indices: torch.Tensor,
+        neighbor_distances: torch.Tensor,
         exponent: int = 1,
-        neighbor_indices: Optional[torch.Tensor] = None,
-        neighbor_distances: Optional[torch.Tensor] = None,
+        dtype: Optional[torch.dtype] = None,
+        device: Optional[torch.device] = None,
     ):
         super().__init__(
-            charges,
-            cell,
-            positions,
-            cutoff,
-            calculator,
-            exponent,
+            charges=charges,
+            cell=cell,
+            positions=positions,
+            cutoff=cutoff,
+            calculator=calculator,
+            exponent=exponent,
+            dtype=dtype,
+            device=device,
         )
         self.error_bounds = error_bounds
         self.params = params
@@ -172,10 +180,11 @@ class GridSearchTuner(TunerBase):
             charges,
             cell,
             positions,
-            cutoff,
             neighbor_indices,
             neighbor_distances,
             True,
+            dtype=dtype,
+            device=device,
         )
 
     def tune(self, accuracy: float = 1e-3) -> tuple[list[float], list[float]]:
@@ -193,22 +202,24 @@ class GridSearchTuner(TunerBase):
         param_errors = []
         param_timings = []
         for param in self.params:
-            error = self.error_bounds(smearing=smearing, cutoff=self.cutoff, **param)  #  type: ignore[call-arg]
+            error = self.error_bounds(smearing=smearing, cutoff=self.cutoff, **param)  # type: ignore[call-arg]
             param_errors.append(float(error))
-            if error > accuracy:
-                param_timings.append(float("inf"))
-                continue
-
-            param_timings.append(self._timing(smearing, param))
+            param_timings.append(
+                self._timing(smearing, param) if error <= accuracy else float("inf")
+            )
 
         return param_errors, param_timings
 
     def _timing(self, smearing: float, k_space_params: dict):
         calculator = self.calculator(
-            potential=CoulombPotential(
-                # exponent=self.exponent,  # but only exponent = 1 is supported
+            potential=InversePowerLawPotential(
+                exponent=self.exponent,  # but only exponent = 1 is supported
                 smearing=smearing,
+                device=self.device,
+                dtype=self.dtype,
             ),
+            device=self.device,
+            dtype=self.dtype,
             **k_space_params,
         )
 
@@ -242,39 +253,26 @@ class TuningTimings(torch.nn.Module):
         charges: torch.Tensor,
         cell: torch.Tensor,
         positions: torch.Tensor,
-        cutoff: float,
-        neighbor_indices: Optional[torch.Tensor] = None,
-        neighbor_distances: Optional[torch.Tensor] = None,
+        neighbor_indices: torch.Tensor,
+        neighbor_distances: torch.Tensor,
         n_repeat: int = 4,
         n_warmup: int = 2,
         run_backward: Optional[bool] = True,
+        dtype: Optional[torch.dtype] = None,
+        device: Optional[torch.device] = None,
     ):
         super().__init__()
-        self._charges = charges
-        self._cell = cell
-        self._positions = positions
-        self._dtype = charges.dtype
-        self._device = charges.device
-        self._n_repeat = n_repeat
-        self._n_warmup = n_warmup
-        self._run_backward = run_backward
-
-        if neighbor_indices is None and neighbor_distances is None:
-            nl = vesin.torch.NeighborList(cutoff=cutoff, full_list=False)
-            i, j, neighbor_distances = nl.compute(
-                points=self._positions.to(dtype=torch.float64, device="cpu"),
-                box=self._cell.to(dtype=torch.float64, device="cpu"),
-                periodic=True,
-                quantities="ijd",
-            )
-            neighbor_indices = torch.stack([i, j], dim=1)
-        elif neighbor_indices is None or neighbor_distances is None:
-            raise ValueError(
-                "If neighbor_indices or neighbor_distances are None, both must be None."
-            )
-        self._neighbor_indices = neighbor_indices.to(device=self._device)
-        self._neighbor_distances = neighbor_distances.to(
-            dtype=self._dtype, device=self._device
+        self.charges = charges
+        self.cell = cell
+        self.positions = positions
+        self.dtype = dtype
+        self.device = device
+        self.n_repeat = n_repeat
+        self.n_warmup = n_warmup
+        self.run_backward = run_backward
+        self.neighbor_indices = neighbor_indices.to(device=self.device)
+        self.neighbor_distances = neighbor_distances.to(
+            dtype=self.dtype, device=self.device
         )
 
     def forward(self, calculator: torch.nn.Module):
@@ -285,24 +283,24 @@ class TuningTimings(torch.nn.Module):
         :param calculator: the calculator to be tuned
         :return: a float, the average execution time
         """
-        for _ in range(self._n_warmup):
+        for _ in range(self.n_warmup):
             result = calculator.forward(
-                positions=self._positions,
-                charges=self._charges,
-                cell=self._cell,
-                neighbor_indices=self._neighbor_indices,
-                neighbor_distances=self._neighbor_distances,
+                positions=self.positions,
+                charges=self.charges,
+                cell=self.cell,
+                neighbor_indices=self.neighbor_indices,
+                neighbor_distances=self.neighbor_distances,
             )
 
         # measure time
         execution_time = 0.0
 
-        for _ in range(self._n_repeat):
-            positions = self._positions.clone()
-            cell = self._cell.clone()
-            charges = self._charges.clone()
+        for _ in range(self.n_repeat):
+            positions = self.positions.clone()
+            cell = self.cell.clone()
+            charges = self.charges.clone()
             # nb - this won't compute gradiens involving the distances
-            if self._run_backward:
+            if self.run_backward:
                 positions.requires_grad_(True)
                 cell.requires_grad_(True)
                 charges.requires_grad_(True)
@@ -311,15 +309,15 @@ class TuningTimings(torch.nn.Module):
                 positions=positions,
                 charges=charges,
                 cell=cell,
-                neighbor_indices=self._neighbor_indices,
-                neighbor_distances=self._neighbor_distances,
+                neighbor_indices=self.neighbor_indices,
+                neighbor_distances=self.neighbor_distances,
             )
             value = result.sum()
-            if self._run_backward:
+            if self.run_backward:
                 value.backward(retain_graph=True)
 
-            if self._device is torch.device("cuda"):
+            if self.device is torch.device("cuda"):
                 torch.cuda.synchronize()
             execution_time += time.time()
 
-        return execution_time / self._n_repeat
+        return execution_time / self.n_repeat
