@@ -130,10 +130,16 @@ class GridSearchTuner(TunerBase):
     """
     Tuner using grid search.
 
-    The tuner uses the error formula to estimate the error of a given parameter set.
-    If the error is smaller than the accuracy, the timing is measured and returned.
-    If the error is larger than the accuracy, the timing is set to infinity and the
-    parameter is skipped.
+    The tuner uses the error formula to estimate the error of a given parameter set. If
+    the error is smaller than the accuracy, the timing is measured and returned. If the
+    error is larger than the accuracy, the timing is set to infinity and the parameter
+    is skipped.
+
+    .. note::
+
+        The cutoff is treated as a hyperparameter here. In case one wants to tune the
+        cutoff, one could instantiate the tuner with different cutoff values and
+        manually pick the best from the tuning results.
 
     :param charges: atomic charges
     :param cell: single tensor of shape (3, 3), describing the bounding
@@ -141,11 +147,12 @@ class GridSearchTuner(TunerBase):
         Cartesian positions of all point charges in the system.
     :param cutoff: real space cutoff, serves as a hyperparameter here.
     :param calculator: the calculator to be tuned
+    :param error_bounds: error bounds for the calculator
     :param params: list of Fourier space parameter sets for which the error is estimated
     :param neighbor_indices: torch.Tensor with the ``i,j`` indices of neighbors for
         which the potential should be computed in real space.
-    :param neighbor_distances: torch.Tensor with the pair distances of the neighbors
-        for which the potential should be computed in real space.
+    :param neighbor_distances: torch.Tensor with the pair distances of the neighbors for
+        which the potential should be computed in real space.
     :param exponent: exponent of the potential, only exponent = 1 is supported
     """
 
