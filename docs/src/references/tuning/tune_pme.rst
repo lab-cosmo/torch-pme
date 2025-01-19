@@ -21,7 +21,7 @@ simulation box, :math:`p` is the order of the interpolation scheme, :math:`H` is
 points, and :math:`\phi_p^2 = H^{-(p+1)}\prod_{s\in S_H^{(p)}}(x - s)`, in which :math:`S_H^{(p)}` is
 the :math:`p+1` mesh points closest to the point :math:`x`.
 
-.. autofunction:: torchpme.tuning.pme.tune_pme
+.. autofunction:: torchpme.tuning.tune_pme
 
 .. autoclass:: torchpme.tuning.pme.PMEErrorBounds
     :members:

@@ -21,7 +21,7 @@ simulation box, :math:`p` is the order of the interpolation scheme, :math:`H` is
 points and :math:`a_m^{(p)}` is an expansion coefficient.
 
 
-.. autofunction:: torchpme.tuning.p3m.tune_p3m
+.. autofunction:: torchpme.tuning.tune_p3m
 
 .. autoclass:: torchpme.tuning.p3m.P3MErrorBounds
     :members:

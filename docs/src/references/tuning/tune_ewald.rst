@@ -18,7 +18,7 @@ where :math:`N` is the number of charges, :math:`Q^2 = \sum_{i = 1}^N q_i^2`, is
 charges, :math:`r_{\text{cutoff}}` is the short-range cutoff, :math:`V` is the volume of the
 simulation box and :math:`h^2` is the long range wavelength.
 
-.. autofunction:: torchpme.tuning.ewald.tune_ewald
+.. autofunction:: torchpme.tuning.tune_ewald
 
 .. autoclass:: torchpme.tuning.ewald.EwaldErrorBounds
     :members:
