@@ -15,11 +15,10 @@ from helpers import compute_distances, define_crystal, neighbor_list
 
 
 DTYPE = torch.float32
-DEVICE = "cpu"
 DEFAULT_CUTOFF = 4.4
-CHARGES_1 = torch.ones((4, 1), dtype=DTYPE, device=DEVICE)
-POSITIONS_1 = 0.3 * torch.arange(12, dtype=DTYPE, device=DEVICE).reshape((4, 3))
-CELL_1 = torch.eye(3, dtype=DTYPE, device=DEVICE)
+CHARGES_1 = torch.ones((4, 1), dtype=DTYPE)
+POSITIONS_1 = 0.3 * torch.arange(12, dtype=DTYPE).reshape((4, 3))
+CELL_1 = torch.eye(3, dtype=DTYPE)
 
 def _nl_calculation(pos, cell):
     neighbor_indices, neighbor_shifts = neighbor_list(
@@ -39,17 +38,24 @@ def _nl_calculation(pos, cell):
 
     return neighbor_indices, neighbor_distances
 
-def test_timer():
+
+@pytest.mark.parametrize("device", ["cpu", "cuda"])
+def test_timer(device):
     n_repeat_1 = 4
     n_repeat_2 = 8
     pos, charges, cell, madelung_ref, num_units = define_crystal()
     neighbor_indices, neighbor_distances = _nl_calculation(pos, cell)
+    pos = pos.to(device=device)
+    charges = charges.to(device=device)
+    cell = cell.to(device=device)
+    neighbor_indices = neighbor_indices.to(device=device)
+    neighbor_distances = neighbor_distances.to(device=device)
 
     calculator = EwaldCalculator(
-        potential=CoulombPotential(smearing=1.0),
+        potential=CoulombPotential(smearing=1.0, device=device),
         lr_wavelength=1.0,
         dtype=DTYPE,
-        device=DEVICE,
+        device=device,
     )
 
     timing_1 = TuningTimings(
@@ -59,7 +65,7 @@ def test_timer():
         neighbor_indices=neighbor_indices,
         neighbor_distances=neighbor_distances,
         dtype=DTYPE,
-        device=DEVICE,
+        device=device,
         n_repeat=n_repeat_1,
     )
 
@@ -70,7 +76,7 @@ def test_timer():
         neighbor_indices=neighbor_indices,
         neighbor_distances=neighbor_distances,
         dtype=DTYPE,
-        device=DEVICE,
+        device=device,
         n_repeat=n_repeat_2,
     )
 
