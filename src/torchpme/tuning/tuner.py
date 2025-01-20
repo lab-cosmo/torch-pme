@@ -251,7 +251,7 @@ class TuningTimings(torch.nn.Module):
     :param neighbor_distances: torch.Tensor with the pair distances of the neighbors for
         which the potential should be computed in real space.
     :param n_repeat: number of times to repeat to estimate the average timing
-    :param n_warmup: number of warmup runs
+    :param n_warmup: number of warmup runs, recommended to be at least 4
     :param run_backward: whether to run the backward pass
     """
 
@@ -263,7 +263,7 @@ class TuningTimings(torch.nn.Module):
         neighbor_indices: torch.Tensor,
         neighbor_distances: torch.Tensor,
         n_repeat: int = 4,
-        n_warmup: int = 2,
+        n_warmup: int = 4,
         run_backward: Optional[bool] = True,
         dtype: Optional[torch.dtype] = None,
         device: Optional[torch.device] = None,
