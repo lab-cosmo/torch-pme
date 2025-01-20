@@ -213,8 +213,6 @@ class PMEErrorBounds(TuningErrorBounds):
         :param smearing: see :class:`torchpme.PMECalculator` for details
         :param cutoff: see :class:`torchpme.PMECalculator` for details
         """
-        smearing = torch.tensor(smearing)
-        cutoff = torch.tensor(cutoff)
 
         return (
             self.prefac

@@ -290,7 +290,6 @@ class TuningTimings(torch.nn.Module):
         :param calculator: the calculator to be tuned
         :return: a float, the average execution time
         """
-
         # measure time
         execution_time = 0.0
 

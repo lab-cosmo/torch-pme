@@ -13,12 +13,12 @@ from torchpme.tuning.tuner import TuningTimings
 sys.path.append(str(Path(__file__).parents[1]))
 from helpers import compute_distances, define_crystal, neighbor_list
 
-
 DTYPE = torch.float32
 DEFAULT_CUTOFF = 4.4
 CHARGES_1 = torch.ones((4, 1), dtype=DTYPE)
 POSITIONS_1 = 0.3 * torch.arange(12, dtype=DTYPE).reshape((4, 3))
 CELL_1 = torch.eye(3, dtype=DTYPE)
+
 
 def _nl_calculation(pos, cell):
     neighbor_indices, neighbor_shifts = neighbor_list(
@@ -83,5 +83,5 @@ def test_timer(device):
     time_1 = timing_1.forward(calculator)
     time_2 = timing_2.forward(calculator)
 
-    assert 0 < time_1
+    assert time_1 > 0
     assert time_1 * n_repeat_1 < time_2 * n_repeat_2

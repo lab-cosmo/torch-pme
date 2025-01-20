@@ -49,7 +49,7 @@ num_formula_units = 4
 atoms = ase.Atoms("NaCl3Na3Cl", positions, cell=cell)
 
 
-# %% 
+# %%
 # Here we calculate the potential energy of the system, and compare it with the
 # madelung constant to calculate the error. This is the actual error. Then we use
 # the :class:`torchpme.tuning.pme.PMEErrorBounds` to calculate the error bound for
