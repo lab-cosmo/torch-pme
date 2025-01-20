@@ -3,7 +3,6 @@ from itertools import product
 from typing import Optional
 
 import torch
-import vesin.torch
 
 from ..calculators import P3MCalculator
 from ..utils import _validate_parameters
@@ -72,9 +71,9 @@ def tune_p3m(
     cell: torch.Tensor,
     positions: torch.Tensor,
     cutoff: float,
+    neighbor_indices: torch.Tensor,
+    neighbor_distances: torch.Tensor,
     exponent: int = 1,
-    neighbor_indices: Optional[torch.Tensor] = None,
-    neighbor_distances: Optional[torch.Tensor] = None,
     nodes_lo: int = 2,
     nodes_hi: int = 5,
     mesh_lo: int = 2,
@@ -97,13 +96,13 @@ def tune_p3m(
     :param cell: torch.Tensor, periodic supercell for the system
     :param positions: torch.Tensor, Cartesian coordinates of the particles within
         the supercell.
-    :param cutoff: float, cutoff distance for the neighborlist
-    :param exponent: :math:`p` in :math:`1/r^p` potentials, currently only :math:`p=1` is
-        supported
     :param neighbor_indices: torch.Tensor with the ``i,j`` indices of neighbors for
         which the potential should be computed in real space.
     :param neighbor_distances: torch.Tensor with the pair distances of the neighbors
         for which the potential should be computed in real space.
+    :param cutoff: float, cutoff distance for the neighborlist
+        supported
+    :param exponent: :math:`p` in :math:`1/r^p` potentials, currently only :math:`p=1` is
     :param nodes_lo: Minimum number of interpolation nodes
     :param nodes_hi: Maximum number of interpolation nodes
     :param mesh_lo: Minimum number of mesh points per axis
@@ -124,12 +123,25 @@ def tune_p3m(
 
     >>> _ = torch.manual_seed(0)
     >>> positions = torch.tensor(
-    ...     [[0.0, 0.0, 0.0], [0.5, 0.5, 0.5]], dtype=torch.float64
+    ...     [[0.0, 0.0, 0.0], [0.4, 0.4, 0.4]], dtype=torch.float64
     ... )
     >>> charges = torch.tensor([[1.0], [-1.0]], dtype=torch.float64)
     >>> cell = torch.eye(3, dtype=torch.float64)
+    >>> neighbour_distances = torch.tensor(
+    ...     [0.9381, 0.9381, 0.8246, 0.9381, 0.8246, 0.8246, 0.6928],
+    ...     dtype=torch.float64,
+    ... )
+    >>> neighbor_indices = torch.tensor(
+    ...     [[0, 1], [0, 1], [0, 1], [0, 1], [0, 1], [0, 1], [0, 1]]
+    ... )
     >>> smearing, parameter = tune_p3m(
-    ...     charges, cell, positions, cutoff=4.4, accuracy=1e-1
+    ...     charges,
+    ...     cell,
+    ...     positions,
+    ...     cutoff=1.0,
+    ...     neighbour_distances=neighbour_distances,
+    ...     neighbor_indices=neighbor_indices,
+    ...     accuracy=1e-1,
     ... )
 
     """
@@ -144,19 +156,6 @@ def tune_p3m(
             range(nodes_lo, nodes_hi + 1), range(mesh_lo, mesh_hi + 1)
         )
     ]
-    if neighbor_indices is None and neighbor_distances is None:
-        nl = vesin.torch.NeighborList(cutoff=cutoff, full_list=False)
-        i, j, neighbor_distances = nl.compute(
-            points=positions.to(dtype=torch.float64, device="cpu"),
-            box=cell.to(dtype=torch.float64, device="cpu"),
-            periodic=True,
-            quantities="ijd",
-        )
-        neighbor_indices = torch.stack([i, j], dim=1)
-    elif neighbor_indices is None or neighbor_distances is None:
-        raise ValueError(
-            "If neighbor_indices or neighbor_distances are None, both must be None."
-        )
 
     tuner = GridSearchTuner(
         charges=charges,

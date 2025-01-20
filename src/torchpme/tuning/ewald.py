@@ -2,7 +2,6 @@ import math
 from typing import Optional
 
 import torch
-import vesin.torch
 
 from ..calculators import EwaldCalculator
 from ..utils import _validate_parameters
@@ -14,9 +13,9 @@ def tune_ewald(
     cell: torch.Tensor,
     positions: torch.Tensor,
     cutoff: float,
+    neighbor_indices: torch.Tensor,
+    neighbor_distances: torch.Tensor,
     exponent: int = 1,
-    neighbor_indices: Optional[torch.Tensor] = None,
-    neighbor_distances: Optional[torch.Tensor] = None,
     ns_lo: int = 1,
     ns_hi: int = 14,
     accuracy: float = 1e-3,
@@ -65,27 +64,27 @@ def tune_ewald(
     ... )
     >>> charges = torch.tensor([[1.0], [-1.0]], dtype=torch.float64)
     >>> cell = torch.eye(3, dtype=torch.float64)
+    >>> neighbour_distances = torch.tensor(
+    ...     [0.9381, 0.9381, 0.8246, 0.9381, 0.8246, 0.8246, 0.6928],
+    ...     dtype=torch.float64,
+    ... )
+    >>> neighbor_indices = torch.tensor(
+    ...     [[0, 1], [0, 1], [0, 1], [0, 1], [0, 1], [0, 1], [0, 1]]
+    ... )
     >>> smearing, parameter = tune_ewald(
-    ...     charges, cell, positions, cutoff=4.4, accuracy=1e-1
+    ...     charges,
+    ...     cell,
+    ...     positions,
+    ...     cutoff=1.0,
+    ...     neighbour_distances=neighbour_distances,
+    ...     neighbor_indices=neighbor_indices,
+    ...     accuracy=1e-1,
     ... )
 
     """
     _validate_parameters(charges, cell, positions, exponent)
     min_dimension = float(torch.min(torch.linalg.norm(cell, dim=1)))
     params = [{"lr_wavelength": min_dimension / ns} for ns in range(ns_lo, ns_hi + 1)]
-    if neighbor_indices is None and neighbor_distances is None:
-        nl = vesin.torch.NeighborList(cutoff=cutoff, full_list=False)
-        i, j, neighbor_distances = nl.compute(
-            points=positions.to(dtype=torch.float64, device="cpu"),
-            box=cell.to(dtype=torch.float64, device="cpu"),
-            periodic=True,
-            quantities="ijd",
-        )
-        neighbor_indices = torch.stack([i, j], dim=1)
-    elif neighbor_indices is None or neighbor_distances is None:
-        raise ValueError(
-            "If neighbor_indices or neighbor_distances are None, both must be None."
-        )
 
     tuner = GridSearchTuner(
         charges=charges,

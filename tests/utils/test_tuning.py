@@ -23,6 +23,25 @@ POSITIONS_1 = 0.3 * torch.arange(12, dtype=DTYPE, device=DEVICE).reshape((4, 3))
 CELL_1 = torch.eye(3, dtype=DTYPE, device=DEVICE)
 
 
+def _nl_calculation(pos, cell):
+    neighbor_indices, neighbor_shifts = neighbor_list(
+        positions=pos,
+        periodic=True,
+        box=cell,
+        cutoff=DEFAULT_CUTOFF,
+        neighbor_shifts=True,
+    )
+
+    neighbor_distances = compute_distances(
+        positions=pos,
+        neighbor_indices=neighbor_indices,
+        cell=cell,
+        neighbor_shifts=neighbor_shifts,
+    )
+
+    return neighbor_indices, neighbor_distances
+
+
 @pytest.mark.parametrize(
     ("calculator", "tune", "param_length"),
     [
@@ -32,7 +51,6 @@ CELL_1 = torch.eye(3, dtype=DTYPE, device=DEVICE)
     ],
 )
 @pytest.mark.parametrize("accuracy", [1e-1, 1e-3, 1e-5])
-@pytest.mark.skipif(sys.platform == "win32", reason="does not run on windows")
 def test_parameter_choose(calculator, tune, param_length, accuracy):
     """
     Check that the Madelung constants obtained from the Ewald sum calculator matches
@@ -41,27 +59,20 @@ def test_parameter_choose(calculator, tune, param_length, accuracy):
     # Get input parameters and adjust to account for scaling
     pos, charges, cell, madelung_ref, num_units = define_crystal()
 
-    smearing, params = tune(charges, cell, pos, DEFAULT_CUTOFF, accuracy=accuracy)
+    # Compute neighbor list
+    neighbor_indices, neighbor_distances = _nl_calculation(pos, cell)
+
+    smearing, params = tune(
+        charges,
+        cell,
+        pos,
+        DEFAULT_CUTOFF,
+        neighbor_indices=neighbor_indices,
+        neighbor_distances=neighbor_distances,
+        accuracy=accuracy,
+    )
 
     assert len(params) == param_length
-
-    # Compute neighbor list
-    neighbor_indices, neighbor_shifts = neighbor_list(
-        positions=pos,
-        periodic=True,
-        box=cell,
-        cutoff=DEFAULT_CUTOFF,
-        neighbor_shifts=True,
-    )
-
-    pos.requires_grad = True
-
-    neighbor_distances = compute_distances(
-        positions=pos,
-        neighbor_indices=neighbor_indices,
-        cell=cell,
-        neighbor_shifts=neighbor_shifts,
-    )
 
     # Compute potential and compare against target value using default hypers
     calc = calculator(
@@ -82,27 +93,42 @@ def test_parameter_choose(calculator, tune, param_length, accuracy):
 
 
 @pytest.mark.parametrize("tune", [tune_ewald, tune_pme, tune_p3m])
-@pytest.mark.skipif(sys.platform == "win32", reason="does not run on windows")
 def test_accuracy_error(tune):
     pos, charges, cell, _, _ = define_crystal()
 
     match = "'foo' is not a float."
+    neighbor_indices, neighbor_distances = _nl_calculation(pos, cell)
     with pytest.raises(ValueError, match=match):
-        tune(charges, cell, pos, DEFAULT_CUTOFF, accuracy="foo")
+        tune(
+            charges,
+            cell,
+            pos,
+            DEFAULT_CUTOFF,
+            neighbor_indices,
+            neighbor_distances,
+            accuracy="foo",
+        )
 
 
 @pytest.mark.parametrize("tune", [tune_ewald, tune_pme, tune_p3m])
-@pytest.mark.skipif(sys.platform == "win32", reason="does not run on windows")
 def test_exponent_not_1_error(tune):
     pos, charges, cell, _, _ = define_crystal()
 
     match = "Only exponent = 1 is supported"
+    neighbor_indices, neighbor_distances = _nl_calculation(pos, cell)
     with pytest.raises(NotImplementedError, match=match):
-        tune(charges, cell, pos, DEFAULT_CUTOFF, exponent=2)
+        tune(
+            charges,
+            cell,
+            pos,
+            DEFAULT_CUTOFF,
+            neighbor_indices,
+            neighbor_distances,
+            exponent=2,
+        )
 
 
 @pytest.mark.parametrize("tune", [tune_ewald, tune_pme, tune_p3m])
-@pytest.mark.skipif(sys.platform == "win32", reason="does not run on windows")
 def test_invalid_shape_positions(tune):
     match = (
         r"each `positions` must be a tensor with shape \[n_atoms, 3\], got at least "
@@ -114,12 +140,13 @@ def test_invalid_shape_positions(tune):
             CELL_1,
             torch.ones((4, 5), dtype=DTYPE, device=DEVICE),
             DEFAULT_CUTOFF,
+            None,  # dummy neighbor indices
+            None,  # dummy neighbor distances
         )
 
 
 # Tests for invalid shape, dtype and device of cell
 @pytest.mark.parametrize("tune", [tune_ewald, tune_pme, tune_p3m])
-@pytest.mark.skipif(sys.platform == "win32", reason="does not run on windows")
 def test_invalid_shape_cell(tune):
     match = (
         r"each `cell` must be a tensor with shape \[3, 3\], got at least one tensor "
@@ -131,22 +158,22 @@ def test_invalid_shape_cell(tune):
             torch.ones([2, 2], dtype=DTYPE, device=DEVICE),
             POSITIONS_1,
             DEFAULT_CUTOFF,
+            None,  # dummy neighbor indices
+            None,  # dummy neighbor distances
         )
 
 
 @pytest.mark.parametrize("tune", [tune_ewald, tune_pme, tune_p3m])
-@pytest.mark.skipif(sys.platform == "win32", reason="does not run on windows")
 def test_invalid_cell(tune):
     match = (
         "provided `cell` has a determinant of 0 and therefore is not valid for "
         "periodic calculation"
     )
     with pytest.raises(ValueError, match=match):
-        tune(CHARGES_1, torch.zeros(3, 3), POSITIONS_1, DEFAULT_CUTOFF)
+        tune(CHARGES_1, torch.zeros(3, 3), POSITIONS_1, DEFAULT_CUTOFF, None, None)
 
 
 @pytest.mark.parametrize("tune", [tune_ewald, tune_pme, tune_p3m])
-@pytest.mark.skipif(sys.platform == "win32", reason="does not run on windows")
 def test_invalid_dtype_cell(tune):
     match = (
         r"each `cell` must have the same type torch.float32 as `positions`, "
@@ -158,11 +185,12 @@ def test_invalid_dtype_cell(tune):
             torch.eye(3, dtype=torch.float64, device=DEVICE),
             POSITIONS_1,
             DEFAULT_CUTOFF,
+            None,
+            None,
         )
 
 
 @pytest.mark.parametrize("tune", [tune_ewald, tune_pme, tune_p3m])
-@pytest.mark.skipif(sys.platform == "win32", reason="does not run on windows")
 def test_invalid_device_cell(tune):
     match = (
         r"each `cell` must be on the same device cpu as `positions`, "
@@ -174,4 +202,6 @@ def test_invalid_device_cell(tune):
             torch.eye(3, dtype=DTYPE, device="meta"),
             POSITIONS_1,
             DEFAULT_CUTOFF,
+            None,
+            None,
         )
