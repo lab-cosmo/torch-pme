@@ -290,19 +290,13 @@ class TuningTimings(torch.nn.Module):
         :param calculator: the calculator to be tuned
         :return: a float, the average execution time
         """
-        for _ in range(self.n_warmup):
-            result = calculator.forward(
-                positions=self.positions,
-                charges=self.charges,
-                cell=self.cell,
-                neighbor_indices=self.neighbor_indices,
-                neighbor_distances=self.neighbor_distances,
-            )
 
         # measure time
         execution_time = 0.0
 
-        for _ in range(self.n_repeat):
+        for _ in range(self.n_repeat + self.n_warmup):
+            if _ == self.n_warmup:
+                execution_time = 0.0
             positions = self.positions.clone()
             cell = self.cell.clone()
             charges = self.charges.clone()
