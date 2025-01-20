@@ -13,7 +13,7 @@ from torchpme import (
 from torchpme.tuning import tune_ewald, tune_p3m, tune_pme
 
 sys.path.append(str(Path(__file__).parents[1]))
-from helpers import define_crystal, neighbor_list
+from helpers import compute_distances, define_crystal, neighbor_list
 
 DTYPE = torch.float32
 DEVICE = "cpu"
@@ -45,8 +45,21 @@ def test_parameter_choose(calculator, tune, param_length, accuracy):
     assert len(params) == param_length
 
     # Compute neighbor list
-    neighbor_indices, neighbor_distances = neighbor_list(
-        positions=pos, periodic=True, box=cell, cutoff=DEFAULT_CUTOFF
+    neighbor_indices, neighbor_shifts = neighbor_list(
+        positions=pos,
+        periodic=True,
+        box=cell,
+        cutoff=DEFAULT_CUTOFF,
+        neighbor_shifts=True,
+    )
+
+    pos.requires_grad = True
+
+    neighbor_distances = compute_distances(
+        positions=pos,
+        neighbor_indices=neighbor_indices,
+        cell=cell,
+        neighbor_shifts=neighbor_shifts,
     )
 
     # Compute potential and compare against target value using default hypers
@@ -65,47 +78,6 @@ def test_parameter_choose(calculator, tune, param_length, accuracy):
     madelung = -torch.sum(energies) / num_units
 
     torch.testing.assert_close(madelung, madelung_ref, atol=0, rtol=accuracy)
-
-
-'''@pytest.mark.parametrize("tune", [tune_ewald, tune_pme, tune_p3m])
-def test_fix_parameters(tune):
-    """Test that the parameters are fixed when they are passed as arguments."""
-    pos, charges, cell, _, _ = define_crystal()
-
-    kwargs_ref = {
-        "sum_squared_charges": float(torch.sum(charges**2)),
-        "cell": cell,
-        "positions": pos,
-        "max_steps": 5,
-    }
-
-    kwargs = kwargs_ref.copy()
-    kwargs["smearing"] = 0.1
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        smearing, _, _ = tune(**kwargs)
-    pytest.approx(smearing, 0.1)
-
-    kwargs = kwargs_ref.copy()
-    if tune.__name__ in ["tune_pme", "tune_p3m"]:
-        kwargs["mesh_spacing"] = 0.1
-    else:
-        kwargs["lr_wavelength"] = 0.1
-
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        _, kspace_param, _ = tune(**kwargs)
-
-    kspace_param = list(kspace_param.values())[0]
-    pytest.approx(kspace_param, 0.1)
-
-    kwargs = kwargs_ref.copy()
-    kwargs["cutoff"] = 0.1
-
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        _, _, sr_cutoff = tune(**kwargs)
-    pytest.approx(sr_cutoff, 1.0)'''
 
 
 @pytest.mark.parametrize("tune", [tune_ewald, tune_pme, tune_p3m])
