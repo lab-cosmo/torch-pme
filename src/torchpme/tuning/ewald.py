@@ -64,7 +64,7 @@ def tune_ewald(
     ... )
     >>> charges = torch.tensor([[1.0], [-1.0]], dtype=torch.float64)
     >>> cell = torch.eye(3, dtype=torch.float64)
-    >>> neighbour_distances = torch.tensor(
+    >>> neighbor_distances = torch.tensor(
     ...     [0.9381, 0.9381, 0.8246, 0.9381, 0.8246, 0.8246, 0.6928],
     ...     dtype=torch.float64,
     ... )
@@ -76,7 +76,7 @@ def tune_ewald(
     ...     cell,
     ...     positions,
     ...     cutoff=1.0,
-    ...     neighbour_distances=neighbour_distances,
+    ...     neighbor_distances=neighbor_distances,
     ...     neighbor_indices=neighbor_indices,
     ...     accuracy=1e-1,
     ... )
