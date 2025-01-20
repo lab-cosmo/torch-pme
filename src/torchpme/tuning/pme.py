@@ -213,7 +213,6 @@ class PMEErrorBounds(TuningErrorBounds):
         :param smearing: see :class:`torchpme.PMECalculator` for details
         :param cutoff: see :class:`torchpme.PMECalculator` for details
         """
-
         return (
             self.prefac
             / torch.sqrt(cutoff * self.volume)
