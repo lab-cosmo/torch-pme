@@ -95,13 +95,12 @@ cell = torch.from_numpy(atoms.cell.array)
 sum_squared_charges = float(torch.sum(charges**2))
 cutoff = 4.4
 nl = vesin.torch.NeighborList(cutoff=cutoff, full_list=False)
-i, j, neighbor_distances = nl.compute(
+neighbor_indices, neighbor_distances = nl.compute(
     points=positions.to(dtype=torch.float64, device="cpu"),
     box=cell.to(dtype=torch.float64, device="cpu"),
     periodic=True,
-    quantities="ijd",
+    quantities="Pd",
 )
-neighbor_indices = torch.stack([i, j], dim=1)
 
 smearing, pme_params = tune_pme(
     charges=charges,

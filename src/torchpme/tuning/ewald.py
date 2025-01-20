@@ -162,8 +162,8 @@ class EwaldErrorBounds(TuningErrorBounds):
         :param smearing: see :class:`torchpme.EwaldCalculator` for details
         :param lr_wavelength: see :class:`torchpme.EwaldCalculator` for details
         """
-        smearing = torch.as_tensor(smearing)
-        lr_wavelength = torch.as_tensor(lr_wavelength)
+        smearing = torch.tensor(smearing)
+        lr_wavelength = torch.tensor(lr_wavelength)
         return (
             self.prefac**0.5
             / smearing
@@ -194,9 +194,9 @@ class EwaldErrorBounds(TuningErrorBounds):
         :param lr_wavelength: see :class:`torchpme.EwaldCalculator` for details
         :param cutoff: see :class:`torchpme.EwaldCalculator` for details
         """
-        smearing = torch.as_tensor(smearing)
-        lr_wavelength = torch.as_tensor(lr_wavelength)
-        cutoff = torch.as_tensor(cutoff)
+        smearing = torch.tensor(smearing)
+        lr_wavelength = torch.tensor(lr_wavelength)
+        cutoff = torch.tensor(cutoff)
         return torch.sqrt(
             self.err_kspace(smearing, lr_wavelength) ** 2
             + self.err_rspace(smearing, cutoff) ** 2

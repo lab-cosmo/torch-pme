@@ -14,7 +14,8 @@ implement custom tuning procedures.
 
 .. important::
 
-   Current tuning methods are only implemented for the Coulomb potential.
+   Current tuning methods are only implemented for the :class:`Coulomb potential
+   <torchpme.CoulombPotential>`.
 
 .. toctree::
    :maxdepth: 1

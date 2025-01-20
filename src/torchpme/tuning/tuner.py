@@ -311,7 +311,7 @@ class TuningTimings(torch.nn.Module):
                 positions.requires_grad_(True)
                 cell.requires_grad_(True)
                 charges.requires_grad_(True)
-            execution_time -= time.time()
+            execution_time -= time.monotonic()
             result = calculator.forward(
                 positions=positions,
                 charges=charges,
@@ -325,6 +325,6 @@ class TuningTimings(torch.nn.Module):
 
             if self.device is torch.device("cuda"):
                 torch.cuda.synchronize()
-            execution_time += time.time()
+            execution_time += time.monotonic()
 
         return execution_time / self.n_repeat

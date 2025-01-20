@@ -213,8 +213,8 @@ class PMEErrorBounds(TuningErrorBounds):
         :param smearing: see :class:`torchpme.PMECalculator` for details
         :param cutoff: see :class:`torchpme.PMECalculator` for details
         """
-        smearing = torch.as_tensor(smearing)
-        cutoff = torch.as_tensor(cutoff)
+        smearing = torch.tensor(smearing)
+        cutoff = torch.tensor(cutoff)
 
         return (
             self.prefac
@@ -248,10 +248,10 @@ class PMEErrorBounds(TuningErrorBounds):
             piecewise polynomials of degree ``n - 1`` (e.g. ``n = 4`` for cubic
             interpolation). Only the values ``3, 4, 5, 6, 7`` are supported.
         """
-        smearing = torch.as_tensor(smearing)
-        mesh_spacing = torch.as_tensor(mesh_spacing)
-        cutoff = torch.as_tensor(cutoff)
-        interpolation_nodes = torch.as_tensor(interpolation_nodes)
+        smearing = torch.tensor(smearing)
+        mesh_spacing = torch.tensor(mesh_spacing)
+        cutoff = torch.tensor(cutoff)
+        interpolation_nodes = torch.tensor(interpolation_nodes)
         return torch.sqrt(
             self.err_rspace(smearing, cutoff) ** 2
             + self.err_kspace(smearing, mesh_spacing, interpolation_nodes) ** 2

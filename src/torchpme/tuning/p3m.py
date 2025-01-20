@@ -299,10 +299,10 @@ class P3MErrorBounds(TuningErrorBounds):
         :param cutoff: see :class:`torchpme.P3MCalculator` for details
         :param interpolation_nodes: see :class:`torchpme.P3MCalculator` for details
         """
-        smearing = torch.as_tensor(smearing)
-        mesh_spacing = torch.as_tensor(mesh_spacing)
-        cutoff = torch.as_tensor(cutoff)
-        interpolation_nodes = torch.as_tensor(interpolation_nodes)
+        smearing = torch.tensor(smearing)
+        mesh_spacing = torch.tensor(mesh_spacing)
+        cutoff = torch.tensor(cutoff)
+        interpolation_nodes = torch.tensor(interpolation_nodes)
         return torch.sqrt(
             self.err_kspace(smearing, mesh_spacing, interpolation_nodes) ** 2
             + self.err_rspace(smearing, cutoff) ** 2
