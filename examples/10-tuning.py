@@ -26,6 +26,7 @@ DTYPE = torch.float64
 
 # get_ipython().run_line_magic("matplotlib", "inline")  # type: ignore # noqa
 # %%
+# Set up a test system of NaCl crystal
 
 positions = torch.tensor(
     [
@@ -48,8 +49,11 @@ num_formula_units = 4
 atoms = ase.Atoms("NaCl3Na3Cl", positions, cell=cell)
 
 
-# %%
-# compute and compare with reference
+# %% 
+# Here we calculate the potential energy of the system, and compare it with the
+# madelung constant to calculate the error. This is the actual error. Then we use
+# the :class:`torchpme.tuning.pme.PMEErrorBounds` to calculate the error bound for
+# PME. You can see that the actual error is smaller than the error bound.
 
 smearing = 0.5
 pme_params = {"mesh_spacing": 0.5, "interpolation_nodes": 4}
@@ -108,7 +112,7 @@ Timing: {estimated_timing} seconds
 )
 
 # %%
-# now set up a testing framework
+# Now set up a testing framework, and prepare data for plotting the error landscape.
 
 
 def timed_madelung(cutoff, smearing, mesh_spacing, interpolation_nodes):
@@ -149,7 +153,11 @@ for ism, smearing in enumerate(smearing_grid):
         bounds[ism, isp] = error_bounds(8.0, smearing, spacing, 4)
 
 # %%
-# plot
+# We now plot the error landscape. The estimated error can be seen as a upper bound of
+# the actual error. Though the magnitude of the estimated error is higher than the
+# actual error, the trend is the same. Also, from the timing results, we can see that
+# the timing increases as the spacing decreases, while the smearing does not affect the
+# timing.
 
 vmin = 1e-12
 vmax = 2
@@ -208,9 +216,8 @@ cbar.ax.set_yscale("log")
 
 
 # %%
-#
-# a good heuristic is to keep cutoff/sigma constant (easy to
-# determine error limit) to see how timings change
+# A good heuristic is to keep cutoff/sigma constant (easy to determine error limit,
+# also the dominating term in the real space error) to see how timings change.
 
 smearing_grid = torch.logspace(-1, 0.5, 8)
 spacing_grid = torch.logspace(-1, 0.5, 9)
@@ -224,7 +231,11 @@ for ism, smearing in enumerate(smearing_grid):
 
 
 # %%
-# plot
+# Now we again plot the error landscape and the timing. The error is now dominated by
+# The ratio of the smearing and the spacing. The larger ratio, the smaller error. The
+# timing is the opposite. Thus, the error and timing are anti-correlated, to a certain
+# extent. In order to achieve a balance between the speed and accuracy, we offer a
+# auto-tuning feature. See :class:`torchpme.tuning.tuner.GridSearchTuner`.
 
 fig, ax = plt.subplots(1, 2, figsize=(7, 3), constrained_layout=True)
 contour = ax[0].contourf(
