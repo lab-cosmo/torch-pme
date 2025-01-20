@@ -39,23 +39,16 @@ def _nl_calculation(pos, cell):
     return neighbor_indices, neighbor_distances
 
 
-@pytest.mark.parametrize("device", ["cpu", "cuda"])
-def test_timer(device):
+def test_timer():
     n_repeat_1 = 4
     n_repeat_2 = 8
     pos, charges, cell, madelung_ref, num_units = define_crystal()
     neighbor_indices, neighbor_distances = _nl_calculation(pos, cell)
-    pos = pos.to(device=device)
-    charges = charges.to(device=device)
-    cell = cell.to(device=device)
-    neighbor_indices = neighbor_indices.to(device=device)
-    neighbor_distances = neighbor_distances.to(device=device)
 
     calculator = EwaldCalculator(
-        potential=CoulombPotential(smearing=1.0, device=device),
+        potential=CoulombPotential(smearing=1.0),
         lr_wavelength=1.0,
         dtype=DTYPE,
-        device=device,
     )
 
     timing_1 = TuningTimings(
@@ -65,7 +58,6 @@ def test_timer(device):
         neighbor_indices=neighbor_indices,
         neighbor_distances=neighbor_distances,
         dtype=DTYPE,
-        device=device,
         n_repeat=n_repeat_1,
     )
 
@@ -76,7 +68,6 @@ def test_timer(device):
         neighbor_indices=neighbor_indices,
         neighbor_distances=neighbor_distances,
         dtype=DTYPE,
-        device=device,
         n_repeat=n_repeat_2,
     )
 
