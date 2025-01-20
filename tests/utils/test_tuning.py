@@ -32,6 +32,7 @@ CELL_1 = torch.eye(3, dtype=DTYPE, device=DEVICE)
     ],
 )
 @pytest.mark.parametrize("accuracy", [1e-1, 1e-3, 1e-5])
+@pytest.mark.skipif(sys.platform == "win32", reason="does not run on windows")
 def test_parameter_choose(calculator, tune, param_length, accuracy):
     """
     Check that the Madelung constants obtained from the Ewald sum calculator matches
@@ -81,6 +82,7 @@ def test_parameter_choose(calculator, tune, param_length, accuracy):
 
 
 @pytest.mark.parametrize("tune", [tune_ewald, tune_pme, tune_p3m])
+@pytest.mark.skipif(sys.platform == "win32", reason="does not run on windows")
 def test_accuracy_error(tune):
     pos, charges, cell, _, _ = define_crystal()
 
@@ -90,6 +92,7 @@ def test_accuracy_error(tune):
 
 
 @pytest.mark.parametrize("tune", [tune_ewald, tune_pme, tune_p3m])
+@pytest.mark.skipif(sys.platform == "win32", reason="does not run on windows")
 def test_exponent_not_1_error(tune):
     pos, charges, cell, _, _ = define_crystal()
 
@@ -99,6 +102,7 @@ def test_exponent_not_1_error(tune):
 
 
 @pytest.mark.parametrize("tune", [tune_ewald, tune_pme, tune_p3m])
+@pytest.mark.skipif(sys.platform == "win32", reason="does not run on windows")
 def test_invalid_shape_positions(tune):
     match = (
         r"each `positions` must be a tensor with shape \[n_atoms, 3\], got at least "
@@ -115,6 +119,7 @@ def test_invalid_shape_positions(tune):
 
 # Tests for invalid shape, dtype and device of cell
 @pytest.mark.parametrize("tune", [tune_ewald, tune_pme, tune_p3m])
+@pytest.mark.skipif(sys.platform == "win32", reason="does not run on windows")
 def test_invalid_shape_cell(tune):
     match = (
         r"each `cell` must be a tensor with shape \[3, 3\], got at least one tensor "
@@ -130,6 +135,7 @@ def test_invalid_shape_cell(tune):
 
 
 @pytest.mark.parametrize("tune", [tune_ewald, tune_pme, tune_p3m])
+@pytest.mark.skipif(sys.platform == "win32", reason="does not run on windows")
 def test_invalid_cell(tune):
     match = (
         "provided `cell` has a determinant of 0 and therefore is not valid for "
@@ -140,6 +146,7 @@ def test_invalid_cell(tune):
 
 
 @pytest.mark.parametrize("tune", [tune_ewald, tune_pme, tune_p3m])
+@pytest.mark.skipif(sys.platform == "win32", reason="does not run on windows")
 def test_invalid_dtype_cell(tune):
     match = (
         r"each `cell` must have the same type torch.float32 as `positions`, "
@@ -155,6 +162,7 @@ def test_invalid_dtype_cell(tune):
 
 
 @pytest.mark.parametrize("tune", [tune_ewald, tune_pme, tune_p3m])
+@pytest.mark.skipif(sys.platform == "win32", reason="does not run on windows")
 def test_invalid_device_cell(tune):
     match = (
         r"each `cell` must be on the same device cpu as `positions`, "
