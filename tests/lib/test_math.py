@@ -10,7 +10,10 @@ def finite_difference_derivative(func, x, h=1e-5):
 
 
 def test_torch_exp1_consistency_with_scipy():
-    random_tensor = torch.FloatTensor(100000).uniform_(0, 1000)
+    seed = 42
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+    random_tensor = torch.rand(100000) * 1000
     random_array = random_tensor.numpy()
     scipy_result = exp1(random_array)
     torch_result = torch_exp1(random_tensor)

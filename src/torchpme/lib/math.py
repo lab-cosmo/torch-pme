@@ -72,7 +72,13 @@ def exp1(input):
 
 
 def gammaincc_over_powerlaw(exponent: torch.Tensor, z: torch.Tensor) -> torch.Tensor:
-    """Function to compute the regularized incomplete gamma function complement for integer exponents."""
+    """
+    Function to compute the regularized incomplete gamma function complement for integer
+    exponents.
+    param exponent: Exponent of the power law
+    param z: Value at which to evaluate the function
+    return: Regularized incomplete gamma function complement
+    """
     if exponent == 1:
         return torch.exp(-z) / z
     if exponent == 2:
