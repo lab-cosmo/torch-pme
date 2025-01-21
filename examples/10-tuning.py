@@ -1,13 +1,27 @@
-"""
+r"""
 Parameter tuning for range-separated models
 ===========================================
 
 .. currentmodule:: torchpme
 
-We explain and demonstrate parameter tuning for Ewald and PME
+:Authors: Michele Ceriotti `@ceriottm <https://github.com/ceriottm/>`_
+
+Metods to compute efficiently a long-range potential :math:`v(r)`
+usually rely on partitioning it into a short-range part, evaluated
+as a sum over neighbor pairs, and a long-range part evaluated
+in reciprocal space
+
+.. math::
+
+    v(r)= v_{\mathrm{SR}}(r) + v_{\mathrm{LR}}(r)
+
+The overall cost depend on the balance of multiple factors, that
+we summarize here briefly to explain how the cost of evaluating
+:math:`v(r)` can be minimized, either manually or automatically.
 """
 
 # %%
+# Import modules
 
 from time import time
 
@@ -22,56 +36,99 @@ import torchpme
 from torchpme.tuning.pme import PMEErrorBounds
 from torchpme.tuning.tuner import TuningTimings
 
-DTYPE = torch.float64
+device = "cpu"
+dtype = torch.float64
+rng = torch.Generator()
+rng.manual_seed(42)
 
 # get_ipython().run_line_magic("matplotlib", "inline")  # type: ignore # noqa
-# %%
-# Set up a test system of NaCl crystal
 
-positions = torch.tensor(
-    [
-        [0.0, 0, 0],
+# %%
+# Set up a test system, a supercell containing atoms with a NaCl structure
+
+structure = ase.Atoms(
+    positions=[
+        [0, 0, 0],
         [1, 0, 0],
         [0, 1, 0],
-        [0, 0, 1],
         [1, 1, 0],
+        [0, 0, 1],
         [1, 0, 1],
         [0, 1, 1],
         [1, 1, 1],
     ],
-    dtype=DTYPE,
+    cell=[2, 2, 2],
+    symbols="NaClClNaClNaNaCl",
 )
-charges = torch.tensor([+1.0, -1, -1, -1, +1, +1, +1, -1], dtype=DTYPE).reshape(-1, 1)
-cell = 2 * torch.eye(3, dtype=DTYPE)
-madelung_ref = 1.7475645946
-num_formula_units = 4
+structure = structure.repeat([3, 3, 3])
+num_formula_units = len(structure) // 2
 
-atoms = ase.Atoms("NaCl3Na3Cl", positions, cell=cell)
+# Uncomment these to add a displacement (energy won't match the Madelung constant)
+# displacement = torch.normal(
+#    mean=0.0, std=2.5e-1, size=(len(structure), 3), generator=rng
+# )
+# structure.positions += displacement.numpy()
+
+positions = torch.from_numpy(structure.positions).to(device=device, dtype=dtype)
+cell = torch.from_numpy(structure.cell.array).to(device=device, dtype=dtype)
+
+charges = torch.tensor(
+    [[1.0], [-1.0], [-1.0], [1.0], [-1.0], [1.0], [1.0], [-1.0]]
+    * (len(structure) // 8),
+    dtype=dtype,
+    device=device,
+).reshape(-1, 1)
+
+# Uncomment these to randomize charges (energy won't match the Madelung constant)
+# charges += torch.normal(mean=0.0, std=1e-1, size=(len(charges), 1), generator=rng)
 
 
 # %%
-# Here we calculate the potential energy of the system, and compare it with the
-# madelung constant to calculate the error. This is the actual error. Then we use
-# the :class:`torchpme.tuning.pme.PMEErrorBounds` to calculate the error bound for
-# PME. You can see that the actual error is smaller than the error bound.
+# Setting up a PME calculator
+# ---------------------------
+#
+# To set up a PME calculation, we need to define its basic parameters and
+# setup a few preliminary quantities.
+#
+# First, we need to evaluate the neighbor list; this is usually pre-computed
+# by the code that calls `torch-pme`, and entails the first key parameter:
+# the cutoff used to compute the real-space potential :math:`v_\mathrm{SR}(r)`
 
-smearing = 0.5
-pme_params = {"mesh_spacing": 0.5, "interpolation_nodes": 4}
 cutoff = 5.0
 
-max_cutoff = 32.0
-
-nl = vesin.NeighborList(cutoff=max_cutoff, full_list=False)
+# use `vesin`
+nl = vesin.NeighborList(cutoff=cutoff, full_list=False)
 i, j, S, d = nl.compute(points=positions, box=cell, periodic=True, quantities="ijSd")
 neighbor_indices = torch.stack([i, j], dim=1)
 neighbor_shifts = S
 neighbor_distances = d
 
+# %%
+#
+# The PME calculator has a few further parameters: ``smearing``, that determines
+# aggressive is the smoothing of the point charges. This makes the reciprocal-space
+# part easier to compute, but makes :math:`v_\mathrm{SR}(r)` decay more slowly,
+# and error that we shall investigate further later on.
+# The mesh parameters involve both the spacing and the order of the interpolation
+# used. Note that here we use :class:`CoulombPotential`, that computes a simple
+# :math:`1/r` electrostatic interaction.
+
+smearing = 1.0
+pme_params = {"mesh_spacing": 1.0, "interpolation_nodes": 4}
 
 pme = torchpme.PMECalculator(
     potential=torchpme.CoulombPotential(smearing=smearing),
     **pme_params,  # type: ignore[arg-type]
 )
+
+# %%
+# Run the calculator
+# ------------------
+#
+# We combine the structure data and the neighbor list information to
+# compute the potential at the particle positions, and then the
+# energy
+
 potential = pme(
     charges=charges,
     cell=cell,
@@ -83,15 +140,22 @@ potential = pme(
 energy = charges.T @ potential
 madelung = (-energy / num_formula_units).flatten().item()
 
+# %%
+# Compute error bounds
+# --------------------
+#
+# Here we calculate the potential energy of the system, and compare it with the
+# madelung constant to calculate the error. This is the actual error. Then we use
+# the :class:`torchpme.tuning.pme.PMEErrorBounds` to calculate the error bound for
+# PME. You can see that the actual error is smaller than the error bound.
+
+
 # this is the estimated error
 error_bounds = PMEErrorBounds(charges, cell, positions)
 
-estimated_error = error_bounds(
-    cutoff=max_cutoff, smearing=smearing, **pme_params
-).item()
+estimated_error = error_bounds(cutoff=cutoff, smearing=smearing, **pme_params).item()
 
 # and this is how long it took to run with these parameters (est.)
-
 timings = TuningTimings(
     charges,
     cell,
