@@ -16,13 +16,13 @@ class EwaldCalculator(Calculator):
 
     For getting reasonable values for the ``smaring`` of the potential class and  the
     ``lr_wavelength`` based on a given accuracy for a specific structure you should use
-    :func:`torchpme.utils.tuning.tune_ewald`. This function will also find the optimal
+    :func:`torchpme.tuning.tune_ewald`. This function will also find the optimal
     ``cutoff`` for the  **neighborlist**.
 
     .. hint::
 
         For a training exercise it is recommended only run a tuning procedure with
-        :func:`torchpme.utils.tuning.tune_ewald` for the largest system in your dataset.
+        :func:`torchpme.tuning.tune_ewald` for the largest system in your dataset.
 
     For a :math:`\mathcal{O}(N^{1.5})` scaling, one can set the parameters as following:
 

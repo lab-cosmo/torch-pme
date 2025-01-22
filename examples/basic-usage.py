@@ -123,7 +123,7 @@ lr_wavelength = smearing / 2
 #
 # However, especially for users without much experience on how to choose these
 # hyperparameters, we have built-in tuning functions for each Calculator (see below)
-# such as :func:`torchpme.utils.tune_ewald`, which can automatically find a good set
+# such as :func:`torchpme.tuning.tune_ewald`, which can automatically find a good set
 # of parameters. These can be used like this:
 #
 # .. code-block:: python
