@@ -28,12 +28,16 @@ Added
 #####
 
 * Added ``dtype`` and ``device`` for ``Calculator`` classses
+* Added an example on the tuning scheme and usage, and how to optimize the ``cutoff``
 
 Changed
 #######
 
 * Removed ``utils`` module. ``utils.tuning`` and ``utils.prefactor`` are now in the root
   of the package. ``utils.splines`` is now in the ``lib`` module.
+* The tuning now uses a grid-search based scheme, instead of a gradient based scheme.
+* The tuning functions no longer takes the ``cutoff`` parameter, and thus does not
+  support a built-in NL calculation.
 
 Fixed
 #####
