@@ -54,7 +54,7 @@ def tune_ewald(
 
     :return: Tuple containing a float of the optimal smearing for the :class:
         `CoulombPotential`, and a dictionary with the parameters for
-        :class:`EwaldCalculator`.
+        :class:`EwaldCalculator`, and the timing of this set of parameters.
 
     Example
     -------
@@ -109,6 +109,11 @@ def tune_ewald(
     if any(err < accuracy for err in errs):
         return smearing, params[timings.index(min(timings))]
     # No parameter meets the requirement, return the one with the smallest error
+    warn(
+        f"No parameter meets the accuracy requirement.\n"
+        f"Returning the parameter with the smallest error, which is {min(errs)}.\n",
+        stacklevel=1,
+    )
     return smearing, params[errs.index(min(errs))]
 
 

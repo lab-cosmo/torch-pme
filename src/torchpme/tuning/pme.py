@@ -1,6 +1,7 @@
 import math
 from itertools import product
 from typing import Optional
+from warnings import warn
 
 import torch
 
@@ -55,7 +56,8 @@ def tune_pme(
 
     :return: Tuple containing a float of the optimal smearing for the :class:
         `CoulombPotential`, a dictionary with the parameters for :class:`PMECalculator`
-        and a float of the optimal cutoff value for the neighborlist computation.
+        and a float of the optimal cutoff value for the neighborlist computation, and
+        the timing of this set of parameters.
 
     Example
     -------
@@ -76,7 +78,7 @@ def tune_pme(
     >>> neighbor_indices = torch.tensor(
     ...     [[0, 1], [0, 1], [0, 1], [0, 1], [0, 1], [0, 1], [0, 1]]
     ... )
-    >>> smearing, parameter = tune_pme(
+    >>> smearing, parameter, timing = tune_pme(
     ...     charges,
     ...     cell,
     ...     positions,
@@ -116,12 +118,18 @@ def tune_pme(
     smearing = tuner.estimate_smearing(accuracy)
     errs, timings = tuner.tune(accuracy)
 
+    # There are multiple errors below the accuracy, return the one with the shortest
+    # calculation time. The timing of those parameters leading to an higher error
+    # than the accuracy are set to infinity
     if any(err < accuracy for err in errs):
-        # There are multiple errors below the accuracy, return the one with the shortest
-        # calculation time. The timing of those parameters leading to an higher error
-        # than the accuracy are set to infinity
         return smearing, params[timings.index(min(timings))], min(timings)
-    # No parameter meets the requirement, return the one with the smallest error
+    # No parameter meets the requirement, return the one with the smallest error, and
+    # throw a warning
+    warn(
+        f"No parameter meets the accuracy requirement.\n"
+        f"Returning the parameter with the smallest error, which is {min(errs)}.\n",
+        stacklevel=1,
+    )
     return smearing, params[errs.index(min(errs))], timings[errs.index(min(errs))]
 
 
