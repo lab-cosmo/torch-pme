@@ -364,7 +364,7 @@ integrator = ase.md.Langevin(
 # ------------------
 #
 # We now have everything in place run the simulation for 50 steps
-# (:math:`0.5\,\mathrm{ps}`) and collect the potential, kinetic and total energy as well
+# (:math:`2\,\mathrm{fs}`) and collect the potential, kinetic and total energy as well
 # as the temperature and pressure.
 
 n_steps = 500
@@ -427,7 +427,7 @@ ax[1].set_ylabel("temperature [K]")
 ax[2].plot(time, pressure)
 ax[2].set_ylabel("pressure [eV Å$^{-3}$]")
 
-ax[-1].set_xlabel("time / ps")
+ax[-1].set_xlabel("time / fs")
 
 fig.align_labels()
 plt.show()
@@ -513,8 +513,17 @@ p3m_energy = atoms.get_potential_energy()
 p3m_forces = atoms.get_forces()
 
 print(
-    f"Energy (Ewald): {ewald_energy}\nEnergy (PME):   {pme_energy}\nEnergy (P3M):   {p3m_energy}\n"
+    f"Energy (Ewald): {ewald_energy}\n"
+    f"Energy (PME):   {pme_energy}\n"
+    f"Energy (P3M):   {p3m_energy}\n"
 )
 print(
-    f"Forces(Ewald):\n{ewald_forces}\nForces (PME):\n{pme_forces}\nForces (P3M):\n{p3m_forces}\n"
+    f"Forces (Ewald):\n{ewald_forces}\n\n"
+    f"Forces (PME):\n{pme_forces}\n\n"
+    f"Forces (P3M):\n{p3m_forces}"
 )
+
+
+# %%
+#
+# The above output shows us that these values are very close to each other, as expected.
