@@ -19,8 +19,6 @@ model to run it with the ASE calculator. For learning these details we refer to 
 
 # %%
 
-# sphinx_gallery_thumbnail_number = 2
-
 from typing import Dict, List, Optional  # noqa
 
 # tools to run the simulation and visualization
@@ -158,7 +156,7 @@ class CalculatorModel(torch.nn.Module):
 
         self.calculator = calculator
 
-        # We use as half neighborlist and allow to have pairs farther than cutoff
+        # We use a half neighborlist and allow to have pairs farther than cutoff
         # (`strict=False`) since this is not problematic for PME and may speed up the
         # computation of the neigbors.
         self.nl = NeighborListOptions(cutoff=cutoff, full_list=False, strict=False)
@@ -413,7 +411,7 @@ chemiscope.show(
 
 fig, ax = plt.subplots(3, figsize=(8, 5), sharex=True)
 
-time = 0.5 * np.arange(n_steps)
+time = 2.0 * np.arange(n_steps)
 
 ax[0].plot(time, potential_energy, label="potential energy")
 ax[0].plot(time, kinetic_energy, label="kinetic energy")
