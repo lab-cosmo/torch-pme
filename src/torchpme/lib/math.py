@@ -13,7 +13,7 @@ def gamma(x: torch.Tensor) -> torch.Tensor:
     return torch.exp(gammaln(x))
 
 
-class CustomExp1(torch.autograd.Function):
+class _CustomExp1(torch.autograd.Function):
     """
     Compute the exponential integral E1(x) for x > 0.
     :param input: Input tensor (x > 0)
@@ -22,6 +22,8 @@ class CustomExp1(torch.autograd.Function):
 
     @staticmethod
     def forward(ctx, input):
+        # this implementation is inspired by the one in scipy:
+        # https://github.com/scipy/scipy/blob/34d91ce06d4d05e564b79bf65288284247b1f3e3/scipy/special/xsf/expint.h#L22
         ctx.save_for_backward(input)
 
         # Constants
@@ -68,7 +70,7 @@ class CustomExp1(torch.autograd.Function):
 
 def exp1(input):
     """Wrapper for the custom exponential integral function."""
-    return CustomExp1.apply(input)
+    return _CustomExp1.apply(input)
 
 
 def gammaincc_over_powerlaw(exponent: torch.Tensor, z: torch.Tensor) -> torch.Tensor:
