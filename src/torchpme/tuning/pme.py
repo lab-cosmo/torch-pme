@@ -1,6 +1,6 @@
 import math
 from itertools import product
-from typing import Optional
+from typing import Any, Optional
 from warnings import warn
 
 import torch
@@ -25,7 +25,7 @@ def tune_pme(
     accuracy: float = 1e-3,
     dtype: Optional[torch.dtype] = None,
     device: Optional[torch.device] = None,
-) -> tuple[float, dict[str, float], float]:
+) -> tuple[float, dict[str, Any], float]:
     r"""
     Find the optimal parameters for :class:`torchpme.PMECalculator`.
 
