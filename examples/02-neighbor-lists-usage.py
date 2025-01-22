@@ -102,7 +102,7 @@ neighbor_indices, neighbor_distances = nl.compute(
     quantities="Pd",
 )
 
-smearing, pme_params = tune_pme(
+smearing, pme_params, _ = tune_pme(
     charges=charges,
     cell=cell,
     positions=positions,
