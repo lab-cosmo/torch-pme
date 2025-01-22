@@ -59,7 +59,7 @@ structure = ase.Atoms(
     cell=[2, 2, 2],
     symbols="NaClClNaClNaNaCl",
 )
-structure = structure.repeat([3, 3, 3])
+structure = structure.repeat([2, 2, 2])
 num_formula_units = len(structure) // 2
 
 # Uncomment these to add a displacement (energy won't match the Madelung constant)
