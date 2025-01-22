@@ -211,6 +211,7 @@ class GridSearchTuner(TunerBase):
         for param in self.params:
             error = self.error_bounds(smearing=smearing, cutoff=self.cutoff, **param)  # type: ignore[call-arg]
             param_errors.append(float(error))
+            # only computes timings for parameters that meet the accuracy requirements
             param_timings.append(
                 self._timing(smearing, param) if error <= accuracy else float("inf")
             )
