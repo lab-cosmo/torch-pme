@@ -72,7 +72,7 @@ def tune_ewald(
     >>> neighbor_indices = torch.tensor(
     ...     [[0, 1], [0, 1], [0, 1], [0, 1], [0, 1], [0, 1], [0, 1]]
     ... )
-    >>> smearing, parameter = tune_ewald(
+    >>> smearing, parameter, timing = tune_ewald(
     ...     charges,
     ...     cell,
     ...     positions,

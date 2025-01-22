@@ -72,7 +72,6 @@ def test_parameter_choose(calculator, tune, param_length, accuracy):
         accuracy=accuracy,
     )
 
-    # TODO: do some reasonable assert on the time?
     assert time > 0
     assert len(params) == param_length
 
