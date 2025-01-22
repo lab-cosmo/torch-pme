@@ -14,17 +14,11 @@ def gamma(x: torch.Tensor) -> torch.Tensor:
 
 
 class _CustomExp1(torch.autograd.Function):
-    """
-    Compute the exponential integral E1(x) for x > 0.
-    :param input: Input tensor (x > 0)
-    :return: Exponential integral E1(x)
-    """
-
     @staticmethod
-    def forward(ctx, input):
+    def forward(ctx, x):
         # this implementation is inspired by the one in scipy:
         # https://github.com/scipy/scipy/blob/34d91ce06d4d05e564b79bf65288284247b1f3e3/scipy/special/xsf/expint.h#L22
-        ctx.save_for_backward(input)
+        ctx.save_for_backward(x)
 
         # Constants
         SCIPY_EULER = (
@@ -33,11 +27,11 @@ class _CustomExp1(torch.autograd.Function):
         inf = torch.inf
 
         # Handle case when x == 0
-        result = torch.full_like(input, inf)
-        mask = input > 0
+        result = torch.full_like(x, inf)
+        mask = x > 0
 
         # Compute for x <= 1
-        x_small = input[mask & (input <= 1)]
+        x_small = x[mask & (x <= 1)]
         if x_small.numel() > 0:
             e1 = torch.ones_like(x_small)
             r = torch.ones_like(x_small)
@@ -46,40 +40,49 @@ class _CustomExp1(torch.autograd.Function):
                 e1 += r
                 if torch.all(torch.abs(r) <= torch.abs(e1) * 1e-15):
                     break
-            result[mask & (input <= 1)] = (
-                -SCIPY_EULER - torch.log(x_small) + x_small * e1
-            )
+            result[mask & (x <= 1)] = -SCIPY_EULER - torch.log(x_small) + x_small * e1
 
         # Compute for x > 1
-        x_large = input[mask & (input > 1)]
+        x_large = x[mask & (x > 1)]
         if x_large.numel() > 0:
             m = 20 + (80.0 / x_large).to(torch.int32)
             t0 = torch.zeros_like(x_large)
             for k in range(m.max(), 0, -1):
                 t0 = k / (1.0 + k / (x_large + t0))
             t = 1.0 / (x_large + t0)
-            result[mask & (input > 1)] = torch.exp(-x_large) * t
+            result[mask & (x > 1)] = torch.exp(-x_large) * t
 
         return result
 
     @staticmethod
     def backward(ctx, grad_output):
-        (input,) = ctx.saved_tensors
-        return -grad_output * torch.exp(-input) / input
+        (x,) = ctx.saved_tensors
+        return -grad_output * torch.exp(-x) / x
 
 
-def exp1(input):
-    """Wrapper for the custom exponential integral function."""
-    return _CustomExp1.apply(input)
+def exp1(x):
+    r"""
+    Exponential integral E1.
+
+    For a real number :math:`x > 0` the exponential integral can be defined as
+
+    .. math::
+
+        E1(x) = \int_{x}^{\infty} \frac{e^{-t}}{t} dt
+
+    :param x: Input tensor (x > 0)
+    :return: Exponential integral E1(x)
+    """
+    return _CustomExp1.apply(x)
 
 
 def gammaincc_over_powerlaw(exponent: torch.Tensor, z: torch.Tensor) -> torch.Tensor:
     """
-    Function to compute the regularized incomplete gamma function complement for integer
-    exponents.
-    param exponent: Exponent of the power law
-    param z: Value at which to evaluate the function
-    return: Regularized incomplete gamma function complement
+    Compute the regularized incomplete gamma function complement for integer exponents.
+
+    :param exponent: Exponent of the power law
+    :param z: Value at which to evaluate the function
+    :return: Regularized incomplete gamma function complement
     """
     if exponent == 1:
         return torch.exp(-z) / z
