@@ -62,7 +62,7 @@ def test_parameter_choose(calculator, tune, param_length, accuracy):
     # Compute neighbor list
     neighbor_indices, neighbor_distances = _nl_calculation(pos, cell)
 
-    smearing, params = tune(
+    smearing, params, _ = tune(
         charges,
         cell,
         pos,

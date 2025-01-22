@@ -82,7 +82,7 @@ def tune_p3m(
     accuracy: float = 1e-3,
     dtype: Optional[torch.dtype] = None,
     device: Optional[torch.device] = None,
-):
+) -> tuple[float, dict[str, float], float]:
     r"""
     Find the optimal parameters for :class:`torchpme.calculators.pme.PMECalculator`.
 
