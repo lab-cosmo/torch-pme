@@ -120,9 +120,9 @@ def tune_pme(
         # There are multiple errors below the accuracy, return the one with the shortest
         # calculation time. The timing of those parameters leading to an higher error
         # than the accuracy are set to infinity
-        return smearing, params[timings.index(min(timings))]
+        return smearing, params[timings.index(min(timings))], min(timings)
     # No parameter meets the requirement, return the one with the smallest error
-    return smearing, params[errs.index(min(errs))]
+    return smearing, params[errs.index(min(errs))], timings[errs.index(min(errs))]
 
 
 class PMEErrorBounds(TuningErrorBounds):

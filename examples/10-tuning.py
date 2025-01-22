@@ -213,20 +213,29 @@ def timed_madelung(cutoff, smearing, mesh_spacing, interpolation_nodes):
         potential=torchpme.CoulombPotential(smearing=smearing),
         mesh_spacing=mesh_spacing,
         interpolation_nodes=interpolation_nodes,
-    )
-    start = time()
+    )   
     potential = pme(
         charges=charges,
         cell=cell,
         positions=positions,
         neighbor_indices=filter_indices,
         neighbor_distances=filter_distances,
-    )
+    )    
     energy = charges.T @ potential
     madelung = (-energy / num_formula_units).flatten().item()
-    end = time()
 
-    return madelung, end - start
+    timings = TuningTimings(
+        charges,
+        cell,
+        positions,
+        neighbor_indices=filter_indices,
+        neighbor_distances=filter_distances,
+        run_backward=True,
+        n_warmup=1,
+        n_repeat=4
+    )
+    estimated_timing = timings(pme)    
+    return madelung, estimated_timing
 
 smearing_grid = torch.logspace(-1, 0.5, 8)
 spacing_grid = torch.logspace(-1, 0.5, 9)
@@ -300,11 +309,6 @@ cbar = fig.colorbar(contour, ax=ax[2], label="time / s")
 cbar.ax.set_yscale("log")
 
 # %%
-
-torch.Tensor([5.0]*len(smearing_grid))
-smearing_grid 
-
-# %%
 # Optimizing the smearing
 # ~~~~~~~~~~~~~~~~~~~~~~~
 # The error is a sum of an error on the real-space evaluation of the 
@@ -336,12 +340,53 @@ ax.legend()
 # Given the simple, monotonic and fast-varying trend for the real-space error, 
 # it is easy to pick the optimal smearing as the value corresponding to roughly 
 # half of the target error -e.g. for a target accuracy of :math:`1e^{-5}`, 
-# one would pick a smearing of about 1Å. 
+# one would pick a smearing of about 1Å. Given that usually there is a 
+# cost/accuracy tradeoff, and smaller smearings make the reciprocal-space evaluation
+# more costly, the largest smearing is the best choice here.
 
 # %%
 # Optimizing mesh and interpolation order
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# 
+# Once the smearing value that gives an acceptable accuracy for the real-space
+# component has been determined, there may be other parameters that need to be
+# optimized. One way to do this is to perform a grid search, and pick, among the 
+# parameters that yield an error below the threshold, those that empirically lead
+# to the fastest evaluation.
+
+spacing_grid = torch.logspace(-1.2, 1, 8)
+nint_grid = [3,4,5,6]
+results = np.zeros((len(nint_grid), len(spacing_grid)))
+timings = np.zeros((len(nint_grid), len(spacing_grid)))
+bounds = np.zeros((len(nint_grid), len(spacing_grid)))
+for inint, nint in enumerate(nint_grid):
+    for isp, spacing in enumerate(spacing_grid):
+        results[inint, isp], timings[inint, isp] = timed_madelung(5.0, 1.0, spacing, nint)
+        bounds[inint, isp] = error_bounds(5.0, 1.0, spacing, nint)
+
+# %%
+
+fig, ax = plt.subplots(1, 2, figsize=(8, 3), constrained_layout=True)
+ax[0].loglog(spacing_grid, bounds[0], 'r-', label="smearing 1Å, n.int: 3")
+ax[0].loglog(spacing_grid, bounds[1], '-', color='#AA0066',
+              label="smearing 1Å, n00.int: 4")
+ax[0].loglog(spacing_grid, bounds[2], '-', color='#6600AA',
+              label="smearing 1Å, n.int: 5")
+ax[0].loglog(spacing_grid, bounds[3], '-', color='b',
+              label="smearing 1Å, n.int: 6")
+
+ax[0].set_ylabel(r"estimated error / a.u.")
+ax[0].set_xlabel(r"mesh spacing / Å")
+ax[0].set_title("cutoff = 5.0 Å")
+ax[0].set_ylim(1e-6,2)
+ax[0].legend()
+
+ax[1].loglog(spacing_grid, timings[0], 'r-', label="smearing 1Å, n.int: 3")
+ax[1].loglog(spacing_grid, timings[1], '-', color='#AA0066',
+              label="smearing 1Å, n.int: 4")
+ax[1].loglog(spacing_grid, timings[2], '-', color='#6600AA',
+              label="smearing 1Å, n.int: 5")
+ax[1].loglog(spacing_grid, timings[3], '-', color='b',
+              label="smearing 1Å, n.int: 6")
 
 # %%
 # word bank
