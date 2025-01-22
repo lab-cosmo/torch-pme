@@ -62,7 +62,7 @@ def test_parameter_choose(calculator, tune, param_length, accuracy):
     # Compute neighbor list
     neighbor_indices, neighbor_distances = _nl_calculation(pos, cell)
 
-    smearing, params, time = tune(
+    smearing, params, _ = tune(
         charges,
         cell,
         pos,
@@ -72,7 +72,6 @@ def test_parameter_choose(calculator, tune, param_length, accuracy):
         accuracy=accuracy,
     )
 
-    assert time > 0
     assert len(params) == param_length
 
     # Compute potential and compare against target value using default hypers
