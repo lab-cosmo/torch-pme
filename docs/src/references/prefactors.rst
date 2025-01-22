@@ -16,6 +16,6 @@ the elementary charge.
 To perform conversions from SI units to other unit systems, you can multiply by the
 appropriate units of energy and divide by the appropriate units of length.
 
-.. automodule:: torchpme.utils.prefactors
+.. automodule:: torchpme.prefactors
     :members:
     :undoc-members:

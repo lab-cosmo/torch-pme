@@ -84,7 +84,7 @@ Here is a simple example to get started with *torch-pme*:
    neighbor_distances = torch.zeros((0,))
 
    # Tune P3M parameters (cutoff optional, useful to set for ML with fixed cutoff)
-   smearing, p3m_parameters, _ = torchpme.utils.tune_p3m(
+   smearing, p3m_parameters, _ = torchpme.tuning.tune_p3m(
       sum_squared_charges=1,
       cell=cell,
       positions=positions,
@@ -163,7 +163,7 @@ Thanks goes to all people that make *torch-pme* possible:
 
 .. |tests| image:: https://github.com/lab-cosmo/torch-pme/workflows/Tests/badge.svg
    :alt: Github Actions Tests Job Status
-   :target: https://github.com/lab-cosmo/torch-pme/actions?query=workflow%3ATests
+   :target: https://github.com/lab-cosmo/torch-pme/actions?query=branch%3Amain
 
 .. |codecov| image:: https://codecov.io/gh/lab-cosmo/torch-pme/graph/badge.svg?token=srVKRy7r6m
    :alt: Code coverage

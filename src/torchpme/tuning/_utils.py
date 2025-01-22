@@ -1,8 +1,5 @@
 import torch
 
-from . import prefactors, splines  # noqa
-from .splines import CubicSpline, CubicSplineReciprocal
-
 
 def _validate_parameters(
     charges: torch.Tensor,
@@ -76,9 +73,3 @@ def _validate_parameters(
             f"shape {list(charges.shape)} where positions contains "
             f"{len(positions)} atoms"
         )
-
-
-__all__ = [
-    "CubicSpline",
-    "CubicSplineReciprocal",
-]

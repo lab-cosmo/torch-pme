@@ -6,7 +6,7 @@ from warnings import warn
 import torch
 
 from ..calculators import P3MCalculator
-from ..utils import _validate_parameters
+from ._utils import _validate_parameters
 from .tuner import GridSearchTuner, TuningErrorBounds
 
 # Coefficients for the P3M Fourier error,

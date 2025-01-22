@@ -5,7 +5,7 @@ from warnings import warn
 import torch
 
 from ..calculators import EwaldCalculator
-from ..utils import _validate_parameters
+from ._utils import _validate_parameters
 from .tuner import GridSearchTuner, TuningErrorBounds
 
 
