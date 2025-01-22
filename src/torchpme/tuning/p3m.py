@@ -106,8 +106,10 @@ def tune_p3m(
         is
     :param nodes_lo: Minimum number of interpolation nodes
     :param nodes_hi: Maximum number of interpolation nodes
-    :param mesh_lo: Minimum number of mesh points per axis
-    :param mesh_hi: Maximum number of mesh points per axis
+    :param mesh_lo: Controls the minimum number of mesh points along the shortest axis,
+        :math:`2^{mesh_lo}`
+    :param mesh_hi: Controls the maximum number of mesh points along the shortest axis,
+        :math:`2^{mesh_hi}`
     :param accuracy: Recomended values for a balance between the accuracy and speed is
         :math:`10^{-3}`. For more accurate results, use :math:`10^{-6}`.
 

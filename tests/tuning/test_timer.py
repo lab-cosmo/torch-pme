@@ -39,8 +39,8 @@ def _nl_calculation(pos, cell):
 
 
 def test_timer():
-    n_repeat_1 = 4
-    n_repeat_2 = 8
+    n_repeat_1 = 8
+    n_repeat_2 = 16
     pos, charges, cell, madelung_ref, num_units = define_crystal()
     neighbor_indices, neighbor_distances = _nl_calculation(pos, cell)
 
