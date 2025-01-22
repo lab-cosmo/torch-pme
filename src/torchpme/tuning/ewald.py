@@ -22,7 +22,7 @@ def tune_ewald(
     accuracy: float = 1e-3,
     dtype: Optional[torch.dtype] = None,
     device: Optional[torch.device] = None,
-) -> tuple[float, dict[str, float]]:
+) -> tuple[float, dict[str, float], float]:
     r"""
     Find the optimal parameters for :class:`torchpme.EwaldCalculator`.
 
@@ -108,14 +108,14 @@ def tune_ewald(
     # calculation time. The timing of those parameters leading to an higher error than
     # the accuracy are set to infinity
     if any(err < accuracy for err in errs):
-        return smearing, params[timings.index(min(timings))]
+        return smearing, params[timings.index(min(timings))], min(timings)
     # No parameter meets the requirement, return the one with the smallest error
     warn(
         f"No parameter meets the accuracy requirement.\n"
         f"Returning the parameter with the smallest error, which is {min(errs)}.\n",
         stacklevel=1,
     )
-    return smearing, params[errs.index(min(errs))]
+    return smearing, params[errs.index(min(errs))], timings[errs.index(min(errs))]
 
 
 class EwaldErrorBounds(TuningErrorBounds):

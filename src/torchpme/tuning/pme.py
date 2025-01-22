@@ -25,7 +25,7 @@ def tune_pme(
     accuracy: float = 1e-3,
     dtype: Optional[torch.dtype] = None,
     device: Optional[torch.device] = None,
-):
+) -> tuple[float, dict[str, float], float]:
     r"""
     Find the optimal parameters for :class:`torchpme.PMECalculator`.
 

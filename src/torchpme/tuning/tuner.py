@@ -6,7 +6,7 @@ import torch
 
 from ..calculators import Calculator
 from ..potentials import InversePowerLawPotential
-from ..utils import _validate_parameters
+from ._utils import _validate_parameters
 
 
 class TuningErrorBounds(torch.nn.Module):
