@@ -23,8 +23,6 @@ we summarize here briefly to explain how the cost of evaluating
 # %%
 # Import modules
 
-from time import time
-
 import ase
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -33,7 +31,7 @@ import torch
 import vesin.torch as vesin
 
 import torchpme
-from torchpme.tuning.pme import PMEErrorBounds
+from torchpme.tuning.pme import PMEErrorBounds, tune_pme
 from torchpme.tuning.tuner import TuningTimings
 
 device = "cpu"
@@ -83,15 +81,9 @@ charges = torch.tensor(
 # Uncomment these to randomize charges (energy won't match the Madelung constant)
 # charges += torch.normal(mean=0.0, std=1e-1, size=(len(charges), 1), generator=rng)
 
-
 # %%
-# Demonstrate errors and timings for PME
-# --------------------------------------
 #
-# To set up a PME calculation, we need to define its basic parameters and
-# setup a few preliminary quantities.
-#
-# First, we need to evaluate the neighbor list; this is usually pre-computed
+# We also need to evaluate the neighbor list; this is usually pre-computed
 # by the code that calls `torch-pme`, and entails the first key parameter:
 # the cutoff used to compute the real-space potential :math:`v_\mathrm{SR}(r)`
 
@@ -104,6 +96,15 @@ i, j, S, d = nl.compute(points=positions, box=cell, periodic=True, quantities="i
 neighbor_indices = torch.stack([i, j], dim=1)
 neighbor_shifts = S
 neighbor_distances = d
+
+
+# %%
+# Demonstrate errors and timings for PME
+# --------------------------------------
+#
+# To set up a PME calculation, we need to define its basic parameters and
+# setup a few preliminary quantities.
+#
 
 # %%
 #
@@ -149,11 +150,13 @@ madelung = (-energy / num_formula_units).flatten().item()
 # Here we calculate the potential energy of the system, and compare it with the
 # madelung constant to calculate the error. This is the actual error. Then we use
 # the :class:`torchpme.tuning.pme.PMEErrorBounds` to calculate the error bound for
-# PME. 
+# PME.
 # Error bounds are computed explicitly for a target structure
 error_bounds = PMEErrorBounds(charges, cell, positions)
 
-estimated_error = error_bounds(cutoff=max_cutoff, smearing=smearing, **pme_params).item()
+estimated_error = error_bounds(
+    cutoff=max_cutoff, smearing=smearing, **pme_params
+).item()
 
 # %%
 # ... and a similar class can be used to estimate the timings, that are assessed
@@ -169,8 +172,8 @@ timings = TuningTimings(
 estimated_timing = timings(pme)
 
 # %%
-# The error bound is estimated for the force acting on atoms, and is 
-# expressed in force units - hence, the comparison with the Madelung constant 
+# The error bound is estimated for the force acting on atoms, and is
+# expressed in force units - hence, the comparison with the Madelung constant
 # error can only be qualitative.
 
 print(
@@ -190,37 +193,40 @@ Timing: {estimated_timing} seconds
 # of a range-separated calculator like PME, and it is necessary
 # to optimize them to obtain the best possible accuracy/cost tradeoff.
 # In most practical use cases, the cutoff is dictated by the external
-# calculator and is treated as a fixed parameter. In cases where 
+# calculator and is treated as a fixed parameter. In cases where
 # performance is critical, one may want to optimize this separately,
 # which can be achieved easily with a grid or binary search.
-# 
-# We can set up easily a brute-force evaluation of the error as a 
-# function of these parameters, and use it to guide the design of 
-# a more sophisticated optimization protocol. 
+#
+# We can set up easily a brute-force evaluation of the error as a
+# function of these parameters, and use it to guide the design of
+# a more sophisticated optimization protocol.
+
 
 def filter_neighbors(cutoff, neighbor_indices, neighbor_distances):
-    
     assert cutoff <= max_cutoff
 
     filter_idx = torch.where(neighbor_distances <= cutoff)
 
     return neighbor_indices[filter_idx], neighbor_distances[filter_idx]
 
+
 def timed_madelung(cutoff, smearing, mesh_spacing, interpolation_nodes):
-    filter_indices, filter_distances = filter_neighbors(cutoff, neighbor_indices, neighbor_distances)
+    filter_indices, filter_distances = filter_neighbors(
+        cutoff, neighbor_indices, neighbor_distances
+    )
 
     pme = torchpme.PMECalculator(
         potential=torchpme.CoulombPotential(smearing=smearing),
         mesh_spacing=mesh_spacing,
         interpolation_nodes=interpolation_nodes,
-    )   
+    )
     potential = pme(
         charges=charges,
         cell=cell,
         positions=positions,
         neighbor_indices=filter_indices,
         neighbor_distances=filter_distances,
-    )    
+    )
     energy = charges.T @ potential
     madelung = (-energy / num_formula_units).flatten().item()
 
@@ -232,10 +238,11 @@ def timed_madelung(cutoff, smearing, mesh_spacing, interpolation_nodes):
         neighbor_distances=filter_distances,
         run_backward=True,
         n_warmup=1,
-        n_repeat=4
+        n_repeat=4,
     )
-    estimated_timing = timings(pme)    
+    estimated_timing = timings(pme)
     return madelung, estimated_timing
+
 
 smearing_grid = torch.logspace(-1, 0.5, 8)
 spacing_grid = torch.logspace(-1, 0.5, 9)
@@ -311,36 +318,42 @@ cbar.ax.set_yscale("log")
 # %%
 # Optimizing the smearing
 # ~~~~~~~~~~~~~~~~~~~~~~~
-# The error is a sum of an error on the real-space evaluation of the 
-# short-range potential, and of a long-range error. Considering the 
+# The error is a sum of an error on the real-space evaluation of the
+# short-range potential, and of a long-range error. Considering the
 # cutoff as given, the short-range error is determined easily by how
-# quickly :math:`v_\mathrm{sr}(r)` decays to zero, which depends on 
+# quickly :math:`v_\mathrm{sr}(r)` decays to zero, which depends on
 # the Gaussian smearing.
 
 smearing_grid = torch.logspace(-0.6, 1, 20)
 err_vsr_grid = error_bounds.err_rspace(smearing_grid, torch.tensor([5.0]))
-err_vlr_grid_4 = [ error_bounds.err_kspace(torch.tensor([s]), 
-                                         torch.tensor([1.0]), 
-                                         torch.tensor([4], dtype=int)) for s in smearing_grid ] 
-err_vlr_grid_2 = [ error_bounds.err_kspace(torch.tensor([s]), 
-                                         torch.tensor([1.0]), 
-                                         torch.tensor([3], dtype=int)) for s in smearing_grid ] 
+err_vlr_grid_4 = [
+    error_bounds.err_kspace(
+        torch.tensor([s]), torch.tensor([1.0]), torch.tensor([4], dtype=int)
+    )
+    for s in smearing_grid
+]
+err_vlr_grid_2 = [
+    error_bounds.err_kspace(
+        torch.tensor([s]), torch.tensor([1.0]), torch.tensor([3], dtype=int)
+    )
+    for s in smearing_grid
+]
 
 fig, ax = plt.subplots(1, 1, figsize=(4, 3), constrained_layout=True)
-ax.loglog(smearing_grid, err_vsr_grid, 'r-', label="real-space")
-ax.loglog(smearing_grid, err_vlr_grid_4, 'b-', label="k-space (spacing: 1Å, n.int.: 4)")
-ax.loglog(smearing_grid, err_vlr_grid_2, 'c-', label="k-space (spacing: 1Å, n.int.: 2)")
+ax.loglog(smearing_grid, err_vsr_grid, "r-", label="real-space")
+ax.loglog(smearing_grid, err_vlr_grid_4, "b-", label="k-space (spacing: 1Å, n.int.: 4)")
+ax.loglog(smearing_grid, err_vlr_grid_2, "c-", label="k-space (spacing: 1Å, n.int.: 2)")
 ax.set_ylabel(r"estimated error / a.u.")
 ax.set_xlabel(r"smearing / Å")
 ax.set_title("cutoff = 5.0 Å")
-ax.set_ylim(1e-20,2)
+ax.set_ylim(1e-20, 2)
 ax.legend()
 
 # %%
-# Given the simple, monotonic and fast-varying trend for the real-space error, 
-# it is easy to pick the optimal smearing as the value corresponding to roughly 
-# half of the target error -e.g. for a target accuracy of :math:`1e^{-5}`, 
-# one would pick a smearing of about 1Å. Given that usually there is a 
+# Given the simple, monotonic and fast-varying trend for the real-space error,
+# it is easy to pick the optimal smearing as the value corresponding to roughly
+# half of the target error -e.g. for a target accuracy of :math:`1e^{-5}`,
+# one would pick a smearing of about 1Å. Given that usually there is a
 # cost/accuracy tradeoff, and smaller smearings make the reciprocal-space evaluation
 # more costly, the largest smearing is the best choice here.
 
@@ -349,169 +362,129 @@ ax.legend()
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Once the smearing value that gives an acceptable accuracy for the real-space
 # component has been determined, there may be other parameters that need to be
-# optimized. One way to do this is to perform a grid search, and pick, among the 
+# optimized. One way to do this is to perform a grid search, and pick, among the
 # parameters that yield an error below the threshold, those that empirically lead
 # to the fastest evaluation.
 
-spacing_grid = torch.logspace(-1.2, 1, 8)
-nint_grid = [3,4,5,6]
+spacing_grid = torch.logspace(-1, 1, 10)
+nint_grid = [3, 4, 5, 6]
 results = np.zeros((len(nint_grid), len(spacing_grid)))
 timings = np.zeros((len(nint_grid), len(spacing_grid)))
 bounds = np.zeros((len(nint_grid), len(spacing_grid)))
 for inint, nint in enumerate(nint_grid):
     for isp, spacing in enumerate(spacing_grid):
-        results[inint, isp], timings[inint, isp] = timed_madelung(5.0, 1.0, spacing, nint)
+        results[inint, isp], timings[inint, isp] = timed_madelung(
+            5.0, 1.0, spacing, nint
+        )
         bounds[inint, isp] = error_bounds(5.0, 1.0, spacing, nint)
 
-# %%
 
 fig, ax = plt.subplots(1, 2, figsize=(8, 3), constrained_layout=True)
-ax[0].loglog(spacing_grid, bounds[0], 'r-', label="smearing 1Å, n.int: 3")
-ax[0].loglog(spacing_grid, bounds[1], '-', color='#AA0066',
-              label="smearing 1Å, n00.int: 4")
-ax[0].loglog(spacing_grid, bounds[2], '-', color='#6600AA',
-              label="smearing 1Å, n.int: 5")
-ax[0].loglog(spacing_grid, bounds[3], '-', color='b',
-              label="smearing 1Å, n.int: 6")
+colors = ["r", "#AA0066", "#6600AA", "b"]
+labels = [
+    "smearing 1Å, n.int: 3",
+    "smearing 1Å, n.int: 4",
+    "smearing 1Å, n.int: 5",
+    "smearing 1Å, n.int: 6",
+]
+
+# Plot original lines on ax[0]
+for i in range(4):
+    ax[0].loglog(spacing_grid, bounds[i], "-", color=colors[i], label=labels[i])
+    ax[1].loglog(spacing_grid, timings[i], "-", color=colors[i], label=labels[i])
+    # Find where condition is met
+    condition = bounds[i] < 1e-5
+    # Overlay thicker markers at the points below threshold
+    ax[0].loglog(
+        spacing_grid[condition],
+        bounds[i][condition],
+        "-o",
+        linewidth=3,
+        markersize=4,
+        color=colors[i],
+    )
+    ax[1].loglog(
+        spacing_grid[condition],
+        timings[i][condition],
+        "-o",
+        linewidth=3,
+        markersize=4,
+        color=colors[i],
+    )
 
 ax[0].set_ylabel(r"estimated error / a.u.")
 ax[0].set_xlabel(r"mesh spacing / Å")
+ax[1].set_ylabel(r"timing / s")
+ax[1].set_xlabel(r"mesh spacing / Å")
 ax[0].set_title("cutoff = 5.0 Å")
-ax[0].set_ylim(1e-6,2)
+ax[0].set_ylim(1e-6, 2)
 ax[0].legend()
 
-ax[1].loglog(spacing_grid, timings[0], 'r-', label="smearing 1Å, n.int: 3")
-ax[1].loglog(spacing_grid, timings[1], '-', color='#AA0066',
-              label="smearing 1Å, n.int: 4")
-ax[1].loglog(spacing_grid, timings[2], '-', color='#6600AA',
-              label="smearing 1Å, n.int: 5")
-ax[1].loglog(spacing_grid, timings[3], '-', color='b',
-              label="smearing 1Å, n.int: 6")
+# %%
+# The overall errors saturate to the value of the real-space error,
+# which is why we can pretty much fix the value of the smearing for a
+# given cutoff. Higher interpolation orders allow to push the accuracy
+# to higher values even with a large mesh spacing, resulting in large
+# computational savings. However, depending on the specific setup,
+# the overhead associated with the more complex interpolation (that is
+# seen in the coarse-mesh limit) could favor intermediate values
+# of ``interpolation_order``.
 
 # %%
-# word bank
+# Automatic tuning
+# ----------------
+# Even though these detailed examples are useful to understand the
+# numerics of PME, and the logic one could follow to pick the best
+# values, in practice one may want to automate the procedure.
 
-smearing_grid = torch.logspace(-1, 0.5, 8)
-spacing_grid = torch.logspace(-1, 0.5, 9)
-results = np.zeros((len(smearing_grid), len(spacing_grid)))
-timings = np.zeros((len(smearing_grid), len(spacing_grid)))
-bounds = np.zeros((len(smearing_grid), len(spacing_grid)))
-for ism, smearing in enumerate(smearing_grid):
-    for isp, spacing in enumerate(spacing_grid):
-        results[ism, isp], timings[ism, isp] = timed_madelung(8.0, smearing, spacing, 4)
-        bounds[ism, isp] = error_bounds(8.0, smearing, spacing, 4)
-
-# %%
-# We now plot the error landscape. The estimated error can be seen as a upper bound of
-# the actual error. Though the magnitude of the estimated error is higher than the
-# actual error, the trend is the same. Also, from the timing results, we can see that
-# the timing increases as the spacing decreases, while the smearing does not affect the
-# timing.
-
-vmin = 1e-12
-vmax = 2
-levels = np.geomspace(vmin, vmax, 30)
-
-fig, ax = plt.subplots(1, 3, figsize=(9, 3), sharey=True, constrained_layout=True)
-contour = ax[0].contourf(
-    spacing_grid,
-    smearing_grid,
-    bounds,
-    vmin=vmin,
-    vmax=vmax,
-    levels=levels,
-    norm=mpl.colors.LogNorm(),
-    extend="both",
-)
-ax[0].set_xscale("log")
-ax[0].set_yscale("log")
-ax[0].set_ylabel(r"$\sigma$ / Å")
-ax[0].set_xlabel(r"spacing / Å")
-ax[0].set_title("estimated error")
-cbar = fig.colorbar(contour, ax=ax[1], label="error")
-cbar.ax.set_yscale("log")
-
-contour = ax[1].contourf(
-    spacing_grid,
-    smearing_grid,
-    np.abs(results - madelung_ref),
-    vmin=vmin,
-    vmax=vmax,
-    levels=levels,
-    norm=mpl.colors.LogNorm(),
-    extend="both",
-)
-ax[1].set_xscale("log")
-ax[1].set_yscale("log")
-ax[1].set_xlabel(r"spacing / Å")
-ax[1].set_title("actual error")
-
-contour = ax[2].contourf(
-    spacing_grid,
-    smearing_grid,
-    timings,
-    levels=np.geomspace(1e-3, 2e-2, 20),
-    norm=mpl.colors.LogNorm(),
-)
-ax[2].set_xscale("log")
-ax[2].set_yscale("log")
-ax[2].set_ylabel(r"$\sigma$ / Å")
-ax[2].set_xlabel(r"spacing / Å")
-ax[2].set_title("actual timing")
-cbar = fig.colorbar(contour, ax=ax[2], label="time / s")
-cbar.ax.set_yscale("log")
-
-# cbar.ax.set_yscale('log')
-
-
-# %%
-# A good heuristic is to keep cutoff/sigma constant (easy to determine error limit,
-# also the dominating term in the real space error) to see how timings change.
-
-smearing_grid = torch.logspace(-1, 0.5, 8)
-spacing_grid = torch.logspace(-1, 0.5, 9)
-results = np.zeros((len(smearing_grid), len(spacing_grid)))
-timings = np.zeros((len(smearing_grid), len(spacing_grid)))
-for ism, smearing in enumerate(smearing_grid):
-    for isp, spacing in enumerate(spacing_grid):
-        madelung, timing = timed_madelung(smearing * 8, smearing, spacing, 4)
-        results[ism, isp] = madelung
-        timings[ism, isp] = timing
-
-
-# %%
-# Now we again plot the error landscape and the timing. The error is now dominated by
-# The ratio of the smearing and the spacing. The larger ratio, the smaller error. The
-# timing is the opposite. Thus, the error and timing are anti-correlated, to a certain
-# extent. In order to achieve a balance between the speed and accuracy, we offer a
-# auto-tuning feature. See :class:`torchpme.tuning.tuner.GridSearchTuner`.
-
-fig, ax = plt.subplots(1, 2, figsize=(7, 3), constrained_layout=True)
-contour = ax[0].contourf(
-    spacing_grid, smearing_grid, np.log10(np.abs(results - madelung_ref))
-)
-ax[0].set_xscale("log")
-ax[0].set_yscale("log")
-ax[0].set_ylabel(r"$\sigma$ / Å")
-ax[0].set_xlabel(r"spacing / Å")
-cbar = fig.colorbar(contour, ax=ax[0], label="log10(error)")
-
-contour = ax[1].contourf(spacing_grid, smearing_grid, np.log10(timings))
-ax[1].set_xscale("log")
-ax[1].set_yscale("log")
-ax[1].set_xlabel(r"spacing / Å")
-cbar = fig.colorbar(contour, ax=ax[1], label="log10(time / s)")
-
-# %%
-
-EB = torchpme.tuning.pme.PMEErrorBounds((charges**2).sum(), cell, positions)
-
-# %%
-v, t = timed_madelung(cutoff=5, smearing=1, mesh_spacing=1, interpolation_nodes=4)
-print(
-    v - madelung_ref,
-    t,
-    EB.forward(cutoff=5, smearing=1, mesh_spacing=1, interpolation_nodes=4).item(),
+smearing, parameters, timing = tune_pme(
+    accuracy=1e-5,
+    charges=charges,
+    cell=cell,
+    positions=positions,
+    cutoff=5.0,
+    neighbor_indices=neighbor_indices,
+    neighbor_distances=neighbor_distances,
 )
 
+print(f"""
+Estimated PME parameters (cutoff={5.0} Å):
+Smearing: {smearing} Å
+Mesh spacing: {parameters["mesh_spacing"]} Å
+Interpolation order: {parameters["interpolation_nodes"]}
+Estimated time per step: {timing} s
+""")
+
 # %%
+# What is the best cutoff?
+# ------------------------
+# Determining the most efficient cutoff value can be achieved by
+# running a simple search over a few "reasonable" values.
+
+cutoff_grid = torch.tensor([3.0, 4.0, 5.0, 6.0, 7.0, 8.0])
+
+timings_grid = []
+for cutoff in cutoff_grid:
+    filter_indices, filter_distances = filter_neighbors(
+        cutoff, neighbor_indices, neighbor_distances
+    )
+    smearing, parameters, timing = tune_pme(
+        accuracy=1e-5,
+        charges=charges,
+        cell=cell,
+        positions=positions,
+        cutoff=cutoff,
+        neighbor_indices=filter_indices,
+        neighbor_distances=filter_distances,
+    )
+    timings_grid.append(timing)
+
+# %%
+# Even though the trend is smooth, there is substantial variability,
+# indicating it may be worth to perform this additional tuning whenever
+# the long-range model is the bottleneck of a calculation
+
+fig, ax = plt.subplots(1, 1, figsize=(4, 3), constrained_layout=True)
+ax.plot(cutoff_grid, timings_grid, "r-*")
+ax.set_ylabel(r"avg. timings / s")
+ax.set_xlabel(r"cutoff / Å")
