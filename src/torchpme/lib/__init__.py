@@ -4,7 +4,7 @@ from .kvectors import (
     generate_kvectors_for_mesh,
     get_ns_mesh,
 )
-from .math import exp1, gamma, gammaincc_over_powerlaw
+from .math import _CustomExp1, exp1, gamma, gammaincc_over_powerlaw
 from .mesh_interpolator import MeshInterpolator
 from .splines import (
     CubicSpline,
@@ -28,6 +28,7 @@ __all__ = [
     "generate_kvectors_for_mesh",
     "get_ns_mesh",
     "gamma",
+    "_CustomExp1",
     "gammaincc_over_powerlaw",
     "exp1",
 ]
