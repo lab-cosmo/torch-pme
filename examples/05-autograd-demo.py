@@ -17,6 +17,8 @@ None of the models presented here has probably much meaning, and the use in a ML
 exercise to the reader.
 """
 
+# %%
+
 from time import time
 
 import ase
@@ -477,10 +479,11 @@ Delta-Charges gradients:
 )
 
 # %%
-# We can also time the difference in execution
+# We can also evaluate the difference in execution
 # time between the Pytorch and scripted versions of the
 # module (depending on the system, the relative efficiency
-# of the two evaluations could go either way!)
+# of the two evaluations could go either way, as this is
+# a too small system to make a difference!)
 
 duration = 0.0
 for _i in range(20):
@@ -513,5 +516,3 @@ time_jit = (duration) * 1e3 / 20
 
 # %%
 print(f"Evaluation time:\nPytorch: {time_python}ms\nJitted:  {time_jit}ms")
-
-# %%

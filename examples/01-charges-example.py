@@ -37,6 +37,7 @@ from metatensor.torch import Labels, TensorBlock
 from metatensor.torch.atomistic import NeighborListOptions, System
 
 import torchpme
+from torchpme.tuning import tune_pme
 
 # %%
 #
@@ -44,6 +45,7 @@ import torchpme
 
 symbols = ("Cs", "Cl")
 types = torch.tensor([55, 17])
+charges = torch.tensor([[1.0], [-1.0]], dtype=torch.float64)
 positions = torch.tensor([(0, 0, 0), (0.5, 0.5, 0.5)], dtype=torch.float64)
 cell = torch.eye(3, dtype=torch.float64)
 pbc = torch.tensor([True, True, True])
@@ -55,8 +57,21 @@ pbc = torch.tensor([True, True, True])
 # The ``sum_squared_charges`` is equal to ``2.0`` becaue each atom either has a charge
 # of 1 or -1 in units of elementary charges.
 
-smearing, pme_params, cutoff = torchpme.tuning.tune_pme(
-    sum_squared_charges=2.0, cell=cell, positions=positions
+cutoff = 4.4
+nl = vesin.torch.NeighborList(cutoff=cutoff, full_list=False)
+neighbor_indices, neighbor_distances = nl.compute(
+    points=positions.to(dtype=torch.float64, device="cpu"),
+    box=cell.to(dtype=torch.float64, device="cpu"),
+    periodic=True,
+    quantities="Pd",
+)
+smearing, pme_params, _ = tune_pme(
+    charges=charges,
+    cell=cell,
+    positions=positions,
+    cutoff=cutoff,
+    neighbor_indices=neighbor_indices,
+    neighbor_distances=neighbor_distances,
 )
 
 # %%
