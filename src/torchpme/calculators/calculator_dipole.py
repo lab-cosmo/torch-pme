@@ -120,12 +120,13 @@ class CalculatorDipole(torch.nn.Module):
         # For this, we precompute trigonometric factors for optimization, which leads
         # to N^2 rather than N^3 scaling.
         trig_args = kvectors @ (positions.T)  # [k, i]
-        mu_k_product = dipoles @ kvectors.T  # [i, k]
         c = torch.cos(trig_args)  # [k, i]
         s = torch.sin(trig_args)  # [k, i]
         sc = torch.stack([c, s], dim=0)  # [2 "f", k, i]
-        sc_summed_G = torch.einsum("fki, ik, ic, k->fkc", sc, mu_k_product, dipoles, G)
-        energy = torch.einsum("fkc, ik ,fki->ic", sc_summed_G, mu_k_product, sc)
+        sc_summed_G = torch.einsum("fki, ic, k->fkc", sc, dipoles, G)
+        energy = torch.einsum(
+            "fkc, fki, kc, kc ->ic", sc_summed_G, sc, kvectors, kvectors
+        )
         energy /= torch.abs(cell.det())
 
         # Remove the self-contribution: Using the Coulomb potential as an
