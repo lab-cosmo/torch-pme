@@ -119,7 +119,7 @@ class PotentialDipole(torch.nn.Module):
                 "Cannot compute long-range contribution without specifying `smearing`."
             )
         alpha = 1 / (2 * self.smearing**2)
-        return 2 * torch.pi / 3 * torch.sqrt((alpha / torch.pi) ** 3)
+        return 4 * torch.pi / 3 * torch.sqrt((alpha / torch.pi) ** 3)
 
     def background_correction(self) -> torch.Tensor:
         if self.smearing is None:
