@@ -131,8 +131,14 @@ How to Perform a Release
 2. **Update the Changelog**
 
    - Edit the changelog located in ``docs/src/references/changelog.rst``:
-     - Add a new section for the new version, summarizing the changes.
-     - Leave a placeholder section titled *Unreleased* for future updates.
+      - Add a new section for the new version, summarizing the changes.
+      - Leave a placeholder section titled *Unreleased* for future updates.
+   - Add a new back reference link in the ``.. version-list::`` of
+     ``docs/src/references/index.rst``:
+     
+     .. code-block:: rst
+
+        .. version:: 0.1.1
 
 3. **Merge the PR and Create a Tag**
 
@@ -150,6 +156,13 @@ How to Perform a Release
 4. **Finalize the GitHub Release**
 
    - Once the PR is merged, the CI will automatically:
-     - Publish the package to PyPI.
-     - Create a draft release on GitHub.
+      - Publish the package to PyPI.
+      - Create a draft release on GitHub.
    - Update the GitHub release notes by pasting the changelog for the version.
+
+5. **Merge Conda Recipe Changes**
+
+   - May resolve and then merge an automatically created PR on the `conda recipe
+     <https://github.com/conda-forge/torch-pme-feedstock>`_.
+   - Once thus PR is merged and the new version will be published automatically on the
+     `conda-forge <https://anaconda.org/conda-forge/torch-pme>`_ channel.
