@@ -223,6 +223,6 @@ class TestWorkflow:
         params["potential"].device = device
         params["potential"] = torch.jit.script(params["potential"])
         with pytest.raises(
-            AssertionError, match="Potential must be an instance of Potential, got.*"
+            TypeError, match="Potential must be an instance of Potential, got.*"
         ):
             CalculatorClass(**params)

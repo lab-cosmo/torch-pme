@@ -1,29 +1,31 @@
 import math
-from typing import Optional
+from itertools import product
+from typing import Any, Optional
+from warnings import warn
 
 import torch
 
-from ..lib import get_ns_mesh
-from ._utils import (
-    _estimate_smearing_cutoff,
-    _optimize_parameters,
-    _validate_parameters,
-)
+from ..calculators import PMECalculator
+from ._utils import _validate_parameters
+from .tuner import GridSearchTuner, TuningErrorBounds
 
 
 def tune_pme(
-    sum_squared_charges: float,
+    charges: torch.Tensor,
     cell: torch.Tensor,
     positions: torch.Tensor,
-    smearing: Optional[float] = None,
-    mesh_spacing: Optional[float] = None,
-    cutoff: Optional[float] = None,
-    interpolation_nodes: int = 4,
+    cutoff: float,
+    neighbor_indices: torch.Tensor,
+    neighbor_distances: torch.Tensor,
     exponent: int = 1,
+    nodes_lo: int = 3,
+    nodes_hi: int = 7,
+    mesh_lo: int = 2,
+    mesh_hi: int = 7,
     accuracy: float = 1e-3,
-    max_steps: int = 50000,
-    learning_rate: float = 0.1,
-):
+    dtype: Optional[torch.dtype] = None,
+    device: Optional[torch.device] = None,
+) -> tuple[float, dict[str, Any], float]:
     r"""
     Find the optimal parameters for :class:`torchpme.PMECalculator`.
 
@@ -34,38 +36,30 @@ def tune_pme(
 
         \alpha = \left(\sqrt{2}\,\mathrm{smearing} \right)^{-1}
 
-    For the optimization we use the :class:`torch.optim.Adam` optimizer. By default this
-    function optimize the ``smearing``, ``mesh_spacing`` and ``cutoff`` based on the
-    error formula given `elsewhere`_. You can limit the optimization by giving one or
-    more parameters to the function. For example in usual ML workflows the cutoff is
-    fixed and one wants to optimize only the ``smearing`` and the ``mesh_spacing`` with
-    respect to the minimal error and fixed cutoff.
-
-    :param sum_squared_charges: accumulated squared charges, must be positive
-    :param cell: single tensor of shape (3, 3), describing the bounding
-    :param positions: single tensor of shape (``len(charges), 3``) containing the
-        Cartesian positions of all point charges in the system.
-    :param smearing: if its value is given, it will not be tuned, see
-        :class:`torchpme.PMECalculator` for details
-    :param mesh_spacing: if its value is given, it will not be tuned, see
-        :class:`torchpme.PMECalculator` for details
-    :param cutoff: if its value is given, it will not be tuned, see
-        :class:`torchpme.PMECalculator` for details
-    :param interpolation_nodes: The number ``n`` of nodes used in the interpolation per
-        coordinate axis. The total number of interpolation nodes in 3D will be ``n^3``.
-        In general, for ``n`` nodes, the interpolation will be performed by piecewise
-        polynomials of degree ``n - 1`` (e.g. ``n = 4`` for cubic interpolation). Only
-        the values ``3, 4, 5, 6, 7`` are supported.
-    :param exponent: exponent :math:`p` in :math:`1/r^p` potentials
+    :param charges: torch.Tensor, atomic (pseudo-)charges
+    :param cell: torch.Tensor, periodic supercell for the system
+    :param positions: torch.Tensor, Cartesian coordinates of the particles within the
+        supercell.
+    :param cutoff: float, cutoff distance for the neighborlist
+    :param neighbor_indices: torch.Tensor with the ``i,j`` indices of neighbors for
+        which the potential should be computed in real space.
+    :param neighbor_distances: torch.Tensor with the pair distances of the neighbors for
+        which the potential should be computed in real space.
+    :param exponent: :math:`p` in :math:`1/r^p` potentials, currently only :math:`p=1`
+        is supported
+    :param nodes_lo: Minimum number of interpolation nodes
+    :param nodes_hi: Maximum number of interpolation nodes
+    :param mesh_lo: Controls the minimum number of mesh points along the shortest axis,
+        :math:`2^{mesh_lo}`
+    :param mesh_hi: Controls the maximum number of mesh points along the shortest axis,
+        :math:`2^{mesh_hi}`
     :param accuracy: Recomended values for a balance between the accuracy and speed is
         :math:`10^{-3}`. For more accurate results, use :math:`10^{-6}`.
-    :param max_steps: maximum number of gradient descent steps
-    :param learning_rate: learning rate for gradient descent
 
     :return: Tuple containing a float of the optimal smearing for the :class:
-        `CoulombPotential`, a dictionary with the parameters for
-        :class:`PMECalculator` and a float of the optimal cutoff value for the
-        neighborlist computation.
+        `CoulombPotential`, a dictionary with the parameters for :class:`PMECalculator`
+        and a float of the optimal cutoff value for the neighborlist computation, and
+        the timing of this set of parameters.
 
     Example
     -------
@@ -79,195 +73,193 @@ def tune_pme(
     ... )
     >>> charges = torch.tensor([[1.0], [-1.0]], dtype=torch.float64)
     >>> cell = torch.eye(3, dtype=torch.float64)
-    >>> smearing, parameter, cutoff = tune_pme(
-    ...     torch.sum(charges**2, dim=0), cell, positions, accuracy=1e-1
+    >>> neighbor_distances = torch.tensor(
+    ...     [0.9381, 0.9381, 0.8246, 0.9381, 0.8246, 0.8246, 0.6928],
+    ...     dtype=torch.float64,
     ... )
-
-    You can check the values of the parameters
-
-    >>> print(smearing)
-    0.6768985898318037
-
-    >>> print(parameter)
-    {'mesh_spacing': 0.6305733973385922, 'interpolation_nodes': 4}
-
-    >>> print(cutoff)
-    2.243154348782357
-
-    You can give one parameter to the function to tune only other parameters, for
-    example, fixing the cutoff to 0.1
-
-    >>> smearing, parameter, cutoff = tune_pme(
-    ...     torch.sum(charges**2, dim=0), cell, positions, cutoff=0.6, accuracy=1e-1
+    >>> neighbor_indices = torch.tensor(
+    ...     [[0, 1], [0, 1], [0, 1], [0, 1], [0, 1], [0, 1], [0, 1]]
     ... )
-
-    You can check the values of the parameters, now the cutoff is fixed
-
-    >>> print(smearing)
-    0.22038829671671745
-
-    >>> print(parameter)
-    {'mesh_spacing': 0.5006356677116188, 'interpolation_nodes': 4}
-
-    >>> print(cutoff)
-    0.6
+    >>> smearing, parameter, timing = tune_pme(
+    ...     charges,
+    ...     cell,
+    ...     positions,
+    ...     cutoff=1.0,
+    ...     neighbor_distances=neighbor_distances,
+    ...     neighbor_indices=neighbor_indices,
+    ...     accuracy=1e-1,
+    ... )
 
     """
-    _validate_parameters(sum_squared_charges, cell, positions, exponent, accuracy)
-
-    smearing_opt, cutoff_opt = _estimate_smearing_cutoff(
-        cell=cell,
-        smearing=smearing,
-        cutoff=cutoff,
-        accuracy=accuracy,
-    )
-
-    # We choose only one mesh as initial guess
-    if mesh_spacing is None:
-        ns_mesh_opt = torch.tensor(
-            [1, 1, 1],
-            device=cell.device,
-            dtype=cell.dtype,
-            requires_grad=True,
+    _validate_parameters(charges, cell, positions, exponent)
+    min_dimension = float(torch.min(torch.linalg.norm(cell, dim=1)))
+    params = [
+        {
+            "interpolation_nodes": interpolation_nodes,
+            "mesh_spacing": 2 * min_dimension / (2**ns - 1),
+        }
+        for interpolation_nodes, ns in product(
+            range(nodes_lo, nodes_hi + 1), range(mesh_lo, mesh_hi + 1)
         )
-    else:
-        ns_mesh_opt = get_ns_mesh(cell, mesh_spacing)
+    ]
 
-    cell_dimensions = torch.linalg.norm(cell, dim=1)
-    volume = torch.abs(cell.det())
-    prefac = 2 * sum_squared_charges / math.sqrt(len(positions))
+    tuner = GridSearchTuner(
+        charges=charges,
+        cell=cell,
+        positions=positions,
+        cutoff=cutoff,
+        exponent=exponent,
+        neighbor_indices=neighbor_indices,
+        neighbor_distances=neighbor_distances,
+        calculator=PMECalculator,
+        error_bounds=PMEErrorBounds(charges=charges, cell=cell, positions=positions),
+        params=params,
+        dtype=dtype,
+        device=device,
+    )
+    smearing = tuner.estimate_smearing(accuracy)
+    errs, timings = tuner.tune(accuracy)
 
-    interpolation_nodes = torch.tensor(interpolation_nodes, device=cell.device)
+    # There are multiple errors below the accuracy, return the one with the shortest
+    # calculation time. The timing of those parameters leading to an higher error
+    # than the accuracy are set to infinity
+    if any(err < accuracy for err in errs):
+        return smearing, params[timings.index(min(timings))], min(timings)
+    # No parameter meets the requirement, return the one with the smallest error, and
+    # throw a warning
+    warn(
+        f"No parameter meets the accuracy requirement.\n"
+        f"Returning the parameter with the smallest error, which is {min(errs)}.\n",
+        stacklevel=1,
+    )
+    return smearing, params[errs.index(min(errs))], timings[errs.index(min(errs))]
 
-    def err_Fourier(smearing, ns_mesh):
-        def H(ns_mesh):
-            return torch.prod(1 / ns_mesh) ** (1 / 3)
 
-        def RMS_phi(ns_mesh):
-            return torch.linalg.norm(
-                _compute_RMS_phi(cell, interpolation_nodes, ns_mesh, positions)
-            )
+class PMEErrorBounds(TuningErrorBounds):
+    r"""
+    Error bounds for :class:`torchpme.PMECalculator`.
 
-        def log_factorial(x):
-            return torch.lgamma(x + 1)
+    .. note::
 
-        def factorial(x):
-            return torch.exp(log_factorial(x))
+        The :func:`torchpme.tuning.pme.PMEErrorBounds.forward` method takes floats as
+        the input, in order to be in consistency with the rest of the package -- these
+        parameters are always ``float`` but not ``torch.Tensor``. This design, however,
+        prevents the utilization of ``torch.autograd`` and other ``torch`` features. To
+        take advantage of these features, one can use the
+        :func:`torchpme.tuning.pme.PMEErrorBounds.err_rspace` and
+        :func:`torchpme.tuning.pme.PMEErrorBounds.err_kspace`, which takes
+        ``torch.Tensor`` as parameters.
+
+    :param charges: atomic charges
+    :param cell: single tensor of shape (3, 3), describing the bounding
+    :param positions: single tensor of shape (``len(charges), 3``) containing the
+        Cartesian positions of all point charges in the system.
+
+    Example
+    -------
+    >>> import torch
+    >>> positions = torch.tensor(
+    ...     [[0.0, 0.0, 0.0], [0.4, 0.4, 0.4]], dtype=torch.float64
+    ... )
+    >>> charges = torch.tensor([[1.0], [-1.0]], dtype=torch.float64)
+    >>> cell = torch.eye(3, dtype=torch.float64)
+    >>> error_bounds = PMEErrorBounds(charges, cell, positions)
+    >>> print(
+    ...     error_bounds(
+    ...         smearing=1.0, mesh_spacing=0.5, cutoff=4.4, interpolation_nodes=3
+    ...     )
+    ... )
+    tensor(0.0011, dtype=torch.float64)
+
+    """
+
+    def __init__(
+        self, charges: torch.Tensor, cell: torch.Tensor, positions: torch.Tensor
+    ):
+        super().__init__(charges, cell, positions)
+
+        self.volume = torch.abs(torch.det(cell))
+        self.sum_squared_charges = (charges**2).sum()
+        self.prefac = 2 * self.sum_squared_charges / math.sqrt(len(positions))
+        self.cell_dimensions = torch.linalg.norm(cell, dim=1)
+
+    def err_kspace(
+        self,
+        smearing: torch.Tensor,
+        mesh_spacing: torch.Tensor,
+        interpolation_nodes: torch.Tensor,
+    ) -> torch.Tensor:
+        """
+        The Fourier space error of PME.
+
+        :param smearing: see :class:`torchpme.PMECalculator` for details
+        :param mesh_spacing: see :class:`torchpme.PMECalculator` for details
+        :param interpolation_nodes: see :class:`torchpme.PMECalculator` for details
+        """
+        actual_spacing = self.cell_dimensions / (
+            2 * self.cell_dimensions / mesh_spacing + 1
+        )
+        h = torch.prod(actual_spacing) ** (1 / 3)
+        i_n_factorial = torch.exp(torch.lgamma(interpolation_nodes + 1))
+        RMS_phi = [None, None, 0.246, 0.404, 0.950, 2.51, 8.42]
 
         return (
-            prefac
+            self.prefac
             * torch.pi**0.25
             * (6 * (1 / 2**0.5 / smearing) / (2 * interpolation_nodes + 1)) ** 0.5
-            / volume ** (2 / 3)
-            * (2**0.5 / smearing * H(ns_mesh)) ** interpolation_nodes
-            / factorial(interpolation_nodes)
+            / self.volume ** (2 / 3)
+            * (2**0.5 / smearing * h) ** interpolation_nodes
+            / i_n_factorial
             * torch.exp(
-                (interpolation_nodes) * (torch.log(interpolation_nodes / 2) - 1) / 2
+                interpolation_nodes * (torch.log(interpolation_nodes / 2) - 1) / 2
             )
-            * RMS_phi(ns_mesh)
+            * RMS_phi[interpolation_nodes - 1]
         )
 
-    def err_real(smearing, cutoff):
+    def err_rspace(self, smearing: torch.Tensor, cutoff: torch.Tensor) -> torch.Tensor:
+        """
+        The real space error of PME.
+
+        :param smearing: see :class:`torchpme.PMECalculator` for details
+        :param cutoff: see :class:`torchpme.PMECalculator` for details
+        """
         return (
-            prefac
-            / torch.sqrt(cutoff * volume)
+            self.prefac
+            / torch.sqrt(cutoff * self.volume)
             * torch.exp(-(cutoff**2) / 2 / smearing**2)
         )
 
-    def loss(smearing, ns_mesh, cutoff):
+    def error(
+        self,
+        cutoff: float,
+        smearing: float,
+        mesh_spacing: float,
+        interpolation_nodes: float,
+    ) -> torch.Tensor:
+        r"""
+        Calculate the error bound of PME.
+
+        .. math::
+            \text{Error}_{\text{total}} = \sqrt{\text{Error}_{\text{real space}}^2 +
+            \text{Error}_{\text{Fourier space}}^2
+
+        :param smearing: if its value is given, it will not be tuned, see
+            :class:`torchpme.PMECalculator` for details
+        :param mesh_spacing: if its value is given, it will not be tuned, see
+            :class:`torchpme.PMECalculator` for details
+        :param cutoff: if its value is given, it will not be tuned, see
+            :class:`torchpme.PMECalculator` for details
+        :param interpolation_nodes: The number ``n`` of nodes used in the interpolation
+            per coordinate axis. The total number of interpolation nodes in 3D will be
+            ``n^3``. In general, for ``n`` nodes, the interpolation will be performed by
+            piecewise polynomials of degree ``n - 1`` (e.g. ``n = 4`` for cubic
+            interpolation). Only the values ``3, 4, 5, 6, 7`` are supported.
+        """
+        smearing = torch.tensor(smearing)
+        mesh_spacing = torch.tensor(mesh_spacing)
+        cutoff = torch.tensor(cutoff)
+        interpolation_nodes = torch.tensor(interpolation_nodes)
         return torch.sqrt(
-            err_Fourier(smearing, ns_mesh) ** 2 + err_real(smearing, cutoff) ** 2
+            self.err_rspace(smearing, cutoff) ** 2
+            + self.err_kspace(smearing, mesh_spacing, interpolation_nodes) ** 2
         )
-
-    params = [smearing_opt, ns_mesh_opt, cutoff_opt]
-    _optimize_parameters(
-        params=params,
-        loss=loss,
-        max_steps=max_steps,
-        accuracy=accuracy,
-        learning_rate=learning_rate,
-    )
-
-    return (
-        float(smearing_opt),
-        {
-            "mesh_spacing": float(torch.min(cell_dimensions / ns_mesh_opt)),
-            "interpolation_nodes": int(interpolation_nodes),
-        },
-        float(cutoff_opt),
-    )
-
-
-def _compute_RMS_phi(
-    cell: torch.Tensor,
-    interpolation_nodes: torch.Tensor,
-    ns_mesh: torch.Tensor,
-    positions: torch.Tensor,
-) -> torch.Tensor:
-    inverse_cell = torch.linalg.inv(cell)
-    # Compute positions relative to the mesh basis vectors
-    positions_rel = ns_mesh * torch.matmul(positions, inverse_cell)
-
-    # Calculate positions and distances based on interpolation nodes
-    even = interpolation_nodes % 2 == 0
-    if even:
-        # For Lagrange interpolation, when the number of interpolation
-        # is even, the relative position of a charge is the midpoint of
-        # the two nearest gridpoints.
-        positions_rel_idx = _Floor.apply(positions_rel)
-    else:
-        # For Lagrange interpolation, when the number of interpolation
-        # points is odd, the relative position of a charge is the nearest gridpoint.
-        positions_rel_idx = _Round.apply(positions_rel)
-
-    # Calculate indices of mesh points on which the particle weights are
-    # interpolated. For each particle, its weight is "smeared" onto `order**3` mesh
-    # points, which can be achived using meshgrid below.
-    indices_to_interpolate = torch.stack(
-        [
-            (positions_rel_idx + i)
-            for i in range(
-                1 - (interpolation_nodes + 1) // 2,
-                1 + interpolation_nodes // 2,
-            )
-        ],
-        dim=0,
-    )
-    positions_rel = positions_rel[torch.newaxis, :, :]
-    positions_rel += 1e-10 * torch.randn(
-        positions_rel.shape, dtype=cell.dtype, device=cell.device
-    )  # Noises help the algorithm work for tiny systems (<100 atoms)
-    return (
-        torch.mean(
-            (torch.prod(indices_to_interpolate - positions_rel, dim=0)) ** 2, dim=0
-        )
-        ** 0.5
-    )
-
-
-class _Floor(torch.autograd.Function):
-    """floor function with non-zero gradient"""
-
-    @staticmethod
-    def forward(ctx, input):
-        result = torch.floor(input)
-        ctx.save_for_backward(result)
-        return result
-
-    @staticmethod
-    def backward(ctx, grad_output):
-        return grad_output
-
-
-class _Round(torch.autograd.Function):
-    """round function with non-zero gradient"""
-
-    @staticmethod
-    def forward(ctx, input):
-        result = torch.round(input)
-        ctx.save_for_backward(result)
-        return result
-
-    @staticmethod
-    def backward(ctx, grad_output):
-        return grad_output

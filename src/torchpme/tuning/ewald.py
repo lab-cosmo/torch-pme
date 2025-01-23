@@ -1,167 +1,207 @@
 import math
-from typing import Optional
+from typing import Any, Optional
+from warnings import warn
 
 import torch
 
-from ._utils import (
-    _estimate_smearing_cutoff,
-    _optimize_parameters,
-    _validate_parameters,
-)
-
-TWO_PI = 2 * math.pi
+from ..calculators import EwaldCalculator
+from ._utils import _validate_parameters
+from .tuner import GridSearchTuner, TuningErrorBounds
 
 
 def tune_ewald(
-    sum_squared_charges: float,
+    charges: torch.Tensor,
     cell: torch.Tensor,
     positions: torch.Tensor,
-    smearing: Optional[float] = None,
-    lr_wavelength: Optional[float] = None,
-    cutoff: Optional[float] = None,
+    cutoff: float,
+    neighbor_indices: torch.Tensor,
+    neighbor_distances: torch.Tensor,
     exponent: int = 1,
+    ns_lo: int = 1,
+    ns_hi: int = 14,
     accuracy: float = 1e-3,
-    max_steps: int = 50000,
-    learning_rate: float = 0.1,
-) -> tuple[float, dict[str, float], float]:
+    dtype: Optional[torch.dtype] = None,
+    device: Optional[torch.device] = None,
+) -> tuple[float, dict[str, Any], float]:
     r"""
     Find the optimal parameters for :class:`torchpme.EwaldCalculator`.
 
-    The error formulas are given `online
-    <https://www2.icp.uni-stuttgart.de/~icp/mediawiki/images/4/4d/Script_Longrange_Interactions.pdf>`_
-    (now not available, need to be updated later). Note the difference notation between
-    the parameters in the reference and ours:
+    .. note::
 
-    .. math::
+        The :func:`torchpme.tuning.ewald.EwaldErrorBounds.forward` method takes floats
+        as the input, in order to be in consistency with the rest of the package --
+        these parameters are always ``float`` but not ``torch.Tensor``. This design,
+        however, prevents the utilization of ``torch.autograd`` and other ``torch``
+        features. To take advantage of these features, one can use the
+        :func:`torchpme.tuning.ewald.EwaldErrorBounds.err_rspace` and
+        :func:`torchpme.tuning.ewald.EwaldErrorBounds.err_kspace`, which takes
+        ``torch.Tensor`` as parameters.
 
-        \alpha &= \left( \sqrt{2}\,\mathrm{smearing} \right)^{-1}
-
-        K &= \frac{2 \pi}{\mathrm{lr\_wavelength}}
-
-        r_c &= \mathrm{cutoff}
-
-    For the optimization we use the :class:`torch.optim.Adam` optimizer. By default this
-    function optimize the ``smearing``, ``lr_wavelength`` and ``cutoff`` based on the
-    error formula given `online`_. You can limit the optimization by giving one or more
-    parameters to the function. For example in usual ML workflows the cutoff is fixed
-    and one wants to optimize only the ``smearing`` and the ``lr_wavelength`` with
-    respect to the minimal error and fixed cutoff.
-
-    :param sum_squared_charges: accumulated squared charges, must be positive
-    :param cell: single tensor of shape (3, 3), describing the bounding
-    :param positions: single tensor of shape (``len(charges), 3``) containing the
-        Cartesian positions of all point charges in the system.
-    :param smearing: if its value is given, it will not be tuned, see
-        :class:`torchpme.EwaldCalculator` for details
-    :param lr_wavelength: if its value is given, it will not be tuned, see
-        :class:`torchpme.EwaldCalculator` for details
-    :param cutoff: if its value is given, it will not be tuned, see
-        :class:`torchpme.EwaldCalculator` for details
-    :param exponent: exponent :math:`p` in :math:`1/r^p` potentials
+    :param charges: torch.Tensor, atomic (pseudo-)charges
+    :param cell: torch.Tensor, periodic supercell for the system
+    :param positions: torch.Tensor, Cartesian coordinates of the particles within the
+        supercell.
+    :param cutoff: float, cutoff distance for the neighborlist
+    :param exponent: :math:`p` in :math:`1/r^p` potentials, currently only :math:`p=1`
+        is supported
+    :param neighbor_indices: torch.Tensor with the ``i,j`` indices of neighbors for
+        which the potential should be computed in real space.
+    :param neighbor_distances: torch.Tensor with the pair distances of the neighbors for
+        which the potential should be computed in real space.
+    :param ns_lo: Minimum number of spatial resolution along each axis
+    :param ns_hi: Maximum number of spatial resolution along each axis
     :param accuracy: Recomended values for a balance between the accuracy and speed is
         :math:`10^{-3}`. For more accurate results, use :math:`10^{-6}`.
-    :param max_steps: maximum number of gradient descent steps
-    :param learning_rate: learning rate for gradient descent
 
     :return: Tuple containing a float of the optimal smearing for the :class:
-        `CoulombPotential`, a dictionary with the parameters for
-        :class:`EwaldCalculator` and a float of the optimal cutoff value for the
-        neighborlist computation.
+        `CoulombPotential`, and a dictionary with the parameters for
+        :class:`EwaldCalculator`, and the timing of this set of parameters.
 
     Example
     -------
     >>> import torch
     >>> positions = torch.tensor(
-    ...     [[0.0, 0.0, 0.0], [0.5, 0.5, 0.5]], dtype=torch.float64
+    ...     [[0.0, 0.0, 0.0], [0.4, 0.4, 0.4]], dtype=torch.float64
     ... )
     >>> charges = torch.tensor([[1.0], [-1.0]], dtype=torch.float64)
     >>> cell = torch.eye(3, dtype=torch.float64)
-    >>> smearing, parameter, cutoff = tune_ewald(
-    ...     torch.sum(charges**2, dim=0), cell, positions, accuracy=1e-1
+    >>> neighbor_distances = torch.tensor(
+    ...     [0.9381, 0.9381, 0.8246, 0.9381, 0.8246, 0.8246, 0.6928],
+    ...     dtype=torch.float64,
     ... )
-
-    You can check the values of the parameters
-
-    >>> print(smearing)
-    0.7527865828476816
-
-    >>> print(parameter)
-    {'lr_wavelength': 11.138556788117427}
-
-    >>> print(cutoff)
-    2.207855328192979
-
-    You can give one parameter to the function to tune only other parameters, for
-    example, fixing the cutoff to 0.1
-
-    >>> smearing, parameter, cutoff = tune_ewald(
-    ...     torch.sum(charges**2, dim=0), cell, positions, cutoff=0.4, accuracy=1e-1
+    >>> neighbor_indices = torch.tensor(
+    ...     [[0, 1], [0, 1], [0, 1], [0, 1], [0, 1], [0, 1], [0, 1]]
     ... )
-
-    You can check the values of the parameters, now the cutoff is fixed
-
-    >>> print(round(smearing, 4))
-    0.1402
-
-    We can also check the value of the other parameter like the ``lr_wavelength``
-
-    >>> print(round(parameter["lr_wavelength"], 3))
-    0.255
-
-    and finally as requested the value of the cutoff is fixed
-
-    >>> print(cutoff)
-    0.4
+    >>> smearing, parameter, timing = tune_ewald(
+    ...     charges,
+    ...     cell,
+    ...     positions,
+    ...     cutoff=1.0,
+    ...     neighbor_distances=neighbor_distances,
+    ...     neighbor_indices=neighbor_indices,
+    ...     accuracy=1e-1,
+    ... )
 
     """
-    _validate_parameters(sum_squared_charges, cell, positions, exponent, accuracy)
+    _validate_parameters(charges, cell, positions, exponent)
+    min_dimension = float(torch.min(torch.linalg.norm(cell, dim=1)))
+    params = [{"lr_wavelength": min_dimension / ns} for ns in range(ns_lo, ns_hi + 1)]
 
-    smearing_opt, cutoff_opt = _estimate_smearing_cutoff(
-        cell=cell, smearing=smearing, cutoff=cutoff, accuracy=accuracy
+    tuner = GridSearchTuner(
+        charges=charges,
+        cell=cell,
+        positions=positions,
+        cutoff=cutoff,
+        exponent=exponent,
+        neighbor_indices=neighbor_indices,
+        neighbor_distances=neighbor_distances,
+        calculator=EwaldCalculator,
+        error_bounds=EwaldErrorBounds(charges=charges, cell=cell, positions=positions),
+        params=params,
+        dtype=dtype,
+        device=device,
     )
+    smearing = tuner.estimate_smearing(accuracy)
+    errs, timings = tuner.tune(accuracy)
 
-    # We choose a very small initial fourier wavelength, hardcoded for now
-    k_cutoff_opt = torch.tensor(
-        1e-3 if lr_wavelength is None else TWO_PI / lr_wavelength,
-        dtype=cell.dtype,
-        device=cell.device,
-        requires_grad=(lr_wavelength is None),
+    # There are multiple errors below the accuracy, return the one with the shortest
+    # calculation time. The timing of those parameters leading to an higher error than
+    # the accuracy are set to infinity
+    if any(err < accuracy for err in errs):
+        return smearing, params[timings.index(min(timings))], min(timings)
+    # No parameter meets the requirement, return the one with the smallest error
+    warn(
+        f"No parameter meets the accuracy requirement.\n"
+        f"Returning the parameter with the smallest error, which is {min(errs)}.\n",
+        stacklevel=1,
     )
+    return smearing, params[errs.index(min(errs))], timings[errs.index(min(errs))]
 
-    volume = torch.abs(cell.det())
-    prefac = 2 * sum_squared_charges / math.sqrt(len(positions))
 
-    def err_Fourier(smearing, k_cutoff):
+class EwaldErrorBounds(TuningErrorBounds):
+    r"""
+    Error bounds for :class:`torchpme.calculators.ewald.EwaldCalculator`.
+
+        .. math::
+            \text{Error}_{\text{total}} = \sqrt{\text{Error}_{\text{real space}}^2 +
+            \text{Error}_{\text{Fourier space}}^2
+
+    :param charges: atomic charges
+    :param cell: single tensor of shape (3, 3), describing the bounding
+    :param positions: single tensor of shape (``len(charges), 3``) containing the
+        Cartesian positions of all point charges in the system.
+
+    Example
+    -------
+    >>> import torch
+    >>> positions = torch.tensor(
+    ...     [[0.0, 0.0, 0.0], [0.4, 0.4, 0.4]], dtype=torch.float64
+    ... )
+    >>> charges = torch.tensor([[1.0], [-1.0]], dtype=torch.float64)
+    >>> cell = torch.eye(3, dtype=torch.float64)
+    >>> error_bounds = EwaldErrorBounds(charges, cell, positions)
+    >>> print(error_bounds(smearing=1.0, lr_wavelength=0.5, cutoff=4.4))
+    tensor(8.4304e-05, dtype=torch.float64)
+
+    """
+
+    def __init__(
+        self,
+        charges: torch.Tensor,
+        cell: torch.Tensor,
+        positions: torch.Tensor,
+    ):
+        super().__init__(charges, cell, positions)
+
+        self.volume = torch.abs(torch.det(cell))
+        self.sum_squared_charges = (charges**2).sum()
+        self.prefac = 2 * self.sum_squared_charges / math.sqrt(len(positions))
+        self.cell = cell
+        self.positions = positions
+
+    def err_kspace(
+        self, smearing: torch.Tensor, lr_wavelength: torch.Tensor
+    ) -> torch.Tensor:
+        """
+        The Fourier space error of Ewald.
+
+        :param smearing: see :class:`torchpme.EwaldCalculator` for details
+        :param lr_wavelength: see :class:`torchpme.EwaldCalculator` for details
+        """
         return (
-            prefac**0.5
+            self.prefac**0.5
             / smearing
-            / torch.sqrt(TWO_PI**2 * volume / (TWO_PI / k_cutoff) ** 0.5)
-            * torch.exp(-(TWO_PI**2) * smearing**2 / (TWO_PI / k_cutoff))
+            / torch.sqrt((2 * torch.pi) ** 2 * self.volume / (lr_wavelength) ** 0.5)
+            * torch.exp(-((2 * torch.pi) ** 2) * smearing**2 / (lr_wavelength))
         )
 
-    def err_real(smearing, cutoff):
+    def err_rspace(self, smearing: torch.Tensor, cutoff: torch.Tensor) -> torch.Tensor:
+        """
+        The real space error of Ewald.
+
+        :param smearing: see :class:`torchpme.EwaldCalculator` for details
+        :param lr_wavelength: see :class:`torchpme.EwaldCalculator` for details
+        """
         return (
-            prefac
-            / torch.sqrt(cutoff * volume)
+            self.prefac
+            / torch.sqrt(cutoff * self.volume)
             * torch.exp(-(cutoff**2) / 2 / smearing**2)
         )
 
-    def loss(smearing, k_cutoff, cutoff):
+    def forward(
+        self, smearing: float, lr_wavelength: float, cutoff: float
+    ) -> torch.Tensor:
+        r"""
+        Calculate the error bound of Ewald.
+
+        :param smearing: see :class:`torchpme.EwaldCalculator` for details
+        :param lr_wavelength: see :class:`torchpme.EwaldCalculator` for details
+        :param cutoff: see :class:`torchpme.EwaldCalculator` for details
+        """
+        smearing = torch.tensor(smearing)
+        lr_wavelength = torch.tensor(lr_wavelength)
+        cutoff = torch.tensor(cutoff)
         return torch.sqrt(
-            err_Fourier(smearing, k_cutoff) ** 2 + err_real(smearing, cutoff) ** 2
+            self.err_kspace(smearing, lr_wavelength) ** 2
+            + self.err_rspace(smearing, cutoff) ** 2
         )
-
-    params = [smearing_opt, k_cutoff_opt, cutoff_opt]
-    _optimize_parameters(
-        params=params,
-        loss=loss,
-        max_steps=max_steps,
-        accuracy=accuracy,
-        learning_rate=learning_rate,
-    )
-
-    return (
-        float(smearing_opt),
-        {"lr_wavelength": TWO_PI / float(k_cutoff_opt)},
-        float(cutoff_opt),
-    )
