@@ -41,3 +41,12 @@ in the case that no parameter can fulfill the accuracy requirement.
 .. autoclass:: torchpme.tuning.tuner.TuningErrorBounds
     :members:
 
+Examples using Tuning Classes
+-----------------------------
+
+.. minigallery::
+
+    torchpme.tuning.tuner.TunerBase
+    torchpme.tuning.tuner.GridSearchTuner
+    torchpme.tuning.tuner.TuningTimings
+    torchpme.tuning.tuner.TuningErrorBounds
