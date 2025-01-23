@@ -137,12 +137,12 @@ class InversePowerLawPotential(Potential):
         # "charge neutrality" correction for 1/r^p potential diverges for exponent p = 3
         # and is not needed for p > 3 , so we set it to zero (see in
         # https://doi.org/10.48550/arXiv.2412.03281 SI section)
-        if self.exponent >= 3:
-            return torch.tensor(0.0, dtype=self.dtype, device=self.device)
         if self.smearing is None:
             raise ValueError(
                 "Cannot compute background correction without specifying `smearing`."
             )
+        if self.exponent >= 3:
+            return self.smearing * 0.0
         prefac = torch.pi**1.5 * (2 * self.smearing**2) ** ((3 - self.exponent) / 2)
         prefac /= (3 - self.exponent) * gamma(self.exponent / 2)
         return prefac

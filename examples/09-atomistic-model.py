@@ -19,8 +19,6 @@ model to run it with the ASE calculator. For learning these details we refer to 
 
 # %%
 
-# sphinx_gallery_thumbnail_number = 2
-
 from typing import Dict, List, Optional  # noqa
 
 # tools to run the simulation and visualization
@@ -158,7 +156,7 @@ class CalculatorModel(torch.nn.Module):
 
         self.calculator = calculator
 
-        # We use as half neighborlist and allow to have pairs farther than cutoff
+        # We use a half neighborlist and allow to have pairs farther than cutoff
         # (`strict=False`) since this is not problematic for PME and may speed up the
         # computation of the neigbors.
         self.nl = NeighborListOptions(cutoff=cutoff, full_list=False, strict=False)
@@ -366,7 +364,7 @@ integrator = ase.md.Langevin(
 # ------------------
 #
 # We now have everything in place run the simulation for 50 steps
-# (:math:`0.5\,\mathrm{ps}`) and collect the potential, kinetic and total energy as well
+# (:math:`2\,\mathrm{fs}`) and collect the potential, kinetic and total energy as well
 # as the temperature and pressure.
 
 n_steps = 500
@@ -413,7 +411,7 @@ chemiscope.show(
 
 fig, ax = plt.subplots(3, figsize=(8, 5), sharex=True)
 
-time = 0.5 * np.arange(n_steps)
+time = 2.0 * np.arange(n_steps)
 
 ax[0].plot(time, potential_energy, label="potential energy")
 ax[0].plot(time, kinetic_energy, label="kinetic energy")
@@ -429,7 +427,7 @@ ax[1].set_ylabel("temperature [K]")
 ax[2].plot(time, pressure)
 ax[2].set_ylabel("pressure [eV Å$^{-3}$]")
 
-ax[-1].set_xlabel("time / ps")
+ax[-1].set_xlabel("time / fs")
 
 fig.align_labels()
 plt.show()
@@ -515,8 +513,17 @@ p3m_energy = atoms.get_potential_energy()
 p3m_forces = atoms.get_forces()
 
 print(
-    f"Energy (Ewald): {ewald_energy}\nEnergy (PME):   {pme_energy}\nEnergy (P3M):   {p3m_energy}\n"
+    f"Energy (Ewald): {ewald_energy}\n"
+    f"Energy (PME):   {pme_energy}\n"
+    f"Energy (P3M):   {p3m_energy}\n"
 )
 print(
-    f"Forces(Ewald):\n{ewald_forces}\nForces (PME):\n{pme_forces}\nForces (P3M):\n{p3m_forces}\n"
+    f"Forces (Ewald):\n{ewald_forces}\n\n"
+    f"Forces (PME):\n{pme_forces}\n\n"
+    f"Forces (P3M):\n{p3m_forces}"
 )
+
+
+# %%
+#
+# The above output shows us that these values are very close to each other, as expected.
