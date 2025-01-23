@@ -43,7 +43,7 @@ class Potential(torch.nn.Module):
     ):
         super().__init__()
         self.dtype = torch.get_default_dtype() if dtype is None else dtype
-        self.device = "cpu" if device is None else device
+        self.device = torch.get_default_device() if device is None else device
         if smearing is not None:
             self.register_buffer(
                 "smearing", torch.tensor(smearing, device=self.device, dtype=self.dtype)
