@@ -21,6 +21,15 @@ changelog <https://keepachangelog.com/en/1.1.0/>`_ format. This project follows
 .. Removed
 .. #######
 
+`Unreleased <https://github.com/lab-cosmo/torch-pme/>`_
+-------------------------------------------------------
+
+Added
+#####
+
+* Require consistent ``dtype`` between ``positions`` and ``neighbor_distances`` in
+  ``Calculator`` classes and tuning functions.
+
 `Version 0.2.0 <https://github.com/lab-cosmo/torch-pme/releases/tag/v0.2.0>`_ - 2025-01-23
 ------------------------------------------------------------------------------------------
 

@@ -172,7 +172,9 @@ def test_wigner(crystal_name, scaling_factor):
     to numerically slower convergence of the relevant sums.
     """
     # Get parameters defining atomic positions, cell and charges
-    positions, charges, cell, madelung_ref, _ = define_crystal(crystal_name)
+    positions, charges, cell, madelung_ref, _ = define_crystal(
+        crystal_name, dtype=DTYPE
+    )
     positions *= scaling_factor
     cell *= scaling_factor
     madelung_ref /= scaling_factor
