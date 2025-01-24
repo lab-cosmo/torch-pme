@@ -1,3 +1,5 @@
+.. _kspace_filter:
+
 Kspace filter
 #############
 
