@@ -14,7 +14,7 @@ from torchpme.tuning import tune_ewald, tune_p3m, tune_pme
 from torchpme.tuning.tuner import TunerBase
 
 sys.path.append(str(Path(__file__).parents[1]))
-from helpers import compute_distances, define_crystal, neighbor_list
+from helpers import define_crystal, neighbor_list
 
 DTYPE = torch.float32
 DEVICE = "cpu"
@@ -22,25 +22,6 @@ DEFAULT_CUTOFF = 4.4
 CHARGES_1 = torch.ones((4, 1), dtype=DTYPE, device=DEVICE)
 POSITIONS_1 = 0.3 * torch.arange(12, dtype=DTYPE, device=DEVICE).reshape((4, 3))
 CELL_1 = torch.eye(3, dtype=DTYPE, device=DEVICE)
-
-
-def _nl_calculation(pos, cell):
-    neighbor_indices, neighbor_shifts = neighbor_list(
-        positions=pos,
-        periodic=True,
-        box=cell,
-        cutoff=DEFAULT_CUTOFF,
-        neighbor_shifts=True,
-    )
-
-    neighbor_distances = compute_distances(
-        positions=pos,
-        neighbor_indices=neighbor_indices,
-        cell=cell,
-        neighbor_shifts=neighbor_shifts,
-    )
-
-    return neighbor_indices, neighbor_distances
 
 
 def test_TunerBase_double():
@@ -78,7 +59,9 @@ def test_parameter_choose(calculator, tune, param_length, accuracy):
     pos, charges, cell, madelung_ref, num_units = define_crystal()
 
     # Compute neighbor list
-    neighbor_indices, neighbor_distances = _nl_calculation(pos, cell)
+    neighbor_indices, neighbor_distances = neighbor_list(
+        positions=pos, box=cell, cutoff=DEFAULT_CUTOFF
+    )
 
     smearing, params, _ = tune(
         charges,
@@ -115,7 +98,9 @@ def test_accuracy_error(tune):
     pos, charges, cell, _, _ = define_crystal()
 
     match = "'foo' is not a float."
-    neighbor_indices, neighbor_distances = _nl_calculation(pos, cell)
+    neighbor_indices, neighbor_distances = neighbor_list(
+        positions=pos, box=cell, cutoff=DEFAULT_CUTOFF
+    )
     with pytest.raises(ValueError, match=match):
         tune(
             charges,
@@ -133,7 +118,9 @@ def test_exponent_not_1_error(tune):
     pos, charges, cell, _, _ = define_crystal()
 
     match = "Only exponent = 1 is supported but got 2."
-    neighbor_indices, neighbor_distances = _nl_calculation(pos, cell)
+    neighbor_indices, neighbor_distances = neighbor_list(
+        positions=pos, box=cell, cutoff=DEFAULT_CUTOFF
+    )
     with pytest.raises(NotImplementedError, match=match):
         tune(
             charges,
