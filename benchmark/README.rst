@@ -7,7 +7,7 @@ This provides a basic benchmarking script intended to catch major performance re
 Usage
 -----
 
-First, make sure to install ``torch-pme`` with the right dependencies:
+First, make sure to install ``torch-pme`` with the right dependencies in a fresh enviroment:
 
 .. code-block:: bash
 
