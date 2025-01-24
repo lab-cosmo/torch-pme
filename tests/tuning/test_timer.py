@@ -1,6 +1,7 @@
 import sys
 from pathlib import Path
 
+import ase
 import torch
 
 from torchpme import (
@@ -10,7 +11,7 @@ from torchpme import (
 from torchpme.tuning.tuner import TuningTimings
 
 sys.path.append(str(Path(__file__).parents[1]))
-from helpers import compute_distances, define_crystal, neighbor_list
+from helpers import define_crystal, neighbor_list
 
 DTYPE = torch.float32
 DEFAULT_CUTOFF = 4.4
@@ -19,30 +20,23 @@ POSITIONS_1 = 0.3 * torch.arange(12, dtype=DTYPE).reshape((4, 3))
 CELL_1 = torch.eye(3, dtype=DTYPE)
 
 
-def _nl_calculation(pos, cell):
-    neighbor_indices, neighbor_shifts = neighbor_list(
-        positions=pos,
-        periodic=True,
-        box=cell,
-        cutoff=DEFAULT_CUTOFF,
-        neighbor_shifts=True,
-    )
-
-    neighbor_distances = compute_distances(
-        positions=pos,
-        neighbor_indices=neighbor_indices,
-        cell=cell,
-        neighbor_shifts=neighbor_shifts,
-    )
-
-    return neighbor_indices, neighbor_distances
-
-
 def test_timer():
-    n_repeat_1 = 8
-    n_repeat_2 = 16
-    pos, charges, cell, madelung_ref, num_units = define_crystal()
-    neighbor_indices, neighbor_distances = _nl_calculation(pos, cell)
+    n_repeat_1 = 10
+    n_repeat_2 = 100
+    pos, charges, cell, _, _ = define_crystal()
+
+    # use ase to make system bigger
+    atoms = ase.Atoms("H" * len(pos), positions=pos.numpy(), cell=cell.numpy())
+    atoms.set_initial_charges(charges.numpy().flatten())
+    atoms.repeat((4, 4, 4))
+
+    pos = torch.tensor(atoms.positions, dtype=DTYPE)
+    charges = torch.tensor(atoms.get_initial_charges(), dtype=DTYPE).reshape(-1, 1)
+    cell = torch.tensor(atoms.cell.array, dtype=DTYPE)
+
+    neighbor_indices, neighbor_distances = neighbor_list(
+        positions=pos, box=cell, cutoff=DEFAULT_CUTOFF
+    )
 
     calculator = EwaldCalculator(
         potential=CoulombPotential(smearing=1.0),
