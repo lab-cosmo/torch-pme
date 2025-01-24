@@ -1,3 +1,5 @@
+.. _mesh_interpolator:
+
 Mesh Interpolator
 #################
 
