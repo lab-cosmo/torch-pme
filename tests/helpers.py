@@ -7,7 +7,6 @@ from typing import Optional
 import torch
 from vesin import NeighborList
 
-DTYPE = torch.float64
 SQRT3 = math.sqrt(3)
 
 DIR_PATH = Path(__file__).parent
@@ -15,7 +14,10 @@ EXAMPLES = DIR_PATH / ".." / "examples"
 COULOMB_TEST_FRAMES = EXAMPLES / "coulomb_test_frames.xyz"
 
 
-def define_crystal(crystal_name="CsCl"):
+def define_crystal(crystal_name="CsCl", dtype=None, device=None):
+    device = torch.get_default_device() if device is None else device
+    dtype = torch.get_default_dtype() if dtype is None else dtype
+
     # Define all relevant parameters (atom positions, charges, cell) of the reference
     # crystal structures for which the Madelung constants obtained from the Ewald sums
     # are compared with reference values.
@@ -27,9 +29,9 @@ def define_crystal(crystal_name="CsCl"):
     # - 1 atom pair in the unit cell
     # - Cation-Anion ratio of 1:1
     if crystal_name == "CsCl":
-        positions = torch.tensor([[0, 0, 0], [0.5, 0.5, 0.5]], dtype=DTYPE)
-        charges = torch.tensor([-1.0, 1.0], dtype=DTYPE)
-        cell = torch.eye(3, dtype=DTYPE)
+        positions = torch.tensor([[0, 0, 0], [0.5, 0.5, 0.5]])
+        charges = torch.tensor([-1.0, 1.0])
+        cell = torch.eye(3)
         madelung_ref = 2.0353610945260
         num_formula_units = 1
 
@@ -38,9 +40,9 @@ def define_crystal(crystal_name="CsCl"):
     # - 1 atom pair in the unit cell
     # - Cation-Anion ratio of 1:1
     elif crystal_name == "NaCl_primitive":
-        positions = torch.tensor([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]], dtype=DTYPE)
-        charges = torch.tensor([1.0, -1.0], dtype=DTYPE)
-        cell = torch.tensor([[0, 1.0, 1], [1, 0, 1], [1, 1, 0]], dtype=DTYPE)  # fcc
+        positions = torch.tensor([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]])
+        charges = torch.tensor([1.0, -1.0])
+        cell = torch.tensor([[0, 1.0, 1], [1, 0, 1], [1, 1, 0]])  # fcc
         madelung_ref = 1.7475645946
         num_formula_units = 1
 
@@ -60,10 +62,9 @@ def define_crystal(crystal_name="CsCl"):
                 [0, 1, 1],
                 [1, 1, 1],
             ],
-            dtype=DTYPE,
         )
-        charges = torch.tensor([+1.0, -1, -1, -1, +1, +1, +1, -1], dtype=DTYPE)
-        cell = 2 * torch.eye(3, dtype=DTYPE)
+        charges = torch.tensor([+1.0, -1, -1, -1, +1, +1, +1, -1])
+        cell = 2 * torch.eye(3)
         madelung_ref = 1.7475645946
         num_formula_units = 4
 
@@ -74,9 +75,9 @@ def define_crystal(crystal_name="CsCl"):
     # Remarks: we use a primitive unit cell which makes the lattice parameter of the
     # cubic cell equal to 2.
     elif crystal_name == "zincblende":
-        positions = torch.tensor([[0, 0, 0], [0.5, 0.5, 0.5]], dtype=DTYPE)
-        charges = torch.tensor([1.0, -1], dtype=DTYPE)
-        cell = torch.tensor([[0, 1, 1], [1, 0, 1], [1, 1, 0]], dtype=DTYPE)
+        positions = torch.tensor([[0, 0, 0], [0.5, 0.5, 0.5]])
+        charges = torch.tensor([1.0, -1])
+        cell = torch.tensor([[0, 1, 1], [1, 0, 1], [1, 1, 0]])
         madelung_ref = 2 * 1.6380550533 / SQRT3
         num_formula_units = 1
 
@@ -94,12 +95,10 @@ def define_crystal(crystal_name="CsCl"):
                 [0.5, -0.5 / SQRT3, 0.5 * c],
                 [0.5, -0.5 / SQRT3, (0.5 + u) * c],
             ],
-            dtype=DTYPE,
         )
-        charges = torch.tensor([1.0, -1, 1, -1], dtype=DTYPE)
+        charges = torch.tensor([1.0, -1, 1, -1])
         cell = torch.tensor(
             [[0.5, -0.5 * SQRT3, 0], [0.5, 0.5 * SQRT3, 0], [0, 0, c]],
-            dtype=DTYPE,
         )
         madelung_ref = 1.64132 / (u * c)
         num_formula_units = 2
@@ -112,10 +111,10 @@ def define_crystal(crystal_name="CsCl"):
         a = 5.463
         a = 1.0
         positions = a * torch.tensor(
-            [[1 / 4, 1 / 4, 1 / 4], [3 / 4, 3 / 4, 3 / 4], [0, 0, 0]], dtype=DTYPE
+            [[1 / 4, 1 / 4, 1 / 4], [3 / 4, 3 / 4, 3 / 4], [0, 0, 0]]
         )
-        charges = torch.tensor([-1, -1, 2], dtype=DTYPE)
-        cell = torch.tensor([[a, a, 0], [a, 0, a], [0, a, a]], dtype=DTYPE) / 2.0
+        charges = torch.tensor([-1, -1, 2])
+        cell = torch.tensor([[a, a, 0], [a, 0, a], [0, a, a]]) / 2.0
         madelung_ref = 11.6365752270768
         num_formula_units = 1
 
@@ -134,10 +133,9 @@ def define_crystal(crystal_name="CsCl"):
                 [3 / 4, 1 / 4, 3 / 4],
                 [3 / 4, 3 / 4, 1 / 4],
             ],
-            dtype=DTYPE,
         )
-        charges = torch.tensor([-2, -2, 1, 1, 1, 1], dtype=DTYPE)
-        cell = a * torch.eye(3, dtype=DTYPE)
+        charges = torch.tensor([-2, -2, 1, 1, 1, 1])
+        cell = a * torch.eye(3)
         madelung_ref = 10.2594570330750
         num_formula_units = 2
 
@@ -151,9 +149,9 @@ def define_crystal(crystal_name="CsCl"):
     # Wigner crystal energies are taken from "Zero-Point Energy of an Electron Lattice"
     # by Rosemary A., Coldwell‐Horsfall and Alexei A. Maradudin (1960), eq. (A21).
     elif crystal_name == "wigner_sc":
-        positions = torch.tensor([[0, 0, 0]], dtype=DTYPE)
-        charges = torch.tensor([1.0], dtype=DTYPE)
-        cell = torch.tensor([[1.0, 0, 0], [0, 1, 0], [0, 0, 1]], dtype=DTYPE)
+        positions = torch.tensor([[0, 0, 0]])
+        charges = torch.tensor([1.0])
+        cell = torch.tensor([[1.0, 0, 0], [0, 1, 0], [0, 0, 1]])
 
         # Reference value is expressed in terms of the Wigner-Seiz radius, and needs to
         # be rescaled to the case in which the lattice parameter = 1.
@@ -166,11 +164,9 @@ def define_crystal(crystal_name="CsCl"):
     # See description of "wigner_sc" for a general explanation on Wigner crystals.
     # Used to test the code for cases in which the unit cell has a nonzero net charge.
     elif crystal_name == "wigner_bcc":
-        positions = torch.tensor([[0, 0, 0]], dtype=DTYPE)
-        charges = torch.tensor([1.0], dtype=DTYPE)
-        cell = torch.tensor(
-            [[1.0, 0, 0], [0, 1, 0], [1 / 2, 1 / 2, 1 / 2]], dtype=DTYPE
-        )
+        positions = torch.tensor([[0, 0, 0]])
+        charges = torch.tensor([1.0])
+        cell = torch.tensor([[1.0, 0, 0], [0, 1, 0], [1 / 2, 1 / 2, 1 / 2]])
 
         # Reference value is expressed in terms of the Wigner-Seiz radius, and needs to
         # be rescaled to the case in which the lattice parameter = 1.
@@ -183,9 +179,9 @@ def define_crystal(crystal_name="CsCl"):
 
     # Same as above, but now using a cubic unit cell rather than the primitive bcc cell
     elif crystal_name == "wigner_bcc_cubiccell":
-        positions = torch.tensor([[0, 0, 0], [1 / 2, 1 / 2, 1 / 2]], dtype=DTYPE)
-        charges = torch.tensor([1.0, 1.0], dtype=DTYPE)
-        cell = torch.tensor([[1.0, 0, 0], [0, 1, 0], [0, 0, 1]], dtype=DTYPE)
+        positions = torch.tensor([[0, 0, 0], [1 / 2, 1 / 2, 1 / 2]])
+        charges = torch.tensor([1.0, 1.0])
+        cell = torch.tensor([[1.0, 0, 0], [0, 1, 0], [0, 0, 1]])
 
         # Reference value is expressed in terms of the Wigner-Seiz radius, and needs to
         # be rescaled to the case in which the lattice parameter = 1.
@@ -200,9 +196,9 @@ def define_crystal(crystal_name="CsCl"):
     # See description of "wigner_sc" for a general explanation on Wigner crystals.
     # Used to test the code for cases in which the unit cell has a nonzero net charge.
     elif crystal_name == "wigner_fcc":
-        positions = torch.tensor([[0, 0, 0]], dtype=DTYPE)
-        charges = torch.tensor([1.0], dtype=DTYPE)
-        cell = torch.tensor([[1, 0, 1], [0, 1, 1], [1, 1, 0]], dtype=DTYPE) / 2
+        positions = torch.tensor([[0, 0, 0]])
+        charges = torch.tensor([1.0])
+        cell = torch.tensor([[1, 0, 1], [0, 1, 1], [1, 1, 0]]) / 2
 
         # Reference value is expressed in terms of the Wigner-Seiz radius, and needs to
         # be rescaled to the case in which the lattice parameter = 1.
@@ -215,11 +211,9 @@ def define_crystal(crystal_name="CsCl"):
 
     # Same as above, but now using a cubic unit cell rather than the primitive fcc cell
     elif crystal_name == "wigner_fcc_cubiccell":
-        positions = 0.5 * torch.tensor(
-            [[0.0, 0, 0], [1, 0, 1], [1, 1, 0], [0, 1, 1]], dtype=DTYPE
-        )
-        charges = torch.tensor([1.0, 1, 1, 1], dtype=DTYPE)
-        cell = torch.eye(3, dtype=DTYPE)
+        positions = 0.5 * torch.tensor([[0.0, 0, 0], [1, 0, 1], [1, 1, 0], [0, 1, 1]])
+        charges = torch.tensor([1.0, 1, 1, 1])
+        cell = torch.eye(3)
 
         # Reference value is expressed in terms of the Wigner-Seiz radius, and needs to
         # be rescaled to the case in which the lattice parameter = 1.
@@ -233,10 +227,16 @@ def define_crystal(crystal_name="CsCl"):
     else:
         raise ValueError(f"crystal_name = {crystal_name} is not supported!")
 
-    madelung_ref = torch.tensor(madelung_ref, dtype=DTYPE)
+    madelung_ref = torch.tensor(madelung_ref)
     charges = charges.reshape((-1, 1))
 
-    return positions, charges, cell, madelung_ref, num_formula_units
+    return (
+        positions.to(device=device, dtype=dtype),
+        charges.to(device=device, dtype=dtype),
+        cell.to(device=device, dtype=dtype),
+        madelung_ref,
+        num_formula_units,
+    )
 
 
 def neighbor_list(

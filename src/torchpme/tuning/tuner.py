@@ -4,9 +4,9 @@ from typing import Optional
 
 import torch
 
+from .._utils import _validate_parameters
 from ..calculators import Calculator
 from ..potentials import InversePowerLawPotential
-from ._utils import _validate_parameters
 
 
 class TuningErrorBounds(torch.nn.Module):
@@ -61,11 +61,9 @@ class TunerBase:
     -------
     >>> import torch
     >>> import torchpme
-    >>> positions = torch.tensor(
-    ...     [[0.0, 0.0, 0.0], [0.4, 0.4, 0.4]], dtype=torch.float64
-    ... )
-    >>> charges = torch.tensor([[1.0], [-1.0]], dtype=torch.float64)
-    >>> cell = torch.eye(3, dtype=torch.float64)
+    >>> positions = torch.tensor([[0.0, 0.0, 0.0], [0.4, 0.4, 0.4]])
+    >>> charges = torch.tensor([[1.0], [-1.0]])
+    >>> cell = torch.eye(3)
     >>> tuner = TunerBase(charges, cell, positions, 4.4, torchpme.EwaldCalculator)
     >>> smearing = tuner.estimate_smearing(1e-3)
     >>> print(smearing)
@@ -84,14 +82,29 @@ class TunerBase:
         dtype: Optional[torch.dtype] = None,
         device: Optional[torch.device] = None,
     ):
-        _validate_parameters(charges, cell, positions, exponent)
+        if exponent != 1:
+            raise NotImplementedError(
+                f"Only exponent = 1 is supported but got {exponent}."
+            )
+
+        _validate_parameters(
+            charges=charges,
+            cell=cell,
+            positions=positions,
+            neighbor_indices=torch.tensor([[0, 1]], device=positions.device),
+            neighbor_distances=torch.tensor(
+                [1.0], device=positions.device, dtype=positions.dtype
+            ),
+            smearing=1.0,  # dummy value because; always have range-seperated potentials
+        )
+
         self.charges = charges
         self.cell = cell
         self.positions = positions
         self.cutoff = cutoff
         self.calculator = calculator
         self.exponent = exponent
-        self.device = "cpu" if device is None else device
+        self.device = torch.get_default_device() if device is None else device
         self.dtype = torch.get_default_dtype() if dtype is None else dtype
 
         self._prefac = 2 * float((charges**2).sum()) / math.sqrt(len(positions))
@@ -270,6 +283,16 @@ class TuningTimings(torch.nn.Module):
         device: Optional[torch.device] = None,
     ):
         super().__init__()
+
+        _validate_parameters(
+            charges=charges,
+            cell=cell,
+            positions=positions,
+            neighbor_indices=neighbor_indices,
+            neighbor_distances=neighbor_distances,
+            smearing=1.0,  # dummy value because; always have range-seperated potentials
+        )
+
         self.charges = charges
         self.cell = cell
         self.positions = positions
@@ -278,10 +301,8 @@ class TuningTimings(torch.nn.Module):
         self.n_repeat = n_repeat
         self.n_warmup = n_warmup
         self.run_backward = run_backward
-        self.neighbor_indices = neighbor_indices.to(device=self.device)
-        self.neighbor_distances = neighbor_distances.to(
-            dtype=self.dtype, device=self.device
-        )
+        self.neighbor_indices = neighbor_indices
+        self.neighbor_distances = neighbor_distances
 
     def forward(self, calculator: torch.nn.Module):
         """

@@ -5,7 +5,6 @@ from warnings import warn
 import torch
 
 from ..calculators import EwaldCalculator
-from ._utils import _validate_parameters
 from .tuner import GridSearchTuner, TuningErrorBounds
 
 
@@ -60,14 +59,11 @@ def tune_ewald(
     Example
     -------
     >>> import torch
-    >>> positions = torch.tensor(
-    ...     [[0.0, 0.0, 0.0], [0.4, 0.4, 0.4]], dtype=torch.float64
-    ... )
-    >>> charges = torch.tensor([[1.0], [-1.0]], dtype=torch.float64)
-    >>> cell = torch.eye(3, dtype=torch.float64)
+    >>> positions = torch.tensor([[0.0, 0.0, 0.0], [0.4, 0.4, 0.4]])
+    >>> charges = torch.tensor([[1.0], [-1.0]])
+    >>> cell = torch.eye(3)
     >>> neighbor_distances = torch.tensor(
     ...     [0.9381, 0.9381, 0.8246, 0.9381, 0.8246, 0.8246, 0.6928],
-    ...     dtype=torch.float64,
     ... )
     >>> neighbor_indices = torch.tensor(
     ...     [[0, 1], [0, 1], [0, 1], [0, 1], [0, 1], [0, 1], [0, 1]]
@@ -83,7 +79,7 @@ def tune_ewald(
     ... )
 
     """
-    _validate_parameters(charges, cell, positions, exponent)
+    # if cell is 0 `min_dimension` will be zero as well; we raise a propper error later
     min_dimension = float(torch.min(torch.linalg.norm(cell, dim=1)))
     params = [{"lr_wavelength": min_dimension / ns} for ns in range(ns_lo, ns_hi + 1)]
 
@@ -134,14 +130,12 @@ class EwaldErrorBounds(TuningErrorBounds):
     Example
     -------
     >>> import torch
-    >>> positions = torch.tensor(
-    ...     [[0.0, 0.0, 0.0], [0.4, 0.4, 0.4]], dtype=torch.float64
-    ... )
-    >>> charges = torch.tensor([[1.0], [-1.0]], dtype=torch.float64)
-    >>> cell = torch.eye(3, dtype=torch.float64)
+    >>> positions = torch.tensor([[0.0, 0.0, 0.0], [0.4, 0.4, 0.4]])
+    >>> charges = torch.tensor([[1.0], [-1.0]])
+    >>> cell = torch.eye(3)
     >>> error_bounds = EwaldErrorBounds(charges, cell, positions)
     >>> print(error_bounds(smearing=1.0, lr_wavelength=0.5, cutoff=4.4))
-    tensor(8.4304e-05, dtype=torch.float64)
+    tensor(8.4304e-05)
 
     """
 

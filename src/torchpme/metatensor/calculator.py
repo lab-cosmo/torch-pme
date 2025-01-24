@@ -33,8 +33,8 @@ class Calculator(torch.nn.Module):
         self._calculator = self._base_calculator(*args, **kwargs)
 
         # TorchScript requires to initialize all attributes in __init__
-        self._device = torch.device("cpu")
-        self._dtype = torch.float32
+        self._device = torch.get_default_device()
+        self._dtype = torch.get_default_dtype()
         self._n_charges_channels = 0
 
     @staticmethod

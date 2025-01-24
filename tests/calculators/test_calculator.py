@@ -86,7 +86,7 @@ def test_invalid_dtype_cell():
         calculator.forward(
             positions=POSITIONS_1,
             charges=CHARGES_1,
-            cell=torch.ones([3, 3], dtype=torch.float64, device=DEVICE),
+            cell=CELL_1.to(dtype=torch.float64),
             neighbor_indices=NEIGHBOR_INDICES,
             neighbor_distances=NEIGHBOR_DISTANCES,
         )
@@ -99,7 +99,7 @@ def test_invalid_device_cell():
         calculator.forward(
             positions=POSITIONS_1,
             charges=CHARGES_1,
-            cell=torch.ones([3, 3], dtype=DTYPE, device="meta"),
+            cell=CELL_1.to(device="meta"),
             neighbor_indices=NEIGHBOR_INDICES,
             neighbor_distances=NEIGHBOR_DISTANCES,
         )
@@ -166,7 +166,7 @@ def test_invalid_dtype_charges():
     with pytest.raises(ValueError, match=match):
         calculator.forward(
             positions=POSITIONS_1,
-            charges=torch.ones((4, 2), dtype=torch.float64, device=DEVICE),
+            charges=CHARGES_1.to(dtype=torch.float64),
             cell=CELL_1,
             neighbor_indices=NEIGHBOR_INDICES,
             neighbor_distances=NEIGHBOR_DISTANCES,
@@ -179,7 +179,7 @@ def test_invalid_device_charges():
     with pytest.raises(ValueError, match=match):
         calculator.forward(
             positions=POSITIONS_1,
-            charges=torch.ones((4, 2), dtype=DTYPE, device="meta"),
+            charges=CHARGES_1.to(device="meta"),
             cell=CELL_1,
             neighbor_indices=NEIGHBOR_INDICES,
             neighbor_distances=NEIGHBOR_DISTANCES,
@@ -226,8 +226,8 @@ def test_invalid_device_neighbor_indices():
             positions=POSITIONS_1,
             charges=CHARGES_1,
             cell=CELL_1,
-            neighbor_indices=torch.ones((10, 2), dtype=DTYPE, device="meta"),
-            neighbor_distances=torch.ones((10), dtype=DTYPE, device=DEVICE),
+            neighbor_indices=NEIGHBOR_INDICES.to(device="meta"),
+            neighbor_distances=NEIGHBOR_DISTANCES,
         )
 
 
@@ -241,6 +241,22 @@ def test_invalid_device_neighbor_distances():
             positions=POSITIONS_1,
             charges=CHARGES_1,
             cell=CELL_1,
-            neighbor_indices=torch.ones((10, 2), dtype=DTYPE, device=DEVICE),
-            neighbor_distances=torch.ones((10), dtype=DTYPE, device="meta"),
+            neighbor_indices=NEIGHBOR_INDICES,
+            neighbor_distances=NEIGHBOR_DISTANCES.to(device="meta"),
+        )
+
+
+def test_invalid_dtype_neighbor_distances():
+    calculator = CalculatorTest()
+    match = (
+        r"type of `neighbor_distances` \(torch.float64\) must be same "
+        r"as `positions` \(torch.float32\)"
+    )
+    with pytest.raises(ValueError, match=match):
+        calculator.forward(
+            positions=POSITIONS_1,
+            charges=CHARGES_1,
+            cell=CELL_1,
+            neighbor_indices=NEIGHBOR_INDICES,
+            neighbor_distances=NEIGHBOR_DISTANCES.to(dtype=torch.float64),
         )

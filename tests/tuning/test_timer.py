@@ -46,7 +46,7 @@ def test_timer():
 
     calculator = EwaldCalculator(
         potential=CoulombPotential(smearing=1.0),
-        lr_wavelength=1.0,
+        lr_wavelength=0.25,
         dtype=DTYPE,
     )
 

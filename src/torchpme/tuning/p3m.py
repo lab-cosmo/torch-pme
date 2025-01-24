@@ -6,7 +6,6 @@ from warnings import warn
 import torch
 
 from ..calculators import P3MCalculator
-from ._utils import _validate_parameters
 from .tuner import GridSearchTuner, TuningErrorBounds
 
 # Coefficients for the P3M Fourier error,
@@ -125,14 +124,11 @@ def tune_p3m(
     To allow reproducibility, we set the seed to a fixed value
 
     >>> _ = torch.manual_seed(0)
-    >>> positions = torch.tensor(
-    ...     [[0.0, 0.0, 0.0], [0.4, 0.4, 0.4]], dtype=torch.float64
-    ... )
-    >>> charges = torch.tensor([[1.0], [-1.0]], dtype=torch.float64)
-    >>> cell = torch.eye(3, dtype=torch.float64)
+    >>> positions = torch.tensor([[0.0, 0.0, 0.0], [0.4, 0.4, 0.4]])
+    >>> charges = torch.tensor([[1.0], [-1.0]])
+    >>> cell = torch.eye(3)
     >>> neighbor_distances = torch.tensor(
     ...     [0.9381, 0.9381, 0.8246, 0.9381, 0.8246, 0.8246, 0.6928],
-    ...     dtype=torch.float64,
     ... )
     >>> neighbor_indices = torch.tensor(
     ...     [[0, 1], [0, 1], [0, 1], [0, 1], [0, 1], [0, 1], [0, 1]]
@@ -148,7 +144,7 @@ def tune_p3m(
     ... )
 
     """
-    _validate_parameters(charges, cell, positions, exponent)
+    # if cell is 0 `min_dimension` will be zero as well; we raise a propper error later
     min_dimension = float(torch.min(torch.linalg.norm(cell, dim=1)))
     params = [
         {

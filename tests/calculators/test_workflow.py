@@ -116,7 +116,7 @@ class TestWorkflow:
         charges = torch.ones((1, 2), dtype=dtype, device=device)
         cell = torch.eye(3, dtype=dtype, device=device)
         neighbor_indices = torch.tensor([[0, 0]], device=device)
-        neighbor_distances = torch.tensor([0.1], device=device)
+        neighbor_distances = torch.tensor([0.1], dtype=dtype, device=device)
         params["potential"].device = device
         calculator = CalculatorClass(**params, device=device)
         potential = calculator.forward(

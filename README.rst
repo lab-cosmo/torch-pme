@@ -83,12 +83,14 @@ Here is a simple example to get started with *torch-pme*:
    neighbor_indices = torch.zeros((0, 2), dtype=torch.int64)
    neighbor_distances = torch.zeros((0,))
 
-   # Tune P3M parameters (cutoff optional, useful to set for ML with fixed cutoff)
+   # Tune P3M parameters
    smearing, p3m_parameters, _ = torchpme.tuning.tune_p3m(
-      sum_squared_charges=1,
+      charges=charges,
       cell=cell,
       positions=positions,
       cutoff=5.0,
+      neighbor_indices=neighbor_indices,
+      neighbor_distances=neighbor_distances,
    )
 
    # Initialize potential and calculator
