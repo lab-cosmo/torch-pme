@@ -71,48 +71,45 @@ Here is a simple example to get started with *torch-pme*:
 
 .. code-block:: python
 
-   import torch
-   import torchpme
+   >>> import torch
+   >>> import torchpme
 
-   # Single charge in a cubic box
-   positions = torch.zeros((1, 3), requires_grad=True)
-   cell = 8 * torch.eye(3)
-   charges = torch.tensor([[1.0]])
+   >>> # Single charge in a cubic box
+   >>> positions = torch.zeros((1, 3), requires_grad=True)
+   >>> cell = 8 * torch.eye(3)
+   >>> charges = torch.tensor([[1.0]])
 
-   # No neighbors for a single atom; use `vesin` for neighbors if needed
-   neighbor_indices = torch.zeros((0, 2), dtype=torch.int64)
-   neighbor_distances = torch.zeros((0,))
+   >>> # No neighbors for a single atom; use `vesin` for neighbors if needed
+   >>> neighbor_indices = torch.zeros((0, 2), dtype=torch.int64)
+   >>> neighbor_distances = torch.zeros((0,))
 
-   # Tune P3M parameters
-   smearing, p3m_parameters, _ = torchpme.tuning.tune_p3m(
-      charges=charges,
-      cell=cell,
-      positions=positions,
-      cutoff=5.0,
-      neighbor_indices=neighbor_indices,
-      neighbor_distances=neighbor_distances,
-   )
+   >>> # Tune P3M parameters
+   >>> smearing, p3m_parameters, _ = torchpme.tuning.tune_p3m(
+   ...    charges=charges,
+   ...    cell=cell,
+   ...    positions=positions,
+   ...    cutoff=5.0,
+   ...    neighbor_indices=neighbor_indices,
+   ...    neighbor_distances=neighbor_distances,
+   ... )
 
-   # Initialize potential and calculator
-   potential = torchpme.CoulombPotential(smearing)
-   calculator = torchpme.P3MCalculator(potential, **p3m_parameters)
+   >>> # Initialize potential and calculator
+   >>> potential = torchpme.CoulombPotential(smearing)
+   >>> calculator = torchpme.P3MCalculator(potential, **p3m_parameters)
 
-   # Compute (per-atom) potentials
-   potentials = calculator.forward(
-      charges=charges,
-      cell=cell,
-      positions=positions,
-      neighbor_indices=neighbor_indices,
-      neighbor_distances=neighbor_distances,
-   )
+   >>> # Compute (per-atom) potentials
+   >>> potentials = calculator.forward(
+   ...    charges=charges,
+   ...    cell=cell,
+   ...    positions=positions,
+   ...    neighbor_indices=neighbor_indices,
+   ...    neighbor_distances=neighbor_distances,
+   ... )
 
-   # Calculate total energy and forces
-   energy = torch.sum(charges * potentials)
-   energy.backward()
-   forces = -positions.grad
-
-   print("Energy:", energy.item())
-   print("Forces:", forces)
+   >>> # Calculate total energy and forces
+   >>> energy = torch.sum(charges * potentials)
+   >>> energy.backward()
+   >>> forces = -positions.grad
 
 For more examples and details, please refer to the `documentation`_.
 

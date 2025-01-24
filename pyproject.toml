@@ -134,6 +134,12 @@ ignore_missing_imports = true
 [tool.pytest.ini_options]
 python_files = ["*.py"]
 testpaths = ["tests"]
+addopts = [
+    "--cov",
+    "--cov-append",
+    "--cov-report=",
+    "--import-mode=append",
+]
 filterwarnings = [
     "error",
     "ignore:ast.Str is deprecated and will be removed in Python 3.14:DeprecationWarning",
