@@ -13,7 +13,7 @@ from vesin import NeighborList
 
 import torchpme
 
-primitive = read("geometry.in")
+primitive = read(Path(__file__).parent / "geometry.in")
 
 # -- settings --
 multipliers = [4, 8]
