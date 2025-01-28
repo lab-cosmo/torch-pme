@@ -21,9 +21,9 @@ class CalculatorDipole(torch.nn.Module):
     ):
         super().__init__()
 
-        assert isinstance(potential, PotentialDipole), (
-            f"Potential must be an instance of Potential, got {type(potential)}"
-        )
+        assert isinstance(
+            potential, PotentialDipole
+        ), f"Potential must be an instance of PotentialDipole, got {type(potential)}"
         self.potential = potential
         self.lr_wavelength = lr_wavelength
 
@@ -32,7 +32,7 @@ class CalculatorDipole(torch.nn.Module):
             and self.potential.smearing is not None
             or (self.lr_wavelength is None and self.potential.smearing is None)
         ), "Either both `lr_wavelength` and `smearing` must be set or both must be None"
-        self.device = "cpu" if device is None else device
+        self.device = torch.get_default_device() if device is None else device
         self.dtype = torch.get_default_dtype() if dtype is None else dtype
 
         assert self.dtype == self.potential.dtype, (

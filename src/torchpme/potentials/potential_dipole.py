@@ -17,7 +17,7 @@ class PotentialDipole(torch.nn.Module):
     ):
         super().__init__()
         self.dtype = torch.get_default_dtype() if dtype is None else dtype
-        self.device = "cpu" if device is None else device
+        self.device = torch.get_default_device() if device is None else device
         if smearing is not None:
             self.register_buffer(
                 "smearing", torch.tensor(smearing, device=self.device, dtype=self.dtype)
@@ -51,9 +51,7 @@ class PotentialDipole(torch.nn.Module):
         """TODO: Add docstring"""
         r_mag = torch.norm(vector, dim=1, keepdim=True)
         scalar_potential = 1.0 / (r_mag**3)
-        r_outer = torch.einsum(
-            "bi,bj->bij", vector, vector
-        )  # outer product shape (batch, 3, 3)
+        r_outer = torch.bmm(vector.unsqueeze(2), vector.unsqueeze(1))
         return scalar_potential.unsqueeze(-1) * torch.eye(3).to(r_outer).unsqueeze(
             0
         ) - 3.0 * r_outer / (r_mag**5).unsqueeze(-1)
@@ -78,23 +76,22 @@ class PotentialDipole(torch.nn.Module):
             )
         alpha = 1 / (2 * self.smearing**2)
         r_mag = torch.norm(vector, dim=1, keepdim=True)
-        scalar_potential = (
-            1.0 / (r_mag**3)
-            - torch.erfc(torch.sqrt(alpha) * r_mag) / r_mag**3
-            - 2 * torch.sqrt(alpha / torch.pi) * torch.exp(-alpha * r_mag**2) / r_mag**2
-        )
-        r_outer = torch.einsum("bi,bj->bij", vector, vector)
-        return scalar_potential.unsqueeze(-1) * torch.eye(3).to(r_outer).unsqueeze(
-            0
-        ) - r_outer * (
-            3.0 / (r_mag**5)
-            - 3.0 * torch.erfc(torch.sqrt(alpha) * r_mag) / r_mag**5
-            - 2
+        r_outer = torch.bmm(vector.unsqueeze(2), vector.unsqueeze(1))
+        B1 = torch.erfc(torch.sqrt(alpha) * r_mag) / r_mag**3
+        B2 = 2 * torch.sqrt(alpha / torch.pi) * torch.exp(-alpha * r_mag**2) / r_mag**2
+        B = 1.0 / (r_mag**3) - B1 - B2
+        C1 = 3.0 * torch.erfc(torch.sqrt(alpha) * r_mag) / r_mag**5
+        C2 = (
+            2
             * torch.sqrt(alpha / torch.pi)
             * (2 * alpha + 3 / r_mag**2)
             * torch.exp(-alpha * r_mag**2)
             / r_mag**2
-        ).unsqueeze(-1)
+        )
+        C = 3.0 / (r_mag**5) - C1 - C2
+        return B.unsqueeze(-1) * torch.eye(3).to(r_outer).unsqueeze(
+            0
+        ) - r_outer * C.unsqueeze(-1)
 
     def lr_from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
         r"""TODO: Add docstring"""
