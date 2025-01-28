@@ -1,5 +1,5 @@
 import math
-from typing import Any, Optional
+from typing import Any, Optional, Union
 from warnings import warn
 
 import torch
@@ -20,7 +20,7 @@ def tune_ewald(
     ns_hi: int = 14,
     accuracy: float = 1e-3,
     dtype: Optional[torch.dtype] = None,
-    device: Optional[torch.device] = None,
+    device: Union[None, str, torch.device] = None,
 ) -> tuple[float, dict[str, Any], float]:
     r"""
     Find the optimal parameters for :class:`torchpme.EwaldCalculator`.

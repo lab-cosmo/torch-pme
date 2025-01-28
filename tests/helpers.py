@@ -227,14 +227,13 @@ def define_crystal(crystal_name="CsCl", dtype=None, device=None):
     else:
         raise ValueError(f"crystal_name = {crystal_name} is not supported!")
 
-    madelung_ref = torch.tensor(madelung_ref)
     charges = charges.reshape((-1, 1))
 
     return (
         positions.to(device=device, dtype=dtype),
         charges.to(device=device, dtype=dtype),
         cell.to(device=device, dtype=dtype),
-        madelung_ref,
+        torch.tensor(madelung_ref, device=device, dtype=dtype),
         num_formula_units,
     )
 

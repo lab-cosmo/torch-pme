@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Union
 
 import torch
 
@@ -56,7 +56,7 @@ class P3MCalculator(PMECalculator):
         full_neighbor_list: bool = False,
         prefactor: float = 1.0,
         dtype: Optional[torch.dtype] = None,
-        device: Optional[torch.device] = None,
+        device: Union[None, str, torch.device] = None,
     ):
         self.mesh_spacing: float = mesh_spacing
 

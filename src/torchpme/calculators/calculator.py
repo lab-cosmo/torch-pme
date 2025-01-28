@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Union
 
 import torch
 from torch import profiler
@@ -37,7 +37,7 @@ class Calculator(torch.nn.Module):
         full_neighbor_list: bool = False,
         prefactor: float = 1.0,
         dtype: Optional[torch.dtype] = None,
-        device: Optional[torch.device] = None,
+        device: Union[None, str, torch.device] = None,
     ):
         super().__init__()
 
@@ -48,17 +48,20 @@ class Calculator(torch.nn.Module):
 
         self.device = torch.get_default_device() if device is None else device
         self.dtype = torch.get_default_dtype() if dtype is None else dtype
+
+        if self.dtype != potential.dtype:
+            raise TypeError(
+                f"dtype of `potential` ({potential.dtype}) must be same as of "
+                f"`calculator` ({self.dtype})"
+            )
+
+        if self.device != potential.device:
+            raise ValueError(
+                f"device of `potential` ({potential.device}) must be same as of "
+                f"`calculator` ({self.device})"
+            )
+
         self.potential = potential
-
-        assert self.dtype == self.potential.dtype, (
-            f"Potential and Calculator must have the same dtype, got {self.dtype} and "
-            f"{self.potential.dtype}"
-        )
-        assert self.device == self.potential.device, (
-            f"Potential and Calculator must have the same device, got {self.device} and "
-            f"{self.potential.device}"
-        )
-
         self.full_neighbor_list = full_neighbor_list
 
         self.prefactor = prefactor
@@ -179,6 +182,8 @@ class Calculator(torch.nn.Module):
             neighbor_indices=neighbor_indices,
             neighbor_distances=neighbor_distances,
             smearing=self.potential.smearing,
+            dtype=self.dtype,
+            device=self.device,
         )
 
         # Compute short-range (SR) part using a real space sum

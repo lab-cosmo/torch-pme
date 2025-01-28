@@ -10,9 +10,23 @@ def _validate_parameters(
     neighbor_indices: torch.Tensor,
     neighbor_distances: torch.Tensor,
     smearing: Union[float, None],
+    dtype: torch.dtype,
+    device: Union[str, torch.device],
 ) -> None:
-    device = positions.device
-    dtype = positions.dtype
+    if positions.dtype != dtype:
+        raise TypeError(
+            f"type of `positions` ({positions.dtype}) must be same as class "
+            f"type ({dtype})"
+        )
+
+    if isinstance(device, torch.device):
+        device = device.type
+
+    if positions.device.type != device:
+        raise ValueError(
+            f"device of `positions` ({positions.device}) must be same as class "
+            f"device ({device})"
+        )
 
     # check shape, dtype and device of positions
     num_atoms = len(positions)
@@ -29,12 +43,12 @@ def _validate_parameters(
             f"{list(cell.shape)}"
         )
 
-    if cell.dtype != dtype:
-        raise ValueError(
+    if cell.dtype != positions.dtype:
+        raise TypeError(
             f"type of `cell` ({cell.dtype}) must be same as `positions` ({dtype})"
         )
 
-    if cell.device != device:
+    if cell.device != positions.device:
         raise ValueError(
             f"device of `cell` ({cell.device}) must be same as `positions` ({device})"
         )
@@ -63,12 +77,12 @@ def _validate_parameters(
             f"{len(positions)} atoms"
         )
 
-    if charges.dtype != dtype:
-        raise ValueError(
+    if charges.dtype != positions.dtype:
+        raise TypeError(
             f"type of `charges` ({charges.dtype}) must be same as `positions` ({dtype})"
         )
 
-    if charges.device != device:
+    if charges.device != positions.device:
         raise ValueError(
             f"device of `charges` ({charges.device}) must be same as `positions` "
             f"({device})"
@@ -82,7 +96,7 @@ def _validate_parameters(
             "structure"
         )
 
-    if neighbor_indices.device != device:
+    if neighbor_indices.device != positions.device:
         raise ValueError(
             f"device of `neighbor_indices` ({neighbor_indices.device}) must be "
             f"same as `positions` ({device})"
@@ -95,14 +109,14 @@ def _validate_parameters(
             f"{list(neighbor_indices.shape)} and {list(neighbor_distances.shape)}"
         )
 
-    if neighbor_distances.device != device:
+    if neighbor_distances.device != positions.device:
         raise ValueError(
             f"device of `neighbor_distances` ({neighbor_distances.device}) must be "
             f"same as `positions` ({device})"
         )
 
-    if neighbor_distances.dtype != dtype:
-        raise ValueError(
+    if neighbor_distances.dtype != positions.dtype:
+        raise TypeError(
             f"type of `neighbor_distances` ({neighbor_distances.dtype}) must be same "
             f"as `positions` ({dtype})"
         )

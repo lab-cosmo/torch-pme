@@ -43,6 +43,35 @@ def test_compute_output_shapes():
     assert result.shape == charges.shape
 
 
+def test_wrong_device_positions():
+    calculator = CalculatorTest()
+    match = r"device of `positions` \(meta\) must be same as class device \(cpu\)"
+    with pytest.raises(ValueError, match=match):
+        calculator.forward(
+            positions=POSITIONS_1.to(device="meta"),
+            charges=CHARGES_1,
+            cell=CELL_1,
+            neighbor_indices=NEIGHBOR_INDICES,
+            neighbor_distances=NEIGHBOR_DISTANCES,
+        )
+
+
+def test_wrong_dtype_positions():
+    calculator = CalculatorTest()
+    match = (
+        r"type of `positions` \(torch.float64\) must be same as class type "
+        r"\(torch.float32\)"
+    )
+    with pytest.raises(TypeError, match=match):
+        calculator.forward(
+            positions=POSITIONS_1.to(dtype=torch.float64),
+            charges=CHARGES_1,
+            cell=CELL_1,
+            neighbor_indices=NEIGHBOR_INDICES,
+            neighbor_distances=NEIGHBOR_DISTANCES,
+        )
+
+
 # Tests for invalid shape, dtype and device of positions
 def test_invalid_shape_positions():
     calculator = CalculatorTest()
@@ -82,7 +111,7 @@ def test_invalid_dtype_cell():
         r"type of `cell` \(torch.float64\) must be same as `positions` "
         r"\(torch.float32\)"
     )
-    with pytest.raises(ValueError, match=match):
+    with pytest.raises(TypeError, match=match):
         calculator.forward(
             positions=POSITIONS_1,
             charges=CHARGES_1,
@@ -163,7 +192,7 @@ def test_invalid_dtype_charges():
         r"type of `charges` \(torch.float64\) must be same as `positions` "
         r"\(torch.float32\)"
     )
-    with pytest.raises(ValueError, match=match):
+    with pytest.raises(TypeError, match=match):
         calculator.forward(
             positions=POSITIONS_1,
             charges=CHARGES_1.to(dtype=torch.float64),
@@ -252,7 +281,7 @@ def test_invalid_dtype_neighbor_distances():
         r"type of `neighbor_distances` \(torch.float64\) must be same "
         r"as `positions` \(torch.float32\)"
     )
-    with pytest.raises(ValueError, match=match):
+    with pytest.raises(TypeError, match=match):
         calculator.forward(
             positions=POSITIONS_1,
             charges=CHARGES_1,
