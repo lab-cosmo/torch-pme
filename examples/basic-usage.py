@@ -146,7 +146,7 @@ lr_wavelength = smearing / 2
 # contains all the necessary functions (such as those defining the short-range and
 # long-range splits) for this potential and makes them useable in the rest of the code.
 
-potential = CoulombPotential(smearing=smearing)
+potential = CoulombPotential(smearing=smearing, device=device, dtype=dtype)
 
 # %%
 #
@@ -193,7 +193,9 @@ neighbor_indices, neighbor_distances = nl.compute(
 # Since our structure is relatively small, we use the :class:`EwaldCalculator`.
 # We start by the initialization of the class.
 
-calculator = EwaldCalculator(potential=potential, lr_wavelength=lr_wavelength)
+calculator = EwaldCalculator(
+    potential=potential, lr_wavelength=lr_wavelength, device=device, dtype=dtype
+)
 
 # %%
 #

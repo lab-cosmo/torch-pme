@@ -256,7 +256,10 @@ def neighbor_list(
 
     nl = NeighborList(cutoff=cutoff, full_list=full_neighbor_list)
     neighbor_indices, d, S = nl.compute(
-        points=positions, box=box, periodic=periodic, quantities="PdS"
+        points=positions.to(dtype=torch.float64, device="cpu"),
+        box=box.to(dtype=torch.float64, device="cpu"),
+        periodic=periodic,
+        quantities="PdS",
     )
 
     neighbor_indices = torch.from_numpy(neighbor_indices.astype(int)).to(
