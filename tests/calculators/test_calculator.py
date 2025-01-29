@@ -45,7 +45,7 @@ def test_compute_output_shapes():
 
 def test_wrong_device_positions():
     calculator = CalculatorTest()
-    match = r"device of `positions` \(meta\) must be same as class device \(cpu\)"
+    match = r"device of `positions` \(meta\) must be same as the class device \(cpu\)"
     with pytest.raises(ValueError, match=match):
         calculator.forward(
             positions=POSITIONS_1.to(device="meta"),
@@ -59,7 +59,7 @@ def test_wrong_device_positions():
 def test_wrong_dtype_positions():
     calculator = CalculatorTest()
     match = (
-        r"type of `positions` \(torch.float64\) must be same as class type "
+        r"type of `positions` \(torch.float64\) must be same as the class type "
         r"\(torch.float32\)"
     )
     with pytest.raises(TypeError, match=match):
@@ -108,8 +108,7 @@ def test_invalid_shape_cell():
 def test_invalid_dtype_cell():
     calculator = CalculatorTest()
     match = (
-        r"type of `cell` \(torch.float64\) must be same as `positions` "
-        r"\(torch.float32\)"
+        r"type of `cell` \(torch.float64\) must be same as the class \(torch.float32\)"
     )
     with pytest.raises(TypeError, match=match):
         calculator.forward(
@@ -123,7 +122,7 @@ def test_invalid_dtype_cell():
 
 def test_invalid_device_cell():
     calculator = CalculatorTest()
-    match = r"device of `cell` \(meta\) must be same as `positions` \(cpu\)"
+    match = r"device of `cell` \(meta\) must be same as the class \(cpu\)"
     with pytest.raises(ValueError, match=match):
         calculator.forward(
             positions=POSITIONS_1,
@@ -189,7 +188,7 @@ def test_invalid_shape_charges():
 def test_invalid_dtype_charges():
     calculator = CalculatorTest()
     match = (
-        r"type of `charges` \(torch.float64\) must be same as `positions` "
+        r"type of `charges` \(torch.float64\) must be same as the class "
         r"\(torch.float32\)"
     )
     with pytest.raises(TypeError, match=match):
@@ -204,7 +203,7 @@ def test_invalid_dtype_charges():
 
 def test_invalid_device_charges():
     calculator = CalculatorTest()
-    match = r"device of `charges` \(meta\) must be same as `positions` \(cpu\)"
+    match = r"device of `charges` \(meta\) must be same as the class \(cpu\)"
     with pytest.raises(ValueError, match=match):
         calculator.forward(
             positions=POSITIONS_1,
@@ -249,7 +248,7 @@ def test_invalid_shape_neighbor_indices_neighbor_distances():
 
 def test_invalid_device_neighbor_indices():
     calculator = CalculatorTest()
-    match = r"device of `neighbor_indices` \(meta\) must be same as `positions` \(cpu\)"
+    match = r"device of `neighbor_indices` \(meta\) must be same as the class \(cpu\)"
     with pytest.raises(ValueError, match=match):
         calculator.forward(
             positions=POSITIONS_1,
@@ -262,9 +261,7 @@ def test_invalid_device_neighbor_indices():
 
 def test_invalid_device_neighbor_distances():
     calculator = CalculatorTest()
-    match = (
-        r"device of `neighbor_distances` \(meta\) must be same as `positions` \(cpu\)"
-    )
+    match = r"device of `neighbor_distances` \(meta\) must be same as the class \(cpu\)"
     with pytest.raises(ValueError, match=match):
         calculator.forward(
             positions=POSITIONS_1,
@@ -279,7 +276,7 @@ def test_invalid_dtype_neighbor_distances():
     calculator = CalculatorTest()
     match = (
         r"type of `neighbor_distances` \(torch.float64\) must be same "
-        r"as `positions` \(torch.float32\)"
+        r"as the class \(torch.float32\)"
     )
     with pytest.raises(TypeError, match=match):
         calculator.forward(

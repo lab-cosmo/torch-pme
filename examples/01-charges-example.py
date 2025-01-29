@@ -39,10 +39,11 @@ from metatensor.torch.atomistic import NeighborListOptions, System
 import torchpme
 from torchpme.tuning import tune_pme
 
+dtype = torch.float64
+
 # %%
 #
 # Create the properties CsCl unit cell
-dtype = torch.float64
 symbols = ("Cs", "Cl")
 types = torch.tensor([55, 17])
 charges = torch.tensor([[1.0], [-1.0]], dtype=dtype)

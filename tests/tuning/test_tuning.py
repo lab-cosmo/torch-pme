@@ -212,8 +212,7 @@ def test_invalid_cell(tune):
 def test_invalid_dtype_cell(tune):
     charges, _, positions = system()
     match = (
-        r"type of `cell` \(torch.float64\) must be same as `positions` "
-        r"\(torch.float32\)"
+        r"type of `cell` \(torch.float64\) must be same as the class \(torch.float32\)"
     )
     with pytest.raises(TypeError, match=match):
         tune(
