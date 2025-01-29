@@ -91,7 +91,7 @@ class TunerBase:
                 f"Only exponent = 1 is supported but got {exponent}."
             )
 
-        self.device = torch.get_default_device() if device is None else device
+        self.device = torch.get_default_device() if device is None else torch.device(device)
         self.dtype = torch.get_default_dtype() if dtype is None else dtype
 
         _validate_parameters(
@@ -295,7 +295,7 @@ class TuningTimings(torch.nn.Module):
         super().__init__()
 
         self.dtype = torch.get_default_dtype() if dtype is None else dtype
-        self.device = torch.get_default_device() if device is None else device
+        self.device = torch.get_default_device() if device is None else torch.device(device)
 
         _validate_parameters(
             charges=charges,

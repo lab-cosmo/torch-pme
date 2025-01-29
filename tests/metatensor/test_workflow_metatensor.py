@@ -54,7 +54,7 @@ MESH_SPACING = SMEARING / 4
 )
 class TestWorkflow:
     def system(self, device=None, dtype=None):
-        device = torch.get_default_device() if device is None else device
+        device = torch.get_default_device() if device is None else torch.device(device)
         dtype = torch.get_default_dtype() if dtype is None else dtype
 
         system = mts_atomistic.System(

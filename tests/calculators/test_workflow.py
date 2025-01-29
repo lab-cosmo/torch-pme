@@ -60,7 +60,7 @@ MESH_SPACING = SMEARING / 4
 class TestWorkflow:
     def cscl_system(self, device=None, dtype=None):
         """CsCl crystal. Same as in the madelung test"""
-        device = torch.get_default_device() if device is None else device
+        device = torch.get_default_device() if device is None else torch.device(device)
         dtype = torch.get_default_dtype() if dtype is None else dtype
 
         positions = torch.tensor(

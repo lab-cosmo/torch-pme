@@ -46,7 +46,7 @@ class Calculator(torch.nn.Module):
                 f"Potential must be an instance of Potential, got {type(potential)}"
             )
 
-        self.device = torch.get_default_device() if device is None else device
+        self.device = torch.get_default_device() if device is None else torch.device(device)
         self.dtype = torch.get_default_dtype() if dtype is None else dtype
 
         if self.dtype != potential.dtype:

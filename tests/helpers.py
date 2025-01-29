@@ -15,7 +15,7 @@ COULOMB_TEST_FRAMES = EXAMPLES / "coulomb_test_frames.xyz"
 
 
 def define_crystal(crystal_name="CsCl", dtype=None, device=None):
-    device = torch.get_default_device() if device is None else device
+    device = torch.get_default_device() if device is None else torch.device(device)
     dtype = torch.get_default_dtype() if dtype is None else dtype
 
     # Define all relevant parameters (atom positions, charges, cell) of the reference

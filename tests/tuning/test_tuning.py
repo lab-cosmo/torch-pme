@@ -22,7 +22,7 @@ DTYPES = [torch.float32, torch.float64]
 
 
 def system(device=None, dtype=None):
-    device = torch.get_default_device() if device is None else device
+    device = torch.get_default_device() if device is None else torch.device(device)
     dtype = torch.get_default_dtype() if dtype is None else dtype
 
     charges = torch.ones((4, 1), dtype=dtype, device=device)
