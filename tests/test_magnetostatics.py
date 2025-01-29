@@ -42,13 +42,13 @@ def test_magnetostatics_direct():
     )
     result = torch.einsum("ij,ij->i", pot, system.dipoles).sum()
     expected_result = torch.tensor(-0.2656, dtype=torch.float64)
-    assert torch.isclose(
-        result, expected_result, atol=1e-4
-    ), f"Expected {expected_result}, but got {result}"
+    assert torch.isclose(result, expected_result, atol=1e-4), (
+        f"Expected {expected_result}, but got {result}"
+    )
 
 
 @pytest.mark.parametrize(
-    "smearing, sr_potential",
+    ("smearing", "sr_potential"),
     [
         (1e10, torch.tensor(-0.2656, dtype=torch.float64)),
         (1e-10, torch.tensor(0.0000, dtype=torch.float64)),
@@ -68,9 +68,9 @@ def test_magnetostatics_sr(smearing, sr_potential):
     )
     result = torch.einsum("ij,ij->i", pot, system.dipoles).sum()
     expected_result = sr_potential
-    assert torch.isclose(
-        result, expected_result, atol=1e-4
-    ), f"Expected {expected_result}, but got {result}"
+    assert torch.isclose(result, expected_result, atol=1e-4), (
+        f"Expected {expected_result}, but got {result}"
+    )
 
 
 def test_magnetostatic_ewald():
@@ -93,6 +93,6 @@ def test_magnetostatic_ewald():
     # result is calculated using espressomd DipolarP3M with the same parameters and mesh
     # size 64
     expected_result = torch.tensor(-0.30848574939287954, dtype=torch.float64)
-    assert torch.isclose(
-        result, expected_result, atol=1e-4
-    ), f"Expected {expected_result}, but got {result}"
+    assert torch.isclose(result, expected_result, atol=1e-4), (
+        f"Expected {expected_result}, but got {result}"
+    )
