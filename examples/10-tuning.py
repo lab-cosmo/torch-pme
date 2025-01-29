@@ -120,7 +120,9 @@ smearing = 1.0
 pme_params = {"mesh_spacing": 1.0, "interpolation_nodes": 4}
 
 pme = torchpme.PMECalculator(
-    potential=torchpme.CoulombPotential(smearing=smearing),
+    potential=torchpme.CoulombPotential(smearing=smearing, device=device, dtype=dtype),
+    device=device,
+    dtype=dtype,
     **pme_params,  # type: ignore[arg-type]
 )
 
@@ -168,6 +170,8 @@ timings = TuningTimings(
     neighbor_indices=neighbor_indices,
     neighbor_distances=neighbor_distances,
     run_backward=True,
+    device=device,
+    dtype=dtype,
 )
 estimated_timing = timings(pme)
 
@@ -210,15 +214,19 @@ def filter_neighbors(cutoff, neighbor_indices, neighbor_distances):
     return neighbor_indices[filter_idx], neighbor_distances[filter_idx]
 
 
-def timed_madelung(cutoff, smearing, mesh_spacing, interpolation_nodes):
+def timed_madelung(cutoff, smearing, mesh_spacing, interpolation_nodes, device, dtype):
     filter_indices, filter_distances = filter_neighbors(
         cutoff, neighbor_indices, neighbor_distances
     )
 
     pme = torchpme.PMECalculator(
-        potential=torchpme.CoulombPotential(smearing=smearing),
+        potential=torchpme.CoulombPotential(
+            smearing=smearing, device=device, dtype=dtype
+        ),
         mesh_spacing=mesh_spacing,
         interpolation_nodes=interpolation_nodes,
+        device=device,
+        dtype=dtype,
     )
     potential = pme(
         charges=charges,
@@ -239,6 +247,8 @@ def timed_madelung(cutoff, smearing, mesh_spacing, interpolation_nodes):
         run_backward=True,
         n_warmup=1,
         n_repeat=4,
+        device=device,
+        dtype=dtype,
     )
     estimated_timing = timings(pme)
     return madelung, estimated_timing
@@ -251,7 +261,9 @@ timings = np.zeros((len(smearing_grid), len(spacing_grid)))
 bounds = np.zeros((len(smearing_grid), len(spacing_grid)))
 for ism, smearing in enumerate(smearing_grid):
     for isp, spacing in enumerate(spacing_grid):
-        results[ism, isp], timings[ism, isp] = timed_madelung(8.0, smearing, spacing, 4)
+        results[ism, isp], timings[ism, isp] = timed_madelung(
+            8.0, smearing, spacing, 4, device, dtype
+        )
         bounds[ism, isp] = error_bounds(8.0, smearing, spacing, 4)
 
 # %%
@@ -374,7 +386,7 @@ bounds = np.zeros((len(nint_grid), len(spacing_grid)))
 for inint, nint in enumerate(nint_grid):
     for isp, spacing in enumerate(spacing_grid):
         results[inint, isp], timings[inint, isp] = timed_madelung(
-            5.0, 1.0, spacing, nint
+            5.0, 1.0, spacing, nint, device=device, dtype=dtype
         )
         bounds[inint, isp] = error_bounds(5.0, 1.0, spacing, nint)
 
@@ -445,15 +457,19 @@ smearing, parameters, timing = tune_pme(
     cutoff=5.0,
     neighbor_indices=neighbor_indices,
     neighbor_distances=neighbor_distances,
+    device=device,
+    dtype=dtype,
 )
 
-print(f"""
+print(
+    f"""
 Estimated PME parameters (cutoff={5.0} Å):
 Smearing: {smearing} Å
 Mesh spacing: {parameters["mesh_spacing"]} Å
 Interpolation order: {parameters["interpolation_nodes"]}
 Estimated time per step: {timing} s
-""")
+"""
+)
 
 # %%
 # What is the best cutoff?
@@ -476,6 +492,8 @@ for cutoff in cutoff_grid:
         cutoff=cutoff,
         neighbor_indices=filter_indices,
         neighbor_distances=filter_distances,
+        device=device,
+        dtype=dtype,
     )
     timings_grid.append(timing)
 

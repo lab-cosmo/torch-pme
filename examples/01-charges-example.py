@@ -39,15 +39,16 @@ from metatensor.torch.atomistic import NeighborListOptions, System
 import torchpme
 from torchpme.tuning import tune_pme
 
+dtype = torch.float64
+
 # %%
 #
 # Create the properties CsCl unit cell
-
 symbols = ("Cs", "Cl")
 types = torch.tensor([55, 17])
-charges = torch.tensor([[1.0], [-1.0]], dtype=torch.float64)
-positions = torch.tensor([(0, 0, 0), (0.5, 0.5, 0.5)], dtype=torch.float64)
-cell = torch.eye(3, dtype=torch.float64)
+charges = torch.tensor([[1.0], [-1.0]], dtype=dtype)
+positions = torch.tensor([(0, 0, 0), (0.5, 0.5, 0.5)], dtype=dtype)
+cell = torch.eye(3, dtype=dtype)
 pbc = torch.tensor([True, True, True])
 
 
@@ -72,6 +73,7 @@ smearing, pme_params, _ = tune_pme(
     cutoff=cutoff,
     neighbor_indices=neighbor_indices,
     neighbor_distances=neighbor_distances,
+    dtype=dtype,
 )
 
 # %%
@@ -101,7 +103,7 @@ neighbor_indices, S, D, neighbor_distances = nl.compute(
 # will be used to *compute* the potential energy of the system.
 
 calculator = torchpme.PMECalculator(
-    torchpme.CoulombPotential(smearing=smearing), **pme_params
+    torchpme.CoulombPotential(smearing=smearing, dtype=dtype), dtype=dtype, **pme_params
 )
 
 # %%
@@ -112,7 +114,7 @@ calculator = torchpme.PMECalculator(
 # As a first application of multiple charge channels, we start simply by using the
 # classic definition of one charge channel per atom.
 
-charges = torch.tensor([[1.0], [-1.0]], dtype=torch.float64)
+charges = torch.tensor([[1.0], [-1.0]], dtype=dtype)
 
 # %%
 #
@@ -160,7 +162,7 @@ print(charges.T @ potential)
 # species-specific potentials and facilitating the learning process for machine learning
 # algorithms.
 
-charges_one_hot = torch.tensor([[1.0, 0.0], [0.0, 1.0]], dtype=torch.float64)
+charges_one_hot = torch.tensor([[1.0, 0.0], [0.0, 1.0]], dtype=dtype)
 
 # %%
 #
@@ -205,7 +207,7 @@ print(charge_Na * potential_one_hot[0] + charge_Cl * potential_one_hot[1])
 # creating a new calculator with the metatensor interface.
 
 calculator_metatensor = torchpme.metatensor.PMECalculator(
-    torchpme.CoulombPotential(smearing=smearing), **pme_params
+    torchpme.CoulombPotential(smearing=smearing, dtype=dtype), dtype=dtype, **pme_params
 )
 
 # %%

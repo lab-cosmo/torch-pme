@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Union
 
 import torch
 
@@ -56,7 +56,7 @@ class P3MCalculator(PMECalculator):
         full_neighbor_list: bool = False,
         prefactor: float = 1.0,
         dtype: Optional[torch.dtype] = None,
-        device: Optional[torch.device] = None,
+        device: Union[None, str, torch.device] = None,
     ):
         self.mesh_spacing: float = mesh_spacing
 
@@ -73,8 +73,8 @@ class P3MCalculator(PMECalculator):
         )
 
         self.kspace_filter: P3MKSpaceFilter = P3MKSpaceFilter(
-            cell=torch.eye(3),
-            ns_mesh=torch.ones(3, dtype=int),
+            cell=torch.eye(3, dtype=self.dtype, device=self.device),
+            ns_mesh=torch.ones(3, dtype=int, device=self.device),
             interpolation_nodes=self.interpolation_nodes,
             kernel=self.potential,
             mode=0,  # Green's function for point-charge potentials
@@ -84,8 +84,8 @@ class P3MCalculator(PMECalculator):
         )
 
         self.mesh_interpolator: MeshInterpolator = MeshInterpolator(
-            cell=torch.eye(3),
-            ns_mesh=torch.ones(3, dtype=int),
+            cell=torch.eye(3, dtype=self.dtype, device=self.device),
+            ns_mesh=torch.ones(3, dtype=int, device=self.device),
             interpolation_nodes=self.interpolation_nodes,
             method="P3M",
         )

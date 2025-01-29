@@ -28,6 +28,8 @@ from vesin.torch import NeighborList
 from torchpme import CombinedPotential, EwaldCalculator, InversePowerLawPotential
 from torchpme.prefactors import eV_A
 
+dtype = torch.float64
+
 # %%
 # Combined potentials
 # -------------------
@@ -65,10 +67,10 @@ lr_wavelength = 0.5 * smearing
 # evaluation, and so one has to set it also for the combined potential, even if it is
 # not used explicitly in the evaluation of the combination.
 
-pot_1 = InversePowerLawPotential(exponent=1, smearing=smearing)
-pot_2 = InversePowerLawPotential(exponent=2, smearing=smearing)
+pot_1 = InversePowerLawPotential(exponent=1, smearing=smearing, dtype=dtype)
+pot_2 = InversePowerLawPotential(exponent=2, smearing=smearing, dtype=dtype)
 
-potential = CombinedPotential(potentials=[pot_1, pot_2], smearing=smearing)
+potential = CombinedPotential(potentials=[pot_1, pot_2], smearing=smearing, dtype=dtype)
 
 # Note also that :class:`CombinedPotential` can be used with any combination of
 # potentials, as long they are all either direct or range separated. For instance, one
@@ -80,7 +82,7 @@ potential = CombinedPotential(potentials=[pot_1, pot_2], smearing=smearing)
 # We now plot of the individual and combined ``potential`` functions together with an
 # explicit sum of the two potentials.
 
-dist = torch.logspace(-3, 2, 1000)
+dist = torch.logspace(-3, 2, 1000, dtype=dtype)
 
 fig, ax = plt.subplots()
 
@@ -115,7 +117,7 @@ plt.show()
 # combines all terms in a range-separated potential, including the k-space
 # kernel.
 
-k = torch.logspace(-2, 2, 1000)
+k = torch.logspace(-2, 2, 1000, dtype=dtype)
 
 fig, ax = plt.subplots()
 
@@ -154,9 +156,8 @@ plt.show()
 # much bigger system.
 
 calculator = EwaldCalculator(
-    potential=potential, lr_wavelength=lr_wavelength, prefactor=eV_A
+    potential=potential, lr_wavelength=lr_wavelength, prefactor=eV_A, dtype=dtype
 )
-calculator.to(dtype=torch.float64)
 
 
 # %%
