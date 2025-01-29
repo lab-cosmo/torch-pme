@@ -91,7 +91,11 @@ class TunerBase:
                 f"Only exponent = 1 is supported but got {exponent}."
             )
 
-        self.device = torch.get_default_device() if device is None else torch.device(device)
+        self.device = (
+            torch.get_default_device() if device is None else torch.device(device)
+        )
+        if self.device.type == "cuda" and self.device.index is None:
+            self.device = torch.device("cuda:0")
         self.dtype = torch.get_default_dtype() if dtype is None else dtype
 
         _validate_parameters(
@@ -295,7 +299,11 @@ class TuningTimings(torch.nn.Module):
         super().__init__()
 
         self.dtype = torch.get_default_dtype() if dtype is None else dtype
-        self.device = torch.get_default_device() if device is None else torch.device(device)
+        self.device = (
+            torch.get_default_device() if device is None else torch.device(device)
+        )
+        if self.device.type == "cuda" and self.device.index is None:
+            self.device = torch.device("cuda:0")
 
         _validate_parameters(
             charges=charges,

@@ -43,7 +43,11 @@ class Potential(torch.nn.Module):
     ):
         super().__init__()
         self.dtype = torch.get_default_dtype() if dtype is None else dtype
-        self.device = torch.get_default_device() if device is None else torch.device(device)
+        self.device = (
+            torch.get_default_device() if device is None else torch.device(device)
+        )
+        if self.device.type == "cuda" and self.device.index is None:
+            self.device = torch.device("cuda:0")
         if smearing is not None:
             self.register_buffer(
                 "smearing", torch.tensor(smearing, device=self.device, dtype=self.dtype)

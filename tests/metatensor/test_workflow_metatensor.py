@@ -26,27 +26,35 @@ MESH_SPACING = SMEARING / 4
         (
             torchpme.metatensor.Calculator,
             {
-                "potential": torchpme.CoulombPotential(smearing=None),
+                "potential": lambda dtype, device: torchpme.CoulombPotential(
+                    smearing=None, dtype=dtype, device=device
+                ),
             },
         ),
         (
             torchpme.metatensor.EwaldCalculator,
             {
-                "potential": torchpme.CoulombPotential(smearing=SMEARING),
+                "potential": lambda dtype, device: torchpme.CoulombPotential(
+                    smearing=SMEARING, dtype=dtype, device=device
+                ),
                 "lr_wavelength": LR_WAVELENGTH,
             },
         ),
         (
             torchpme.metatensor.PMECalculator,
             {
-                "potential": torchpme.CoulombPotential(smearing=SMEARING),
+                "potential": lambda dtype, device: torchpme.CoulombPotential(
+                    smearing=SMEARING, dtype=dtype, device=device
+                ),
                 "mesh_spacing": MESH_SPACING,
             },
         ),
         (
             torchpme.metatensor.P3MCalculator,
             {
-                "potential": torchpme.CoulombPotential(smearing=SMEARING),
+                "potential": lambda dtype, device: torchpme.CoulombPotential(
+                    smearing=SMEARING, dtype=dtype, device=device
+                ),
                 "mesh_spacing": MESH_SPACING,
             },
         ),
@@ -109,23 +117,22 @@ class TestWorkflow:
 
     def test_operation_as_python(self, CalculatorClass, params, device, dtype):
         """Run `check_operation` as a normal python script"""
-        params["potential"].device = device
-        params["potential"].dtype = dtype
+        params = params.copy()
+        params["potential"] = params["potential"](dtype, device)
         calculator = CalculatorClass(**params, device=device, dtype=dtype)
         self.check_operation(calculator=calculator, device=device, dtype=dtype)
 
     def test_operation_as_torch_script(self, CalculatorClass, params, device, dtype):
         """Run `check_operation` as a compiled torch script module."""
-        params["potential"].device = device
-        params["potential"].dtype = dtype
+        params = params.copy()
+        params["potential"] = params["potential"](dtype, device)
         calculator = CalculatorClass(**params, device=device, dtype=dtype)
         scripted = torch.jit.script(calculator)
         self.check_operation(calculator=scripted, device=device, dtype=dtype)
 
     def test_save_load(self, CalculatorClass, params, device, dtype):
         params = params.copy()
-        params["potential"].device = device
-        params["potential"].dtype = dtype
+        params["potential"] = params["potential"](dtype, device)
 
         calculator = CalculatorClass(**params, device=device, dtype=dtype)
         scripted = torch.jit.script(calculator)
