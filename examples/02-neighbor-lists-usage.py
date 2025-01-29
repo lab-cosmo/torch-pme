@@ -55,6 +55,7 @@ from torchpme.tuning import tune_pme
 #
 # As a test system, we use a 2x2x2 supercell of an CsCl crystal in a cubic cell.
 
+dtype = torch.float64
 atoms_unitcell = ase.Atoms(
     symbols=["Cs", "Cl"],
     positions=np.array([(0, 0, 0), (0.5, 0.5, 0.5)]),
@@ -97,7 +98,7 @@ cutoff = 4.4
 nl = vesin.torch.NeighborList(cutoff=cutoff, full_list=False)
 neighbor_indices, neighbor_distances = nl.compute(
     points=positions.to(dtype=torch.float64, device="cpu"),
-    box=cell.to(dtype=torch.float64, device="cpu"),
+    box=cell.to(dtype=dtype, device="cpu"),
     periodic=True,
     quantities="Pd",
 )
@@ -109,6 +110,7 @@ smearing, pme_params, _ = tune_pme(
     cutoff=cutoff,
     neighbor_indices=neighbor_indices,
     neighbor_distances=neighbor_distances,
+    dtype=dtype,
 )
 
 # %%
@@ -193,7 +195,9 @@ neighbor_distances = distances(
 # compute the potential.
 
 pme = torchpme.PMECalculator(
-    potential=torchpme.CoulombPotential(smearing=smearing), **pme_params
+    potential=torchpme.CoulombPotential(smearing=smearing, dtype=dtype),
+    dtype=dtype,
+    **pme_params,
 )
 potential = pme(
     charges=charges,

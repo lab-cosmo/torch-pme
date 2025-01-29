@@ -11,14 +11,15 @@ import torchpme
 mts_torch = pytest.importorskip("metatensor.torch")
 mts_atomistic = pytest.importorskip("metatensor.torch.atomistic")
 
-AVAILABLE_DEVICES = [torch.device("cpu")] + torch.cuda.is_available() * [
-    torch.device("cuda")
-]
+DEVICES = ["cpu", torch.device("cpu")] + torch.cuda.is_available() * ["cuda"]
+DTYPES = [torch.float32, torch.float64]
 SMEARING = 0.1
 LR_WAVELENGTH = SMEARING / 4
 MESH_SPACING = SMEARING / 4
 
 
+@pytest.mark.parametrize("device", DEVICES)
+@pytest.mark.parametrize("dtype", DTYPES)
 @pytest.mark.parametrize(
     ("CalculatorClass", "params"),
     [
@@ -52,7 +53,10 @@ MESH_SPACING = SMEARING / 4
     ],
 )
 class TestWorkflow:
-    def system(self, device=None):
+    def system(self, device=None, dtype=None):
+        device = torch.get_default_device() if device is None else device
+        dtype = torch.get_default_dtype() if dtype is None else dtype
+
         system = mts_atomistic.System(
             types=torch.tensor([1, 2, 2]),
             positions=torch.tensor([[0.0, 0.0, 0.0], [0.0, 0.0, 0.2], [0.0, 0.0, 0.5]]),
@@ -92,30 +96,32 @@ class TestWorkflow:
 
         return system.to(device=device), neighbors.to(device=device)
 
-    def check_operation(self, calculator, device):
+    def check_operation(self, calculator, device, dtype):
         """Make sure computation runs and returns a metatensor.TensorMap."""
-        system, neighbors = self.system(device)
+        system, neighbors = self.system(device=device, dtype=dtype)
         descriptor = calculator.forward(system, neighbors)
 
         assert isinstance(descriptor, torch.ScriptObject)
         if version.parse(torch.__version__) >= version.parse("2.1"):
             assert descriptor._type().name() == "TensorMap"
 
-    @pytest.mark.parametrize("device", AVAILABLE_DEVICES)
-    def test_operation_as_python(self, CalculatorClass, params, device):
+    def test_operation_as_python(self, CalculatorClass, params, device, dtype):
         """Run `check_operation` as a normal python script"""
         calculator = CalculatorClass(**params)
-        self.check_operation(calculator=calculator, device=device)
+        self.check_operation(calculator=calculator, device=device, dtype=dtype)
 
-    @pytest.mark.parametrize("device", AVAILABLE_DEVICES)
-    def test_operation_as_torch_script(self, CalculatorClass, params, device):
+    def test_operation_as_torch_script(self, CalculatorClass, params, device, dtype):
         """Run `check_operation` as a compiled torch script module."""
         calculator = CalculatorClass(**params)
         scripted = torch.jit.script(calculator)
-        self.check_operation(calculator=scripted, device=device)
+        self.check_operation(calculator=scripted, device=device, dtype=dtype)
 
-    def test_save_load(self, CalculatorClass, params):
-        calculator = CalculatorClass(**params)
+    def test_save_load(self, CalculatorClass, params, device, dtype):
+        params = params.copy()
+        params["potential"].device = device
+        params["potential"].dtype = dtype
+
+        calculator = CalculatorClass(**params, device=device, dtype=dtype)
         scripted = torch.jit.script(calculator)
         with io.BytesIO() as buffer:
             torch.jit.save(scripted, buffer)

@@ -1,6 +1,6 @@
 import math
 import time
-from typing import Optional
+from typing import Optional, Union
 
 import torch
 
@@ -84,12 +84,15 @@ class TunerBase:
         calculator: type[Calculator],
         exponent: int = 1,
         dtype: Optional[torch.dtype] = None,
-        device: Optional[torch.device] = None,
+        device: Union[None, str, torch.device] = None,
     ):
         if exponent != 1:
             raise NotImplementedError(
                 f"Only exponent = 1 is supported but got {exponent}."
             )
+
+        self.device = torch.get_default_device() if device is None else device
+        self.dtype = torch.get_default_dtype() if dtype is None else dtype
 
         _validate_parameters(
             charges=charges,
@@ -100,16 +103,15 @@ class TunerBase:
                 [1.0], device=positions.device, dtype=positions.dtype
             ),
             smearing=1.0,  # dummy value because; always have range-seperated potentials
+            dtype=self.dtype,
+            device=self.device,
         )
-
         self.charges = charges
         self.cell = cell
         self.positions = positions
         self.cutoff = cutoff
         self.calculator = calculator
         self.exponent = exponent
-        self.device = torch.get_default_device() if device is None else device
-        self.dtype = torch.get_default_dtype() if dtype is None else dtype
 
         self._prefac = 2 * float((charges**2).sum()) / math.sqrt(len(positions))
 
@@ -188,7 +190,7 @@ class GridSearchTuner(TunerBase):
         neighbor_distances: torch.Tensor,
         exponent: int = 1,
         dtype: Optional[torch.dtype] = None,
-        device: Optional[torch.device] = None,
+        device: Union[None, str, torch.device] = None,
     ):
         super().__init__(
             charges=charges,
@@ -288,9 +290,12 @@ class TuningTimings(torch.nn.Module):
         n_warmup: int = 4,
         run_backward: Optional[bool] = True,
         dtype: Optional[torch.dtype] = None,
-        device: Optional[torch.device] = None,
+        device: Union[None, str, torch.device] = None,
     ):
         super().__init__()
+
+        self.dtype = torch.get_default_dtype() if dtype is None else dtype
+        self.device = torch.get_default_device() if device is None else device
 
         _validate_parameters(
             charges=charges,
@@ -299,13 +304,13 @@ class TuningTimings(torch.nn.Module):
             neighbor_indices=neighbor_indices,
             neighbor_distances=neighbor_distances,
             smearing=1.0,  # dummy value because; always have range-seperated potentials
+            device=self.device,
+            dtype=self.dtype,
         )
 
         self.charges = charges
         self.cell = cell
         self.positions = positions
-        self.dtype = dtype
-        self.device = device
         self.n_repeat = n_repeat
         self.n_warmup = n_warmup
         self.run_backward = run_backward
