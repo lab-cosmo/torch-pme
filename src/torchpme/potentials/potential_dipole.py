@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Union
 
 import torch
 
@@ -13,7 +13,7 @@ class PotentialDipole(torch.nn.Module):
         smearing: Optional[float] = None,
         exclusion_radius: Optional[float] = None,
         dtype: Optional[torch.dtype] = None,
-        device: Optional[torch.device] = None,
+        device: Union[None, str, torch.device] = None,
     ):
         super().__init__()
         self.dtype = torch.get_default_dtype() if dtype is None else dtype
@@ -35,7 +35,7 @@ class PotentialDipole(torch.nn.Module):
     @torch.jit.export
     def f_cutoff(self, vector: torch.Tensor) -> torch.Tensor:
         r"""TODO: Add docstring"""
-        r_mag = torch.norm(vector, dim=1)
+        r_mag = torch.norm(vector, dim=1, keepdim=True)
         if self.exclusion_radius is None:
             raise ValueError(
                 "Cannot compute cutoff function when `exclusion_radius` is not set"
@@ -65,7 +65,7 @@ class PotentialDipole(torch.nn.Module):
             )
         if self.exclusion_radius is None:
             return self.from_dist(vector) - self.lr_from_dist(vector)
-        return -self.lr_from_dist(vector) * self.f_cutoff(vector)
+        return -self.lr_from_dist(vector) * self.f_cutoff(vector).unsqueeze(-1)
 
     @torch.jit.export
     def lr_from_dist(self, vector: torch.Tensor) -> torch.Tensor:
