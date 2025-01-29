@@ -6,9 +6,8 @@ def get_ns_mesh(cell: torch.Tensor, mesh_spacing: float):
     Computes the mesh size given a target mesh spacing and cell
     getting the closest powers of 2 to help with FFT.
 
-    :param cell: torch.tensor of shape ``(3, 3)``
-        Tensor specifying the real space unit cell of a structure, where ``cell[i]`` is
-        the i-th basis vector
+    :param cell: torch.tensor of shape ``(3, 3)``, where ``cell[i]`` is the i-th basis
+        vector of the unit cell
     :param mesh_spacing: float
     :param differentiable: boll
 
@@ -81,9 +80,8 @@ def generate_kvectors_for_mesh(cell: torch.Tensor, ns: torch.Tensor) -> torch.Te
     This variant is used in combination with **mesh based calculators** using the fast
     fourier transform (FFT) algorithm.
 
-    :param cell: torch.tensor of shape ``(3, 3)``
-        Tensor specifying the real space unit cell of a structure, where ``cell[i]`` is
-        the i-th basis vector
+    :param cell: torch.tensor of shape ``(3, 3)``, where ``cell[i]`` is the i-th basis
+        vector of the unit cell
     :param ns: torch.tensor of shape ``(3,)`` and dtype int
         ``ns = [nx, ny, nz]`` contains the number of mesh points in the x-, y- and
         z-direction, respectively. For faster performance during the Fast Fourier
@@ -119,9 +117,8 @@ def generate_kvectors_for_ewald(
     reciprocal space vectors is returned, rather than the FFT-optimized set that roughly
     contains only half of the vectors.
 
-    :param cell: torch.tensor of shape ``(3, 3)``
-        Tensor specifying the real space unit cell of a structure, where ``cell[i]`` is
-        the i-th basis vector
+    :param cell: torch.tensor of shape ``(3, 3)``, where ``cell[i]`` is the i-th basis
+        vector of the unit cell
     :param ns: torch.tensor of shape ``(3,)`` and dtype int
         ``ns = [nx, ny, nz]`` contains the number of mesh points in the x-, y- and
         z-direction, respectively.

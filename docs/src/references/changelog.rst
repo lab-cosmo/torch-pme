@@ -28,15 +28,14 @@ Added
 #####
 
 * Enhanced ``device`` and ``dtype`` consistency checks throughout the library
+* Better documentation for for ``cell``, ``charges`` and ``positions`` parameters
 * Require consistent ``dtype`` between ``positions`` and ``neighbor_distances`` in
   ``Calculator`` classes and tuning functions.
-
 
 Fixed
 #####
 
 * Fix ``device`` and ``dtype`` not being used in the init of the ``P3MCalculator``
-
 
 `Version 0.2.0 <https://github.com/lab-cosmo/torch-pme/releases/tag/v0.2.0>`_ - 2025-01-23
 ------------------------------------------------------------------------------------------

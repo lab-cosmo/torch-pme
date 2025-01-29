@@ -84,7 +84,7 @@ class Potential(torch.nn.Module):
         """
         Computes a pair potential given a tensor of interatomic distances.
 
-        :param dist: torch.Tensor containing the distances at which the potential
+        :param dist: torch.tensor containing the distances at which the potential
             is to be evaluated.
         """
         raise NotImplementedError(

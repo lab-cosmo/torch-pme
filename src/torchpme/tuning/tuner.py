@@ -16,10 +16,12 @@ class TuningErrorBounds(torch.nn.Module):
     process. It can also be used with the :class:`torchpme.tuning.tuner.TunerBase` to
     build up a custom parameter tuner.
 
-    :param charges: atomic charges
-    :param cell: single tensor of shape (3, 3), describing the bounding
-    :param positions: single tensor of shape (``len(charges), 3``) containing the
-        Cartesian positions of all point charges in the system.
+    :param charges: torch.tensor of shape ``(len(positions, 1))`` containing the atomic
+        (pseudo-)charges
+    :param cell: torch.tensor of shape ``(3, 3)``, where ``cell[i]`` is the i-th basis
+        vector of the unit cell
+    :param positions: torch.tensor of shape ``(N, 3)`` containing the Cartesian
+        coordinates of the ``N`` particles within the supercell.
     """
 
     def __init__(
@@ -49,10 +51,12 @@ class TunerBase:
     real space error formula. The :func:`TunerBase.tune` defines the interface for a
     sophisticated tuning process, which takes a value of the desired accuracy.
 
-    :param charges: atomic charges
-    :param cell: single tensor of shape (3, 3), describing the bounding
-    :param positions: single tensor of shape (``len(charges), 3``) containing the
-        Cartesian positions of all point charges in the system.
+    :param charges: torch.tensor of shape ``(len(positions, 1))`` containing the atomic
+        (pseudo-)charges
+    :param cell: torch.tensor of shape ``(3, 3)``, where ``cell[i]`` is the i-th basis
+        vector of the unit cell
+    :param positions: torch.tensor of shape ``(N, 3)`` containing the Cartesian
+        coordinates of the ``N`` particles within the supercell.
     :param cutoff: real space cutoff, serves as a hyperparameter here.
     :param calculator: the calculator to be tuned
     :param exponent: exponent of the potential, only exponent = 1 is supported
@@ -156,17 +160,19 @@ class GridSearchTuner(TunerBase):
         cutoff, one could instantiate the tuner with different cutoff values and
         manually pick the best from the tuning results.
 
-    :param charges: atomic charges
-    :param cell: single tensor of shape (3, 3), describing the bounding
-    :param positions: single tensor of shape (``len(charges), 3``) containing the
-        Cartesian positions of all point charges in the system.
+    :param charges: torch.tensor of shape ``(len(positions, 1))`` containing the atomic
+        (pseudo-)charges
+    :param cell: torch.tensor of shape ``(3, 3)``, where ``cell[i]`` is the i-th basis
+        vector of the unit cell
+    :param positions: torch.tensor of shape ``(N, 3)`` containing the Cartesian
+        coordinates of the ``N`` particles within the supercell.
     :param cutoff: real space cutoff, serves as a hyperparameter here.
     :param calculator: the calculator to be tuned
     :param error_bounds: error bounds for the calculator
     :param params: list of Fourier space parameter sets for which the error is estimated
-    :param neighbor_indices: torch.Tensor with the ``i,j`` indices of neighbors for
+    :param neighbor_indices: torch.tensor with the ``i,j`` indices of neighbors for
         which the potential should be computed in real space.
-    :param neighbor_distances: torch.Tensor with the pair distances of the neighbors for
+    :param neighbor_distances: torch.tensor with the pair distances of the neighbors for
         which the potential should be computed in real space.
     :param exponent: exponent of the potential, only exponent = 1 is supported
     """
@@ -257,14 +263,16 @@ class TuningTimings(torch.nn.Module):
     warmup runs. The class takes the information of the structure that one wants to
     benchmark on, and the configuration of the timing process as inputs.
 
-    :param charges: atomic charges
-    :param cell: single tensor of shape (3, 3), describing the bounding
-    :param positions: single tensor of shape (``len(charges), 3``) containing the
-        Cartesian positions of all point charges in the system.
+    :param charges: torch.tensor of shape ``(len(positions, 1))`` containing the atomic
+        (pseudo-)charges
+    :param cell: torch.tensor of shape ``(3, 3)``, where ``cell[i]`` is the i-th basis
+        vector of the unit cell
+    :param positions: torch.tensor of shape ``(N, 3)`` containing the Cartesian
+        coordinates of the ``N`` particles within the supercell.
     :param cutoff: real space cutoff, serves as a hyperparameter here.
-    :param neighbor_indices: torch.Tensor with the ``i,j`` indices of neighbors for
+    :param neighbor_indices: torch.tensor with the ``i,j`` indices of neighbors for
         which the potential should be computed in real space.
-    :param neighbor_distances: torch.Tensor with the pair distances of the neighbors for
+    :param neighbor_distances: torch.tensor with the pair distances of the neighbors for
         which the potential should be computed in real space.
     :param n_repeat: number of times to repeat to estimate the average timing
     :param n_warmup: number of warmup runs, recommended to be at least 4
