@@ -69,30 +69,6 @@ class Calculator(torch.nn.Module):
         neighbor_indices: torch.Tensor,
         neighbor_distances: torch.Tensor,
     ) -> torch.Tensor:
-        """
-        Computes the "real space" part of the potential. Depending on the
-        ``smearing`` in the potential class, it will either evaluate the
-        full potential, or only the short-range, "local" part.
-
-        :param charges: 2D tensor or list of 2D tensor of shape
-            ``(n_channels,len(positions))``.
-            ``n_channels`` is the number of charge channels the
-            potential should be calculated for a standard potential ``n_channels=1``.
-            If more than one "channel" is provided multiple potentials for the same
-            position are computed depending on the charges and the potentials.
-        :param neighbor_indices: Single or list of 2D tensors of shape ``(n, 2)``, where
-            ``n`` is the number of neighbors. The two columns correspond to the indices
-            of a **half neighbor list** for the two atoms which are considered neighbors
-            (e.g. within a cutoff distance) if ``full_neighbor_list=False`` (default).
-            Otherwise, a full neighbor list is expected.
-        :param neighbor_distances: single or list of 1D tensors containing the distance
-            between the ``n`` pairs corresponding to a **half (or full) neighbor list**
-            (see ``neighbor_indices``).
-        :return: Torch tensor containing the potential(s) for all
-            positions. Each tensor in the list is of shape ``(len(positions),
-            len(charges))``, where If the inputs are only single tensors only a single
-            torch tensor with the potentials is returned.
-        """
         # Compute the pair potential terms V(r_ij) for each pair of atoms (i,j)
         # contained in the neighbor list
         with profiler.record_function("compute bare potential"):
@@ -163,13 +139,19 @@ class Calculator(torch.nn.Module):
         calculator implements a ``_compute_kspace`` method, it will also evaluate the
         long-range part using a Fourier-domain method.
 
-        :param charges: torch.Tensor, atomic (pseudo-)charges
-        :param cell: torch.Tensor, periodic supercell for the system
-        :param positions: torch.Tensor, Cartesian coordinates of the particles within
-            the supercell.
-        :param neighbor_indices: torch.Tensor with the ``i,j`` indices of neighbors for
+        :param charges: torch.tensor of shape ``(n_channels, len(positions))``
+            containaing the atomic (pseudo-)charges. ``n_channels`` is the number of
+            charge channels the potential should be calculated. For a standard potential
+            ``n_channels = 1``. If more than one "channel" is provided multiple
+            potentials for the same position are computed depending on the charges and
+            the potentials.
+        :param cell: torch.tensor of shape ``(3, 3)``, where ``cell[i]`` is the i-th basis
+            vector of the unit cell
+        :param positions: torch.tensor of shape ``(N, 3)`` containing the Cartesian
+            coordinates of the ``N`` particles within the supercell.
+        :param neighbor_indices: torch.tensor with the ``i,j`` indices of neighbors for
             which the potential should be computed in real space.
-        :param neighbor_distances: torch.Tensor with the pair distances of the neighbors
+        :param neighbor_distances: torch.tensor with the pair distances of the neighbors
             for which the potential should be computed in real space.
         """
         _validate_parameters(

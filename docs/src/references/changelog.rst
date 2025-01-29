@@ -27,6 +27,7 @@ changelog <https://keepachangelog.com/en/1.1.0/>`_ format. This project follows
 Added
 #####
 
+* Better documentation for for ``cell``, ``charges`` and ``positions`` parameters
 * Require consistent ``dtype`` between ``positions`` and ``neighbor_distances`` in
   ``Calculator`` classes and tuning functions.
 

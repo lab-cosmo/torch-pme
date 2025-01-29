@@ -35,14 +35,16 @@ def tune_pme(
 
         \alpha = \left(\sqrt{2}\,\mathrm{smearing} \right)^{-1}
 
-    :param charges: torch.Tensor, atomic (pseudo-)charges
-    :param cell: torch.Tensor, periodic supercell for the system
-    :param positions: torch.Tensor, Cartesian coordinates of the particles within the
-        supercell.
+    :param charges: torch.tensor of shape ``(len(positions, 1))`` containing the atomic
+        (pseudo-)charges
+    :param cell: torch.tensor of shape ``(3, 3)``, where ``cell[i]`` is the i-th basis
+        vector of the unit cell
+    :param positions: torch.tensor of shape ``(N, 3)`` containing the Cartesian
+        coordinates of the ``N`` particles within the supercell.
     :param cutoff: float, cutoff distance for the neighborlist
-    :param neighbor_indices: torch.Tensor with the ``i,j`` indices of neighbors for
+    :param neighbor_indices: torch.tensor with the ``i,j`` indices of neighbors for
         which the potential should be computed in real space.
-    :param neighbor_distances: torch.Tensor with the pair distances of the neighbors for
+    :param neighbor_distances: torch.tensor with the pair distances of the neighbors for
         which the potential should be computed in real space.
     :param exponent: :math:`p` in :math:`1/r^p` potentials, currently only :math:`p=1`
         is supported
@@ -146,10 +148,12 @@ class PMEErrorBounds(TuningErrorBounds):
         :func:`torchpme.tuning.pme.PMEErrorBounds.err_kspace`, which takes
         ``torch.Tensor`` as parameters.
 
-    :param charges: atomic charges
-    :param cell: single tensor of shape (3, 3), describing the bounding
-    :param positions: single tensor of shape (``len(charges), 3``) containing the
-        Cartesian positions of all point charges in the system.
+    :param charges: torch.tensor of shape ``(len(positions, 1))`` containing the atomic
+        (pseudo-)charges
+    :param cell: torch.tensor of shape ``(3, 3)``, where ``cell[i]`` is the i-th basis
+        vector of the unit cell
+    :param positions: torch.tensor of shape ``(N, 3)`` containing the Cartesian
+        coordinates of the ``N`` particles within the supercell.
 
     Example
     -------
