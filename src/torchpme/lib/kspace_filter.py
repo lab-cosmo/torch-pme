@@ -110,8 +110,8 @@ class KSpaceFilter(torch.nn.Module):
         ``ns_mesh`` are given, the instance's attributes required by these will also be
         updated accordingly.
 
-        :param cell: torch.tensor of shape ``(3, 3)``, where `
-            `cell[i]`` is the i-th basis vector of the unit cell
+        :param cell: torch.tensor of shape ``(3, 3)``, where ``cell[i]`` is the i-th
+            basis vector of the unit cell
         :param ns_mesh: toch.tensor of shape ``(3,)``
             Number of mesh points to use along each of the three axes
         """

@@ -80,8 +80,8 @@ class MeshInterpolator(torch.nn.Module):
         the mesh resolution changes. If neither ``cell`` nor ``ns_mesh`` are passed
         there is nothing to be done.
 
-        :param cell: torch.tensor of shape ``(3, 3)``, where ``cell[i]`` is the i-th
-            basis vector of the unit cell
+        :param cell: torch.tensor of shape ``(3, 3)``, where ``cell[i]`` is the i-th basis
+            vector of the unit cell
         :param ns_mesh: toch.tensor of shape ``(3,)`` Number of mesh points to use along
             each of the three axes
         """
@@ -297,8 +297,8 @@ class MeshInterpolator(torch.nn.Module):
         when calling the forward (:func:`points_to_mesh`) and backward
         (:func:`mesh_to_points`) interpolation functions.
 
-        :param positions: torch.tensor of shape ``(N, 3)``
-            Absolute positions of atoms in Cartesian coordinates
+        :param positions: torch.tensor of shape ``(N, 3)`` containing the Cartesian
+            coordinates of the ``N`` particles within the supercell.
         """
         if positions.device != self._device:
             raise ValueError(
