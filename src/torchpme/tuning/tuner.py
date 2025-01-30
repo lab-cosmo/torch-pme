@@ -4,7 +4,7 @@ from typing import Optional, Union
 
 import torch
 
-from .._utils import _get_device, _validate_parameters
+from .._utils import _get_device, _get_dtype, _validate_parameters
 from ..calculators import Calculator
 from ..potentials import InversePowerLawPotential
 
@@ -92,7 +92,7 @@ class TunerBase:
             )
 
         self.device = _get_device(device)
-        self.dtype = torch.get_default_dtype() if dtype is None else dtype
+        self.dtype = _get_dtype(dtype)
 
         _validate_parameters(
             charges=charges,
@@ -295,7 +295,7 @@ class TuningTimings(torch.nn.Module):
         super().__init__()
 
         self.device = _get_device(device)
-        self.dtype = torch.get_default_dtype() if dtype is None else dtype
+        self.dtype = _get_dtype(dtype)
 
         _validate_parameters(
             charges=charges,

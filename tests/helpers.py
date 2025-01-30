@@ -7,7 +7,7 @@ from typing import Optional
 import torch
 from vesin import NeighborList
 
-from torchpme._utils import _get_device
+from torchpme._utils import _get_device, _get_dtype
 
 SQRT3 = math.sqrt(3)
 
@@ -18,7 +18,7 @@ COULOMB_TEST_FRAMES = EXAMPLES / "coulomb_test_frames.xyz"
 
 def define_crystal(crystal_name="CsCl", dtype=None, device=None):
     device = _get_device(device)
-    dtype = torch.get_default_dtype() if dtype is None else dtype
+    dtype = _get_dtype(dtype)
 
     # Define all relevant parameters (atom positions, charges, cell) of the reference
     # crystal structures for which the Madelung constants obtained from the Ewald sums

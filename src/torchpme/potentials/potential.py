@@ -2,7 +2,7 @@ from typing import Optional, Union
 
 import torch
 
-from .._utils import _get_device
+from .._utils import _get_device, _get_dtype
 
 
 class Potential(torch.nn.Module):
@@ -46,7 +46,7 @@ class Potential(torch.nn.Module):
         super().__init__()
 
         self.device = _get_device(device)
-        self.dtype = torch.get_default_dtype() if dtype is None else dtype
+        self.dtype = _get_dtype(dtype)
 
         if smearing is not None:
             self.register_buffer(

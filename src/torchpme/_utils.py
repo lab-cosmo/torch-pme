@@ -1,6 +1,10 @@
-from typing import Union
+from typing import Optional, Union
 
 import torch
+
+
+def _get_dtype(dtype: Optional[torch.dtype]) -> torch.dtype:
+    return torch.get_default_dtype() if dtype is None else dtype
 
 
 def _get_device(device: Union[None, str, torch.device]) -> torch.device:
