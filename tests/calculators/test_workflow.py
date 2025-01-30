@@ -15,6 +15,7 @@ from torchpme import (
     P3MCalculator,
     PMECalculator,
 )
+from torchpme._utils import _get_device, _get_dtype
 
 DEVICES = ["cpu", torch.device("cpu")] + torch.cuda.is_available() * ["cuda"]
 DTYPES = [torch.float32, torch.float64]
@@ -31,27 +32,35 @@ MESH_SPACING = SMEARING / 4
         (
             Calculator,
             {
-                "potential": CoulombPotential(smearing=None),
+                "potential": lambda dtype, device: CoulombPotential(
+                    smearing=None, dtype=dtype, device=device
+                ),
             },
         ),
         (
             EwaldCalculator,
             {
-                "potential": CoulombPotential(smearing=SMEARING),
+                "potential": lambda dtype, device: CoulombPotential(
+                    smearing=SMEARING, dtype=dtype, device=device
+                ),
                 "lr_wavelength": LR_WAVELENGTH,
             },
         ),
         (
             PMECalculator,
             {
-                "potential": CoulombPotential(smearing=SMEARING),
+                "potential": lambda dtype, device: CoulombPotential(
+                    smearing=SMEARING, dtype=dtype, device=device
+                ),
                 "mesh_spacing": MESH_SPACING,
             },
         ),
         (
             P3MCalculator,
             {
-                "potential": CoulombPotential(smearing=SMEARING),
+                "potential": lambda dtype, device: CoulombPotential(
+                    smearing=SMEARING, dtype=dtype, device=device
+                ),
                 "mesh_spacing": MESH_SPACING,
             },
         ),
@@ -60,8 +69,8 @@ MESH_SPACING = SMEARING / 4
 class TestWorkflow:
     def cscl_system(self, device=None, dtype=None):
         """CsCl crystal. Same as in the madelung test"""
-        device = torch.get_default_device() if device is None else device
-        dtype = torch.get_default_dtype() if dtype is None else dtype
+        device = _get_device(device)
+        dtype = _get_dtype(dtype)
 
         positions = torch.tensor(
             [[0, 0, 0], [0.5, 0.5, 0.5]], dtype=dtype, device=device
@@ -75,6 +84,7 @@ class TestWorkflow:
 
     def test_smearing_non_positive(self, CalculatorClass, params, device, dtype):
         params = params.copy()
+        params["potential"] = params["potential"](dtype, device)
         match = r"`smearing` .* has to be positive"
         if type(CalculatorClass) in [EwaldCalculator, PMECalculator]:
             params["smearing"] = 0
@@ -86,6 +96,7 @@ class TestWorkflow:
 
     def test_interpolation_order_error(self, CalculatorClass, params, device, dtype):
         params = params.copy()
+        params["potential"] = params["potential"](dtype, device)
         if type(CalculatorClass) in [PMECalculator]:
             match = "Only `interpolation_nodes` from 1 to 5"
             params["interpolation_nodes"] = 10
@@ -94,6 +105,7 @@ class TestWorkflow:
 
     def test_lr_wavelength_non_positive(self, CalculatorClass, params, device, dtype):
         params = params.copy()
+        params["potential"] = params["potential"](dtype, device)
         match = r"`lr_wavelength` .* has to be positive"
         if type(CalculatorClass) in [EwaldCalculator]:
             params["lr_wavelength"] = 0
@@ -106,8 +118,7 @@ class TestWorkflow:
     def test_dtype_device(self, CalculatorClass, params, device, dtype):
         """Test that the output dtype and device are the same as the input."""
         params = params.copy()
-        params["potential"].device = device
-        params["potential"].dtype = dtype
+        params["potential"] = params["potential"](dtype, device)
 
         calculator = CalculatorClass(**params, device=device, dtype=dtype)
         potential = calculator.forward(*self.cscl_system(device=device, dtype=dtype))
@@ -127,8 +138,7 @@ class TestWorkflow:
     def test_operation_as_python(self, CalculatorClass, params, device, dtype):
         """Run `check_operation` as a normal python script"""
         params = params.copy()
-        params["potential"].device = device
-        params["potential"].dtype = dtype
+        params["potential"] = params["potential"](dtype, device)
 
         calculator = CalculatorClass(**params, device=device, dtype=dtype)
         self.check_operation(calculator=calculator, device=device, dtype=dtype)
@@ -136,8 +146,7 @@ class TestWorkflow:
     def test_operation_as_torch_script(self, CalculatorClass, params, device, dtype):
         """Run `check_operation` as a compiled torch script module."""
         params = params.copy()
-        params["potential"].device = device
-        params["potential"].dtype = dtype
+        params["potential"] = params["potential"](dtype, device)
 
         calculator = CalculatorClass(**params, device=device, dtype=dtype)
         scripted = torch.jit.script(calculator)
@@ -145,8 +154,7 @@ class TestWorkflow:
 
     def test_save_load(self, CalculatorClass, params, device, dtype):
         params = params.copy()
-        params["potential"].device = device
-        params["potential"].dtype = dtype
+        params["potential"] = params["potential"](dtype, device)
 
         calculator = CalculatorClass(**params, device=device, dtype=dtype)
         scripted = torch.jit.script(calculator)
@@ -158,8 +166,7 @@ class TestWorkflow:
     def test_prefactor(self, CalculatorClass, params, device, dtype):
         """Test if the prefactor is applied correctly."""
         params = params.copy()
-        params["potential"].device = device
-        params["potential"].dtype = dtype
+        params["potential"] = params["potential"](dtype, device)
 
         prefactor = 2.0
         calculator1 = CalculatorClass(**params, device=device, dtype=dtype)
@@ -175,8 +182,7 @@ class TestWorkflow:
     def test_not_nan(self, CalculatorClass, params, device, dtype):
         """Make sure derivatives are not NaN."""
         params = params.copy()
-        params["potential"].device = device
-        params["potential"].dtype = dtype
+        params["potential"] = params["potential"](dtype, device)
 
         calculator = CalculatorClass(**params, device=device, dtype=dtype)
         system = self.cscl_system(device=device, dtype=dtype)
@@ -212,9 +218,7 @@ class TestWorkflow:
         params = params.copy()
 
         other_dtype = torch.float32 if dtype == torch.float64 else torch.float64
-
-        params["potential"].device = device
-        params["potential"].dtype = dtype
+        params["potential"] = params["potential"](dtype, device)
 
         match = (
             rf"dtype of `potential` \({params['potential'].dtype}\) must be same as "
@@ -239,11 +243,33 @@ class TestWorkflow:
     ):
         """Test that the calculator raises an error if the potential and calculator are incompatible."""
         params = params.copy()
-        params["potential"].device = device
-        params["potential"].dtype = dtype
+        params["potential"] = params["potential"](dtype, device)
 
         params["potential"] = torch.jit.script(params["potential"])
         with pytest.raises(
             TypeError, match="Potential must be an instance of Potential, got.*"
         ):
             CalculatorClass(**params, device=device, dtype=dtype)
+
+    def test_device_string_compatability(self, CalculatorClass, params, dtype, device):
+        """Test that the calculator works with device strings."""
+        params = params.copy()
+        params["potential"] = params["potential"](dtype, "cpu")
+        calculator = CalculatorClass(
+            **params,
+            device=torch.device("cpu"),
+            dtype=dtype,
+        )
+
+        assert calculator.device == params["potential"].device
+
+    def test_device_index_compatability(self, CalculatorClass, params, dtype, device):
+        """Test that the calculator works with no index on the device."""
+        if torch.cuda.is_available():
+            params = params.copy()
+            params["potential"] = params["potential"](dtype, "cuda")
+            calculator = CalculatorClass(
+                **params, device=torch.device("cuda:0"), dtype=dtype
+            )
+
+            assert calculator.device == params["potential"].device

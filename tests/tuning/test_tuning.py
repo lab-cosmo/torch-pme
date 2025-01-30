@@ -10,6 +10,7 @@ from torchpme import (
     P3MCalculator,
     PMECalculator,
 )
+from torchpme._utils import _get_device, _get_dtype
 from torchpme.tuning import tune_ewald, tune_p3m, tune_pme
 from torchpme.tuning.tuner import TunerBase
 
@@ -22,8 +23,8 @@ DTYPES = [torch.float32, torch.float64]
 
 
 def system(device=None, dtype=None):
-    device = torch.get_default_device() if device is None else device
-    dtype = torch.get_default_dtype() if dtype is None else dtype
+    device = _get_device(device)
+    dtype = _get_dtype(dtype)
 
     charges = torch.ones((4, 1), dtype=dtype, device=device)
     cell = torch.eye(3, dtype=dtype, device=device)
