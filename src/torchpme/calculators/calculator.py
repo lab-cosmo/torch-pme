@@ -3,7 +3,7 @@ from typing import Optional, Union
 import torch
 from torch import profiler
 
-from .._utils import _validate_parameters
+from .._utils import _get_device, _validate_parameters
 from ..potentials import Potential
 
 
@@ -46,11 +46,7 @@ class Calculator(torch.nn.Module):
                 f"Potential must be an instance of Potential, got {type(potential)}"
             )
 
-        self.device = (
-            torch.get_default_device() if device is None else torch.device(device)
-        )
-        if self.device.type == "cuda" and self.device.index is None:
-            self.device = torch.device("cuda:0")
+        self.device = _get_device(device)
         self.dtype = torch.get_default_dtype() if dtype is None else dtype
 
         if self.dtype != potential.dtype:

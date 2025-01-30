@@ -7,6 +7,7 @@ import torch
 from packaging import version
 
 import torchpme
+from torchpme._utils import _get_device
 
 mts_torch = pytest.importorskip("metatensor.torch")
 mts_atomistic = pytest.importorskip("metatensor.torch.atomistic")
@@ -62,7 +63,7 @@ MESH_SPACING = SMEARING / 4
 )
 class TestWorkflow:
     def system(self, device=None, dtype=None):
-        device = torch.get_default_device() if device is None else torch.device(device)
+        device = _get_device(device)
         dtype = torch.get_default_dtype() if dtype is None else dtype
 
         system = mts_atomistic.System(

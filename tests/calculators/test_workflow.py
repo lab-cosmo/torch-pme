@@ -15,6 +15,7 @@ from torchpme import (
     P3MCalculator,
     PMECalculator,
 )
+from torchpme._utils import _get_device
 
 DEVICES = ["cpu", torch.device("cpu")] + torch.cuda.is_available() * ["cuda"]
 DTYPES = [torch.float32, torch.float64]
@@ -68,7 +69,7 @@ MESH_SPACING = SMEARING / 4
 class TestWorkflow:
     def cscl_system(self, device=None, dtype=None):
         """CsCl crystal. Same as in the madelung test"""
-        device = torch.get_default_device() if device is None else torch.device(device)
+        device = _get_device(device)
         dtype = torch.get_default_dtype() if dtype is None else dtype
 
         positions = torch.tensor(

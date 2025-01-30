@@ -3,6 +3,17 @@ from typing import Union
 import torch
 
 
+def _get_device(device: Union[None, str, torch.device]) -> torch.device:
+    new_device = torch.get_default_device() if device is None else torch.device(device)
+
+    # Add default index of 0 to a cuda device to avoid errors when comparing with
+    # devices from tensors
+    if new_device.type == "cuda" and new_device.index is None:
+        new_device = torch.device("cuda:0")
+
+    return new_device
+
+
 def _validate_parameters(
     charges: torch.Tensor,
     cell: torch.Tensor,
