@@ -3,13 +3,7 @@ requires = ["setuptools", "setuptools_scm>=8", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "torch-pme"
-description = "Particle-mesh based calculations of long-range interactions in PyTorch"
 authors = [{name = "torch-pme developers"}]
-
-readme = "README.rst"
-requires-python = ">=3.9"
-license = {text = "BSD-3-Clause"}
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",
@@ -27,22 +21,27 @@ classifiers = [
     "Topic :: Software Development :: Libraries",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
+dependencies = ["torch >=2.3"]
+description = "Particle-mesh based calculations of long-range interactions in PyTorch"
+dynamic = ["version"]
 keywords = [
-    "PyTorch",
     "Auto-differentiation",
-    "Particle-Mesh Ewald",
-    "Electrostatics",
     "Computational Materials Science",
-    "Machine Learning",
-    "Molecular Dynamics",
+    "Electrostatics",
+    "Fourier Transform",
     "GPU Acceleration",
     "High-Performance Computing",
-    "Fourier Transform",
-    "TorchScript",
+    "Machine Learning",
+    "Molecular Dynamics",
+    "Particle-Mesh Ewald",
+    "PyTorch",
     "Scientific Computing",
+    "TorchScript",
 ]
-dependencies = ["torch >=2.3"]
-dynamic = ["version"]
+license = {text = "BSD-3-Clause"}
+name = "torch-pme"
+readme = "README.rst"
+requires-python = ">=3.9"
 
 [project.optional-dependencies]
 examples = [
@@ -76,6 +75,28 @@ data_file = 'tests/.coverage'
 
 [tool.coverage.xml]
 output = 'tests/coverage.xml'
+
+[tool.mypy]
+exclude = ["docs/src/examples"]
+follow_imports = 'skip'
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+python_files = ["*.py"]
+testpaths = ["tests"]
+addopts = [
+    "--cov",
+    "--cov-append",
+    "--cov-report=",
+    "--import-mode=append",
+]
+filterwarnings = [
+    "error",
+    "ignore:ast.Str is deprecated and will be removed in Python 3.14:DeprecationWarning",
+    "ignore:Attribute s is deprecated and will be removed in Python 3.14:DeprecationWarning",
+    "ignore:ast.NameConstant is deprecated and will be removed in Python 3.14:DeprecationWarning",
+    "ignore:custom data 'charges' is experimental, please contact metatensor's developers to add this data as a member of the `System` class:UserWarning",
+]
 
 [tool.ruff]
 exclude = ["docs/src/examples/**", "src/torchpme/_version.py"]
@@ -125,28 +146,6 @@ docstring-code-format = true
 
 [tool.setuptools_scm]
 version_file = "src/torchpme/_version.py"
-
-[tool.mypy]
-exclude = ["docs/src/examples"]
-follow_imports = 'skip'
-ignore_missing_imports = true
-
-[tool.pytest.ini_options]
-python_files = ["*.py"]
-testpaths = ["tests"]
-addopts = [
-    "--cov",
-    "--cov-append",
-    "--cov-report=",
-    "--import-mode=append",
-]
-filterwarnings = [
-    "error",
-    "ignore:ast.Str is deprecated and will be removed in Python 3.14:DeprecationWarning",
-    "ignore:Attribute s is deprecated and will be removed in Python 3.14:DeprecationWarning",
-    "ignore:ast.NameConstant is deprecated and will be removed in Python 3.14:DeprecationWarning",
-    "ignore:custom data 'charges' is experimental, please contact metatensor's developers to add this data as a member of the `System` class:UserWarning",
-]
 
 [tool.setuptools.packages.find]
 where = ["src"]
