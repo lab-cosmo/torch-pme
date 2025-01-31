@@ -1,8 +1,12 @@
 import pytest
 import torch
+from ase.io import read
+from helpers import DIPOLES_TEST_FRAMES
+from vesin.torch import NeighborList
 
 from torchpme.calculators import CalculatorDipole
 from torchpme.potentials import PotentialDipole
+from torchpme.prefactors import eV_A
 
 
 class System:
@@ -95,4 +99,54 @@ def test_magnetostatic_ewald():
     expected_result = torch.tensor(-0.30848574939287954, dtype=torch.float64)
     assert torch.isclose(result, expected_result, atol=1e-4), (
         f"Expected {expected_result}, but got {result}"
+    )
+
+
+frames = read(DIPOLES_TEST_FRAMES, ":3")
+cutoffs = [3.9986718930, 4.0000000000, 4.7363281250]
+alphas = [0.8819831493, 0.8956299559, 0.7215211182]
+energies = [frame.get_potential_energy() for frame in frames]
+forces = [frame.get_forces() for frame in frames]
+
+
+@pytest.mark.parametrize(
+    ("frame", "cutoff", "alpha", "energy", "force"),
+    zip(frames, cutoffs, alphas, energies, forces),
+)
+def test_magnetostatic_ewald_crystal(frame, cutoff, alpha, energy, force):
+    smearing = (1 / (2 * alpha**2)) ** 0.5
+    calc = CalculatorDipole(
+        potential=PotentialDipole(smearing=smearing, dtype=torch.float64),
+        full_neighbor_list=False,
+        lr_wavelength=0.1,
+        dtype=torch.float64,
+        prefactor=eV_A,
+    )
+    positions = torch.tensor(
+        frame.get_positions(), requires_grad=True, dtype=torch.float64
+    )
+    dipoles = torch.tensor(frame.get_array("dipoles"), dtype=torch.float64)
+    cell = torch.tensor(frame.get_cell().array, dtype=torch.float64)
+    calculator = NeighborList(cutoff=cutoff, full_list=False)
+    p, d = calculator.compute(
+        points=positions, box=cell, periodic=True, quantities="PD"
+    )
+    pot = calc(
+        dipoles=dipoles,
+        cell=cell,
+        positions=positions,
+        neighbor_indices=p,
+        neighbor_vectors=d,
+    )
+
+    result = torch.einsum("ij,ij->", pot, dipoles)
+    expected_result = torch.tensor(energy, dtype=torch.float64)
+    assert torch.isclose(result, expected_result, atol=1e-4), (
+        f"Expected {expected_result}, but got {result}"
+    )
+
+    forces = -torch.autograd.grad(result, positions)[0]
+    expected_forces = torch.tensor(force, dtype=torch.float64)
+    assert torch.allclose(forces, expected_forces, atol=1e-4), (
+        f"Expected {expected_forces}, but got {forces}"
     )

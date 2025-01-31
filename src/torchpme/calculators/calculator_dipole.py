@@ -3,7 +3,7 @@ from typing import Optional, Union
 import torch
 from torch import profiler
 
-from .._utils import _validate_parameters
+from .._utils import _get_device, _get_dtype, _validate_parameters
 from ..lib import generate_kvectors_for_ewald
 from ..potentials import PotentialDipole
 
@@ -24,7 +24,7 @@ class CalculatorDipole(torch.nn.Module):
 
         if not isinstance(potential, PotentialDipole):
             raise TypeError(
-                f"Potential must be an instance of Potential, got {type(potential)}"
+                f"Potential must be an instance of PotentialDipole, got {type(potential)}"
             )
 
         self.potential = potential
@@ -36,8 +36,8 @@ class CalculatorDipole(torch.nn.Module):
             or (self.lr_wavelength is None and self.potential.smearing is None)
         ), "Either both `lr_wavelength` and `smearing` must be set or both must be None"
 
-        self.device = torch.get_default_device() if device is None else device
-        self.dtype = torch.get_default_dtype() if dtype is None else dtype
+        self.device = _get_device(device)
+        self.dtype = _get_dtype(dtype)
 
         if self.dtype != potential.dtype:
             raise TypeError(
@@ -76,7 +76,9 @@ class CalculatorDipole(torch.nn.Module):
         atom_is = neighbor_indices[:, 0]
         atom_js = neighbor_indices[:, 1]
         with profiler.record_function("compute real potential"):
-            contributions_is = torch.bmm(potentials_bare,dipoles[atom_js].unsqueeze(-1)).squeeze(-1)
+            contributions_is = torch.bmm(
+                potentials_bare, dipoles[atom_js].unsqueeze(-1)
+            ).squeeze(-1)
 
         # For each atom i, add up all contributions of the form q_j*V(r_ij) for j
         # ranging over all of its neighbors.
@@ -86,7 +88,9 @@ class CalculatorDipole(torch.nn.Module):
             # If we are using a half neighbor list, we need to add the contributions
             # from the "inverse" pairs (j, i) to the atoms i
             if not self.full_neighbor_list:
-                contributions_js = torch.bmm(potentials_bare,dipoles[atom_is].unsqueeze(-1)).squeeze(-1)
+                contributions_js = torch.bmm(
+                    potentials_bare, dipoles[atom_is].unsqueeze(-1)
+                ).squeeze(-1)
                 potential.index_add_(0, atom_js, contributions_js)
 
         # Compensate for double counting of pairs (i,j) and (j,i)
@@ -124,15 +128,14 @@ class CalculatorDipole(torch.nn.Module):
         c = torch.cos(trig_args)  # [k, i]
         s = torch.sin(trig_args)  # [k, i]
         sc = torch.stack([c, s], dim=0)  # [2 "f", k, i]
-        mu_k = dipoles @ kvectors.T # [i, k]
-        print(mu_k)
+        mu_k = dipoles @ kvectors.T  # [i, k]
         sc_summed_G = torch.einsum("fki, ik, k->fk", sc, mu_k, G)
-        energy = torch.einsum(
-            "fk, fki, kc->ic", sc_summed_G, sc, kvectors
-        )
+        energy = torch.einsum("fk, fki, kc->ic", sc_summed_G, sc, kvectors)
         energy /= torch.abs(cell.det())
         energy -= dipoles * self.potential.self_contribution()
-        energy += self.potential.background_correction(torch.abs(cell.det())) * dipoles.sum(dim = 0)
+        energy += self.potential.background_correction(
+            torch.abs(cell.det())
+        ) * dipoles.sum(dim=0)
         return energy / 2
 
     def forward(
