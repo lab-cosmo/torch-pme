@@ -12,6 +12,7 @@ class PotentialDipole(torch.nn.Module):
         self,
         smearing: Optional[float] = None,
         exclusion_radius: Optional[float] = None,
+        epsilon: float = 0.0,
         dtype: Optional[torch.dtype] = None,
         device: Union[None, str, torch.device] = None,
     ):
@@ -31,6 +32,9 @@ class PotentialDipole(torch.nn.Module):
             )
         else:
             self.exclusion_radius = None
+        self.register_buffer(
+            "epsilon", torch.tensor(epsilon, device=self.device, dtype=self.dtype)
+        )
 
     @torch.jit.export
     def f_cutoff(self, vector: torch.Tensor) -> torch.Tensor:
@@ -118,12 +122,10 @@ class PotentialDipole(torch.nn.Module):
         alpha = 1 / (2 * self.smearing**2)
         return 4 * torch.pi / 3 * torch.sqrt((alpha / torch.pi) ** 3)
 
-    def background_correction(self) -> torch.Tensor:
-        if self.smearing is None:
-            raise ValueError(
-                "Cannot compute background correction without specifying `smearing`."
-            )
-        return self.smearing * 0.0
+    def background_correction(self, volume) -> torch.Tensor:
+        if self.epsilon == 0.0:
+            return self.epsilon
+        return 4 * torch.pi / (2 * self.epsilon + 1) / volume
 
     self_contribution.__doc__ = Potential.self_contribution.__doc__
     background_correction.__doc__ = Potential.background_correction.__doc__
