@@ -13,7 +13,7 @@ torch-pme
 interactions in *PyTorch*. Auto-differentiation is supported for particle *positions*,
 *charges*, and *cell* parameters, allowing not only the automatic computation of forces
 but also enabling general applications in machine learning tasks. The library offers
-classes for Particle-Particle Particle-Mesh Ewald (P3M), Particle Mesh Ewald (``PME``),
+classes for Particle-Particle Particle-Mesh Ewald (``P3M``), Particle Mesh Ewald (``PME``),
 standard ``Ewald``, and non-periodic methods, with the flexibility to calculate
 potentials beyond :math:`1/r` electrostatics, including arbitrary order :math:`1/r^p`
 potentials.
