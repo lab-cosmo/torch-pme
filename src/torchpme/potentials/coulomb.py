@@ -34,20 +34,18 @@ class CoulombPotential(Potential):
         self,
         smearing: Optional[float] = None,
         exclusion_radius: Optional[float] = None,
-        dtype: Optional[torch.dtype] = None,
-        device: Union[None, str, torch.device] = None,
     ):
-        super().__init__(smearing, exclusion_radius, dtype, device)
+        super().__init__(smearing, exclusion_radius)
 
         # constants used in the forwward
         self.register_buffer(
             "_rsqrt2",
-            torch.rsqrt(torch.tensor(2.0, dtype=self.dtype, device=self.device)),
+            torch.rsqrt(torch.tensor(2.0)),
         )
         self.register_buffer(
             "_sqrt_2_on_pi",
             torch.sqrt(
-                torch.tensor(2.0 / torch.pi, dtype=self.dtype, device=self.device)
+                torch.tensor(2.0 / torch.pi)
             ),
         )
 

@@ -2,9 +2,6 @@ from typing import Optional, Union
 
 import torch
 
-from .._utils import _get_device, _get_dtype
-
-
 class Potential(torch.nn.Module):
     r"""
     Base class defining the interface for a pair potential energy function
@@ -32,32 +29,25 @@ class Potential(torch.nn.Module):
     :param exclusion_radius: A length scale that defines a *local environment* within
         which the potential should be smoothly zeroed out, as it will be described by a
         separate model.
-    :param dtype: type used for the internal buffers and parameters
-    :param device: device used for the internal buffers and parameters
     """
 
     def __init__(
         self,
         smearing: Optional[float] = None,
         exclusion_radius: Optional[float] = None,
-        dtype: Optional[torch.dtype] = None,
-        device: Union[None, str, torch.device] = None,
     ):
         super().__init__()
 
-        self.device = _get_device(device)
-        self.dtype = _get_dtype(dtype)
-
         if smearing is not None:
             self.register_buffer(
-                "smearing", torch.tensor(smearing, device=self.device, dtype=self.dtype)
+                "smearing", torch.tensor(smearing)
             )
         else:
             self.smearing = None
         if exclusion_radius is not None:
             self.register_buffer(
                 "exclusion_radius",
-                torch.tensor(exclusion_radius, device=self.device, dtype=self.dtype),
+                torch.tensor(exclusion_radius),
             )
         else:
             self.exclusion_radius = None

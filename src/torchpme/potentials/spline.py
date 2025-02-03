@@ -57,21 +57,17 @@ class SplinePotential(Potential):
         yhat_at_zero: Optional[float] = None,
         smearing: Optional[float] = None,
         exclusion_radius: Optional[float] = None,
-        dtype: Optional[torch.dtype] = None,
-        device: Union[None, str, torch.device] = None,
     ):
         super().__init__(
             smearing=smearing,
             exclusion_radius=exclusion_radius,
-            dtype=dtype,
-            device=device,
         )
 
         if len(y_grid) != len(r_grid):
             raise ValueError("Length of radial grid and value array mismatch.")
-
-        r_grid = r_grid.to(dtype=self.dtype, device=self.device)
-        y_grid = y_grid.to(dtype=self.dtype, device=self.device)
+        
+        self.register_buffer("r_grid", r_grid)
+        self.register_buffer("y_grid", y_grid)
 
         if reciprocal:
             if torch.min(r_grid) <= 0.0:
@@ -87,9 +83,9 @@ class SplinePotential(Potential):
             if reciprocal:
                 k_grid = torch.pi * 2 * torch.reciprocal(r_grid).flip(dims=[0])
             else:
-                k_grid = r_grid.clone()
+                k_grid = r_grid.clone().detach()
         else:
-            k_grid = k_grid.to(dtype=self.dtype, device=self.device)
+            self.register_buffer("k_grid", k_grid)
 
         if yhat_grid is None:
             # computes automatically!
@@ -100,7 +96,7 @@ class SplinePotential(Potential):
                 compute_second_derivatives(r_grid, y_grid),
             )
         else:
-            yhat_grid = yhat_grid.to(dtype=self.dtype, device=self.device)
+            self.register_buffer("yhat_grid", yhat_grid)
 
         # the function is defined for k**2, so we define the grid accordingly
         if reciprocal:

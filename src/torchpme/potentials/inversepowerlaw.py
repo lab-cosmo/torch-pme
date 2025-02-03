@@ -31,8 +31,6 @@ class InversePowerLawPotential(Potential):
     :param: exclusion_radius: float or torch.Tensor containing the length scale
         corresponding to a local environment. See also
         :class:`Potential`.
-    :param dtype: type used for the internal buffers and parameters
-    :param device: device used for the internal buffers and parameters
     """
 
     def __init__(
@@ -40,15 +38,13 @@ class InversePowerLawPotential(Potential):
         exponent: int,
         smearing: Optional[float] = None,
         exclusion_radius: Optional[float] = None,
-        dtype: Optional[torch.dtype] = None,
-        device: Union[None, str, torch.device] = None,
     ):
-        super().__init__(smearing, exclusion_radius, dtype, device)
+        super().__init__(smearing, exclusion_radius)
 
         # function call to check the validity of the exponent
-        gammaincc_over_powerlaw(exponent, torch.tensor(1.0, dtype=dtype, device=device))
+        gammaincc_over_powerlaw(exponent, torch.tensor(1.0))
         self.register_buffer(
-            "exponent", torch.tensor(exponent, dtype=self.dtype, device=self.device)
+            "exponent", torch.tensor(exponent)
         )
 
     @torch.jit.export
