@@ -37,18 +37,6 @@ class CoulombPotential(Potential):
     ):
         super().__init__(smearing, exclusion_radius)
 
-        # constants used in the forwward
-        self.register_buffer(
-            "_rsqrt2",
-            torch.rsqrt(torch.tensor(2.0)),
-        )
-        self.register_buffer(
-            "_sqrt_2_on_pi",
-            torch.sqrt(
-                torch.tensor(2.0 / torch.pi)
-            ),
-        )
-
     def from_dist(self, dist: torch.Tensor) -> torch.Tensor:
         """
         Full :math:`1/r` potential as a function of :math:`r`.
@@ -73,7 +61,7 @@ class CoulombPotential(Potential):
                 "Cannot compute long-range contribution without specifying `smearing`."
             )
 
-        return torch.erf(dist * (self._rsqrt2 / self.smearing)) / dist
+        return torch.erf(dist / self.smearing / 2.0 ** 0.5) / dist
 
     def lr_from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
         r"""
@@ -103,7 +91,7 @@ class CoulombPotential(Potential):
             raise ValueError(
                 "Cannot compute self contribution without specifying `smearing`."
             )
-        return self._sqrt_2_on_pi / self.smearing
+        return (2 / torch.pi) ** 0.5 / self.smearing
 
     def background_correction(self) -> torch.Tensor:
         # "charge neutrality" correction for 1/r potential

@@ -80,12 +80,9 @@ class InversePowerLawPotential(Potential):
                 "Cannot compute long-range contribution without specifying `smearing`."
             )
 
-        exponent = self.exponent
-        smearing = self.smearing
-
-        x = 0.5 * dist**2 / smearing**2
-        peff = exponent / 2
-        prefac = 1.0 / (2 * smearing**2) ** peff
+        x = 0.5 * dist**2 / self.smearing**2
+        peff = self.exponent / 2
+        prefac = 1.0 / (2 * self.smearing**2) ** peff
         return prefac * gammainc(peff, x) / x**peff
 
     @torch.jit.export
@@ -101,12 +98,9 @@ class InversePowerLawPotential(Potential):
                 "Cannot compute long-range kernel without specifying `smearing`."
             )
 
-        exponent = self.exponent
-        smearing = self.smearing
-
-        peff = (3 - exponent) / 2
-        prefac = torch.pi**1.5 / gamma(exponent / 2) * (2 * smearing**2) ** peff
-        x = 0.5 * smearing**2 * k_sq
+        peff = (3 - self.exponent) / 2
+        prefac = torch.pi**1.5 / gamma(self.exponent / 2) * (2 * self.smearing**2) ** peff
+        x = 0.5 * self.smearing**2 * k_sq
 
         # The k=0 term often needs to be set separately since for exponents p<=3
         # dimension, there is a divergence to +infinity. Setting this value manually
@@ -117,7 +111,7 @@ class InversePowerLawPotential(Potential):
         # for consistency reasons.
         masked = torch.where(x == 0, 1.0, x)  # avoid NaNs in backwards, see Coulomb
         return torch.where(
-            k_sq == 0, 0.0, prefac * gammaincc_over_powerlaw(exponent, masked)
+            k_sq == 0, 0.0, prefac * gammaincc_over_powerlaw(self.exponent, masked)
         )
 
     def self_contribution(self) -> torch.Tensor:
@@ -138,7 +132,7 @@ class InversePowerLawPotential(Potential):
                 "Cannot compute background correction without specifying `smearing`."
             )
         if self.exponent >= 3:
-            return self.smearing * 0.0
+            return torch.zero_like(self.smearing)
         prefac = torch.pi**1.5 * (2 * self.smearing**2) ** ((3 - self.exponent) / 2)
         prefac /= (3 - self.exponent) * gamma(self.exponent / 2)
         return prefac

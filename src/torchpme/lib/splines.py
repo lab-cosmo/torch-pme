@@ -127,8 +127,8 @@ def _solve_tridiagonal(a, b, c, d):
     """
     n = len(d)
     # Create copies to avoid modifying the original arrays
-    c_prime = torch.zeros(n)
-    d_prime = torch.zeros(n)
+    c_prime = torch.zeros_like(d)
+    d_prime = torch.zeros_like(d)
 
     # Initial coefficients
     c_prime[0] = c[0] / b[0]
@@ -141,7 +141,7 @@ def _solve_tridiagonal(a, b, c, d):
         d_prime[i] = (d[i] - a[i] * d_prime[i - 1]) / denom
 
     # Backward substitution
-    x = torch.zeros(n)
+    x = torch.zeros_like(d)
     x[-1] = d_prime[-1]
     for i in reversed(range(n - 1)):
         x[i] = d_prime[i] - c_prime[i] * x[i + 1]
@@ -174,13 +174,13 @@ def compute_second_derivatives(
     dy = (y[1:] - y[:-1]) / intervals
 
     # Create zero boundary conditions (natural spline)
-    d2y = torch.zeros_like(x, dtype=torch.float64)
+    d2y = torch.zeros_like(x)
 
     n = len(x)
-    a = torch.zeros(n)  # Sub-diagonal (a[1..n-1])
-    b = torch.zeros(n)  # Main diagonal (b[0..n-1])
-    c = torch.zeros(n)  # Super-diagonal (c[0..n-2])
-    d = torch.zeros(n)  # Right-hand side (d[0..n-1])
+    a = torch.zeros_like(x)  # Sub-diagonal (a[1..n-1])
+    b = torch.zeros_like(x)  # Main diagonal (b[0..n-1])
+    c = torch.zeros_like(x)  # Super-diagonal (c[0..n-2])
+    d = torch.zeros_like(x)  # Right-hand side (d[0..n-1])
 
     # Natural spline boundary conditions
     b[0] = 1
@@ -198,7 +198,7 @@ def compute_second_derivatives(
     d2y = _solve_tridiagonal(a, b, c, d)
 
     # Converts back to the original dtype
-    return d2y.to(dtype=x_points.dtype, device=x_points.device)
+    return d2y
 
 
 def compute_spline_ft(

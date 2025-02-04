@@ -84,8 +84,8 @@ class SplinePotential(Potential):
                 k_grid = torch.pi * 2 * torch.reciprocal(r_grid).flip(dims=[0])
             else:
                 k_grid = r_grid.clone().detach()
-        else:
-            self.register_buffer("k_grid", k_grid)
+
+        self.register_buffer("k_grid", k_grid)
 
         if yhat_grid is None:
             # computes automatically!
@@ -95,8 +95,8 @@ class SplinePotential(Potential):
                 y_grid,
                 compute_second_derivatives(r_grid, y_grid),
             )
-        else:
-            self.register_buffer("yhat_grid", yhat_grid)
+
+        self.register_buffer("yhat_grid", yhat_grid)
 
         # the function is defined for k**2, so we define the grid accordingly
         if reciprocal:
