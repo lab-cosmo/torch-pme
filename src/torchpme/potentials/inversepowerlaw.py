@@ -44,7 +44,7 @@ class InversePowerLawPotential(Potential):
         # function call to check the validity of the exponent
         gammaincc_over_powerlaw(exponent, torch.tensor(1.0))
         self.register_buffer(
-            "exponent", torch.tensor(exponent)
+            "exponent", torch.tensor(float(exponent))
         )
 
     @torch.jit.export

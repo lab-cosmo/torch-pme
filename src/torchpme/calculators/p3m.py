@@ -66,9 +66,12 @@ class P3MCalculator(PMECalculator):
             prefactor=prefactor,
         )
 
+        cell = torch.eye(3, device=self.potential.smearing.device, dtype=self.potential.smearing.dtype)
+        ns_mesh = torch.ones(3, dtype=int, device=cell.device)
+
         self.kspace_filter: P3MKSpaceFilter = P3MKSpaceFilter(
-            cell=torch.eye(3, dtype=self.dtype, device=self.device),
-            ns_mesh=torch.ones(3, dtype=int, device=self.device),
+            cell=cell,
+            ns_mesh=ns_mesh,
             interpolation_nodes=self.interpolation_nodes,
             kernel=self.potential,
             mode=0,  # Green's function for point-charge potentials
@@ -78,8 +81,8 @@ class P3MCalculator(PMECalculator):
         )
 
         self.mesh_interpolator: MeshInterpolator = MeshInterpolator(
-            cell=torch.eye(3, dtype=self.dtype, device=self.device),
-            ns_mesh=torch.ones(3, dtype=int, device=self.device),
+            cell=cell,
+            ns_mesh=ns_mesh,
             interpolation_nodes=self.interpolation_nodes,
             method="P3M",
         )

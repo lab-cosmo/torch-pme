@@ -38,7 +38,11 @@ class Potential(torch.nn.Module):
     ):
         super().__init__()
 
-        self.smearing = smearing
+        if smearing is not None:
+            self.register_buffer("smearing", torch.tensor(smearing))
+        else:
+            self.smearing = None
+
         self.exclusion_radius = exclusion_radius
 
     @torch.jit.export

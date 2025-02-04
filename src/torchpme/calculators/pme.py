@@ -70,11 +70,11 @@ class PMECalculator(Calculator):
 
         self.mesh_spacing: float = mesh_spacing
 
-        self.register_buffer("cell", torch.eye(3))
-        ns_mesh = torch.ones(3, dtype=int, device=self.cell.device)
+        cell = torch.eye(3, device=self.potential.smearing.device, dtype=self.potential.smearing.dtype)
+        ns_mesh = torch.ones(3, dtype=int, device=cell.device)
 
         self.kspace_filter: KSpaceFilter = KSpaceFilter(
-            cell=self.cell,
+            cell=cell,
             ns_mesh=ns_mesh,
             kernel=self.potential,
             fft_norm="backward",
@@ -84,7 +84,7 @@ class PMECalculator(Calculator):
         self.interpolation_nodes: int = interpolation_nodes
 
         self.mesh_interpolator: MeshInterpolator = MeshInterpolator(
-            cell=self.cell,
+            cell=cell,
             ns_mesh=ns_mesh,
             interpolation_nodes=self.interpolation_nodes,
             method="Lagrange",  # convention for classic PME

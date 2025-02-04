@@ -79,8 +79,6 @@ def tune_p3m(
     mesh_lo: int = 2,
     mesh_hi: int = 7,
     accuracy: float = 1e-3,
-    dtype: Optional[torch.dtype] = None,
-    device: Union[None, str, torch.device] = None,
 ) -> tuple[float, dict[str, Any], float]:
     r"""
     Find the optimal parameters for :class:`torchpme.calculators.pme.PMECalculator`.
@@ -169,8 +167,6 @@ def tune_p3m(
         calculator=P3MCalculator,
         error_bounds=P3MErrorBounds(charges=charges, cell=cell, positions=positions),
         params=params,
-        dtype=dtype,
-        device=device,
     )
     smearing = tuner.estimate_smearing(accuracy)
     errs, timings = tuner.tune(accuracy)
