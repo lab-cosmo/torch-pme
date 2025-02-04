@@ -364,7 +364,7 @@ ax.legend()
 # %%
 # Given the simple, monotonic and fast-varying trend for the real-space error,
 # it is easy to pick the optimal smearing as the value corresponding to roughly
-# half of the target error -e.g. for a target accuracy of :math:`1e^{-5}`,
+# half of the target squared error -e.g. for a target accuracy of :math:`1e^{-5}`,
 # one would pick a smearing of about 1Å. Given that usually there is a
 # cost/accuracy tradeoff, and smaller smearings make the reciprocal-space evaluation
 # more costly, the largest smearing is the best choice here.
