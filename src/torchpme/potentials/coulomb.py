@@ -26,8 +26,6 @@ class CoulombPotential(Potential):
     :param exclusion_radius: A length scale that defines a *local environment* within
         which the potential should be smoothly zeroed out, as it will be described by a
         separate model.
-    :param dtype: type used for the internal buffers and parameters
-    :param device: device used for the internal buffers and parameters
     """
 
     def __init__(

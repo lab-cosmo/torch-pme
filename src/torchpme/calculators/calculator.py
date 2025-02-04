@@ -27,8 +27,6 @@ class Calculator(torch.nn.Module):
         will come from a full (True) or half (False, default) neighbor list.
     :param prefactor: electrostatics prefactor; see :ref:`prefactors` for details and
         common values.
-    :param dtype: type used for the internal buffers and parameters
-    :param device: device used for the internal buffers and parameters
     """
 
     def __init__(
