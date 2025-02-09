@@ -120,12 +120,10 @@ smearing = 1.0
 pme_params = {"mesh_spacing": 1.0, "interpolation_nodes": 4}
 
 pme = torchpme.PMECalculator(
-    potential=torchpme.CoulombPotential(smearing=smearing, device=device, dtype=dtype),
-    device=device,
-    dtype=dtype,
+    potential=torchpme.CoulombPotential(smearing=smearing),
     **pme_params,  # type: ignore[arg-type]
 )
-
+pme.to(device=device, dtype=dtype)
 # %%
 # Run the calculator
 # ~~~~~~~~~~~~~~~~~~
@@ -170,8 +168,6 @@ timings = TuningTimings(
     neighbor_indices=neighbor_indices,
     neighbor_distances=neighbor_distances,
     run_backward=True,
-    device=device,
-    dtype=dtype,
 )
 estimated_timing = timings(pme)
 
@@ -220,14 +216,11 @@ def timed_madelung(cutoff, smearing, mesh_spacing, interpolation_nodes, device, 
     )
 
     pme = torchpme.PMECalculator(
-        potential=torchpme.CoulombPotential(
-            smearing=smearing, device=device, dtype=dtype
-        ),
+        potential=torchpme.CoulombPotential(smearing=smearing),
         mesh_spacing=mesh_spacing,
         interpolation_nodes=interpolation_nodes,
-        device=device,
-        dtype=dtype,
     )
+    pme.to(device=device, dtype=dtype)
     potential = pme(
         charges=charges,
         cell=cell,
@@ -247,8 +240,6 @@ def timed_madelung(cutoff, smearing, mesh_spacing, interpolation_nodes, device, 
         run_backward=True,
         n_warmup=1,
         n_repeat=4,
-        device=device,
-        dtype=dtype,
     )
     estimated_timing = timings(pme)
     return madelung, estimated_timing
@@ -457,8 +448,6 @@ smearing, parameters, timing = tune_pme(
     cutoff=5.0,
     neighbor_indices=neighbor_indices,
     neighbor_distances=neighbor_distances,
-    device=device,
-    dtype=dtype,
 )
 
 print(
@@ -492,8 +481,6 @@ for cutoff in cutoff_grid:
         cutoff=cutoff,
         neighbor_indices=filter_indices,
         neighbor_distances=filter_distances,
-        device=device,
-        dtype=dtype,
     )
     timings_grid.append(timing)
 

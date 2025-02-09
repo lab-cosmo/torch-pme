@@ -63,7 +63,7 @@ class PMECalculator(Calculator):
 
         if potential.smearing is None:
             raise ValueError(
-                "Must specify smearing to use a potential with EwaldCalculator"
+                "Must specify smearing to use a potential with PMECalculator"
             )
 
         self.mesh_spacing: float = mesh_spacing

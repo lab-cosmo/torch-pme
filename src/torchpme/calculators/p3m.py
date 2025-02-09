@@ -64,6 +64,11 @@ class P3MCalculator(PMECalculator):
             prefactor=prefactor,
         )
 
+        if potential.smearing is None:
+            raise ValueError(
+                "Must specify smearing to use a potential with P3MCalculator"
+            )
+
         cell = torch.eye(
             3,
             device=self.potential.smearing.device,

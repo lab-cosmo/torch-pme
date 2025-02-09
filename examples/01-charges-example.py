@@ -73,7 +73,6 @@ smearing, pme_params, _ = tune_pme(
     cutoff=cutoff,
     neighbor_indices=neighbor_indices,
     neighbor_distances=neighbor_distances,
-    dtype=dtype,
 )
 
 # %%
@@ -103,9 +102,9 @@ neighbor_indices, S, D, neighbor_distances = nl.compute(
 # will be used to *compute* the potential energy of the system.
 
 calculator = torchpme.PMECalculator(
-    torchpme.CoulombPotential(smearing=smearing, dtype=dtype), dtype=dtype, **pme_params
+    torchpme.CoulombPotential(smearing=smearing), **pme_params
 )
-
+calculator.to(dtype=dtype)
 # %%
 #
 # Single Charge Channel
@@ -207,9 +206,9 @@ print(charge_Na * potential_one_hot[0] + charge_Cl * potential_one_hot[1])
 # creating a new calculator with the metatensor interface.
 
 calculator_metatensor = torchpme.metatensor.PMECalculator(
-    torchpme.CoulombPotential(smearing=smearing, dtype=dtype), dtype=dtype, **pme_params
+    torchpme.CoulombPotential(smearing=smearing), **pme_params
 )
-
+calculator_metatensor.to(dtype=dtype)
 # %%
 #
 # Computation with metatensor involves using Metatensor's :class:`System
