@@ -18,7 +18,8 @@ class CalculatorTest(Calculator):
     def __init__(self, **kwargs):
         super().__init__(
             potential=CoulombPotential(
-                smearing=None, exclusion_radius=None,
+                smearing=None,
+                exclusion_radius=None,
             ),
             **kwargs,
         )

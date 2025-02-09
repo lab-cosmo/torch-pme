@@ -1,4 +1,4 @@
-from typing import Optional, Union
+from typing import Optional
 
 import torch
 from torch.special import gammainc
@@ -43,9 +43,7 @@ class InversePowerLawPotential(Potential):
 
         # function call to check the validity of the exponent
         gammaincc_over_powerlaw(exponent, torch.tensor(1.0))
-        self.register_buffer(
-            "exponent", torch.tensor(float(exponent))
-        )
+        self.register_buffer("exponent", torch.tensor(exponent, dtype=torch.float64))
 
     @torch.jit.export
     def from_dist(self, dist: torch.Tensor) -> torch.Tensor:
@@ -99,7 +97,9 @@ class InversePowerLawPotential(Potential):
             )
 
         peff = (3 - self.exponent) / 2
-        prefac = torch.pi**1.5 / gamma(self.exponent / 2) * (2 * self.smearing**2) ** peff
+        prefac = (
+            torch.pi**1.5 / gamma(self.exponent / 2) * (2 * self.smearing**2) ** peff
+        )
         x = 0.5 * self.smearing**2 * k_sq
 
         # The k=0 term often needs to be set separately since for exponents p<=3

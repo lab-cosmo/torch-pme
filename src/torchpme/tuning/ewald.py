@@ -1,5 +1,5 @@
 import math
-from typing import Any, Optional, Union
+from typing import Any
 from warnings import warn
 
 import torch

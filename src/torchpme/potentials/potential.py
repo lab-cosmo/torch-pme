@@ -1,6 +1,7 @@
-from typing import Optional, Union
+from typing import Optional
 
 import torch
+
 
 class Potential(torch.nn.Module):
     r"""
@@ -39,7 +40,9 @@ class Potential(torch.nn.Module):
         super().__init__()
 
         if smearing is not None:
-            self.register_buffer("smearing", torch.tensor(smearing))
+            self.register_buffer(
+                "smearing", torch.tensor(smearing, dtype=torch.float64)
+            )
         else:
             self.smearing = None
 

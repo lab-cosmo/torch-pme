@@ -15,7 +15,6 @@ COULOMB_TEST_FRAMES = EXAMPLES / "coulomb_test_frames.xyz"
 
 
 def define_crystal(crystal_name="CsCl", dtype=None, device=None):
-
     # Define all relevant parameters (atom positions, charges, cell) of the reference
     # crystal structures for which the Madelung constants obtained from the Ewald sums
     # are compared with reference values.

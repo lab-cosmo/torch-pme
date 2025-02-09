@@ -151,30 +151,25 @@ def _solve_tridiagonal(a, b, c, d):
 def compute_second_derivatives(
     x_points: torch.Tensor,
     y_points: torch.Tensor,
-    high_precision: Optional[bool] = True,
 ):
     """
     Computes second derivatives given the grid points of a cubic spline.
 
     :param x_points: Abscissas of the splining points for the real-space function
     :param y_points: Ordinates of the splining points for the real-space function
-    :param high_accuracy: bool, perform calculation in double precision
 
     :return: The second derivatives for the spline points
     """
     # Do the calculation in float64 if required
     x = x_points
     y = y_points
-    if high_precision:
-        x = x.to(dtype=torch.float64)
-        y = y.to(dtype=torch.float64)
 
     # Calculate intervals
     intervals = x[1:] - x[:-1]
     dy = (y[1:] - y[:-1]) / intervals
 
     # Create zero boundary conditions (natural spline)
-    d2y = torch.zeros_like(x)
+    torch.zeros_like(x)
 
     n = len(x)
     a = torch.zeros_like(x)  # Sub-diagonal (a[1..n-1])
@@ -195,10 +190,9 @@ def compute_second_derivatives(
         c[i] = intervals[i] / 6
         d[i] = dy[i] - dy[i - 1]
 
-    d2y = _solve_tridiagonal(a, b, c, d)
+    return _solve_tridiagonal(a, b, c, d)
 
     # Converts back to the original dtype
-    return d2y
 
 
 def compute_spline_ft(
@@ -206,7 +200,6 @@ def compute_spline_ft(
     x_points: torch.Tensor,
     y_points: torch.Tensor,
     d2y_points: torch.Tensor,
-    high_precision: Optional[bool] = True,
 ):
     r"""
     Computes the Fourier transform of a splined radial function.
@@ -228,7 +221,6 @@ def compute_spline_ft(
     :param x_points: Abscissas of the splining points for the real-space function
     :param y_points: Ordinates of the splining points for the real-space function
     :param d2y_points:  Second derivatives for the spline points
-    :param high_accuracy: bool, perform calculation in double precision
 
     :return: The radial Fourier transform :math:`\hat{f}(k)` computed
         at the ``k_points`` provided.
@@ -244,8 +236,6 @@ def compute_spline_ft(
 
     # chooses precision for the FT evaluation
     dtype = x_points.dtype
-    if high_precision:
-        dtype = torch.float64
 
     # broadcast to compute at once on all k values.
     # all these are terms that enter the analytical integral.

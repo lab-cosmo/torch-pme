@@ -1,4 +1,4 @@
-from typing import Optional, Union
+from typing import Optional
 
 import torch
 
@@ -63,7 +63,7 @@ class SplinePotential(Potential):
 
         if len(y_grid) != len(r_grid):
             raise ValueError("Length of radial grid and value array mismatch.")
-        
+
         self.register_buffer("r_grid", r_grid)
         self.register_buffer("y_grid", y_grid)
 
@@ -106,14 +106,14 @@ class SplinePotential(Potential):
 
         if y_at_zero is None:
             self._y_at_zero = self._spline(
-                torch.zeros(1, dtype=self.dtype, device=self.device)
+                torch.zeros(1, dtype=self.r_grid.dtype, device=self.r_grid.device)
             )
         else:
             self._y_at_zero = y_at_zero
 
         if yhat_at_zero is None:
             self._yhat_at_zero = self._krn_spline(
-                torch.zeros(1, dtype=self.dtype, device=self.device)
+                torch.zeros(1, dtype=self.k_grid.dtype, device=self.k_grid.device)
             )
         else:
             self._yhat_at_zero = yhat_at_zero

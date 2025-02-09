@@ -1,4 +1,4 @@
-from typing import Optional, Union
+from typing import Union
 
 import torch
 
@@ -11,7 +11,6 @@ def _validate_parameters(
     neighbor_distances: torch.Tensor,
     smearing: Union[float, None],
 ) -> None:
-    
     dtype = positions.dtype
     device = positions.device
 

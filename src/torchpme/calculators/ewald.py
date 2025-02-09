@@ -1,5 +1,3 @@
-from typing import Optional, Union
-
 import torch
 
 from ..lib import generate_kvectors_for_ewald

@@ -78,9 +78,7 @@ def test_invalid_shape_cell():
 
 def test_invalid_dtype_cell():
     calculator = CalculatorTest()
-    match = (
-        r"type of `cell` \(torch.float64\) must be same as that of the `positions` class \(torch.float32\)"
-    )
+    match = r"type of `cell` \(torch.float64\) must be same as that of the `positions` class \(torch.float32\)"
     with pytest.raises(TypeError, match=match):
         calculator.forward(
             positions=POSITIONS_1,

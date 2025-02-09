@@ -1,5 +1,3 @@
-from typing import Optional, Union
-
 import torch
 from torch import profiler
 
@@ -70,7 +68,11 @@ class PMECalculator(Calculator):
 
         self.mesh_spacing: float = mesh_spacing
 
-        cell = torch.eye(3, device=self.potential.smearing.device, dtype=self.potential.smearing.dtype)
+        cell = torch.eye(
+            3,
+            device=self.potential.smearing.device,
+            dtype=self.potential.smearing.dtype,
+        )
         ns_mesh = torch.ones(3, dtype=int, device=cell.device)
 
         self.kspace_filter: KSpaceFilter = KSpaceFilter(

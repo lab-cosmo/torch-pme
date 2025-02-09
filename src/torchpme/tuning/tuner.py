@@ -1,6 +1,6 @@
 import math
 import time
-from typing import Optional, Union
+from typing import Optional
 
 import torch
 
@@ -234,7 +234,7 @@ class GridSearchTuner(TunerBase):
             ),
             **k_space_params,
         )
-
+        calculator.to(device=self.positions.device, dtype=self.positions.dtype)
         return self.time_func(calculator)
 
 

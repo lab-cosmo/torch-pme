@@ -1,5 +1,3 @@
-from typing import Optional, Union
-
 import torch
 
 from ..lib.kspace_filter import P3MKSpaceFilter
@@ -66,7 +64,11 @@ class P3MCalculator(PMECalculator):
             prefactor=prefactor,
         )
 
-        cell = torch.eye(3, device=self.potential.smearing.device, dtype=self.potential.smearing.dtype)
+        cell = torch.eye(
+            3,
+            device=self.potential.smearing.device,
+            dtype=self.potential.smearing.dtype,
+        )
         ns_mesh = torch.ones(3, dtype=int, device=cell.device)
 
         self.kspace_filter: P3MKSpaceFilter = P3MKSpaceFilter(

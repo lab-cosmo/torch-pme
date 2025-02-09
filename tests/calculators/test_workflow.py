@@ -16,7 +16,6 @@ from torchpme import (
     PMECalculator,
 )
 
-
 DEVICES = ["cpu", torch.device("cpu")] + torch.cuda.is_available() * ["cuda"]
 DTYPES = [torch.float32, torch.float64]
 SMEARING = 0.1
@@ -32,35 +31,27 @@ MESH_SPACING = SMEARING / 4
         (
             Calculator,
             {
-                "potential": CoulombPotential(
-                    smearing=None
-                ),
+                "potential": CoulombPotential(smearing=None),
             },
         ),
         (
             EwaldCalculator,
             {
-                "potential": CoulombPotential(
-                    smearing=SMEARING
-                ),
+                "potential": CoulombPotential(smearing=SMEARING),
                 "lr_wavelength": LR_WAVELENGTH,
             },
         ),
         (
             PMECalculator,
             {
-                "potential": CoulombPotential(
-                    smearing=SMEARING
-                ),
+                "potential": CoulombPotential(smearing=SMEARING),
                 "mesh_spacing": MESH_SPACING,
             },
         ),
         (
             P3MCalculator,
             {
-                "potential": CoulombPotential(
-                    smearing=SMEARING
-                ),
+                "potential": CoulombPotential(smearing=SMEARING),
                 "mesh_spacing": MESH_SPACING,
             },
         ),
@@ -69,7 +60,6 @@ MESH_SPACING = SMEARING / 4
 class TestWorkflow:
     def cscl_system(self, device=None, dtype=None):
         """CsCl crystal. Same as in the madelung test"""
-
         positions = torch.tensor(
             [[0, 0, 0], [0.5, 0.5, 0.5]], dtype=dtype, device=device
         )
@@ -109,7 +99,6 @@ class TestWorkflow:
 
     def test_dtype_device(self, CalculatorClass, params, device, dtype):
         """Test that the output dtype and device are the same as the input."""
-        print(params["potential"].smearing)
         calculator = CalculatorClass(**params)
         calculator.to(device=device, dtype=dtype)
         potential = calculator(*self.cscl_system(device=device, dtype=dtype))
@@ -163,10 +152,8 @@ class TestWorkflow:
 
     def test_not_nan(self, CalculatorClass, params, device, dtype):
         """Make sure derivatives are not NaN."""
-        params = params.copy()
-        params["potential"] = params["potential"](dtype, device)
-
-        calculator = CalculatorClass(**params, device=device, dtype=dtype)
+        calculator = CalculatorClass(**params)
+        calculator.to(device=device, dtype=dtype)
         system = self.cscl_system(device=device, dtype=dtype)
         system[0].requires_grad = True
         system[1].requires_grad = True
@@ -193,29 +180,6 @@ class TestWorkflow:
                 torch.autograd.grad(energy, system[2], retain_graph=True)[0]
             ).any()
 
-    def test_dtype_and_device_incompatability(
-        self, CalculatorClass, params, device, dtype
-    ):
-        """Test that the calculator raises an error if the dtype and device are incompatible with potential."""
-        params = params.copy()
-
-        other_dtype = torch.float32 if dtype == torch.float64 else torch.float64
-        params["potential"] = params["potential"](dtype, device)
-
-        match = (
-            rf"dtype of `potential` \({params['potential'].dtype}\) must be same as "
-            rf"of `calculator` \({other_dtype}\)"
-        )
-        with pytest.raises(TypeError, match=match):
-            CalculatorClass(**params, dtype=other_dtype, device=device)
-
-        match = (
-            rf"device of `potential` \({params['potential'].device}\) must be same as "
-            rf"of `calculator` \(meta\)"
-        )
-        with pytest.raises(ValueError, match=match):
-            CalculatorClass(**params, dtype=dtype, device=torch.device("meta"))
-
     def test_potential_and_calculator_incompatability(
         self,
         CalculatorClass,
@@ -224,34 +188,8 @@ class TestWorkflow:
         dtype,
     ):
         """Test that the calculator raises an error if the potential and calculator are incompatible."""
-        params = params.copy()
-        params["potential"] = params["potential"](dtype, device)
-
         params["potential"] = torch.jit.script(params["potential"])
         with pytest.raises(
             TypeError, match="Potential must be an instance of Potential, got.*"
         ):
-            CalculatorClass(**params, device=device, dtype=dtype)
-
-    def test_device_string_compatability(self, CalculatorClass, params, dtype, device):
-        """Test that the calculator works with device strings."""
-        params = params.copy()
-        params["potential"] = params["potential"](dtype, "cpu")
-        calculator = CalculatorClass(
-            **params,
-            device=torch.device("cpu"),
-            dtype=dtype,
-        )
-
-        assert calculator.device == params["potential"].device
-
-    def test_device_index_compatability(self, CalculatorClass, params, dtype, device):
-        """Test that the calculator works with no index on the device."""
-        if torch.cuda.is_available():
-            params = params.copy()
-            params["potential"] = params["potential"](dtype, "cuda")
-            calculator = CalculatorClass(
-                **params, device=torch.device("cuda:0"), dtype=dtype
-            )
-
-            assert calculator.device == params["potential"].device
+            CalculatorClass(**params)

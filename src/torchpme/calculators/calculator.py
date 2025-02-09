@@ -1,5 +1,3 @@
-from typing import Optional, Union
-
 import torch
 from torch import profiler
 

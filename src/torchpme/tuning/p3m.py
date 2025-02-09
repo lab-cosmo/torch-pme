@@ -1,6 +1,6 @@
 import math
 from itertools import product
-from typing import Any, Optional, Union
+from typing import Any
 from warnings import warn
 
 import torch

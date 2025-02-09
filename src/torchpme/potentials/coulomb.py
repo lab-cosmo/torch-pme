@@ -1,4 +1,4 @@
-from typing import Optional, Union
+from typing import Optional
 
 import torch
 
@@ -59,7 +59,7 @@ class CoulombPotential(Potential):
                 "Cannot compute long-range contribution without specifying `smearing`."
             )
 
-        return torch.erf(dist / self.smearing / 2.0 ** 0.5) / dist
+        return torch.erf(dist / self.smearing / 2.0**0.5) / dist
 
     def lr_from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
         r"""
