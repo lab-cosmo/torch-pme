@@ -77,8 +77,6 @@ class CoulombPotential(Potential):
         # https://github.com/jax-ml/jax/issues/1052
         # https://github.com/tensorflow/probability/blob/main/discussion/where-nan.pdf
         masked = torch.where(k_sq == 0, 1.0, k_sq)
-        print(self.smearing.device)
-        print(k_sq.device)
         return torch.where(
             k_sq == 0,
             0.0,
