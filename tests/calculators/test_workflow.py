@@ -193,3 +193,12 @@ class TestWorkflow:
             TypeError, match="Potential must be an instance of Potential, got.*"
         ):
             CalculatorClass(**params)
+
+    def test_smearing_incompatability(self, CalculatorClass, params, device, dtype):
+        """Test that the calculator raises an error if the potential and calculator are incompatible."""
+        if type(CalculatorClass) in [EwaldCalculator, PMECalculator, P3MCalculator]:
+            params["smearing"] = None
+            with pytest.raises(
+                TypeError, match="Must specify smearing to use a potential with .*"
+            ):
+                CalculatorClass(**params)

@@ -168,9 +168,6 @@ def compute_second_derivatives(
     intervals = x[1:] - x[:-1]
     dy = (y[1:] - y[:-1]) / intervals
 
-    # Create zero boundary conditions (natural spline)
-    torch.zeros_like(x)
-
     n = len(x)
     a = torch.zeros_like(x)  # Sub-diagonal (a[1..n-1])
     b = torch.zeros_like(x)  # Main diagonal (b[0..n-1])
