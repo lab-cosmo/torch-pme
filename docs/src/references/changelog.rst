@@ -32,6 +32,11 @@ Added
 * Require consistent ``dtype`` between ``positions`` and ``neighbor_distances`` in
   ``Calculator`` classes and tuning functions.
 
+Changed
+#######
+
+* Remove ``device`` and ``dtype`` from init of ``Calculator`` and ``Potential`` classes
+
 Fixed
 #####
 
