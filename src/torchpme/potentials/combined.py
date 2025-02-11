@@ -1,4 +1,4 @@
-from typing import Optional, Union
+from typing import Optional
 
 import torch
 
@@ -27,8 +27,6 @@ class CombinedPotential(Potential):
     :param exclusion_radius: A length scale that defines a *local environment* within
         which the potential should be smoothly zeroed out, as it will be described by a
         separate model.
-    :param dtype: type used for the internal buffers and parameters
-    :param device: device used for the internal buffers and parameters
     """
 
     def __init__(
@@ -38,14 +36,10 @@ class CombinedPotential(Potential):
         learnable_weights: Optional[bool] = True,
         smearing: Optional[float] = None,
         exclusion_radius: Optional[float] = None,
-        dtype: Optional[torch.dtype] = None,
-        device: Union[None, str, torch.device] = None,
     ):
         super().__init__(
             smearing=smearing,
             exclusion_radius=exclusion_radius,
-            dtype=dtype,
-            device=device,
         )
 
         smearings = [pot.smearing for pot in potentials]
@@ -73,9 +67,7 @@ class CombinedPotential(Potential):
                     "The number of initial weights must match the number of potentials being combined"
                 )
         else:
-            initial_weights = torch.ones(
-                len(potentials), dtype=self.dtype, device=self.device
-            )
+            initial_weights = torch.ones(len(potentials))
         # for torchscript
         self.potentials = torch.nn.ModuleList(potentials)
         if learnable_weights:

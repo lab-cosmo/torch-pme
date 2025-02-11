@@ -101,9 +101,8 @@ def test_madelung(crystal_name, scaling_factor, calc_name):
         smearing = sr_cutoff / 5.0
         lr_wavelength = 0.5 * smearing
         calc = EwaldCalculator(
-            InversePowerLawPotential(exponent=1, smearing=smearing, dtype=DTYPE),
+            InversePowerLawPotential(exponent=1, smearing=smearing),
             lr_wavelength=lr_wavelength,
-            dtype=DTYPE,
         )
         rtol = 4e-6
     elif calc_name == "pme":
@@ -113,19 +112,16 @@ def test_madelung(crystal_name, scaling_factor, calc_name):
             InversePowerLawPotential(
                 exponent=1,
                 smearing=smearing,
-                dtype=DTYPE,
             ),
             mesh_spacing=smearing / 8,
-            dtype=DTYPE,
         )
         rtol = 9e-4
     elif calc_name == "p3m":
         sr_cutoff = 2 * scaling_factor
         smearing = sr_cutoff / 5.0
         calc = P3MCalculator(
-            CoulombPotential(smearing=smearing, dtype=DTYPE),
+            CoulombPotential(smearing=smearing),
             mesh_spacing=smearing / 8,
-            dtype=DTYPE,
         )
         rtol = 9e-4
 
@@ -133,7 +129,7 @@ def test_madelung(crystal_name, scaling_factor, calc_name):
     neighbor_indices, neighbor_distances = neighbor_list(
         positions=pos, periodic=True, box=cell, cutoff=sr_cutoff
     )
-
+    calc.to(DTYPE)
     # Compute potential and compare against target value using default hypers
     potentials = calc.forward(
         positions=pos,
@@ -200,10 +196,10 @@ def test_wigner(crystal_name, scaling_factor):
 
         # Compute potential and compare against reference
         calc = EwaldCalculator(
-            InversePowerLawPotential(exponent=1, smearing=smeareff, dtype=DTYPE),
+            InversePowerLawPotential(exponent=1, smearing=smeareff),
             lr_wavelength=smeareff / 2,
-            dtype=DTYPE,
         )
+        calc.to(DTYPE)
         potentials = calc.forward(
             positions=positions,
             charges=charges,
@@ -251,28 +247,25 @@ def test_random_structure(
 
     if calc_name == "ewald":
         calc = EwaldCalculator(
-            CoulombPotential(smearing=smearing, dtype=DTYPE),
+            CoulombPotential(smearing=smearing),
             lr_wavelength=0.5 * smearing,
             full_neighbor_list=full_neighbor_list,
             prefactor=torchpme.prefactors.eV_A,
-            dtype=DTYPE,
         )
 
     elif calc_name == "pme":
         calc = PMECalculator(
-            CoulombPotential(smearing=smearing, dtype=DTYPE),
+            CoulombPotential(smearing=smearing),
             mesh_spacing=smearing / 8.0,
             full_neighbor_list=full_neighbor_list,
             prefactor=torchpme.prefactors.eV_A,
-            dtype=DTYPE,
         )
     elif calc_name == "p3m":
         calc = P3MCalculator(
-            CoulombPotential(smearing=smearing, dtype=DTYPE),
+            CoulombPotential(smearing=smearing),
             mesh_spacing=smearing / 8.0,
             full_neighbor_list=full_neighbor_list,
             prefactor=torchpme.prefactors.eV_A,
-            dtype=DTYPE,
         )
 
     neighbor_indices, neighbor_shifts = neighbor_list(
@@ -295,6 +288,7 @@ def test_random_structure(
         neighbor_shifts=neighbor_shifts,
     )
 
+    calc.to(DTYPE)
     potentials = calc.forward(
         positions=positions,
         charges=charges,

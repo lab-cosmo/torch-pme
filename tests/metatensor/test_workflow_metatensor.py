@@ -7,7 +7,6 @@ import torch
 from packaging import version
 
 import torchpme
-from torchpme._utils import _get_device, _get_dtype
 
 mts_torch = pytest.importorskip("metatensor.torch")
 mts_atomistic = pytest.importorskip("metatensor.torch.atomistic")
@@ -27,35 +26,27 @@ MESH_SPACING = SMEARING / 4
         (
             torchpme.metatensor.Calculator,
             {
-                "potential": lambda dtype, device: torchpme.CoulombPotential(
-                    smearing=None, dtype=dtype, device=device
-                ),
+                "potential": torchpme.CoulombPotential(smearing=None),
             },
         ),
         (
             torchpme.metatensor.EwaldCalculator,
             {
-                "potential": lambda dtype, device: torchpme.CoulombPotential(
-                    smearing=SMEARING, dtype=dtype, device=device
-                ),
+                "potential": torchpme.CoulombPotential(smearing=SMEARING),
                 "lr_wavelength": LR_WAVELENGTH,
             },
         ),
         (
             torchpme.metatensor.PMECalculator,
             {
-                "potential": lambda dtype, device: torchpme.CoulombPotential(
-                    smearing=SMEARING, dtype=dtype, device=device
-                ),
+                "potential": torchpme.CoulombPotential(smearing=SMEARING),
                 "mesh_spacing": MESH_SPACING,
             },
         ),
         (
             torchpme.metatensor.P3MCalculator,
             {
-                "potential": lambda dtype, device: torchpme.CoulombPotential(
-                    smearing=SMEARING, dtype=dtype, device=device
-                ),
+                "potential": torchpme.CoulombPotential(smearing=SMEARING),
                 "mesh_spacing": MESH_SPACING,
             },
         ),
@@ -63,9 +54,6 @@ MESH_SPACING = SMEARING / 4
 )
 class TestWorkflow:
     def system(self, device=None, dtype=None):
-        device = _get_device(device)
-        dtype = _get_dtype(dtype)
-
         system = mts_atomistic.System(
             types=torch.tensor([1, 2, 2]),
             positions=torch.tensor([[0.0, 0.0, 0.0], [0.0, 0.0, 0.2], [0.0, 0.0, 0.5]]),
@@ -118,24 +106,21 @@ class TestWorkflow:
 
     def test_operation_as_python(self, CalculatorClass, params, device, dtype):
         """Run `check_operation` as a normal python script"""
-        params = params.copy()
-        params["potential"] = params["potential"](dtype, device)
-        calculator = CalculatorClass(**params, device=device, dtype=dtype)
+        calculator = CalculatorClass(**params)
+        calculator.to(device=device, dtype=dtype)
         self.check_operation(calculator=calculator, device=device, dtype=dtype)
 
     def test_operation_as_torch_script(self, CalculatorClass, params, device, dtype):
         """Run `check_operation` as a compiled torch script module."""
-        params = params.copy()
-        params["potential"] = params["potential"](dtype, device)
-        calculator = CalculatorClass(**params, device=device, dtype=dtype)
+        calculator = CalculatorClass(**params)
+        calculator.to(device=device, dtype=dtype)
         scripted = torch.jit.script(calculator)
         self.check_operation(calculator=scripted, device=device, dtype=dtype)
 
     def test_save_load(self, CalculatorClass, params, device, dtype):
-        params = params.copy()
-        params["potential"] = params["potential"](dtype, device)
-
-        calculator = CalculatorClass(**params, device=device, dtype=dtype)
+        """Save and load a compiled torch script module."""
+        calculator = CalculatorClass(**params)
+        calculator.to(device=device, dtype=dtype)
         scripted = torch.jit.script(calculator)
         with io.BytesIO() as buffer:
             torch.jit.save(scripted, buffer)

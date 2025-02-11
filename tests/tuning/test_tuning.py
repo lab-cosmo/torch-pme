@@ -10,7 +10,6 @@ from torchpme import (
     P3MCalculator,
     PMECalculator,
 )
-from torchpme._utils import _get_device, _get_dtype
 from torchpme.tuning import tune_ewald, tune_p3m, tune_pme
 from torchpme.tuning.tuner import TunerBase
 
@@ -23,9 +22,6 @@ DTYPES = [torch.float32, torch.float64]
 
 
 def system(device=None, dtype=None):
-    device = _get_device(device)
-    dtype = _get_dtype(dtype)
-
     charges = torch.ones((4, 1), dtype=dtype, device=device)
     cell = torch.eye(3, dtype=dtype, device=device)
     positions = 0.3 * torch.arange(12, dtype=dtype, device=device).reshape((4, 3))
@@ -50,8 +46,6 @@ def test_TunerBase_init(device, dtype):
         cutoff=DEFAULT_CUTOFF,
         calculator=1.0,
         exponent=1,
-        dtype=dtype,
-        device=device,
     )
 
 
@@ -89,19 +83,16 @@ def test_parameter_choose(device, dtype, calculator, tune, param_length, accurac
         neighbor_indices=neighbor_indices,
         neighbor_distances=neighbor_distances,
         accuracy=accuracy,
-        dtype=dtype,
-        device=device,
     )
 
     assert len(params) == param_length
 
     # Compute potential and compare against target value using default hypers
     calc = calculator(
-        potential=(CoulombPotential(smearing=smearing, dtype=dtype, device=device)),
-        dtype=dtype,
-        device=device,
+        potential=(CoulombPotential(smearing=smearing)),
         **params,
     )
+    calc.to(device=device, dtype=dtype)
     potentials = calc.forward(
         positions=pos,
         charges=charges,
@@ -212,9 +203,7 @@ def test_invalid_cell(tune):
 @pytest.mark.parametrize("tune", [tune_ewald, tune_pme, tune_p3m])
 def test_invalid_dtype_cell(tune):
     charges, _, positions = system()
-    match = (
-        r"type of `cell` \(torch.float64\) must be same as the class \(torch.float32\)"
-    )
+    match = r"type of `cell` \(torch.float64\) must be same as that of the `positions` class \(torch.float32\)"
     with pytest.raises(TypeError, match=match):
         tune(
             charges=charges,

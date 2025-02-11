@@ -1,4 +1,4 @@
-from typing import Optional, Union
+from typing import Optional
 
 import torch
 
@@ -26,30 +26,14 @@ class CoulombPotential(Potential):
     :param exclusion_radius: A length scale that defines a *local environment* within
         which the potential should be smoothly zeroed out, as it will be described by a
         separate model.
-    :param dtype: type used for the internal buffers and parameters
-    :param device: device used for the internal buffers and parameters
     """
 
     def __init__(
         self,
         smearing: Optional[float] = None,
         exclusion_radius: Optional[float] = None,
-        dtype: Optional[torch.dtype] = None,
-        device: Union[None, str, torch.device] = None,
     ):
-        super().__init__(smearing, exclusion_radius, dtype, device)
-
-        # constants used in the forwward
-        self.register_buffer(
-            "_rsqrt2",
-            torch.rsqrt(torch.tensor(2.0, dtype=self.dtype, device=self.device)),
-        )
-        self.register_buffer(
-            "_sqrt_2_on_pi",
-            torch.sqrt(
-                torch.tensor(2.0 / torch.pi, dtype=self.dtype, device=self.device)
-            ),
-        )
+        super().__init__(smearing, exclusion_radius)
 
     def from_dist(self, dist: torch.Tensor) -> torch.Tensor:
         """
@@ -75,7 +59,7 @@ class CoulombPotential(Potential):
                 "Cannot compute long-range contribution without specifying `smearing`."
             )
 
-        return torch.erf(dist * (self._rsqrt2 / self.smearing)) / dist
+        return torch.erf(dist / self.smearing / 2.0**0.5) / dist
 
     def lr_from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
         r"""
@@ -105,7 +89,7 @@ class CoulombPotential(Potential):
             raise ValueError(
                 "Cannot compute self contribution without specifying `smearing`."
             )
-        return self._sqrt_2_on_pi / self.smearing
+        return (2 / torch.pi) ** 0.5 / self.smearing
 
     def background_correction(self) -> torch.Tensor:
         # "charge neutrality" correction for 1/r potential

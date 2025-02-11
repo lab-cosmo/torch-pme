@@ -127,8 +127,8 @@ def _solve_tridiagonal(a, b, c, d):
     """
     n = len(d)
     # Create copies to avoid modifying the original arrays
-    c_prime = torch.zeros(n)
-    d_prime = torch.zeros(n)
+    c_prime = torch.zeros_like(d)
+    d_prime = torch.zeros_like(d)
 
     # Initial coefficients
     c_prime[0] = c[0] / b[0]
@@ -141,7 +141,7 @@ def _solve_tridiagonal(a, b, c, d):
         d_prime[i] = (d[i] - a[i] * d_prime[i - 1]) / denom
 
     # Backward substitution
-    x = torch.zeros(n)
+    x = torch.zeros_like(d)
     x[-1] = d_prime[-1]
     for i in reversed(range(n - 1)):
         x[i] = d_prime[i] - c_prime[i] * x[i + 1]
@@ -151,36 +151,28 @@ def _solve_tridiagonal(a, b, c, d):
 def compute_second_derivatives(
     x_points: torch.Tensor,
     y_points: torch.Tensor,
-    high_precision: Optional[bool] = True,
 ):
     """
     Computes second derivatives given the grid points of a cubic spline.
 
     :param x_points: Abscissas of the splining points for the real-space function
     :param y_points: Ordinates of the splining points for the real-space function
-    :param high_accuracy: bool, perform calculation in double precision
 
     :return: The second derivatives for the spline points
     """
     # Do the calculation in float64 if required
     x = x_points
     y = y_points
-    if high_precision:
-        x = x.to(dtype=torch.float64)
-        y = y.to(dtype=torch.float64)
 
     # Calculate intervals
     intervals = x[1:] - x[:-1]
     dy = (y[1:] - y[:-1]) / intervals
 
-    # Create zero boundary conditions (natural spline)
-    d2y = torch.zeros_like(x, dtype=torch.float64)
-
     n = len(x)
-    a = torch.zeros(n)  # Sub-diagonal (a[1..n-1])
-    b = torch.zeros(n)  # Main diagonal (b[0..n-1])
-    c = torch.zeros(n)  # Super-diagonal (c[0..n-2])
-    d = torch.zeros(n)  # Right-hand side (d[0..n-1])
+    a = torch.zeros_like(x)  # Sub-diagonal (a[1..n-1])
+    b = torch.zeros_like(x)  # Main diagonal (b[0..n-1])
+    c = torch.zeros_like(x)  # Super-diagonal (c[0..n-2])
+    d = torch.zeros_like(x)  # Right-hand side (d[0..n-1])
 
     # Natural spline boundary conditions
     b[0] = 1
@@ -195,10 +187,9 @@ def compute_second_derivatives(
         c[i] = intervals[i] / 6
         d[i] = dy[i] - dy[i - 1]
 
-    d2y = _solve_tridiagonal(a, b, c, d)
+    return _solve_tridiagonal(a, b, c, d)
 
     # Converts back to the original dtype
-    return d2y.to(dtype=x_points.dtype, device=x_points.device)
 
 
 def compute_spline_ft(
@@ -206,7 +197,6 @@ def compute_spline_ft(
     x_points: torch.Tensor,
     y_points: torch.Tensor,
     d2y_points: torch.Tensor,
-    high_precision: Optional[bool] = True,
 ):
     r"""
     Computes the Fourier transform of a splined radial function.
@@ -228,7 +218,6 @@ def compute_spline_ft(
     :param x_points: Abscissas of the splining points for the real-space function
     :param y_points: Ordinates of the splining points for the real-space function
     :param d2y_points:  Second derivatives for the spline points
-    :param high_accuracy: bool, perform calculation in double precision
 
     :return: The radial Fourier transform :math:`\hat{f}(k)` computed
         at the ``k_points`` provided.
@@ -244,8 +233,6 @@ def compute_spline_ft(
 
     # chooses precision for the FT evaluation
     dtype = x_points.dtype
-    if high_precision:
-        dtype = torch.float64
 
     # broadcast to compute at once on all k values.
     # all these are terms that enter the analytical integral.
