@@ -1,8 +1,7 @@
-from typing import Optional, Union
+from typing import Optional
 
 import torch
 
-from .._utils import _get_device, _get_dtype
 from .potential import Potential
 
 
@@ -14,29 +13,23 @@ class PotentialDipole(torch.nn.Module):
         smearing: Optional[float] = None,
         exclusion_radius: Optional[float] = None,
         epsilon: float = 0.0,
-        dtype: Optional[torch.dtype] = None,
-        device: Union[None, str, torch.device] = None,
     ):
         super().__init__()
 
-        self.dtype = _get_dtype(dtype)
-        self.device = _get_device(device)
         if smearing is not None:
             self.register_buffer(
-                "smearing", torch.tensor(smearing, device=self.device, dtype=self.dtype)
+                "smearing", torch.tensor(smearing, dtype=torch.float64)
             )
         else:
             self.smearing = None
         if exclusion_radius is not None:
             self.register_buffer(
                 "exclusion_radius",
-                torch.tensor(exclusion_radius, device=self.device, dtype=self.dtype),
+                torch.tensor(exclusion_radius, dtype=torch.float64),
             )
         else:
             self.exclusion_radius = None
-        self.register_buffer(
-            "epsilon", torch.tensor(epsilon, device=self.device, dtype=self.dtype)
-        )
+        self.register_buffer("epsilon", torch.tensor(epsilon, dtype=torch.float64))
 
     @torch.jit.export
     def f_cutoff(self, vector: torch.Tensor) -> torch.Tensor:

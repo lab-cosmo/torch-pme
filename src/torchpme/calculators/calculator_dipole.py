@@ -3,7 +3,7 @@ from typing import Optional, Union
 import torch
 from torch import profiler
 
-from .._utils import _get_device, _get_dtype, _validate_parameters
+from .._utils import _validate_parameters
 from ..lib import generate_kvectors_for_ewald
 from ..potentials import PotentialDipole
 
@@ -35,21 +35,6 @@ class CalculatorDipole(torch.nn.Module):
             and self.potential.smearing is not None
             or (self.lr_wavelength is None and self.potential.smearing is None)
         ), "Either both `lr_wavelength` and `smearing` must be set or both must be None"
-
-        self.device = _get_device(device)
-        self.dtype = _get_dtype(dtype)
-
-        if self.dtype != potential.dtype:
-            raise TypeError(
-                f"dtype of `potential` ({potential.dtype}) must be same as of "
-                f"`calculator` ({self.dtype})"
-            )
-
-        if self.device != potential.device:
-            raise ValueError(
-                f"device of `potential` ({potential.device}) must be same as of "
-                f"`calculator` ({self.device})"
-            )
 
         self.full_neighbor_list = full_neighbor_list
 
@@ -155,8 +140,6 @@ class CalculatorDipole(torch.nn.Module):
             neighbor_indices=neighbor_indices,
             neighbor_distances=neighbor_vectors.norm(dim=-1),
             smearing=self.potential.smearing,
-            dtype=self.dtype,
-            device=self.device,
         )
 
         # Compute short-range (SR) part using a real space sum

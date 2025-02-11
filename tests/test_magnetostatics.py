@@ -55,9 +55,8 @@ system = System()
 
 def test_magnetostatics_direct():
     calculator = CalculatorDipole(
-        potential=PotentialDipole(dtype=torch.float64),
+        potential=PotentialDipole(),
         full_neighbor_list=False,
-        dtype=torch.float64,
     )
     pot = calculator(
         dipoles=system.dipoles,
@@ -82,10 +81,9 @@ def test_magnetostatics_direct():
 )
 def test_magnetostatics_sr(smearing, sr_potential):
     calculator = CalculatorDipole(
-        potential=PotentialDipole(smearing=smearing, dtype=torch.float64),
+        potential=PotentialDipole(smearing=smearing),
         full_neighbor_list=False,
         lr_wavelength=1.0,
-        dtype=torch.float64,
     )
     pot = calculator._compute_rspace(
         dipoles=system.dipoles,
@@ -103,10 +101,9 @@ def test_magnetostatic_ewald():
     alpha = 1.0
     smearing = (1 / (2 * alpha**2)) ** 0.5
     calculator = CalculatorDipole(
-        potential=PotentialDipole(smearing=smearing, dtype=torch.float64),
+        potential=PotentialDipole(smearing=smearing),
         full_neighbor_list=False,
         lr_wavelength=0.1,
-        dtype=torch.float64,
     )
     pot = calculator(
         dipoles=system.dipoles,
@@ -138,10 +135,9 @@ forces = [frame.get_forces() for frame in frames]
 def test_magnetostatic_ewald_crystal(frame, cutoff, alpha, energy, force):
     smearing = (1 / (2 * alpha**2)) ** 0.5
     calc = CalculatorDipole(
-        potential=PotentialDipole(smearing=smearing, dtype=torch.float64),
+        potential=PotentialDipole(smearing=smearing),
         full_neighbor_list=False,
         lr_wavelength=0.1,
-        dtype=torch.float64,
         prefactor=eV_A,
     )
     positions = torch.tensor(frame.get_positions(), dtype=torch.float64)
