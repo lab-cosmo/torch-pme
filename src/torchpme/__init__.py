@@ -2,12 +2,19 @@ import contextlib
 
 from . import calculators, lib, potentials, prefactors, tuning  # noqa
 from ._version import __version__, __version_tuple__  # noqa
-from .calculators import Calculator, EwaldCalculator, P3MCalculator, PMECalculator
+from .calculators import (
+    Calculator,
+    CalculatorDipole,
+    EwaldCalculator,
+    P3MCalculator,
+    PMECalculator,
+)
 from .potentials import (
     CombinedPotential,
     CoulombPotential,
     InversePowerLawPotential,
     Potential,
+    PotentialDipole,
     SplinePotential,
 )
 
@@ -24,4 +31,6 @@ __all__ = [
     "InversePowerLawPotential",
     "SplinePotential",
     "CombinedPotential",
+    "PotentialDipole",
+    "CalculatorDipole",
 ]

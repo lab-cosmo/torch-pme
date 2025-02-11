@@ -1,125 +1,13 @@
 import pytest
 import torch
 from ase.io import read
-from helpers import DIPOLES_TEST_FRAMES, neighbor_list
+from helpers import DIPOLES_TEST_FRAMES, compute_distances, neighbor_list
 
-from torchpme.calculators import CalculatorDipole
-from torchpme.potentials import PotentialDipole
+from torchpme import CalculatorDipole, PotentialDipole
 from torchpme.prefactors import eV_A
 
-
-def compute_distance_vectors(
-    positions, neighbor_indices, cell=None, neighbor_shifts=None
-):
-    """Compute pairwise distance vectors."""
-    atom_is = neighbor_indices[:, 0]
-    atom_js = neighbor_indices[:, 1]
-
-    pos_is = positions[atom_is]
-    pos_js = positions[atom_js]
-
-    distance_vectors = pos_js - pos_is
-
-    if cell is not None and neighbor_shifts is not None:
-        shifts = neighbor_shifts.type(cell.dtype)
-        distance_vectors += shifts @ cell
-    elif cell is not None and neighbor_shifts is None:
-        raise ValueError("Provided `cell` but no `neighbor_shifts`.")
-    elif cell is None and neighbor_shifts is not None:
-        raise ValueError("Provided `neighbor_shifts` but no `cell`.")
-
-    return distance_vectors
-
-
-class System:
-    def __init__(self):
-        self.cell = torch.tensor(
-            [[10.0, 0.0, 0.0], [0.0, 10.0, 0.0], [0.0, 0.0, 10.0]], dtype=torch.float64
-        )
-        self.dipoles = torch.tensor(
-            [[1.0, 1.0, 0.0], [1.0, 1.0, 0.0], [1.0, 1.0, 0.0]], dtype=torch.float64
-        )
-        self.positions = torch.tensor(
-            [[0.0, 0.0, 0.0], [0.0, 2.0, 0.0], [0.0, 4.0, 0.0]], dtype=torch.float64
-        )
-        self.neighbor_indices = torch.tensor(
-            [[0, 1], [1, 2], [0, 2]], dtype=torch.int64
-        )
-        self.neighbor_vectors = torch.tensor(
-            [[0.0, 2.0, 0.0], [0.0, 2.0, 0.0], [0.0, 4.0, 0.0]], dtype=torch.float64
-        )
-
-
-system = System()
-
-
-def test_magnetostatics_direct():
-    calculator = CalculatorDipole(
-        potential=PotentialDipole(),
-        full_neighbor_list=False,
-    )
-    pot = calculator(
-        dipoles=system.dipoles,
-        cell=system.cell,
-        positions=system.positions,
-        neighbor_indices=system.neighbor_indices,
-        neighbor_vectors=system.neighbor_vectors,
-    )
-    result = torch.einsum("ij,ij->i", pot, system.dipoles).sum()
-    expected_result = torch.tensor(-0.2656, dtype=torch.float64)
-    assert torch.isclose(result, expected_result, atol=1e-4), (
-        f"Expected {expected_result}, but got {result}"
-    )
-
-
-@pytest.mark.parametrize(
-    ("smearing", "sr_potential"),
-    [
-        (1e10, torch.tensor(-0.2656, dtype=torch.float64)),
-        (1e-10, torch.tensor(0.0000, dtype=torch.float64)),
-    ],
-)
-def test_magnetostatics_sr(smearing, sr_potential):
-    calculator = CalculatorDipole(
-        potential=PotentialDipole(smearing=smearing),
-        full_neighbor_list=False,
-        lr_wavelength=1.0,
-    )
-    pot = calculator._compute_rspace(
-        dipoles=system.dipoles,
-        neighbor_indices=system.neighbor_indices,
-        neighbor_vectors=system.neighbor_vectors,
-    )
-    result = torch.einsum("ij,ij->i", pot, system.dipoles).sum()
-    expected_result = sr_potential
-    assert torch.isclose(result, expected_result, atol=1e-4), (
-        f"Expected {expected_result}, but got {result}"
-    )
-
-
-def test_magnetostatic_ewald():
-    alpha = 1.0
-    smearing = (1 / (2 * alpha**2)) ** 0.5
-    calculator = CalculatorDipole(
-        potential=PotentialDipole(smearing=smearing),
-        full_neighbor_list=False,
-        lr_wavelength=0.1,
-    )
-    pot = calculator(
-        dipoles=system.dipoles,
-        cell=system.cell,
-        positions=system.positions,
-        neighbor_indices=system.neighbor_indices,
-        neighbor_vectors=system.neighbor_vectors,
-    )
-    result = torch.einsum("ij,ij->i", pot, system.dipoles).sum()
-    # result is calculated using espressomd DipolarP3M with the same parameters and mesh
-    # size 64
-    expected_result = torch.tensor(-0.30848574939287954, dtype=torch.float64)
-    assert torch.isclose(result, expected_result, atol=1e-4), (
-        f"Expected {expected_result}, but got {result}"
-    )
-
+DEVICES = ["cpu", torch.device("cpu")] + torch.cuda.is_available() * ["cuda"]
+DTYPES = [torch.float32, torch.float64]
 
 frames = read(DIPOLES_TEST_FRAMES, ":3")
 cutoffs = [3.9986718930, 4.0000000000, 4.7363281250]
@@ -128,52 +16,145 @@ energies = [frame.get_potential_energy() for frame in frames]
 forces = [frame.get_forces() for frame in frames]
 
 
-@pytest.mark.parametrize(
-    ("frame", "cutoff", "alpha", "energy", "force"),
-    zip(frames, cutoffs, alphas, energies, forces),
-)
-def test_magnetostatic_ewald_crystal(frame, cutoff, alpha, energy, force):
-    smearing = (1 / (2 * alpha**2)) ** 0.5
-    calc = CalculatorDipole(
-        potential=PotentialDipole(smearing=smearing),
-        full_neighbor_list=False,
-        lr_wavelength=0.1,
-        prefactor=eV_A,
-    )
-    positions = torch.tensor(frame.get_positions(), dtype=torch.float64)
-    dipoles = torch.tensor(frame.get_array("dipoles"), dtype=torch.float64)
-    cell = torch.tensor(frame.get_cell().array, dtype=torch.float64)
-    neighbor_indices, neighbor_shifts = neighbor_list(
-        positions=positions,
-        periodic=True,
-        box=cell,
-        cutoff=cutoff,
-        full_neighbor_list=False,
-        neighbor_shifts=True,
-    )
-    positions.requires_grad = True
-    neighbor_distance_vectors = compute_distance_vectors(
-        positions=positions,
-        neighbor_indices=neighbor_indices,
-        cell=cell,
-        neighbor_shifts=neighbor_shifts,
-    )
-    pot = calc(
-        dipoles=dipoles,
-        cell=cell,
-        positions=positions,
-        neighbor_indices=neighbor_indices,
-        neighbor_vectors=neighbor_distance_vectors,
-    )
+@pytest.mark.parametrize("device", DEVICES)
+@pytest.mark.parametrize("dtype", DTYPES)
+class TestDipoles:
+    def parallel_dipoles(self, device, dtype):
+        """Parallel dipoles along the y-axis"""
+        positions = torch.tensor(
+            [[0.0, 0.0, 0.0], [0.0, 2.0, 0.0], [0.0, 4.0, 0.0]],
+            dtype=dtype,
+            device=device,
+        )
+        dipoles = torch.tensor(
+            [[1.0, 1.0, 0.0], [1.0, 1.0, 0.0], [1.0, 1.0, 0.0]],
+            dtype=dtype,
+            device=device,
+        )
+        cell = torch.tensor(
+            [[10.0, 0.0, 0.0], [0.0, 10.0, 0.0], [0.0, 0.0, 10.0]],
+            dtype=dtype,
+            device=device,
+        )
+        neighbor_indices = torch.tensor(
+            [[0, 1], [1, 2], [0, 2]], dtype=torch.int64, device=device
+        )
+        neighbor_vectors = torch.tensor(
+            [[0.0, 2.0, 0.0], [0.0, 2.0, 0.0], [0.0, 4.0, 0.0]],
+            dtype=dtype,
+            device=device,
+        )
 
-    result = torch.einsum("ij,ij->", pot, dipoles)
-    expected_result = torch.tensor(energy, dtype=torch.float64)
-    assert torch.isclose(result, expected_result, atol=1e-4), (
-        f"Expected {expected_result}, but got {result}"
-    )
+        return dipoles, cell, positions, neighbor_indices, neighbor_vectors
 
-    forces = -torch.autograd.grad(result, positions)[0]
-    expected_forces = torch.tensor(force, dtype=torch.float64)
-    assert torch.allclose(forces, expected_forces, atol=1e-4), (
-        f"Expected {expected_forces}, but got {forces}"
+    def test_magnetostatics_direct(self, device, dtype):
+        calculator = CalculatorDipole(
+            potential=PotentialDipole(),
+            full_neighbor_list=False,
+        )
+        calculator.to(device=device, dtype=dtype)
+        pot = calculator(*self.parallel_dipoles(device=device, dtype=dtype))
+        dipoles = self.parallel_dipoles(device=device, dtype=dtype)[0]
+        result = (pot * dipoles).sum()
+        print(result)
+        expected_result = torch.tensor(
+            -0.265625, dtype=dtype, device=device
+        )  # analytical result
+        torch.testing.assert_close(result, expected_result)
+
+    @pytest.mark.parametrize(
+        ("smearing", "sr_potential"),
+        [
+            (
+                1e10,
+                torch.tensor(-0.265625),
+            ),  # analytical result, should coinside with the direct calculation when smearing -> inf
+            (1e-10, torch.tensor(0.0000)),  # should be zero when smearing -> 0
+        ],
     )
+    def test_magnetostatics_sr(self, device, dtype, smearing, sr_potential):
+        calculator = CalculatorDipole(
+            potential=PotentialDipole(smearing=smearing),
+            full_neighbor_list=False,
+            lr_wavelength=1.0,
+        )
+        calculator.to(device=device, dtype=dtype)
+        system = self.parallel_dipoles(device=device, dtype=dtype)
+        pot = calculator._compute_rspace(
+            dipoles=system[0], neighbor_indices=system[3], neighbor_vectors=system[4]
+        )
+        dipoles = self.parallel_dipoles(device=device, dtype=dtype)[0]
+        result = (pot * dipoles).sum()
+        expected_result = sr_potential.to(dtype=dtype, device=device)
+        torch.testing.assert_close(result, expected_result)
+
+    def test_magnetostatic_ewald(self, device, dtype):
+        alpha = 1.0
+        smearing = (
+            1 / (2 * alpha**2)
+        ) ** 0.5  # convert espressomd alpha to torch-pme smearing
+        calculator = CalculatorDipole(
+            potential=PotentialDipole(smearing=smearing),
+            full_neighbor_list=False,
+            lr_wavelength=0.1,  # this value is heuristic
+        )
+        calculator.to(device=device, dtype=dtype)
+        pot = calculator(*self.parallel_dipoles(device=device, dtype=dtype))
+        dipoles = self.parallel_dipoles(device=device, dtype=dtype)[0]
+        result = (pot * dipoles).sum()
+        # result is calculated using espressomd DipolarP3M with the same parameters and mesh
+        # size 64
+        expected_result = torch.tensor(-0.30848574939287954, dtype=dtype, device=device)
+        torch.testing.assert_close(result, expected_result, atol=1e-6, rtol=1e-4)
+
+    @pytest.mark.parametrize(
+        ("frame", "cutoff", "alpha", "energy", "force"),
+        zip(frames, cutoffs, alphas, energies, forces),
+    )
+    def test_magnetostatic_ewald_crystal(
+        self, frame, cutoff, alpha, energy, force, device, dtype
+    ):
+        smearing = (
+            1 / (2 * alpha**2)
+        ) ** 0.5  # convert espressomd alpha to torch-pme smearing
+        calc = CalculatorDipole(
+            potential=PotentialDipole(smearing=smearing),
+            full_neighbor_list=False,
+            lr_wavelength=0.1,
+            prefactor=eV_A,
+        )
+        calc.to(device=device, dtype=dtype)
+        positions = torch.tensor(frame.get_positions(), dtype=dtype, device=device)
+        dipoles = torch.tensor(frame.get_array("dipoles"), dtype=dtype, device=device)
+        cell = torch.tensor(frame.get_cell().array, dtype=dtype, device=device)
+        neighbor_indices, neighbor_shifts = neighbor_list(
+            positions=positions,
+            periodic=True,
+            box=cell,
+            cutoff=cutoff,
+            full_neighbor_list=False,
+            neighbor_shifts=True,
+        )
+        positions.requires_grad = True
+        neighbor_distance_vectors = compute_distances(
+            positions=positions,
+            neighbor_indices=neighbor_indices,
+            cell=cell,
+            neighbor_shifts=neighbor_shifts,
+            norm=False,
+        )
+        pot = calc(
+            dipoles=dipoles,
+            cell=cell,
+            positions=positions,
+            neighbor_indices=neighbor_indices,
+            neighbor_vectors=neighbor_distance_vectors,
+        )
+
+        result = (pot * dipoles).sum()
+        expected_result = torch.tensor(energy, dtype=dtype, device=device)
+        torch.testing.assert_close(result, expected_result, atol=1e-5, rtol=1e-4)
+
+        forces = -torch.autograd.grad(result, positions)[0]
+        expected_forces = torch.tensor(force, dtype=dtype, device=device)
+        torch.testing.assert_close(forces, expected_forces, atol=1e-5, rtol=1e-4)

@@ -271,8 +271,14 @@ def neighbor_list(
     return neighbor_indices, S
 
 
-def compute_distances(positions, neighbor_indices, cell=None, neighbor_shifts=None):
-    """Compute pairwise distances."""
+def compute_distances(
+    positions: torch.tensor,
+    neighbor_indices: torch.tensor,
+    cell: Optional[torch.tensor] = None,
+    neighbor_shifts: Optional[torch.tensor] = None,
+    norm: bool = True,
+) -> torch.tensor:
+    """Compute pairwise distance vectors or scalar distances."""
     atom_is = neighbor_indices[:, 0]
     atom_js = neighbor_indices[:, 1]
 
@@ -289,4 +295,6 @@ def compute_distances(positions, neighbor_indices, cell=None, neighbor_shifts=No
     elif cell is None and neighbor_shifts is not None:
         raise ValueError("Provided `neighbor_shifts` but no `cell`.")
 
-    return torch.linalg.norm(distance_vectors, dim=1)
+    if norm:
+        return torch.linalg.norm(distance_vectors, dim=1)
+    return distance_vectors
