@@ -1,10 +1,10 @@
 import math
 import time
-from typing import Optional, Union
+from typing import Optional
 
 import torch
 
-from .._utils import _get_device, _get_dtype, _validate_parameters
+from .._utils import _validate_parameters
 from ..calculators import Calculator
 from ..potentials import InversePowerLawPotential
 
@@ -83,16 +83,11 @@ class TunerBase:
         cutoff: float,
         calculator: type[Calculator],
         exponent: int = 1,
-        dtype: Optional[torch.dtype] = None,
-        device: Union[None, str, torch.device] = None,
     ):
         if exponent != 1:
             raise NotImplementedError(
                 f"Only exponent = 1 is supported but got {exponent}."
             )
-
-        self.device = _get_device(device)
-        self.dtype = _get_dtype(dtype)
 
         _validate_parameters(
             charges=charges,
@@ -103,8 +98,6 @@ class TunerBase:
                 [1.0], device=positions.device, dtype=positions.dtype
             ),
             smearing=1.0,  # dummy value because; always have range-seperated potentials
-            dtype=self.dtype,
-            device=self.device,
         )
         self.charges = charges
         self.cell = cell
@@ -189,8 +182,6 @@ class GridSearchTuner(TunerBase):
         neighbor_indices: torch.Tensor,
         neighbor_distances: torch.Tensor,
         exponent: int = 1,
-        dtype: Optional[torch.dtype] = None,
-        device: Union[None, str, torch.device] = None,
     ):
         super().__init__(
             charges=charges,
@@ -199,8 +190,6 @@ class GridSearchTuner(TunerBase):
             cutoff=cutoff,
             calculator=calculator,
             exponent=exponent,
-            dtype=dtype,
-            device=device,
         )
         self.error_bounds = error_bounds
         self.params = params
@@ -211,8 +200,6 @@ class GridSearchTuner(TunerBase):
             neighbor_indices,
             neighbor_distances,
             True,
-            dtype=dtype,
-            device=device,
         )
 
     def tune(self, accuracy: float = 1e-3) -> tuple[list[float], list[float]]:
@@ -244,14 +231,10 @@ class GridSearchTuner(TunerBase):
             potential=InversePowerLawPotential(
                 exponent=self.exponent,  # but only exponent = 1 is supported
                 smearing=smearing,
-                device=self.device,
-                dtype=self.dtype,
             ),
-            device=self.device,
-            dtype=self.dtype,
             **k_space_params,
         )
-
+        calculator.to(device=self.positions.device, dtype=self.positions.dtype)
         return self.time_func(calculator)
 
 
@@ -289,13 +272,8 @@ class TuningTimings(torch.nn.Module):
         n_repeat: int = 4,
         n_warmup: int = 4,
         run_backward: Optional[bool] = True,
-        dtype: Optional[torch.dtype] = None,
-        device: Union[None, str, torch.device] = None,
     ):
         super().__init__()
-
-        self.device = _get_device(device)
-        self.dtype = _get_dtype(dtype)
 
         _validate_parameters(
             charges=charges,
@@ -304,8 +282,6 @@ class TuningTimings(torch.nn.Module):
             neighbor_indices=neighbor_indices,
             neighbor_distances=neighbor_distances,
             smearing=1.0,  # dummy value because; always have range-seperated potentials
-            device=self.device,
-            dtype=self.dtype,
         )
 
         self.charges = charges
@@ -351,8 +327,6 @@ class TuningTimings(torch.nn.Module):
             if self.run_backward:
                 value.backward(retain_graph=True)
 
-            if self.device is torch.device("cuda"):
-                torch.cuda.synchronize()
             execution_time += time.monotonic()
 
         return execution_time / self.n_repeat

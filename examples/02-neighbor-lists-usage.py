@@ -110,7 +110,6 @@ smearing, pme_params, _ = tune_pme(
     cutoff=cutoff,
     neighbor_indices=neighbor_indices,
     neighbor_distances=neighbor_distances,
-    dtype=dtype,
 )
 
 # %%
@@ -195,8 +194,7 @@ neighbor_distances = distances(
 # compute the potential.
 
 pme = torchpme.PMECalculator(
-    potential=torchpme.CoulombPotential(smearing=smearing, dtype=dtype),
-    dtype=dtype,
+    potential=torchpme.CoulombPotential(smearing=smearing),
     **pme_params,
 )
 potential = pme(

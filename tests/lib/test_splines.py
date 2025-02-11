@@ -59,8 +59,12 @@ def test_inverse_spline(function):
 
 @pytest.mark.parametrize("high_accuracy", [True, False])
 def test_ft_accuracy(high_accuracy):
-    x_grid = torch.linspace(0, 20, 2000, dtype=torch.float32)
-    y_grid = torch.exp(-(x_grid**2) * 0.5)
+    if high_accuracy:
+        x_grid = torch.linspace(0, 20, 2000, dtype=torch.float64)
+        y_grid = torch.exp(-(x_grid**2) * 0.5)
+    else:
+        x_grid = torch.linspace(0, 20, 2000, dtype=torch.float32)
+        y_grid = torch.exp(-(x_grid**2) * 0.5)
 
     k_grid = torch.linspace(0, 20, 20, dtype=torch.float32)
     krn = compute_spline_ft(
@@ -68,9 +72,9 @@ def test_ft_accuracy(high_accuracy):
         x_points=x_grid,
         y_points=y_grid,
         d2y_points=compute_second_derivatives(
-            x_points=x_grid, y_points=y_grid, high_precision=high_accuracy
+            x_points=x_grid,
+            y_points=y_grid,
         ),
-        high_precision=high_accuracy,
     )
 
     krn_ref = torch.exp(-(k_grid**2) * 0.5) * (2 * torch.pi) ** (3 / 2)

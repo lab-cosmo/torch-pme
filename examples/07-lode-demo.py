@@ -420,7 +420,7 @@ class LODECalculator(torchpme.Calculator):
         )
 
         # assumes a smooth exclusion region so sets the integration cutoff to half that
-        nodes, weights = get_full_grid(n_grid, potential.exclusion_radius.item() / 2)
+        nodes, weights = get_full_grid(n_grid, potential.exclusion_radius / 2)
 
         # these are the "stencils" used to project the potential
         # on an atom-centered basis. NB: weights might also be incorporated

@@ -67,10 +67,12 @@ lr_wavelength = 0.5 * smearing
 # evaluation, and so one has to set it also for the combined potential, even if it is
 # not used explicitly in the evaluation of the combination.
 
-pot_1 = InversePowerLawPotential(exponent=1, smearing=smearing, dtype=dtype)
-pot_2 = InversePowerLawPotential(exponent=2, smearing=smearing, dtype=dtype)
-
-potential = CombinedPotential(potentials=[pot_1, pot_2], smearing=smearing, dtype=dtype)
+pot_1 = InversePowerLawPotential(exponent=1, smearing=smearing)
+pot_2 = InversePowerLawPotential(exponent=2, smearing=smearing)
+pot_1 = pot_1.to(dtype=dtype)
+pot_2 = pot_2.to(dtype=dtype)
+potential = CombinedPotential(potentials=[pot_1, pot_2], smearing=smearing)
+potential = potential.to(dtype=dtype)
 
 # Note also that :class:`CombinedPotential` can be used with any combination of
 # potentials, as long they are all either direct or range separated. For instance, one
@@ -156,9 +158,9 @@ plt.show()
 # much bigger system.
 
 calculator = EwaldCalculator(
-    potential=potential, lr_wavelength=lr_wavelength, prefactor=eV_A, dtype=dtype
+    potential=potential, lr_wavelength=lr_wavelength, prefactor=eV_A
 )
-
+calculator.to(dtype=dtype)
 
 # %%
 #

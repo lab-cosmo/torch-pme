@@ -1,5 +1,3 @@
-from typing import Optional, Union
-
 import torch
 from torch import profiler
 
@@ -47,8 +45,6 @@ class PMECalculator(Calculator):
         set to :obj:`False`, a "half" neighbor list is expected.
     :param prefactor: electrostatics prefactor; see :ref:`prefactors` for details and
         common values.
-    :param dtype: type used for the internal buffers and parameters
-    :param device: device used for the internal buffers and parameters
     """
 
     def __init__(
@@ -58,27 +54,30 @@ class PMECalculator(Calculator):
         interpolation_nodes: int = 4,
         full_neighbor_list: bool = False,
         prefactor: float = 1.0,
-        dtype: Optional[torch.dtype] = None,
-        device: Union[None, str, torch.device] = None,
     ):
         super().__init__(
             potential=potential,
             full_neighbor_list=full_neighbor_list,
             prefactor=prefactor,
-            dtype=dtype,
-            device=device,
         )
 
         if potential.smearing is None:
             raise ValueError(
-                "Must specify smearing to use a potential with EwaldCalculator"
+                "Must specify smearing to use a potential with PMECalculator"
             )
 
         self.mesh_spacing: float = mesh_spacing
 
+        cell = torch.eye(
+            3,
+            device=self.potential.smearing.device,
+            dtype=self.potential.smearing.dtype,
+        )
+        ns_mesh = torch.ones(3, dtype=int, device=cell.device)
+
         self.kspace_filter: KSpaceFilter = KSpaceFilter(
-            cell=torch.eye(3, dtype=self.dtype, device=self.device),
-            ns_mesh=torch.ones(3, dtype=int, device=self.device),
+            cell=cell,
+            ns_mesh=ns_mesh,
             kernel=self.potential,
             fft_norm="backward",
             ifft_norm="forward",
@@ -87,8 +86,8 @@ class PMECalculator(Calculator):
         self.interpolation_nodes: int = interpolation_nodes
 
         self.mesh_interpolator: MeshInterpolator = MeshInterpolator(
-            cell=torch.eye(3, dtype=self.dtype, device=self.device),
-            ns_mesh=torch.ones(3, dtype=int, device=self.device),
+            cell=cell,
+            ns_mesh=ns_mesh,
             interpolation_nodes=self.interpolation_nodes,
             method="Lagrange",  # convention for classic PME
         )

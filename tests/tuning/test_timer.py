@@ -41,7 +41,6 @@ def test_timer():
     calculator = EwaldCalculator(
         potential=CoulombPotential(smearing=1.0),
         lr_wavelength=0.25,
-        dtype=DTYPE,
     )
 
     timing_1 = TuningTimings(
@@ -50,7 +49,6 @@ def test_timer():
         positions=pos,
         neighbor_indices=neighbor_indices,
         neighbor_distances=neighbor_distances,
-        dtype=DTYPE,
         n_repeat=n_repeat_1,
     )
 
@@ -60,7 +58,6 @@ def test_timer():
         positions=pos,
         neighbor_indices=neighbor_indices,
         neighbor_distances=neighbor_distances,
-        dtype=DTYPE,
         n_repeat=n_repeat_2,
     )
 

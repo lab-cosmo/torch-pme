@@ -67,8 +67,8 @@ def test_sr_lr_split(exponent, smearing):
     potential.
     """
     # Compute diverse potentials for this inverse power law
-    ipl = InversePowerLawPotential(exponent=exponent, smearing=smearing, dtype=dtype)
-
+    ipl = InversePowerLawPotential(exponent=exponent, smearing=smearing)
+    ipl.to(dtype=dtype)
     potential_from_dist = ipl.from_dist(dists)
     potential_sr_from_dist = ipl.sr_from_dist(dists)
     potential_lr_from_dist = ipl.lr_from_dist(dists)
@@ -96,10 +96,9 @@ def test_exact_sr(exponent, smearing):
     """
     # Compute SR part of Coulomb potential using the potentials class working for any
     # exponent
-    ipl = InversePowerLawPotential(exponent=exponent, smearing=smearing, dtype=dtype)
-
+    ipl = InversePowerLawPotential(exponent=exponent, smearing=smearing)
+    ipl.to(dtype=dtype)
     potential_sr_from_dist = ipl.sr_from_dist(dists)
-
     # Compute exact analytical expression obtained for relevant exponents
     potential_1 = erfc(dists / SQRT2 / smearing) / dists
     potential_2 = torch.exp(-0.5 * dists_sq / smearing**2) / dists_sq
@@ -110,7 +109,6 @@ def test_exact_sr(exponent, smearing):
     elif exponent == 3:
         prefac = SQRT2 / torch.sqrt(PI) / smearing
         potential_exact = potential_1 / dists_sq + prefac * potential_2
-
     # Compare results. Large tolerance due to singular division
     rtol = 1e2 * machine_epsilon
     atol = 4e-15
@@ -130,7 +128,8 @@ def test_exact_lr(exponent, smearing):
     """
     # Compute LR part of Coulomb potential using the potentials class working for any
     # exponent
-    ipl = InversePowerLawPotential(exponent=exponent, smearing=smearing, dtype=dtype)
+    ipl = InversePowerLawPotential(exponent=exponent, smearing=smearing)
+    ipl.to(dtype=dtype)
 
     potential_lr_from_dist = ipl.lr_from_dist(dists)
 
@@ -164,7 +163,8 @@ def test_exact_fourier(exponent, smearing):
     """
     # Compute LR part of Coulomb potential using the potentials class working for any
     # exponent
-    ipl = InversePowerLawPotential(exponent=exponent, smearing=smearing, dtype=dtype)
+    ipl = InversePowerLawPotential(exponent=exponent, smearing=smearing)
+    ipl.to(dtype=dtype)
 
     fourier_from_class = ipl.lr_from_k_sq(ks_sq)
 
@@ -202,7 +202,8 @@ def test_lr_value_at_zero(exponent, smearing):
     """
     # Get atomic density at tiny distance
     dist_small = torch.tensor(1e-8, dtype=dtype)
-    ipl = InversePowerLawPotential(exponent=exponent, smearing=smearing, dtype=dtype)
+    ipl = InversePowerLawPotential(exponent=exponent, smearing=smearing)
+    ipl.to(dtype=dtype)
 
     potential_close_to_zero = ipl.lr_from_dist(dist_small)
 
@@ -279,7 +280,8 @@ def test_no_impl():
 
 @pytest.mark.parametrize("exclusion_radius", [0.5, 1.0, 2.0])
 def test_f_cutoff(exclusion_radius):
-    coul = CoulombPotential(exclusion_radius=exclusion_radius, dtype=dtype)
+    coul = CoulombPotential(exclusion_radius=exclusion_radius)
+    coul.to(dtype=dtype)
 
     dist = torch.tensor([0.3])
     fcut = coul.f_cutoff(dist)
@@ -294,8 +296,10 @@ def test_inverserp_coulomb(smearing):
     """
     # Compute LR part of Coulomb potential using the potentials class working for any
     # exponent
-    ipl = InversePowerLawPotential(exponent=1, smearing=smearing, dtype=dtype)
-    coul = CoulombPotential(smearing=smearing, dtype=dtype)
+    ipl = InversePowerLawPotential(exponent=1, smearing=smearing)
+    ipl.to(dtype=dtype)
+    coul = CoulombPotential(smearing=smearing)
+    coul.to(dtype=dtype)
 
     ipl_from_dist = ipl.from_dist(dists)
     ipl_sr_from_dist = ipl.sr_from_dist(dists)
@@ -371,16 +375,17 @@ def test_spline_potential_vs_coulomb():
     # the approximation is not super-accurate
 
     coulomb = CoulombPotential(smearing=1.0)
-    x_grid = torch.logspace(-3.0, 3.0, 1000)
+    coulomb.to(dtype=dtype)
+    x_grid = torch.logspace(-3.0, 3.0, 1000, dtype=dtype)
     y_grid = coulomb.lr_from_dist(x_grid)
 
     spline = SplinePotential(r_grid=x_grid, y_grid=y_grid, reciprocal=True)
-    t_grid = torch.logspace(-torch.pi / 2, torch.pi / 2, 100)
+    t_grid = torch.logspace(-torch.pi / 2, torch.pi / 2, 100, dtype=dtype)
     z_coul = coulomb.lr_from_dist(t_grid)
     z_spline = spline.lr_from_dist(t_grid)
     assert_close(z_coul, z_spline, atol=5e-5, rtol=0)
 
-    k_grid2 = torch.logspace(-2, 1, 40)
+    k_grid2 = torch.logspace(-2, 1, 40, dtype=dtype)
     krn_coul = coulomb.kernel_from_k_sq(k_grid2)
     krn_spline = spline.kernel_from_k_sq(k_grid2)
 
@@ -439,8 +444,8 @@ def test_potentials_jit(potpars):
 
 @pytest.mark.parametrize("smearing", smearinges)
 def test_combined_potential(smearing):
-    ipl_1 = InversePowerLawPotential(exponent=1, smearing=smearing, dtype=dtype)
-    ipl_2 = InversePowerLawPotential(exponent=2, smearing=smearing, dtype=dtype)
+    ipl_1 = InversePowerLawPotential(exponent=1, smearing=smearing)
+    ipl_2 = InversePowerLawPotential(exponent=2, smearing=smearing)
 
     ipl_1_from_dist = ipl_1.from_dist(dists)
     ipl_1_sr_from_dist = ipl_1.sr_from_dist(dists)
@@ -461,7 +466,6 @@ def test_combined_potential(smearing):
         potentials=[ipl_1, ipl_2],
         initial_weights=weights,
         learnable_weights=False,
-        dtype=dtype,
         smearing=1.0,
     )
     combined_from_dist = combined.from_dist(dists)
@@ -516,53 +520,53 @@ def test_combined_potential(smearing):
 def test_combined_potentials_jit(smearing):
     # make a separate test as pytest.mark.parametrize does not work with
     # torch.jit.script for combined potentials
-    coulomb = CoulombPotential(smearing=smearing, dtype=dtype)
+    coulomb = CoulombPotential(smearing=smearing)
+    coulomb.to(dtype=dtype)
     x_grid = torch.logspace(-2, 2, 100, dtype=dtype)
     y_grid = coulomb.lr_from_dist(x_grid)
 
     # create a spline potential
     spline = SplinePotential(
-        r_grid=x_grid, y_grid=y_grid, reciprocal=True, dtype=dtype, smearing=1.0
+        r_grid=x_grid, y_grid=y_grid, reciprocal=True, smearing=1.0
     )
-
-    combo = CombinedPotential(potentials=[spline, coulomb], dtype=dtype, smearing=1.0)
-    mypme = PMECalculator(combo, mesh_spacing=1.0, dtype=dtype)
+    spline.to(dtype=dtype)
+    combo = CombinedPotential(potentials=[spline, coulomb], smearing=1.0)
+    combo.to(dtype=dtype)
+    mypme = PMECalculator(combo, mesh_spacing=1.0)
     _ = torch.jit.script(mypme)
 
 
 def test_combined_potential_incompatability():
-    coulomb1 = CoulombPotential(smearing=1.0, dtype=dtype)
-    coulomb2 = CoulombPotential(dtype=dtype)
+    coulomb1 = CoulombPotential(smearing=1.0)
+    coulomb2 = CoulombPotential()
     with pytest.raises(
         ValueError,
         match="Cannot combine direct \\(`smearing=None`\\) and range-separated \\(`smearing=float`\\) potentials.",
     ):
-        _ = CombinedPotential(potentials=[coulomb1, coulomb2], dtype=dtype)
+        _ = CombinedPotential(potentials=[coulomb1, coulomb2])
     with pytest.raises(
         ValueError,
         match="You should specify a `smearing` when combining range-separated \\(`smearing=float`\\) potentials.",
     ):
-        _ = CombinedPotential(potentials=[coulomb1, coulomb1], dtype=dtype)
+        _ = CombinedPotential(potentials=[coulomb1, coulomb1])
     with pytest.raises(
         ValueError,
         match="Cannot specify `smearing` when combining direct \\(`smearing=None`\\) potentials.",
     ):
-        _ = CombinedPotential(
-            potentials=[coulomb2, coulomb2], smearing=1.0, dtype=dtype
-        )
+        _ = CombinedPotential(potentials=[coulomb2, coulomb2], smearing=1.0)
 
 
 def test_combined_potential_learnable_weights():
     weights = torch.randn(2, dtype=dtype)
-    coulomb1 = CoulombPotential(smearing=2.0, dtype=dtype)
-    coulomb2 = CoulombPotential(smearing=1.0, dtype=dtype)
+    coulomb1 = CoulombPotential(smearing=2.0)
+    coulomb2 = CoulombPotential(smearing=1.0)
     combined = CombinedPotential(
         potentials=[coulomb1, coulomb2],
         smearing=1.0,
-        dtype=dtype,
         initial_weights=weights.clone(),
         learnable_weights=True,
     )
+    combined.to(dtype=dtype)
     assert combined.weights.requires_grad
 
     # make a small optimization step
@@ -587,17 +591,16 @@ def test_potential_device_dtype(potential_class, device, dtype):
     exponent = 2
 
     if potential_class is InversePowerLawPotential:
-        potential = potential_class(
-            exponent=exponent, smearing=smearing, dtype=dtype, device=device
-        )
+        potential = potential_class(exponent=exponent, smearing=smearing)
+        potential.to(device=device, dtype=dtype)
     elif potential_class is SplinePotential:
         x_grid = torch.linspace(0, 20, 100, device=device, dtype=dtype)
         y_grid = torch.exp(-(x_grid**2) * 0.5)
-        potential = potential_class(
-            r_grid=x_grid, y_grid=y_grid, reciprocal=False, dtype=dtype, device=device
-        )
+        potential = potential_class(r_grid=x_grid, y_grid=y_grid, reciprocal=False)
+        potential.to(device=device, dtype=dtype)
     else:
-        potential = potential_class(smearing=smearing, dtype=dtype, device=device)
+        potential = potential_class(smearing=smearing)
+        potential.to(device=device, dtype=dtype)
 
     dists = torch.linspace(0.1, 10.0, 100, device=device, dtype=dtype)
     potential_lr = potential.lr_from_dist(dists)
@@ -616,13 +619,15 @@ def test_inverserp_vs_spline(exponent, smearing):
     ks_sq_grad1 = ks_sq.clone().requires_grad_(True)
     ks_sq_grad2 = ks_sq.clone().requires_grad_(True)
     # Create InversePowerLawPotential
-    ipl = InversePowerLawPotential(exponent=exponent, smearing=smearing, dtype=dtype)
+    ipl = InversePowerLawPotential(exponent=exponent, smearing=smearing)
+    ipl.to(dtype=dtype)
     ipl_fourier = ipl.lr_from_k_sq(ks_sq_grad1)
 
     # Create PotentialSpline
     r_grid = torch.logspace(-5, 2, 1000, dtype=dtype)
     y_grid = ipl.lr_from_dist(r_grid)
-    spline = SplinePotential(r_grid=r_grid, y_grid=y_grid, dtype=dtype)
+    spline = SplinePotential(r_grid=r_grid, y_grid=y_grid)
+    spline.to(dtype=dtype)
     spline_fourier = spline.lr_from_k_sq(ks_sq_grad2)
 
     # Test agreement between InversePowerLawPotential and SplinePotential
