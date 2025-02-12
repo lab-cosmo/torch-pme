@@ -41,7 +41,7 @@ keywords = [
 license = {text = "BSD-3-Clause"}
 name = "torch-pme"
 readme = "README.rst"
-requires-python = ">=3.9,<3.13"
+requires-python = ">=3.9"
 
 [project.optional-dependencies]
 examples = [
@@ -50,11 +50,11 @@ examples = [
     "matplotlib",
     "metatensor-operations",
     "scipy",
-    "torch < 2.6",  # vesin requires this pinning
-    "vesin >= 0.3.0",
-    "vesin-torch >= 0.3.0",
+    "torch <= 2.6",  # limit version in tests due to vesin
+    "vesin >= 0.3.2",
+    "vesin-torch >= 0.3.2",
 ]
-metatensor = ["metatensor-torch <0.7,>=0.6"]
+metatensor = ["metatensor-torch <0.8,>=0.6"]
 
 [project.urls]
 homepage = "https://lab-cosmo.github.io/torch-pme"
