@@ -13,6 +13,8 @@ DIR_PATH = Path(__file__).parent
 EXAMPLES = DIR_PATH / ".." / "examples"
 COULOMB_TEST_FRAMES = EXAMPLES / "coulomb_test_frames.xyz"
 DIPOLES_TEST_FRAMES = EXAMPLES / "dipoles_test_frames.xyz"
+DEVICES = ["cpu", torch.device("cpu")] + torch.cuda.is_available() * ["cuda"]
+DTYPES = [torch.float32, torch.float64]
 
 
 def define_crystal(crystal_name="CsCl", dtype=None, device=None):

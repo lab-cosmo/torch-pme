@@ -1,13 +1,21 @@
+import sys
+from pathlib import Path
+
 import pytest
 import torch
 from ase.io import read
-from helpers import DIPOLES_TEST_FRAMES, compute_distances, neighbor_list
 
 from torchpme import CalculatorDipole, PotentialDipole
 from torchpme.prefactors import eV_A
 
-DEVICES = ["cpu", torch.device("cpu")] + torch.cuda.is_available() * ["cuda"]
-DTYPES = [torch.float32, torch.float64]
+sys.path.append(str(Path(__file__).parents[1]))
+from helpers import (
+    DEVICES,
+    DIPOLES_TEST_FRAMES,
+    DTYPES,
+    compute_distances,
+    neighbor_list,
+)
 
 frames = read(DIPOLES_TEST_FRAMES, ":3")
 cutoffs = [3.9986718930, 4.0000000000, 4.7363281250]

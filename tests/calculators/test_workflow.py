@@ -4,6 +4,8 @@ for the metatensor calculator.
 """
 
 import io
+import sys
+from pathlib import Path
 
 import pytest
 import torch
@@ -16,8 +18,9 @@ from torchpme import (
     PMECalculator,
 )
 
-DEVICES = ["cpu", torch.device("cpu")] + torch.cuda.is_available() * ["cuda"]
-DTYPES = [torch.float32, torch.float64]
+sys.path.append(str(Path(__file__).parents[1]))
+from helpers import DEVICES, DTYPES
+
 SMEARING = 0.1
 LR_WAVELENGTH = SMEARING / 4
 MESH_SPACING = SMEARING / 4
