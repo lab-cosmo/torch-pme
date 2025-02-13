@@ -132,7 +132,7 @@ class InversePowerLawPotential(Potential):
                 "Cannot compute background correction without specifying `smearing`."
             )
         if self.exponent >= 3:
-            return torch.zero_like(self.smearing)
+            return torch.zeros_like(self.smearing)
         prefac = torch.pi**1.5 * (2 * self.smearing**2) ** ((3 - self.exponent) / 2)
         prefac /= (3 - self.exponent) * gamma(self.exponent / 2)
         return prefac

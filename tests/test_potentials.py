@@ -640,3 +640,15 @@ def test_inverserp_vs_spline(exponent, smearing):
     ipl_fourier.sum().backward()
     spline_fourier.sum().backward()
     assert_close(ks_sq_grad1.grad, ks_sq_grad2.grad, rtol=rtol, atol=atol)
+
+
+@pytest.mark.parametrize("exponent", [1, 2, 3, 4, 5, 6])
+def test_inversp_exp_background(exponent):
+    smearing = 1.0
+    ipl = InversePowerLawPotential(exponent=exponent, smearing=smearing)
+    ipl.to(dtype=dtype)
+    bg = ipl.background_correction()
+    if exponent >= 3:
+        assert torch.allclose(bg, torch.tensor([0.0], dtype=dtype))
+    else:
+        assert not torch.allclose(bg, torch.tensor([0.0], dtype=dtype))
