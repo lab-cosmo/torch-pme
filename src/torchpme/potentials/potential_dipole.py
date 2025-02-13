@@ -6,7 +6,22 @@ from .potential import Potential
 
 
 class PotentialDipole(torch.nn.Module):
-    """TODO: Add docstring"""
+    r"""
+    Dipole potential :math:`1/|\mathbf{r}|^3 - 3 \mathbf{r} \otimes \mathbf{r} /
+    |\mathbf{r}|^5`.
+
+    Here :math:`\mathbf{r}` is the inter-particle vectors
+
+    :param smearing: float or torch.Tensor containing the parameter often called "sigma"
+        in publications, which determines the length-scale at which the short-range and
+        long-range parts of the naive :math:`1/r` potential are separated. The smearing
+        parameter corresponds to the "width" of a Gaussian smearing of the particle
+        density.
+    :param exclusion_radius: A length scale that defines a *local environment* within
+        which the potential should be smoothly zeroed out, as it will be described by a
+        separate model.
+    :param epsilon: Dielectric constant of the medium in which the dipoles are embedded.
+    """
 
     def __init__(
         self,
@@ -33,7 +48,6 @@ class PotentialDipole(torch.nn.Module):
 
     @torch.jit.export
     def f_cutoff(self, vector: torch.Tensor) -> torch.Tensor:
-        r"""TODO: Add docstring"""
         r_mag = torch.norm(vector, dim=1, keepdim=True)
         if self.exclusion_radius is None:
             raise ValueError(
@@ -47,7 +61,13 @@ class PotentialDipole(torch.nn.Module):
         )
 
     def from_dist(self, vector: torch.Tensor) -> torch.Tensor:
-        """TODO: Add docstring"""
+        r"""
+        Full :math:`1/|\mathbf{r}|^3 - 3 \mathbf{r} \otimes \mathbf{r} / |\mathbf{r}|^5`
+        potential as a function of :math:`\mathbf{r}`.
+
+        :param vector: torch.tensor containing the vectors at which the potential is to
+            be evaluated.
+        """
         r_mag = torch.norm(vector, dim=1, keepdim=True)
         scalar_potential = 1.0 / (r_mag**3)
         r_outer = torch.bmm(vector.unsqueeze(2), vector.unsqueeze(1))
@@ -57,7 +77,6 @@ class PotentialDipole(torch.nn.Module):
 
     @torch.jit.export
     def sr_from_dist(self, vector: torch.Tensor) -> torch.Tensor:
-        r"""TODO: Add docstring"""
         if self.smearing is None:
             raise ValueError(
                 "Cannot compute range-separated potential when `smearing` is not specified."
@@ -68,7 +87,16 @@ class PotentialDipole(torch.nn.Module):
 
     @torch.jit.export
     def lr_from_dist(self, vector: torch.Tensor) -> torch.Tensor:
-        r"""TODO: Add docstring"""
+        r"""
+        Long range of the range-separated :math:`1/|\mathbf{r}|^3 - 3 \mathbf{r} \otimes
+        \mathbf{r} / |\mathbf{r}|^5` potential.
+
+        Used to subtract out the interior contributions after computing the LR part in
+        reciprocal (Fourier) space.
+
+        :param vector: torch.tensor containing the vectors at which the potential is to
+            be evaluated.
+        """
         if self.smearing is None:
             raise ValueError(
                 "Cannot compute long-range contribution without specifying `smearing`."
@@ -93,7 +121,12 @@ class PotentialDipole(torch.nn.Module):
         ) - r_outer * C.unsqueeze(-1)
 
     def lr_from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
-        r"""TODO: Add docstring"""
+        r"""
+        Fourier transform of the LR part potential in terms of :math:`\mathbf{k^2}`.
+
+        :param k_sq: torch.tensor containing the squared lengths (2-norms) of the wave
+            vectors k at which the Fourier-transformed potential is to be evaluated
+        """
         if self.smearing is None:
             raise ValueError(
                 "Cannot compute long-range kernel without specifying `smearing`."
@@ -124,3 +157,5 @@ class PotentialDipole(torch.nn.Module):
 
     self_contribution.__doc__ = Potential.self_contribution.__doc__
     background_correction.__doc__ = Potential.background_correction.__doc__
+    sr_from_dist.__doc__ = Potential.sr_from_dist.__doc__
+    f_cutoff.__doc__ = Potential.f_cutoff.__doc__

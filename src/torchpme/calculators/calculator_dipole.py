@@ -1,4 +1,4 @@
-from typing import Optional, Union
+from typing import Optional
 
 import torch
 from torch import profiler
@@ -9,7 +9,18 @@ from ..potentials import PotentialDipole
 
 
 class CalculatorDipole(torch.nn.Module):
-    """TODO: Add docstring"""
+    """
+    Base calculator for interacting dipoles in the torch interface.
+
+    :param potential: a :class:`Potential` class object containing the functions
+        that are necessary to compute the various components of the potential, as
+        well as the parameters that determine the behavior of the potential itself.
+    :param full_neighbor_list: parameter indicating whether the neighbor information
+        will come from a full (True) or half (False, default) neighbor list.
+    :param prefactor: electrostatics prefactor; see :ref:`prefactors` for details and
+        common values.
+    :param lr_wavelength: the wavelength of the long-range part of the potential.
+    """
 
     def __init__(
         self,
@@ -17,8 +28,6 @@ class CalculatorDipole(torch.nn.Module):
         full_neighbor_list: bool = False,
         prefactor: float = 1.0,
         lr_wavelength: Optional[float] = None,
-        dtype: Optional[torch.dtype] = None,
-        device: Union[None, str, torch.device] = None,
     ):
         super().__init__()
 
@@ -46,7 +55,6 @@ class CalculatorDipole(torch.nn.Module):
         neighbor_indices: torch.Tensor,
         neighbor_vectors: torch.Tensor,
     ) -> torch.Tensor:
-        """TODO: Add docstring"""
         # Compute the pair potential terms V(r_ij) for each pair of atoms (i,j)
         # contained in the neighbor list
         with profiler.record_function("compute bare potential"):
@@ -131,7 +139,34 @@ class CalculatorDipole(torch.nn.Module):
         neighbor_indices: torch.Tensor,
         neighbor_vectors: torch.Tensor,
     ):
-        r"""TODO: Add docstring"""
+        r"""
+        Compute the potential "energy".
+
+        It is calculated as:
+
+        .. math::
+
+            V_i = \frac{1}{2} \sum_{j} \boldsymbol{\mu_j} \, \mathbf{v}(\mathbf{r_{ij}})
+
+        where :math:`\mathbf{v}(\mathbf{r})` is the pair potential defined by the ``potential``
+        parameter, and :math:`\boldsymbol{\mu_j}` are atomic "dipoles".
+
+        If the ``smearing`` of the ``potential`` is not set, the calculator evaluates
+        only the real-space part of the potential. Otherwise, provided that the
+        calculator implements a ``_compute_kspace`` method, it will also evaluate the
+        long-range part using a Fourier-domain method.
+
+        :param dipoles: torch.tensor of shape ``(len(positions), 3)``
+            containaing the atomic dipoles.
+        :param cell: torch.tensor of shape ``(3, 3)``, where ``cell[i]`` is the i-th basis
+            vector of the unit cell
+        :param positions: torch.tensor of shape ``(N, 3)`` containing the Cartesian
+            coordinates of the ``N`` particles within the supercell.
+        :param neighbor_indices: torch.tensor with the ``i,j`` indices of neighbors for
+            which the potential should be computed in real space.
+        :param neighbor_vectors: torch.tensor with the pair vectors of the neighbors
+            for which the potential should be computed in real space.
+        """
         # Temporarily pass the distance tensor to the _validate_parameters function
         _validate_parameters(
             charges=dipoles,
