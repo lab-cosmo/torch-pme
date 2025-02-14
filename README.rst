@@ -11,11 +11,15 @@ torch-pme
 
 ``torch-pme`` enables efficient and auto-differentiable computation of long-range
 interactions in *PyTorch*. Auto-differentiation is supported for particle *positions*,
-*charges*, and *cell* parameters, allowing not only the computation of forces but also
-enabling general applications in machine learning tasks. The library offers classes for
-Particle-Particle Particle-Mesh Ewald (``P3M``), Particle Mesh Ewald (``PME``), standard
-``Ewald``, and non-periodic methods, with the flexibility to calculate potentials beyond
-:math:`1/r` electrostatics, including arbitrary order :math:`1/r^p` potentials.
+
+*charges*/*dipoles*, and *cell* parameters, allowing not only the automatic computation
+of forces but also enabling general applications in machine learning tasks. For
+**monopoles** the library offers classes for Particle-Particle Particle-Mesh Ewald
+(``P3M``), Particle Mesh Ewald (``PME``), standard ``Ewald``, and non-periodic methods.
+The library has the flexibility to calculate potentials beyond :math:`1/r`
+electrostatics, including arbitrary order :math:`1/r^p` potentials. For **dipolar**
+interaction we offer to calculate the :math:`1/r^3` potential using the standard
+``Ewald`` method.
 
 Optimized for both CPU and GPU devices, ``torch-pme`` is fully `TorchScriptable`_,
 allowing it to be converted into a format that runs independently of Python, such as in

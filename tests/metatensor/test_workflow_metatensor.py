@@ -1,6 +1,8 @@
-"""Madelung tests"""
+"""Workflow tests for the metatensor interface."""
 
 import io
+import sys
+from pathlib import Path
 
 import pytest
 import torch
@@ -8,11 +10,12 @@ from packaging import version
 
 import torchpme
 
+sys.path.append(str(Path(__file__).parents[1]))
+from helpers import DEVICES, DTYPES
+
 mts_torch = pytest.importorskip("metatensor.torch")
 mts_atomistic = pytest.importorskip("metatensor.torch.atomistic")
 
-DEVICES = ["cpu", torch.device("cpu")] + torch.cuda.is_available() * ["cuda"]
-DTYPES = [torch.float32, torch.float64]
 SMEARING = 0.1
 LR_WAVELENGTH = SMEARING / 4
 MESH_SPACING = SMEARING / 4

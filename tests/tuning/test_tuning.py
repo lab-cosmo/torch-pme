@@ -14,11 +14,9 @@ from torchpme.tuning import tune_ewald, tune_p3m, tune_pme
 from torchpme.tuning.tuner import TunerBase
 
 sys.path.append(str(Path(__file__).parents[1]))
-from helpers import define_crystal, neighbor_list
+from helpers import DEVICES, DTYPES, define_crystal, neighbor_list
 
 DEFAULT_CUTOFF = 4.4
-DEVICES = ["cpu", torch.device("cpu")] + torch.cuda.is_available() * ["cuda"]
-DTYPES = [torch.float32, torch.float64]
 
 
 def system(device=None, dtype=None):

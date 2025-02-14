@@ -126,8 +126,8 @@ class Calculator(torch.nn.Module):
             ``n_channels = 1``. If more than one "channel" is provided multiple
             potentials for the same position are computed depending on the charges and
             the potentials.
-        :param cell: torch.tensor of shape ``(3, 3)``, where ``cell[i]`` is the i-th basis
-            vector of the unit cell
+        :param cell: torch.tensor of shape ``(3, 3)``, where ``cell[i]`` is the i-th
+            basis vector of the unit cell
         :param positions: torch.tensor of shape ``(N, 3)`` containing the Cartesian
             coordinates of the ``N`` particles within the supercell.
         :param neighbor_indices: torch.tensor with the ``i,j`` indices of neighbors for
