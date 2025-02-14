@@ -12,7 +12,7 @@ class CalculatorDipole(torch.nn.Module):
     """
     Base calculator for interacting dipoles in the torch interface.
 
-    :param potential: a :class:`Potential` class object containing the functions
+    :param potential: a :class:`PotentialDipole` class object containing the functions
         that are necessary to compute the various components of the potential, as
         well as the parameters that determine the behavior of the potential itself.
     :param full_neighbor_list: parameter indicating whether the neighbor information
@@ -167,7 +167,8 @@ class CalculatorDipole(torch.nn.Module):
         :param neighbor_vectors: torch.tensor with the pair vectors of the neighbors
             for which the potential should be computed in real space.
         """
-        # Temporarily pass the distance tensor to the _validate_parameters function
+        # TODO: _validate_parameters to allow also dipoles. Temporarily pass the
+        # distance tensor.
         _validate_parameters(
             charges=dipoles,
             cell=cell,

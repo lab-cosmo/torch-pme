@@ -17,12 +17,10 @@ class Calculator(torch.nn.Module):
     """
     Base calculator for the metatensor interface.
 
-    This is just a thin wrapper around the corresponding
-    generic torch :class:`torchpme.calculators.Calculator`.
-    If you want to wrap a ``metatensor`` interface around another
-    calculator, you can just define the class and set the static
-    member ``_base_calculator`` to the corresponding
-    torch calculator.
+    This is just a thin wrapper around the corresponding generic torch
+    :class:`torchpme.calculators.Calculator`. If you want to wrap a ``metatensor``
+    interface around another calculator, you can just define the class and set the
+    static member ``_base_calculator`` to the corresponding torch calculator.
     """
 
     _base_calculator: type[torch_calculators.Calculator] = torch_calculators.Calculator
