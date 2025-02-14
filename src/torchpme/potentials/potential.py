@@ -5,7 +5,7 @@ import torch
 
 class Potential(torch.nn.Module):
     r"""
-    Base class defining the interface for a pair potential energy function
+    Base interface for a pair potential energy function between monopoles.
 
     The class provides the interface to compute a short-range and long-range functions
     in real space (such that :math:`V(r)=V_{\mathrm{SR}}(r)+V_{\mathrm{LR}}(r)` ), as
@@ -84,7 +84,7 @@ class Potential(torch.nn.Module):
     @torch.jit.export
     def sr_from_dist(self, dist: torch.Tensor) -> torch.Tensor:
         r"""
-        Short-range part of the pair potential in real space.
+        Short-range (SR) part of the pair potential in real space.
 
         Even though one can provide a custom version, this is usually evaluated as
         :math:`V_{\mathrm{SR}}(r)=V(r)-V_{\mathrm{LR}}(r)`, based on the full and
