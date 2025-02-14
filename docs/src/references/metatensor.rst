@@ -34,6 +34,4 @@ Examples using the Metatensor Bindings
 .. minigallery::
 
     torchpme.metatensor.Calculator
-    torchpme.metatensor.PMECalculator
-    torchpme.metatensor.P3MCalculator
     torchpme.metatensor.EwaldCalculator
