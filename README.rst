@@ -9,8 +9,9 @@ torch-pme
 
 .. marker-introduction
 
-``torch-pme`` enables efficient, auto-differentiable computation of long-range
+``torch-pme`` enables efficient and auto-differentiable computation of long-range
 interactions in *PyTorch*. Auto-differentiation is supported for particle *positions*,
+
 *charges*/*dipoles*, and *cell* parameters, allowing not only the automatic computation
 of forces but also enabling general applications in machine learning tasks. For
 **monopoles** the library offers classes for Particle-Particle Particle-Mesh Ewald
@@ -57,8 +58,8 @@ or conda
 
 and ``import torchpme`` to use it in your projects!
 
-We also provide bindings to `metatensor <https://docs.metatensor.org>`_ which
-can optionally be installed together and used as ``torchpme.metatensor`` via
+We also provide bindings to `metatensor <https://docs.metatensor.org>`_ which can
+optionally be installed together and used as ``torchpme.metatensor`` via
 
 .. code-block:: bash
 
