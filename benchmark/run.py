@@ -6,6 +6,7 @@ import platform
 import subprocess
 from pathlib import Path
 from time import monotonic
+from pathlib import Path
 
 import metatensor.torch as mt
 import numpy as np
@@ -199,10 +200,16 @@ def get_calculate_fn(calculator):
 
     def calculate(charges, positions, cell, neighbor_indices, neighbor_shifts):
         positions.requires_grad = True
+<<<<<<< Updated upstream
         distances = compute_distances(
             positions, neighbor_indices, cell, neighbor_shifts
         )
         potentials = calculator(charges, cell, positions, neighbor_indices, distances)
+=======
+        distances = compute_distances(positions, neighbor_indices, cell, neighbor_shifts)
+        # potentials = potential(positions, charges, cell, neighbor_indices, distances)
+        potentials = potential(charges, cell, positions, neighbor_indices, distances)
+>>>>>>> Stashed changes
         energy = potentials.sum()  # we don't benchmark multiplying with charges
         forces = -torch.autograd.grad(energy, positions)[0]
         return energy, forces
