@@ -11,7 +11,7 @@ First, make sure to install ``torch-pme`` with the right dependencies in a fresh
 
 .. code-block:: bash
 
-    pip install .[metatensor]
+    pip install .[metatensor,examples]
 
 Then, run
 

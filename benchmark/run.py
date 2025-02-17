@@ -1,9 +1,10 @@
-#!/usr/bin/env python 
+#!/usr/bin/env python
 
 import datetime
 import os
 import platform
 import subprocess
+from pathlib import Path
 from time import monotonic
 
 import metatensor.torch as mt
@@ -99,6 +100,7 @@ version = {
     "torch": str(torch.__version__),
     "torch-pme-commit": torch_pme_commit,
     "torch-pme-status": torch_pme_status,
+    "torch-pme-version": torchpme.__version__,
 }
 
 
@@ -108,6 +110,10 @@ runs = {}
 for N, atoms in systems.items():
     for h, hypers in all_hypers[N].items():
         for d in devices:
+            if h == "tight" and d == "cpu":
+                # avoid very expensive work on CPU
+                continue
+
             name = f"{N}_{h}_{d}"
 
             runs[name] = {
@@ -140,6 +146,7 @@ def compute_distances(positions, neighbor_indices, cell=None, neighbor_shifts=No
 
 
 def atoms_to_inputs(atoms, device, cutoff):
+    """Convert atoms to inputs for calculate function."""
     charges = torch.tensor([-1.0, 1.0]).type(torch.float32).to(device)
     charges = charges.repeat(len(atoms) // 2).reshape(-1, 1)
     positions = torch.from_numpy(atoms.positions).type(torch.float32).to(device)
@@ -161,6 +168,7 @@ def atoms_to_inputs(atoms, device, cutoff):
 
 
 def atoms_to_metatensor_inputs(atoms, device, cutoff):
+    """Convert atoms to metatensor inputs for calculate functions."""
     from metatensor.torch.atomistic.ase_calculator import _compute_ase_neighbors
 
     system = mt.atomistic.systems_to_torch(
@@ -186,14 +194,15 @@ def atoms_to_metatensor_inputs(atoms, device, cutoff):
     return (system, neighbors)
 
 
-def get_calculate_fn(potential):
+def get_calculate_fn(calculator):
+    """Define a calculate function for a given calculator."""
+
     def calculate(charges, positions, cell, neighbor_indices, neighbor_shifts):
         positions.requires_grad = True
         distances = compute_distances(
             positions, neighbor_indices, cell, neighbor_shifts
         )
-        # potentials = potential(positions, charges, cell, neighbor_indices, distances)
-        potentials = potential(charges, cell, positions, neighbor_indices, distances)
+        potentials = calculator(charges, cell, positions, neighbor_indices, distances)
         energy = potentials.sum()  # we don't benchmark multiplying with charges
         forces = -torch.autograd.grad(energy, positions)[0]
         return energy, forces
@@ -202,6 +211,8 @@ def get_calculate_fn(potential):
 
 
 def get_metatensor_calculate_fn(calculator):
+    """Get a metatensor calculate function from calculator."""
+
     def calculate(system, neighbors):
         potentials = calculator(system, neighbors)
         energy = (potentials.block_by_id(0).values).sum()
@@ -212,6 +223,7 @@ def get_metatensor_calculate_fn(calculator):
 
 
 def timed_run(calculate_fn, inputs, repeats, device, warmup=True):
+    """Helper for repeated and timed running of a function with warmup."""
     if warmup:
         for i in range(repeats):
             calculate_fn(*inputs[i])
@@ -231,6 +243,7 @@ def timed_run(calculate_fn, inputs, repeats, device, warmup=True):
 
 
 def execute(run):
+    """Do a benchmark for given settings."""
     device = run["device"]
     atoms = run["atoms"]
     hypers = run["hypers"]
@@ -256,7 +269,7 @@ def execute(run):
 
     potential = torchpme.CoulombPotential(smearing=atomic_smearing)
 
-    # task 1: PME, no metatensor
+    # PME, no metatensor
     calculator = torchpme.PMECalculator(
         potential,
         mesh_spacing=mesh_spacing,
@@ -268,7 +281,7 @@ def execute(run):
     time_per_calculation = timed_run(calculate, inputs, repeats, device)
     results["PME"] = time_per_calculation
 
-    # task 2: PME, metatensor
+    # PME, metatensor
     metatensor_inputs = [
         atoms_to_metatensor_inputs(atoms, device, cutoff) for atoms in atomss
     ]
@@ -291,7 +304,42 @@ def execute(run):
     )
     results["PME_MT"] = time_per_calculation
 
-    # task 3: Ewald, no metatensor
+    # P3M, no metatensor
+    calculator = torchpme.P3MCalculator(
+        potential,
+        mesh_spacing=mesh_spacing,
+        full_neighbor_list=False,
+    )
+    calculator = torch.jit.script(calculator)
+    calculator = calculator.to(device)
+    calculate = get_calculate_fn(calculator)
+    time_per_calculation = timed_run(calculate, inputs, repeats, device)
+    results["P3M"] = time_per_calculation
+
+    # P3M, metatensor
+    metatensor_inputs = [
+        atoms_to_metatensor_inputs(atoms, device, cutoff) for atoms in atomss
+    ]
+    warmup_metatensor_inputs = [
+        atoms_to_metatensor_inputs(atoms, device, cutoff) for atoms in atomss
+    ]
+    calculator = torchpme.metatensor.P3MCalculator(
+        potential,
+        mesh_spacing=mesh_spacing,
+        full_neighbor_list=False,
+    )
+    calculator = torch.jit.script(calculator)
+    calculator = calculator.to(device)
+    calculate = get_metatensor_calculate_fn(calculator)
+
+    # metatensor doesn't reset grads, so we can't reuse inputs for warmup
+    timed_run(calculate, warmup_metatensor_inputs, repeats, device, warmup=False)
+    time_per_calculation = timed_run(
+        calculate, metatensor_inputs, repeats, device, warmup=False
+    )
+    results["P3M_MT"] = time_per_calculation
+
+    # Ewald, no metatensor
     calculator = torchpme.EwaldCalculator(
         potential,
         lr_wavelength=lr_wavelength,
@@ -303,7 +351,7 @@ def execute(run):
     time_per_calculation = timed_run(calculate, inputs, repeats, device)
     results["E"] = time_per_calculation
 
-    # task 4: Ewald, metatensor
+    # Ewald, metatensor
     metatensor_inputs = [
         atoms_to_metatensor_inputs(atoms, device, cutoff) for atoms in atomss
     ]
