@@ -27,7 +27,10 @@ changelog <https://keepachangelog.com/en/1.1.0/>`_ format. This project follows
 Fixed
 #####
 
+
 * Fix inconsistent ``cutoff`` in neighbor list example
+=======
+* Fixed consistency of dtype and device in the SplinePotential class
 * All calculators now check if the cell is zero if the potential is range-separated
 
 
