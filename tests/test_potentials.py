@@ -402,6 +402,10 @@ def test_spline_potential_vs_coulomb():
             {"exponent": 2, "smearing": 1.0, "exclusion_radius": 1.0},
         ),
         (
+            InversePowerLawPotential,
+            {"exponent": 4, "smearing": 1.0, "exclusion_radius": 1.0},
+        ),
+        (
             SplinePotential,
             {
                 "r_grid": torch.tensor([1.0, 2.0, 3.0, 4.0]),
@@ -429,17 +433,24 @@ def test_potentials_jit(potpars):
             self.pot = pot(**kwargs)
 
         def forward(self, x: torch.Tensor):
-            return self.pot.lr_from_dist(x), self.pot.lr_from_k_sq(x)
+            return (
+                self.pot.lr_from_dist(x),
+                self.pot.lr_from_k_sq(x),
+                self.pot.self_contribution(),
+                self.pot.background_correction(),
+            )
 
     wrapper = JITWrapper(**pars)
     jit_wrapper = torch.jit.script(wrapper)
 
     x = torch.tensor([1.0, 2.0, 3.0])
-    rs_y, ks_y = wrapper(x)
-    rs_y_jit, ks_y_jit = jit_wrapper(x)
+    rs_y, ks_y, self_y, bg_y = wrapper(x)
+    rs_y_jit, ks_y_jit, self_y_jit, bg_y_jit = jit_wrapper(x)
 
     assert_close(rs_y, rs_y_jit)
     assert_close(ks_y, ks_y_jit)
+    assert_close(self_y, self_y_jit)
+    assert_close(bg_y, bg_y_jit)
 
 
 @pytest.mark.parametrize("smearing", smearinges)
@@ -644,11 +655,13 @@ def test_inverserp_vs_spline(exponent, smearing):
 
 @pytest.mark.parametrize("exponent", [1, 2, 3, 4, 5, 6])
 def test_inversp_exp_background(exponent):
-    smearing = 1.0
+    smearing = 1.5
     ipl = InversePowerLawPotential(exponent=exponent, smearing=smearing)
     ipl.to(dtype=dtype)
     bg = ipl.background_correction()
     if exponent >= 3:
         assert torch.allclose(bg, torch.tensor([0.0], dtype=dtype))
     else:
-        assert not torch.allclose(bg, torch.tensor([0.0], dtype=dtype))
+        prefac = torch.pi**1.5 * (2 * smearing**2) ** ((3 - exponent) / 2)
+        prefac /= (3 - exponent) * gamma(exponent / 2)
+        assert torch.allclose(bg, prefac)

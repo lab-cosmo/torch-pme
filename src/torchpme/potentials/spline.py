@@ -109,14 +109,18 @@ class SplinePotential(Potential):
                 torch.zeros(1, dtype=self.r_grid.dtype, device=self.r_grid.device)
             )
         else:
-            self._y_at_zero = y_at_zero
+            self._y_at_zero = torch.tensor(
+                y_at_zero, dtype=self.r_grid.dtype, device=self.r_grid.device
+            )
 
         if yhat_at_zero is None:
             self._yhat_at_zero = self._krn_spline(
                 torch.zeros(1, dtype=self.k_grid.dtype, device=self.k_grid.device)
             )
         else:
-            self._yhat_at_zero = yhat_at_zero
+            self._yhat_at_zero = torch.tensor(
+                yhat_at_zero, dtype=self.k_grid.dtype, device=self.k_grid.device
+            )
 
     def from_dist(self, dist: torch.Tensor) -> torch.Tensor:
         # if the full spline is not given, falls back on the lr part
