@@ -104,6 +104,25 @@ def test_parameter_choose(device, dtype, calculator, tune, param_length, accurac
     torch.testing.assert_close(madelung, madelung_ref, atol=0, rtol=accuracy)
 
 
+@pytest.mark.parametrize("device", DEVICES)
+@pytest.mark.parametrize("dtype", DTYPES)
+def test_cutoff_filter(device, dtype):
+    """
+    Check that `TunerBase` initilizes correctly.
+
+    We are using dummy `neighbor_indices` and `neighbor_distances` to verify types. Have
+    to be sure that these dummy variables are initilized correctly.
+    """
+    _, cell, positions = system(device, dtype)
+    neighbor_indices, neighbor_distances = neighbor_list(
+        positions=positions, box=cell, cutoff=DEFAULT_CUTOFF * 10
+    )
+    _, filtered_distances = TunerBase.filter_neighbors(
+        DEFAULT_CUTOFF, neighbor_indices, neighbor_distances
+    )
+    assert filtered_distances.max() <= DEFAULT_CUTOFF
+
+
 @pytest.mark.parametrize("tune", [tune_ewald, tune_pme, tune_p3m])
 def test_accuracy_error(tune):
     pos, charges, cell, _, _ = define_crystal()
