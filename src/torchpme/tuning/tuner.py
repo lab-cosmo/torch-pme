@@ -153,7 +153,7 @@ class TunerBase:
         :param neighbor_distances: torch.tensor with the pair distances of the neighbors
             for which the potential should be computed in real space.
         """
-        filter_idx = torch.where(neighbor_distances <= cutoff)
+        filter_idx = torch.where(neighbor_distances < cutoff)
         return neighbor_indices[filter_idx], neighbor_distances[filter_idx]
 
 

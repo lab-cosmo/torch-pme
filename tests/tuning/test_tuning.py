@@ -120,7 +120,12 @@ def test_cutoff_filter(device, dtype):
     _, filtered_distances = TunerBase.filter_neighbors(
         DEFAULT_CUTOFF, neighbor_indices, neighbor_distances
     )
-    assert filtered_distances.max() <= DEFAULT_CUTOFF
+    assert filtered_distances.max() < DEFAULT_CUTOFF
+
+    _, distance_from_calculation = neighbor_list(
+        positions=positions, box=cell, cutoff=DEFAULT_CUTOFF
+    )
+    assert torch.allclose(filtered_distances, distance_from_calculation)
 
 
 @pytest.mark.parametrize("tune", [tune_ewald, tune_pme, tune_p3m])
