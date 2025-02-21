@@ -16,7 +16,7 @@ ROOT = os.path.realpath(os.path.join(HERE, "..", ".."))
 sphinx_gallery_conf = {
     "backreferences_dir": "backreferences",
     "copyfile_regex": r".*\.(xyz)",
-    "default_thumb_file": os.path.join(ROOT, "docs/src/logo/torch-pme-512.png"),
+    "default_thumb_file": os.path.join(ROOT, "docs/logo/torch-pme-512.png"),
     "doc_module": ("torchpme",),
     "examples_dirs": ["../../examples"],
     "filename_pattern": ".*",

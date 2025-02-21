@@ -136,15 +136,23 @@ html_theme_options = {
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 
+html_title = "torch-pme"
 html_static_path = ["../static"]
-html_favicon = "logo/torch-pme-64.png"
+html_favicon = "../logo/torch-pme-64.png"
 
 html_theme_options = {
     "light_logo": "images/torch-pme.png",
     "dark_logo": "images/torch-pme-dark.png",
     "sidebar_hide_name": True,
+    "footer_icons": [
+        {
+            "name": "GitHub",
+            "url": project_dict["urls"]["repository"],
+            "html": "",
+            "class": "fa-brands fa-github fa-2x",
+        },
+    ],
 }
-
 
 # font-awesome logos (used in the footer)
 html_css_files = [
