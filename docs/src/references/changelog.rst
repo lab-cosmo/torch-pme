@@ -24,19 +24,26 @@ changelog <https://keepachangelog.com/en/1.1.0/>`_ format. This project follows
 `Unreleased <https://github.com/lab-cosmo/torch-pme/>`_
 -------------------------------------------------------
 
+`Version 0.3.0 <https://github.com/lab-cosmo/torch-pme/releases/tag/v0.3.0>`_ - 2025-02-21
+------------------------------------------------------------------------------------------
+
 Added
 #####
 
-* Updated to ``metatensor-torch`` version 0.7
 * Added support for Python 3.13
-* Added classes for the calculation of dipole interactions
+* Updated to ``metatensor-torch`` version 0.7
+* Add a method to select a subset of a neighbor list based on a new ``cutoff``
+  (:meth:`torchpme.tuning.tuner.TunerBase.filter_neighbors`)
+* Added an *Ewald* calculator  for computing dipole-dipole interactions
+  (:class:`torchpme.CalculatorDipole`) using a dipolar potential
+  (:class:`torchpme.PotentialDipole`)
 * Better documentation for for ``cell``, ``charges`` and ``positions`` parameters
 
 Removed
 #######
 
-* Remove ``device`` and ``dtype`` from init of ``Calculator``, ``Potential`` and
-  ``Tuning`` classes
+* Remove ``device`` and ``dtype`` from the init from all ``Calculator``, ``Potential``
+  and ``Tuning`` classes
 
 `Version 0.2.0 <https://github.com/lab-cosmo/torch-pme/releases/tag/v0.2.0>`_ - 2025-01-23
 ------------------------------------------------------------------------------------------
@@ -56,15 +63,16 @@ Changed
 * Tuning now uses a grid-search based scheme, instead of a gradient based scheme
 * Tuning functions no longer takes the ``cutoff`` parameter, and thus does not
   support a built-in NL calculation.
-* Refactor the ``InversePowerLawPotential`` class to restrict the exponent to integer
-  values
+* Refactor the :class:`torchpme.InversePowerLawPotential`` class to restrict the
+  exponent to integer values
 
 Fixed
 #####
 
 * Ensured consistency of ``dtype`` and ``device`` in the ``Potential`` and
   ``Calculator`` classses
-* Fixed consistency of ``dtype`` and ``device`` in the ``SplinePotential`` class
+* Fixed consistency of ``dtype`` and ``device`` in the :class:`torchpme.SplinePotential`
+  class
 * Fix inconsistent ``cutoff`` in neighbor list example
 * All calculators now check if the cell is zero if the potential is range-separated
 

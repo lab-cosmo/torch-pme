@@ -12,8 +12,9 @@ API reference
      :tag-prefix: v
      :url-suffix: references/index.html
 
-     .. version:: 0.1.0
+     .. version:: 0.3.0
      .. version:: 0.2.0
+     .. version:: 0.1.0
 
 The main references for public functions and classes inside ``torch-pme``. For examples
 refer to the :ref:`userdoc-how-to` section.
