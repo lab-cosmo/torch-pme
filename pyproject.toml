@@ -130,7 +130,7 @@ ignore = [
     "D401",  # First line should be in imperative mood
     "D403",  # First word of the first line should be capitalized
     "D404",  # First word of the docstring should not be This
-    "D412",  # No blank lines allowed between a section header and its conten
+    "D412",  # No blank lines allowed between a section header and its content
     "D415",  # First line should end with a period, question mark, or exclamation point
     "D416",  # Section name should end with a colon
     "E501",  # Line too long
