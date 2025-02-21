@@ -33,7 +33,7 @@ manipulating atomic structures.
 import torch
 import vesin.torch
 import vesin.torch.metatensor
-from metatensor.torch import Labels, TensorBlock
+from metatensor.torch import Labels, TensorBlock, TensorMap
 from metatensor.torch.atomistic import NeighborListOptions, System
 
 import torchpme
@@ -243,20 +243,25 @@ neighbors = nl_mts.compute(system)
 #
 # For the metatensor branch, charges of the atoms are defined in a tensor format and
 # attached to the system as a :class:`TensorBlock <metatensor.torch.TensorBlock>`.
+#
+# Create a :class:`TensorMap <metetensor.torch.TensorMap>` for the charges
 
-# Create a TensorBlock for the charges
-data = TensorBlock(
+block = TensorBlock(
     values=charges,
     samples=Labels.range("atom", charges.shape[0]),
     components=[],
     properties=Labels.range("charge", charges.shape[1]),
 )
 
+tensor = TensorMap(
+    keys=Labels("_", torch.zeros(1, 1, dtype=torch.int32)), blocks=[block]
+)
+
 # %%
 #
 # Add the charges data to the system
 
-system.add_data(name="charges", data=data)
+system.add_data(name="charges", tensor=tensor)
 
 # %%
 #
@@ -300,15 +305,23 @@ print(potential_metatensor[0])
 # overwrite the ``system``'s charges data using ``override=True`` when applying the
 # :meth:`add_data <metatensor.torch.atomistic.System.add_data>` method.
 
-data_one_hot = TensorBlock(
+block_one_hot = TensorBlock(
     values=charges_one_hot,
     samples=Labels.range("atom", charges_one_hot.shape[0]),
     components=[],
     properties=Labels.range("charge", charges_one_hot.shape[1]),
 )
 
-# Add the charges data to the system
-system.add_data(name="charges", data=data_one_hot, override=True)
+tensor_one_hot = TensorMap(
+    keys=Labels("_", torch.zeros(1, 1, dtype=torch.int32)), blocks=[block_one_hot]
+)
+
+# %%
+#
+# Add the charges data to the system. We use the ``override=True`` to overwrite the
+# already existing charge data from above.
+
+system.add_data(name="charges", tensor=tensor_one_hot, override=True)
 
 # %%
 #

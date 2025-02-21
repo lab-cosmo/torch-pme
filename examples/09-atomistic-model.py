@@ -101,10 +101,15 @@ def add_charges(system: System) -> None:
     # Create metadata for the charges TensorBlock
     samples = Labels("atom", torch.arange(len(system), device=device).reshape(-1, 1))
     properties = Labels("charge", torch.zeros(1, 1, device=device, dtype=torch.int32))
-    data = TensorBlock(
+    block = TensorBlock(
         values=charges, samples=samples, components=[], properties=properties
     )
-    system.add_data(name="charges", data=data)
+
+    tensor = TensorMap(
+        keys=Labels("_", torch.zeros(1, 1, dtype=torch.int32)), blocks=[block]
+    )
+
+    system.add_data(name="charges", tensor=tensor)
 
 
 # %%
@@ -131,7 +136,7 @@ system = System(
 
 add_charges(system)
 
-print(system.get_data("charges").values)
+print(system.get_data("charges").block().values)
 
 # %%
 #
@@ -213,7 +218,7 @@ class CalculatorModel(torch.nn.Module):
         # Create a reference charge block with the same metadata as the potential to
         # allow multiplcation which requries same metadata
         charges_block = TensorBlock(
-            values=system.get_data("charges").values,
+            values=system.get_data("charges").block().values,
             samples=potential[0].samples,
             components=potential[0].components,
             properties=potential[0].properties,

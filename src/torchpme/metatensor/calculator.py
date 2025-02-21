@@ -1,5 +1,4 @@
 import torch
-from torch import profiler
 
 try:
     from metatensor.torch import Labels, TensorBlock, TensorMap
@@ -30,16 +29,8 @@ class Calculator(torch.nn.Module):
 
         self._calculator = self._base_calculator(*args, **kwargs)
 
-        # TorchScript requires to initialize all attributes in __init__
-        self._device = torch.get_default_device()
-        self._dtype = torch.get_default_dtype()
-        self._n_charges_channels = 0
-
     @staticmethod
-    def _validate_compute_parameters(
-        system: System,
-        neighbors: TensorBlock,
-    ):
+    def _validate_compute_parameters(system: System, neighbors: TensorBlock) -> None:
         dtype = system.positions.dtype
         device = system.positions.device
 
@@ -94,23 +85,21 @@ class Calculator(torch.nn.Module):
         if "charges" not in system.known_data():
             raise ValueError("`system` does not contain `charges` data")
 
-        # Metatensor will issue a warning because `charges` are not a default member of
-        # a System object
-        n_charges_channels = system.get_data("charges").values.shape[1]
-
-        n_channels = system.get_data("charges").values.shape[1]
-        if n_channels != n_charges_channels:
+        charge_tensor = system.get_data("charges")
+        if len(charge_tensor) != 1:
             raise ValueError(
-                f"number of charges-channels in system "
-                f"({n_channels}) is inconsistent with first system "
-                f"({n_charges_channels})"
+                f"Charge tensor have exactlty one block but has {len(charge_tensor)} "
+                "blocks"
             )
 
-    def forward(
-        self,
-        system: System,
-        neighbors: TensorBlock,
-    ) -> TensorMap:
+        n_charge_components = len(charge_tensor.block().components)
+        if n_charge_components > 0:
+            raise ValueError(
+                "TensorBlock containg the charges should not have components; "
+                f"found {n_charge_components}"
+            )
+
+    def forward(self, system: System, neighbors: TensorBlock) -> TensorMap:
         """
         Compute the potential "energy".
 
@@ -144,51 +133,43 @@ class Calculator(torch.nn.Module):
         """
         self._validate_compute_parameters(system, neighbors)
 
-        # In actual computations, the data type (dtype) and device (e.g. CPU, GPU) of
-        # all remaining variables need to be consistent
-        self._dtype = system.positions.dtype
-        self._device = system.positions.device
-        self._n_charges_channels = system.get_data("charges").values.shape[1]
+        device = system.positions.device
+        charges = system.get_data("charges").block().values
 
         n_atoms = len(system)
-        samples = torch.zeros((n_atoms, 2), device=self._device, dtype=torch.int32)
+        samples = torch.zeros((n_atoms, 2), device=device, dtype=torch.int32)
         samples[:, 0] = 0
-        samples[:, 1] = torch.arange(n_atoms, device=self._device, dtype=torch.int32)
+        samples[:, 1] = torch.arange(n_atoms, device=device, dtype=torch.int32)
 
         neighbor_indices = neighbors.samples.view(["first_atom", "second_atom"]).values
 
-        if self._device.type == "cpu":
-            # move data to 64-bit integers, for some reason indexing with 64-bit
-            # is a lot faster than using 32-bit integers on CPU. CUDA seems fine
-            # with either types
+        if device.type == "cpu":
+            # move to 64-bit integers, for some reason indexing 64-bit is a lot faster
+            # than using 32-bit integers on CPU. CUDA seems fine with either types
             neighbor_indices = neighbor_indices.to(
                 torch.int64, memory_format=torch.contiguous_format
             )
 
         neighbor_distances = torch.linalg.norm(neighbors.values, dim=1).squeeze(1)
 
-        # `calculator._compute_single_system` is implemented only in child classes!
         potential = self._calculator.forward(
-            charges=system.get_data("charges").values,
+            charges=charges,
             cell=system.cell,
             positions=system.positions,
             neighbor_indices=neighbor_indices,
             neighbor_distances=neighbor_distances,
         )
 
-        with profiler.record_function("wrap metatensor"):
-            properties_values = torch.arange(
-                self._n_charges_channels, device=self._device, dtype=torch.int32
-            )
+        properties_values = torch.arange(
+            charges.shape[1], device=device, dtype=torch.int32
+        )
 
-            block = TensorBlock(
-                values=potential,
-                samples=Labels(["system", "atom"], samples),
-                components=[],
-                properties=Labels("charges_channel", properties_values.unsqueeze(1)),
-            )
+        block = TensorBlock(
+            values=potential,
+            samples=Labels(["system", "atom"], samples),
+            components=[],
+            properties=Labels("charges_channel", properties_values.unsqueeze(1)),
+        )
 
-            keys = Labels(
-                "_", torch.zeros(1, 1, dtype=torch.int32, device=self._device)
-            )
-            return TensorMap(keys=keys, blocks=[block])
+        keys = Labels("_", torch.zeros(1, 1, dtype=torch.int32, device=device))
+        return TensorMap(keys=keys, blocks=[block])

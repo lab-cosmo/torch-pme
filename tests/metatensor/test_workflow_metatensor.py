@@ -56,7 +56,7 @@ MESH_SPACING = SMEARING / 4
     ],
 )
 class TestWorkflow:
-    def system(self, device=None, dtype=None):
+    def system(self, device, dtype):
         system = mts_atomistic.System(
             types=torch.tensor([1, 2, 2]),
             positions=torch.tensor([[0.0, 0.0, 0.0], [0.0, 0.0, 0.2], [0.0, 0.0, 0.5]]),
@@ -65,14 +65,21 @@ class TestWorkflow:
         )
 
         charges = torch.tensor([1.0, -0.5, -0.5]).unsqueeze(1)
-        data = mts_torch.TensorBlock(
+        block = mts_torch.TensorBlock(
             values=charges,
             samples=mts_torch.Labels.range("atom", charges.shape[0]),
             components=[],
             properties=mts_torch.Labels.range("charge", charges.shape[1]),
         )
 
-        system.add_data(name="charges", data=data)
+        tensor = mts_torch.TensorMap(
+            keys=mts_torch.Labels(
+                "_", torch.zeros(1, 1, dtype=torch.int32, device=device)
+            ),
+            blocks=[block],
+        )
+
+        system.add_data(name="charges", tensor=tensor)
 
         sample_values = torch.tensor([[0, 1, 0, 0, 0]])
         samples = mts_torch.Labels(
