@@ -137,6 +137,25 @@ class TunerBase:
 
         return float(smearing)
 
+    @staticmethod
+    def filter_neighbors(
+        cutoff: float, neighbor_indices: torch.Tensor, neighbor_distances: torch.Tensor
+    ):
+        """
+        Filter neighbor indices and distances based on a user given cutoff. This allows
+        users pre-computing the neighbor list with a larger cutoff and then filtering
+        the neighbors based on a smaller cutoff, leading to a faster tuning on the
+        cutoff.
+
+        :param cutoff: real space cutoff
+        :param neighbor_indices: torch.tensor with the ``i,j`` indices of neighbors for
+            which the potential should be computed in real space.
+        :param neighbor_distances: torch.tensor with the pair distances of the neighbors
+            for which the potential should be computed in real space.
+        """
+        filter_idx = torch.where(neighbor_distances < cutoff)
+        return neighbor_indices[filter_idx], neighbor_distances[filter_idx]
+
 
 class GridSearchTuner(TunerBase):
     """
@@ -193,6 +212,9 @@ class GridSearchTuner(TunerBase):
         )
         self.error_bounds = error_bounds
         self.params = params
+        neighbor_indices, neighbor_distances = self.filter_neighbors(
+            cutoff, neighbor_indices, neighbor_distances
+        )
         self.time_func = TuningTimings(
             charges,
             cell,
