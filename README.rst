@@ -1,7 +1,7 @@
 torch-pme
 =========
 
-.. image:: https://raw.githubusercontent.com/lab-cosmo/torch-pme/refs/heads/main/docs/src/logo/torch-pme.svg
+.. image:: https://raw.githubusercontent.com/lab-cosmo/torch-pme/refs/heads/main/docs/logo/torch-pme.svg
    :width: 200 px
    :align: left
 

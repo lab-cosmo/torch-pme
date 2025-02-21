@@ -1,5 +1,5 @@
 furo
-sphinx > 7.0
+sphinx > 7.0, < 8.2  # copying folders in the `html_static_path` seems broken in 8.2...
 sphinx-design
 sphinx-gallery
 sphinx-toggleprompt
