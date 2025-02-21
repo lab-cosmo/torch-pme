@@ -28,6 +28,7 @@ Added
 #####
 
 * Updated to ``metatensor-torch`` version 0.7
+* Added support for Python 3.13
 * Added classes for the calculation of dipole interactions
 * Better documentation for for ``cell``, ``charges`` and ``positions`` parameters
 

@@ -4,6 +4,5 @@ pytest
 pytest-cov
 pytest-doctestplus
 scipy
-torch < 2.6  # limit version in tests due to vesin
 vesin >= 0.3.0
 vesin[torch] >= 0.3.0
