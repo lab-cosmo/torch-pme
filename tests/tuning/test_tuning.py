@@ -58,7 +58,10 @@ def test_TunerBase_init(device, dtype):
     ],
 )
 @pytest.mark.parametrize("accuracy", [1e-1, 1e-3, 1e-5])
-def test_parameter_choose(device, dtype, calculator, tune, param_length, accuracy):
+@pytest.mark.parametrize("full_neighbor_list", [True, False])
+def test_parameter_choose(
+    device, dtype, calculator, tune, param_length, accuracy, full_neighbor_list
+):
     """
     Check that the Madelung constants obtained from the Ewald sum calculator matches
     the reference values and that all branches of the from_accuracy method are covered.
@@ -70,7 +73,10 @@ def test_parameter_choose(device, dtype, calculator, tune, param_length, accurac
 
     # Compute neighbor list
     neighbor_indices, neighbor_distances = neighbor_list(
-        positions=pos, box=cell, cutoff=DEFAULT_CUTOFF
+        positions=pos,
+        box=cell,
+        cutoff=DEFAULT_CUTOFF,
+        full_neighbor_list=full_neighbor_list,
     )
 
     smearing, params, _ = tune(
@@ -80,6 +86,7 @@ def test_parameter_choose(device, dtype, calculator, tune, param_length, accurac
         DEFAULT_CUTOFF,
         neighbor_indices=neighbor_indices,
         neighbor_distances=neighbor_distances,
+        full_neighbor_list=full_neighbor_list,
         accuracy=accuracy,
     )
 
@@ -88,6 +95,7 @@ def test_parameter_choose(device, dtype, calculator, tune, param_length, accurac
     # Compute potential and compare against target value using default hypers
     calc = calculator(
         potential=(CoulombPotential(smearing=smearing)),
+        full_neighbor_list=full_neighbor_list,
         **params,
     )
     calc.to(device=device, dtype=dtype)
@@ -106,7 +114,8 @@ def test_parameter_choose(device, dtype, calculator, tune, param_length, accurac
 
 @pytest.mark.parametrize("device", DEVICES)
 @pytest.mark.parametrize("dtype", DTYPES)
-def test_cutoff_filter(device, dtype):
+@pytest.mark.parametrize("full_nl_list", [True, False])
+def test_cutoff_filter(device, dtype, full_neighbor_list):
     """
     Check that `TunerBase` initilizes correctly.
 
@@ -115,7 +124,10 @@ def test_cutoff_filter(device, dtype):
     """
     _, cell, positions = system(device, dtype)
     neighbor_indices, neighbor_distances = neighbor_list(
-        positions=positions, box=cell, cutoff=DEFAULT_CUTOFF * 10
+        positions=positions,
+        box=cell,
+        cutoff=DEFAULT_CUTOFF * 10,
+        full_neighbor_list=full_neighbor_list,
     )
     _, filtered_distances = TunerBase.filter_neighbors(
         DEFAULT_CUTOFF, neighbor_indices, neighbor_distances
@@ -123,7 +135,10 @@ def test_cutoff_filter(device, dtype):
     assert filtered_distances.max() < DEFAULT_CUTOFF
 
     _, distance_from_calculation = neighbor_list(
-        positions=positions, box=cell, cutoff=DEFAULT_CUTOFF
+        positions=positions,
+        box=cell,
+        cutoff=DEFAULT_CUTOFF,
+        full_neighbor_list=full_neighbor_list,
     )
     assert torch.allclose(filtered_distances, distance_from_calculation)
 

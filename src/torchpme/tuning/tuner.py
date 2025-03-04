@@ -60,6 +60,11 @@ class TunerBase:
     :param cutoff: real space cutoff, serves as a hyperparameter here.
     :param calculator: the calculator to be tuned
     :param exponent: exponent of the potential, only exponent = 1 is supported
+    :param full_neighbor_list: If set to :py:obj:`True`, a "full" neighbor list
+        is expected as input. This means that each atom pair appears twice. If
+        set to :py:obj:`False`, a "half" neighbor list is expected.
+    :param prefactor: electrostatics prefactor; see :ref:`prefactors` for details and
+        common values.
 
     Example
     -------
@@ -83,6 +88,8 @@ class TunerBase:
         cutoff: float,
         calculator: type[Calculator],
         exponent: int = 1,
+        full_neighbor_list: bool = False,
+        prefactor: float = 1.0,
     ):
         if exponent != 1:
             raise NotImplementedError(
@@ -105,8 +112,12 @@ class TunerBase:
         self.cutoff = cutoff
         self.calculator = calculator
         self.exponent = exponent
+        self.full_neighbor_list = full_neighbor_list
+        self.prefactor = prefactor
 
-        self._prefac = 2 * float((charges**2).sum()) / math.sqrt(len(positions))
+        self._smearing_esti_prefac = (
+            2 * float((charges**2).sum()) / math.sqrt(len(positions))
+        )
 
     def tune(self, accuracy: float = 1e-3):
         raise NotImplementedError
@@ -129,7 +140,7 @@ class TunerBase:
             * math.log(
                 accuracy
                 / 2
-                / self._prefac
+                / self._smearing_esti_prefac
                 * math.sqrt(self.cutoff * float(torch.abs(self.cell.det())))
             )
         )
@@ -186,6 +197,11 @@ class GridSearchTuner(TunerBase):
         which the potential should be computed in real space.
     :param neighbor_distances: torch.tensor with the pair distances of the neighbors for
         which the potential should be computed in real space.
+    :param full_neighbor_list: If set to :py:obj:`True`, a "full" neighbor list
+        is expected as input. This means that each atom pair appears twice. If
+        set to :py:obj:`False`, a "half" neighbor list is expected.
+    :param prefactor: electrostatics prefactor; see :ref:`prefactors` for details and
+        common values.
     :param exponent: exponent of the potential, only exponent = 1 is supported
     """
 
@@ -200,6 +216,8 @@ class GridSearchTuner(TunerBase):
         params: list[dict],
         neighbor_indices: torch.Tensor,
         neighbor_distances: torch.Tensor,
+        full_neighbor_list: bool = False,
+        prefactor: float = 1.0,
         exponent: int = 1,
     ):
         super().__init__(
@@ -209,6 +227,8 @@ class GridSearchTuner(TunerBase):
             cutoff=cutoff,
             calculator=calculator,
             exponent=exponent,
+            full_neighbor_list=full_neighbor_list,
+            prefactor=prefactor,
         )
         self.error_bounds = error_bounds
         self.params = params
@@ -254,6 +274,8 @@ class GridSearchTuner(TunerBase):
                 exponent=self.exponent,  # but only exponent = 1 is supported
                 smearing=smearing,
             ),
+            full_neighbor_list=self.full_neighbor_list,
+            prefactor=self.prefactor,
             **k_space_params,
         )
         calculator.to(device=self.positions.device, dtype=self.positions.dtype)

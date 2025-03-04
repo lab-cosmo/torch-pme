@@ -76,7 +76,8 @@ def generate_orthogonal_transformations():
     ],
 )
 @pytest.mark.parametrize("scaling_factor", [1 / 2.0353610, 1.0, 3.4951291])
-def test_madelung(crystal_name, scaling_factor, calc_name):
+@pytest.mark.parametrize("full_neighbor_list", [True, False])
+def test_madelung(crystal_name, scaling_factor, calc_name, full_neighbor_list):
     """
     Check that the Madelung constants obtained from the Ewald sum calculator matches
     the reference values.
@@ -103,6 +104,7 @@ def test_madelung(crystal_name, scaling_factor, calc_name):
         calc = EwaldCalculator(
             InversePowerLawPotential(exponent=1, smearing=smearing),
             lr_wavelength=lr_wavelength,
+            full_neighbor_list=full_neighbor_list,
         )
         rtol = 4e-6
     elif calc_name == "pme":
@@ -114,6 +116,7 @@ def test_madelung(crystal_name, scaling_factor, calc_name):
                 smearing=smearing,
             ),
             mesh_spacing=smearing / 8,
+            full_neighbor_list=full_neighbor_list,
         )
         rtol = 9e-4
     elif calc_name == "p3m":
@@ -122,12 +125,17 @@ def test_madelung(crystal_name, scaling_factor, calc_name):
         calc = P3MCalculator(
             CoulombPotential(smearing=smearing),
             mesh_spacing=smearing / 8,
+            full_neighbor_list=full_neighbor_list,
         )
         rtol = 9e-4
 
     # Compute neighbor list
     neighbor_indices, neighbor_distances = neighbor_list(
-        positions=pos, periodic=True, box=cell, cutoff=sr_cutoff
+        positions=pos,
+        periodic=True,
+        box=cell,
+        cutoff=sr_cutoff,
+        full_neighbor_list=full_neighbor_list,
     )
     calc.to(DTYPE)
     # Compute potential and compare against target value using default hypers

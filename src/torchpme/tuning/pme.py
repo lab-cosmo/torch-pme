@@ -16,6 +16,8 @@ def tune_pme(
     cutoff: float,
     neighbor_indices: torch.Tensor,
     neighbor_distances: torch.Tensor,
+    full_neighbor_list: bool = False,
+    prefactor: float = 1.0,
     exponent: int = 1,
     nodes_lo: int = 3,
     nodes_hi: int = 7,
@@ -44,6 +46,11 @@ def tune_pme(
         which the potential should be computed in real space.
     :param neighbor_distances: torch.tensor with the pair distances of the neighbors for
         which the potential should be computed in real space.
+    :param full_neighbor_list: If set to :py:obj:`True`, a "full" neighbor list
+        is expected as input. This means that each atom pair appears twice. If
+        set to :py:obj:`False`, a "half" neighbor list is expected.
+    :param prefactor: electrostatics prefactor; see :ref:`prefactors` for details and
+        common values.
     :param exponent: :math:`p` in :math:`1/r^p` potentials, currently only :math:`p=1`
         is supported
     :param nodes_lo: Minimum number of interpolation nodes
@@ -107,6 +114,8 @@ def tune_pme(
         exponent=exponent,
         neighbor_indices=neighbor_indices,
         neighbor_distances=neighbor_distances,
+        full_neighbor_list=full_neighbor_list,
+        prefactor=prefactor,
         calculator=PMECalculator,
         error_bounds=PMEErrorBounds(charges=charges, cell=cell, positions=positions),
         params=params,
