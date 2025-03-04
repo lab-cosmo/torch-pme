@@ -114,7 +114,7 @@ def test_parameter_choose(
 
 @pytest.mark.parametrize("device", DEVICES)
 @pytest.mark.parametrize("dtype", DTYPES)
-@pytest.mark.parametrize("full_nl_list", [True, False])
+@pytest.mark.parametrize("full_neighbor_list", [True, False])
 def test_cutoff_filter(device, dtype, full_neighbor_list):
     """
     Check that `TunerBase` initilizes correctly.
