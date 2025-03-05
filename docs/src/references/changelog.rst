@@ -24,6 +24,11 @@ changelog <https://keepachangelog.com/en/1.1.0/>`_ format. This project follows
 `Unreleased <https://github.com/lab-cosmo/torch-pme/>`_
 -------------------------------------------------------
 
+Added
+#####
+
+* Allow passing `full_neighbor_list` and `prefactor` to tuning functions
+
 `Version 0.3.0 <https://github.com/lab-cosmo/torch-pme/releases/tag/v0.3.0>`_ - 2025-02-21
 ------------------------------------------------------------------------------------------
 
