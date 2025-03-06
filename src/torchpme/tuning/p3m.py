@@ -73,6 +73,8 @@ def tune_p3m(
     cutoff: float,
     neighbor_indices: torch.Tensor,
     neighbor_distances: torch.Tensor,
+    full_neighbor_list: bool = False,
+    prefactor: float = 1.0,
     exponent: int = 1,
     nodes_lo: int = 2,
     nodes_hi: int = 5,
@@ -100,6 +102,11 @@ def tune_p3m(
         which the potential should be computed in real space.
     :param neighbor_distances: torch.tensor with the pair distances of the neighbors for
         which the potential should be computed in real space.
+    :param full_neighbor_list: If set to :py:obj:`True`, a "full" neighbor list
+        is expected as input. This means that each atom pair appears twice. If
+        set to :py:obj:`False`, a "half" neighbor list is expected.
+    :param prefactor: electrostatics prefactor; see :ref:`prefactors` for details and
+        common values.
     :param cutoff: float, cutoff distance for the neighborlist supported
     :param exponent: :math:`p` in :math:`1/r^p` potentials, currently only :math:`p=1`
         is
@@ -164,6 +171,8 @@ def tune_p3m(
         exponent=exponent,
         neighbor_indices=neighbor_indices,
         neighbor_distances=neighbor_distances,
+        full_neighbor_list=full_neighbor_list,
+        prefactor=prefactor,
         calculator=P3MCalculator,
         error_bounds=P3MErrorBounds(charges=charges, cell=cell, positions=positions),
         params=params,
