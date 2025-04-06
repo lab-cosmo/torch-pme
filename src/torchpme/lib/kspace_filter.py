@@ -190,8 +190,8 @@ class KSpaceFilter(torch.nn.Module):
 
         if torch.isnan(result).any():
             raise ValueError(
-                "NaNs found in the output of the k-space filter. This is (likely) due to"
-                " a bad setting of `mesh_spacing`. Please try a different value."
+                "NaNs found in the output of the k-space filter. This is (likely) due "
+                "to a bad setting of `mesh_spacing`. Please try a different value."
             )
 
         return result
