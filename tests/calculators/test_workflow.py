@@ -205,3 +205,42 @@ class TestWorkflow:
                 TypeError, match="Must specify smearing to use a potential with .*"
             ):
                 CalculatorClass(**params)
+
+
+def test_kspace_filter_error_catch():
+    interpolation_nodes = 5
+
+    calculator = P3MCalculator(
+        potential=CoulombPotential(smearing=1, exclusion_radius=4.5),
+        interpolation_nodes=interpolation_nodes,
+        full_neighbor_list=True,
+        mesh_spacing=0.5,
+    )
+
+    charges = torch.ones([4, 1])
+    positions = torch.arange(4 * 3).reshape(4, 3).to(torch.float32)
+    cell = torch.tensor(
+        [
+            [-2.2958, -0.5882, -0.0797],
+            [1.3575, -0.2575, -1.9272],
+            [1.9694, -5.7254, 2.1524],
+        ],
+    )
+
+    neighbor_indices = torch.zeros((0, 2), dtype=torch.int64)
+    neighbor_distances = torch.zeros((0,))
+
+    match = (
+        "NaNs detected in the k-space filter result. This are probably caused "
+        "by an unsuitable `mesh_spacing`, resulting in a problematic grid of "
+        r"shape: \[1, 16, 16, 32\]. Try adjsuting the grid by using a "
+        "different `mesh_spacing` value."
+    )
+    with pytest.raises(ValueError, match=match):
+        calculator.forward(
+            charges=charges,
+            positions=positions,
+            cell=cell,
+            neighbor_indices=neighbor_indices,
+            neighbor_distances=neighbor_distances,
+        )

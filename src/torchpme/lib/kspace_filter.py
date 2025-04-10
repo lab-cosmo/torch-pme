@@ -178,7 +178,7 @@ class KSpaceFilter(torch.nn.Module):
 
         filter_hat = mesh_hat * self._kfilter
 
-        return torch.fft.irfftn(
+        result = torch.fft.irfftn(
             filter_hat,
             norm=self._ifft_norm,
             dim=dims,
@@ -187,6 +187,16 @@ class KSpaceFilter(torch.nn.Module):
             # well-defined
             s=mesh_values.shape[-3:],
         )
+
+        if torch.isnan(result).any():
+            raise ValueError(
+                "NaNs detected in the k-space filter result. This are probably caused "
+                "by an unsuitable `mesh_spacing`, resulting in a problematic grid of "
+                f"shape: {list(mesh_values.shape)}. Try adjsuting the grid by using a "
+                "different `mesh_spacing` value."
+            )
+
+        return result
 
     def _prep_kvectors(
         self, cell: Optional[torch.Tensor], ns_mesh: Optional[torch.Tensor]
