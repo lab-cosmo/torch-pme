@@ -230,11 +230,13 @@ def test_kspace_filter_error_catch():
     neighbor_indices = torch.zeros((0, 2), dtype=torch.int64)
     neighbor_distances = torch.zeros((0,))
 
-    with pytest.raises(
-        ValueError,
-        match=r"NaNs found in the output of the k-space filter. This is \(likely\) due "
-        "to a bad setting of `mesh_spacing`. Please try a different value.",
-    ):
+    match = (
+        "NaNs detected in the k-space filter result. This are probably caused "
+        "by an unsuitable `mesh_spacing`, resulting in a problematic grid of "
+        r"shape: \[1, 16, 16, 32\]. Try adjsuting the grid by using a "
+        "different `mesh_spacing` value."
+    )
+    with pytest.raises(ValueError, match=match):
         calculator.forward(
             charges=charges,
             positions=positions,
