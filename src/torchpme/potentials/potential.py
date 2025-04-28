@@ -65,7 +65,7 @@ class Potential(torch.nn.Module):
 
         return torch.where(
             dist < self.exclusion_radius,
-            ((1 - (dist / self.exclusion_radius) ** 12)) ** 4,
+            (1 - (dist / self.exclusion_radius) ** 12) ** 4,
             0.0,
         )
 
