@@ -285,7 +285,9 @@ def test_f_cutoff(exclusion_radius):
 
     dist = torch.tensor([0.3])
     fcut = coul.f_cutoff(dist)
-    torch.allclose(fcut, 0.5 * (1.0 + torch.cos(torch.pi * dist / exclusion_radius)))
+    assert_close(
+        fcut, 0.5 * (1.0 + torch.cos(torch.pi * (dist / exclusion_radius) ** 8))
+    )
 
 
 @pytest.mark.parametrize("smearing", smearinges)
