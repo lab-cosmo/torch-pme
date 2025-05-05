@@ -57,7 +57,7 @@ chemiscope.show(
 
 cutoff = frames[0].cell.array[0, 0] / 2 - 1e-6
 smearing = cutoff / 6.0
-lr_wavelength = 0.5 * smearing
+lr_wavelength = 0.25 * smearing
 
 # %%
 #
