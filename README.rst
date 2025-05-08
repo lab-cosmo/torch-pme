@@ -78,7 +78,7 @@ Here is a simple example to get started with *torch-pme*:
    >>> import torchpme
 
    >>> # Single charge in a cubic box
-   >>> positions = torch.zeros((1, 3), requires_grad=True)
+   >>> positions = torch.zeros((1, 3))
    >>> cell = 8 * torch.eye(3)
    >>> charges = torch.tensor([[1.0]])
 
@@ -99,6 +99,9 @@ Here is a simple example to get started with *torch-pme*:
    >>> # Initialize potential and calculator
    >>> potential = torchpme.CoulombPotential(smearing)
    >>> calculator = torchpme.P3MCalculator(potential, **p3m_parameters)
+
+   >>> # Start recording operations done to ``positions``
+   >>> _ = positions.requires_grad_()
 
    >>> # Compute (per-atom) potentials
    >>> potentials = calculator.forward(
