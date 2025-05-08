@@ -132,26 +132,26 @@ Submit new features or bug fixes through a `pull request
 Reference
 ---------
 
-If you use *torch-pme* for your work, please read and cite our preprint available on
-`arXiv`_.
+If you use *torch-pme* for your work, please read and cite our publication available on
+`JCP`_.
 
 .. code-block::
 
-   @article{loche_fast_2024,
-      title = {Fast and Flexible Range-Separated Models for Atomistic Machine Learning},
-      author = {Loche, Philip and {Huguenin-Dumittan}, Kevin K. and Honarmand, Melika and Xu, Qianjun and Rumiantsev, Egor and How, Wei Bin and Langer, Marcel F. and Ceriotti, Michele},
-      year = {2024},
-      month = dec,
-      number = {arXiv:2412.03281},
-      eprint = {2412.03281},
-      primaryclass = {physics},
-      publisher = {arXiv},
-      doi = {10.48550/arXiv.2412.03281},
-      urldate = {2024-12-05},
-      archiveprefix = {arXiv}
-      }
+   @article{10.1063/5.0251713,
+      title = {Fast and flexible long-range models for atomistic machine learning},
+      author = {Loche, Philip and Huguenin-Dumittan, Kevin K. and Honarmand, Melika and Xu, Qianjun and Rumiantsev, Egor and How, Wei Bin and Langer, Marcel F. and Ceriotti, Michele},
+      journal = {The Journal of Chemical Physics},
+      volume = {162},
+      number = {14},
+      pages = {142501},
+      year = {2025},
+      month = {04},
+      issn = {0021-9606},
+      doi = {10.1063/5.0251713},
+      url = {https://doi.org/10.1063/5.0251713},
+   }
 
-.. _`arXiv`: http://arxiv.org/abs/2412.03281
+.. _`JCP`: https://doi.org/10.1063/5.0251713
 
 .. marker-contributing
 
