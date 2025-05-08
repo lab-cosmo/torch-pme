@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools", "setuptools_scm>=8", "wheel"]
+requires = ["setuptools >= 77", "setuptools_scm>=8", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -7,7 +7,6 @@ authors = [{name = "torch-pme developers"}]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: BSD License",
     "Natural Language :: English",
     "Operating System :: POSIX",
     "Operating System :: MacOS :: MacOS X",
@@ -38,7 +37,7 @@ keywords = [
     "Scientific Computing",
     "TorchScript",
 ]
-license = {text = "BSD-3-Clause"}
+license = "BSD-3-Clause"
 name = "torch-pme"
 readme = "README.rst"
 requires-python = ">=3.9"
