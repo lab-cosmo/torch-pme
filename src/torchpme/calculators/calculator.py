@@ -54,7 +54,12 @@ class Calculator(torch.nn.Module):
         # contained in the neighbor list
         with profiler.record_function("compute bare potential"):
             if self.potential.smearing is None:
-                potentials_bare = self.potential.from_dist(neighbor_distances)
+                if self.potential.exclusion_radius is None:
+                    potentials_bare = self.potential.from_dist(neighbor_distances)
+                else:
+                    potentials_bare = self.potential.from_dist(neighbor_distances) * (
+                        1 - self.potential.f_cutoff(neighbor_distances)
+                    )
             else:
                 potentials_bare = self.potential.sr_from_dist(neighbor_distances)
 
