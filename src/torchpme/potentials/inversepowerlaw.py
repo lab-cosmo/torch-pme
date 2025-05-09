@@ -31,6 +31,9 @@ class InversePowerLawPotential(Potential):
     :param: exclusion_radius: float or torch.Tensor containing the length scale
         corresponding to a local environment. See also
         :class:`Potential`.
+    :param exclusion_degree: Controls the sharpness of the transition in the cutoff function
+        applied within the ``exclusion_radius``. The cutoff is computed as a raised cosine
+        with exponent ``exclusion_degree``
     """
 
     def __init__(

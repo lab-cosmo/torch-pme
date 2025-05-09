@@ -30,6 +30,9 @@ class Potential(torch.nn.Module):
     :param exclusion_radius: A length scale that defines a *local environment* within
         which the potential should be smoothly zeroed out, as it will be described by a
         separate model.
+    :param exclusion_degree: Controls the sharpness of the transition in the cutoff function
+        applied within the ``exclusion_radius``. The cutoff is computed as a raised cosine
+        with exponent ``exclusion_degree``
     """
 
     def __init__(
@@ -55,7 +58,8 @@ class Potential(torch.nn.Module):
         r"""
         Default cutoff function defining the *local* region that should be excluded from
         the computation of a long-range model. Defaults to a shifted cosine
-        :math:`(1+\cos \pi r/r_\mathrm{cut})/2`.
+        :math:`1 - ((1 - \cos \pi r/r_\mathrm{cut})/2) ^ n`. where :math:`n` is the
+        ``exclusion_degree`` parameter.
 
         :param dist: a torc.Tensor containing the interatomic distances over which the
             cutoff function should be computed.
