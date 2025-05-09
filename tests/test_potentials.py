@@ -280,13 +280,19 @@ def test_no_impl():
 
 @pytest.mark.parametrize("exclusion_radius", [0.5, 1.0, 2.0])
 def test_f_cutoff(exclusion_radius):
-    coul = CoulombPotential(exclusion_radius=exclusion_radius)
+    exclusion_degree = 10
+    coul = CoulombPotential(
+        exclusion_radius=exclusion_radius, exclusion_degree=exclusion_degree
+    )
     coul.to(dtype=dtype)
 
     dist = torch.tensor([0.3])
     fcut = coul.f_cutoff(dist)
     assert_close(
-        fcut, 0.5 * (1.0 + torch.cos(torch.pi * (dist / exclusion_radius) ** 8))
+        fcut,
+        1
+        - ((1 - torch.cos(torch.pi * (dist / exclusion_radius))) * 0.5)
+        ** exclusion_degree,
     )
 
 

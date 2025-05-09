@@ -36,10 +36,12 @@ class CombinedPotential(Potential):
         learnable_weights: Optional[bool] = True,
         smearing: Optional[float] = None,
         exclusion_radius: Optional[float] = None,
+        exclusion_degree: int = 1,
     ):
         super().__init__(
             smearing=smearing,
             exclusion_radius=exclusion_radius,
+            exclusion_degree=exclusion_degree,
         )
 
         smearings = [pot.smearing for pot in potentials]

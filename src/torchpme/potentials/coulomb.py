@@ -32,8 +32,9 @@ class CoulombPotential(Potential):
         self,
         smearing: Optional[float] = None,
         exclusion_radius: Optional[float] = None,
+        exclusion_degree: int = 1,
     ):
-        super().__init__(smearing, exclusion_radius)
+        super().__init__(smearing, exclusion_radius, exclusion_degree)
 
     def from_dist(self, dist: torch.Tensor) -> torch.Tensor:
         """

@@ -36,6 +36,7 @@ class Potential(torch.nn.Module):
         self,
         smearing: Optional[float] = None,
         exclusion_radius: Optional[float] = None,
+        exclusion_degree: int = 1,
     ):
         super().__init__()
 
@@ -47,6 +48,7 @@ class Potential(torch.nn.Module):
             self.smearing = None
 
         self.exclusion_radius = exclusion_radius
+        self.exclusion_degree = exclusion_degree
 
     @torch.jit.export
     def f_cutoff(self, dist: torch.Tensor) -> torch.Tensor:
@@ -65,7 +67,9 @@ class Potential(torch.nn.Module):
 
         return torch.where(
             dist < self.exclusion_radius,
-            (1 + torch.cos(torch.pi * (dist / self.exclusion_radius) ** 8)) * 0.5,
+            1
+            - ((1 - torch.cos(torch.pi * (dist / self.exclusion_radius))) * 0.5)
+            ** self.exclusion_degree,
             0.0,
         )
 

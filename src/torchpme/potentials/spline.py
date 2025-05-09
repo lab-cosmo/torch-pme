@@ -55,10 +55,12 @@ class SplinePotential(Potential):
         yhat_at_zero: Optional[float] = None,
         smearing: Optional[float] = None,
         exclusion_radius: Optional[float] = None,
+        exclusion_degree: int = 1,
     ):
         super().__init__(
             smearing=smearing,
             exclusion_radius=exclusion_radius,
+            exclusion_degree=exclusion_degree,
         )
 
         if len(y_grid) != len(r_grid):

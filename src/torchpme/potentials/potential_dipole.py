@@ -33,6 +33,7 @@ class PotentialDipole(torch.nn.Module):
         self,
         smearing: Optional[float] = None,
         exclusion_radius: Optional[float] = None,
+        exclusion_degree: int = 1,
         epsilon: float = 0.0,
     ):
         super().__init__()
@@ -70,7 +71,9 @@ class PotentialDipole(torch.nn.Module):
 
         return torch.where(
             r_mag < self.exclusion_radius,
-            (1 + torch.cos(r_mag * (torch.pi / self.exclusion_radius))) * 0.5,
+            1
+            - ((1 - torch.cos(torch.pi * (r_mag / self.exclusion_radius))) * 0.5)
+            ** self.exclusion_degree,
             0.0,
         )
 

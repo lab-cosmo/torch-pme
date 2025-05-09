@@ -38,8 +38,9 @@ class InversePowerLawPotential(Potential):
         exponent: int,
         smearing: Optional[float] = None,
         exclusion_radius: Optional[float] = None,
+        exclusion_degree: int = 1,
     ):
-        super().__init__(smearing, exclusion_radius)
+        super().__init__(smearing, exclusion_radius, exclusion_degree)
 
         # function call to check the validity of the exponent
         gammaincc_over_powerlaw(exponent, torch.tensor(1.0))
