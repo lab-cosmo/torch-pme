@@ -26,14 +26,18 @@ class CoulombPotential(Potential):
     :param exclusion_radius: A length scale that defines a *local environment* within
         which the potential should be smoothly zeroed out, as it will be described by a
         separate model.
+    :param exclusion_degree: Controls the sharpness of the transition in the cutoff function
+        applied within the ``exclusion_radius``. The cutoff is computed as a raised cosine
+        with exponent ``exclusion_degree``
     """
 
     def __init__(
         self,
         smearing: Optional[float] = None,
         exclusion_radius: Optional[float] = None,
+        exclusion_degree: int = 1,
     ):
-        super().__init__(smearing, exclusion_radius)
+        super().__init__(smearing, exclusion_radius, exclusion_degree)
 
     def from_dist(self, dist: torch.Tensor) -> torch.Tensor:
         """

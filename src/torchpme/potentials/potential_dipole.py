@@ -27,16 +27,21 @@ class PotentialDipole(torch.nn.Module):
         which the potential should be smoothly zeroed out, as it will be described by a
         separate model.
     :param epsilon: Dielectric constant of the medium in which the dipoles are embedded.
+    :param exclusion_degree: Controls the sharpness of the transition in the cutoff function
+        applied within the ``exclusion_radius``. The cutoff is computed as a raised cosine
+        with exponent ``exclusion_degree``
     """
 
     def __init__(
         self,
         smearing: Optional[float] = None,
         exclusion_radius: Optional[float] = None,
+        exclusion_degree: int = 1,
         epsilon: float = 0.0,
     ):
         super().__init__()
 
+        self.exclusion_degree = exclusion_degree
         if smearing is not None:
             self.register_buffer(
                 "smearing", torch.tensor(smearing, dtype=torch.float64)
@@ -57,7 +62,8 @@ class PotentialDipole(torch.nn.Module):
         r"""
         Default cutoff function defining the *local* region that should be excluded from
         the computation of a long-range model. Defaults to a shifted cosine
-        :math:`(1+\cos \pi r/r_\mathrm{cut})/2`.
+        :math:`1 - ((1 - \cos \pi r/r_\mathrm{cut})/2) ^ n`. where :math:`n` is the
+        ``exclusion_degree`` parameter.
 
         :param vector: torch.tensor containing the vectors at which the potential is to
             be evaluated.
@@ -70,7 +76,9 @@ class PotentialDipole(torch.nn.Module):
 
         return torch.where(
             r_mag < self.exclusion_radius,
-            (1 + torch.cos(r_mag * (torch.pi / self.exclusion_radius))) * 0.5,
+            1
+            - ((1 - torch.cos(torch.pi * (r_mag / self.exclusion_radius))) * 0.5)
+            ** self.exclusion_degree,
             0.0,
         )
 

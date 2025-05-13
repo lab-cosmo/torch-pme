@@ -42,6 +42,9 @@ class SplinePotential(Potential):
     :param exclusion_radius: A length scale that defines a *local environment* within
         which the potential should be smoothly zeroed out, as it will be described by a
         separate model.
+    :param exclusion_degree: Controls the sharpness of the transition in the cutoff function
+        applied within the ``exclusion_radius``. The cutoff is computed as a raised cosine
+        with exponent ``exclusion_degree``
     """
 
     def __init__(
@@ -55,10 +58,12 @@ class SplinePotential(Potential):
         yhat_at_zero: Optional[float] = None,
         smearing: Optional[float] = None,
         exclusion_radius: Optional[float] = None,
+        exclusion_degree: int = 1,
     ):
         super().__init__(
             smearing=smearing,
             exclusion_radius=exclusion_radius,
+            exclusion_degree=exclusion_degree,
         )
 
         if len(y_grid) != len(r_grid):
