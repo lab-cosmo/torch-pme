@@ -30,6 +30,10 @@ Added
 * Add a nan check for ``KSpaceFilter``
 * Allow passing ``full_neighbor_list`` and ``prefactor`` to tuning functions
 
+Fixed
+#####
+
+* Fix exclusion_radius to work in a direct calculator
 `Version 0.3.0 <https://github.com/lab-cosmo/torch-pme/releases/tag/v0.3.0>`_ - 2025-02-21
 ------------------------------------------------------------------------------------------
 

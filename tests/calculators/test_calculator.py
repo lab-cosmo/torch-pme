@@ -16,9 +16,13 @@ NEIGHBOR_DISTANCES = torch.ones(3)
 
 # non-range-separated Coulomb direct calculator
 class CalculatorTest(Calculator):
-    def __init__(self):
+    def __init__(self, exclusion_radius=None, exclusion_degree=1):
         super().__init__(
-            potential=CoulombPotential(smearing=None, exclusion_radius=None)
+            potential=CoulombPotential(
+                smearing=None,
+                exclusion_radius=exclusion_radius,
+                exclusion_degree=exclusion_degree,
+            ),
         )
 
 
@@ -255,3 +259,49 @@ def test_invalid_dtype_neighbor_distances():
             neighbor_indices=NEIGHBOR_INDICES,
             neighbor_distances=NEIGHBOR_DISTANCES.to(dtype=torch.float64),
         )
+
+
+def test_exclusion_radius():
+    """Test that the exclusion radius is applied correctly"""
+    exclusion_radius = 4.0
+    exclusion_degree = 8
+    calculator1 = CalculatorTest()
+    potential1 = calculator1.forward(
+        positions=POSITIONS_1,
+        charges=CHARGES_1,
+        cell=CELL_1,
+        neighbor_indices=NEIGHBOR_INDICES,
+        neighbor_distances=NEIGHBOR_DISTANCES,
+    )
+    calculator2 = CalculatorTest(
+        exclusion_radius=exclusion_radius, exclusion_degree=exclusion_degree
+    )
+    potential2 = calculator2.forward(
+        positions=POSITIONS_1,
+        charges=CHARGES_1,
+        cell=CELL_1,
+        neighbor_indices=NEIGHBOR_INDICES,
+        neighbor_distances=NEIGHBOR_DISTANCES,
+    )
+    assert torch.allclose(
+        (
+            potential1
+            * (
+                1
+                - (
+                    1
+                    - (
+                        (
+                            1
+                            - torch.cos(
+                                torch.pi * (NEIGHBOR_DISTANCES[0] / exclusion_radius)
+                            )
+                        )
+                        * 0.5
+                    )
+                    ** exclusion_degree
+                )
+            )
+        ),
+        potential2,
+    )
