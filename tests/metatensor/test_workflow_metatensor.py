@@ -14,7 +14,7 @@ sys.path.append(str(Path(__file__).parents[1]))
 from helpers import DEVICES, DTYPES
 
 mts_torch = pytest.importorskip("metatensor.torch")
-mts_atomistic = pytest.importorskip("metatensor.torch.atomistic")
+mts_atomistic = pytest.importorskip("metatomic.torch")
 
 SMEARING = 0.1
 LR_WAVELENGTH = SMEARING / 4
