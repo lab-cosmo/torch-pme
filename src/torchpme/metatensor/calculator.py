@@ -1,12 +1,19 @@
 import torch
 
 try:
-    from metatensor.torch import Labels, TensorBlock, TensorMap
-    from metatomic.torch import System
+    from metatensor.torch import Labels, TensorBlock, TensorMap 
 except ImportError:
     raise ImportError(
         "metatensor.torch is required for torchpme.metatensor but is not installed. "
         "Try installing it with:\npip install metatensor[torch]"
+    ) from None
+
+try:
+    from metatomic.torch import System
+except ImportError:
+    raise ImportError(
+        "metatomic is required for torchpme.metatensor but is not installed. "
+        "Try installing it with:\npip install metatomic"
     ) from None
 
 from .. import calculators as torch_calculators
