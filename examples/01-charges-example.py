@@ -34,7 +34,7 @@ import torch
 import vesin.torch
 import vesin.torch.metatensor
 from metatensor.torch import Labels, TensorBlock, TensorMap
-from metatensor.torch.atomistic import NeighborListOptions, System
+from metatomic.torch import NeighborListOptions, System
 
 import torchpme
 from torchpme.tuning import tune_pme
@@ -212,7 +212,7 @@ calculator_metatensor.to(dtype=dtype)
 # %%
 #
 # Computation with metatensor involves using Metatensor's :class:`System
-# <metatensor.torch.atomistic.System>` class. The ``System`` stores atomic ``types``,
+# <metatomic.torch.System>` class. The ``System`` stores atomic ``types``,
 # ``positions``, and ``cell`` dimensions.
 #
 # .. note::
@@ -227,7 +227,7 @@ system = System(types=types, positions=positions, cell=cell, pbc=pbc)
 #
 # We now compute the neighborlist for our ``system`` using the `vesin metatensor
 # interface <https://luthaf.fr/vesin/latest/metatensor.html>`_. This requires creating a
-# :class:`NeighborListOptions <metatensor.torch.atomistic.NeighborListOptions>` to set
+# :class:`NeighborListOptions <metatomic.torch.NeighborListOptions>` to set
 # the cutoff and the type of list.
 
 options = NeighborListOptions(cutoff=4.0, full_list=True, strict=False)
@@ -303,7 +303,7 @@ print(potential_metatensor[0])
 #
 # We now create new charges data based on the species-wise ``charges_one_hot`` and
 # overwrite the ``system``'s charges data using ``override=True`` when applying the
-# :meth:`add_data <metatensor.torch.atomistic.System.add_data>` method.
+# :meth:`add_data <metatomic.torch.System.add_data>` method.
 
 block_one_hot = TensorBlock(
     values=charges_one_hot,

@@ -52,7 +52,7 @@ examples = [
     "vesin >= 0.3.0",
     "vesin-torch >= 0.3.0",
 ]
-metatensor = ["metatensor-torch <0.8,>=0.7"]
+metatensor = ["metatensor-torch <0.8,>=0.7", "metatrain"]
 
 [project.urls]
 homepage = "https://lab-cosmo.github.io/torch-pme"

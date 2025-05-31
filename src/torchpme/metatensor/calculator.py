@@ -1,7 +1,7 @@
 import torch
 
 try:
-    from metatensor.torch import Labels, TensorBlock, TensorMap 
+    from metatensor.torch import Labels, TensorBlock, TensorMap
 except ImportError:
     raise ImportError(
         "metatensor.torch is required for torchpme.metatensor but is not installed. "

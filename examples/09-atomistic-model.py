@@ -33,8 +33,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 from metatensor.torch import Labels, TensorBlock, TensorMap
-from metatensor.torch.atomistic import (
-    MetatensorAtomisticModel,
+from metatomic.torch import (
+    AtomisticModel,
     ModelCapabilities,
     ModelEvaluationOptions,
     ModelMetadata,
@@ -44,7 +44,7 @@ from metatensor.torch.atomistic import (
 )
 
 # Integration with ASE calculator for metatensor atomistic models
-from metatensor.torch.atomistic.ase_calculator import MetatensorCalculator
+from metatomic.torch.ase_calculator import MetatomicCalculator
 
 # the usual suspect
 import torchpme
@@ -84,7 +84,7 @@ chemiscope.show(
 # -----------------
 #
 # For computing the electrostatic potential we need to assign ``charges`` to a
-# :class:`metatensor.torch.atomistic.System` since ``charges`` will not be provided by
+# :class:`metatomic.torch.System` since ``charges`` will not be provided by
 # the engine. Here, we define a simple charge assignment scheme based on the atomic
 # number. We set the partial charge of all hydrogens :math:`1` in terms of the
 # elementary charge. Such an assignemnt scheme can also be more complex and for example
@@ -249,8 +249,8 @@ class CalculatorModel(torch.nn.Module):
 #
 # .. warning::
 #
-#  Due to limitatations in the engine interface of the :class:`MetatensorAtomisticModel
-#  <metatensor.torch.atomistic.MetatensorAtomisticModel>`, the evaluation of the energy for a
+#  Due to limitatations in the engine interface of the :class:`AtomisticModel
+#  <metatomic.torch.AtomisticModel>`, the evaluation of the energy for a
 #  subset of atoms is not supported. If you want to compute the energy for a subset you
 #  have to filter the contributions after the computation of the whole system.
 #
@@ -300,7 +300,7 @@ length_unit = "angstrom"
 # %%
 #
 # We now have to define what our model is able to compute. The
-# :class:`metatensor.torch.atomistic.ModelOutput` defines that the model will compute
+# :class:`metatomic.torch.ModelOutput` defines that the model will compute
 # the energy in eV. Besides the obvous parameters (``atomic_types``,
 # ``supported_devices`` and the ``dtype``) it is very important to set
 # ``interaction_range`` to be **infinite**. For a finite range the provided system of
@@ -328,9 +328,7 @@ model_capabilities = ModelCapabilities(
 model = CalculatorModel(calculator=calculator, cutoff=cutoff)
 model.eval()
 
-atomistic_model = MetatensorAtomisticModel(
-    model.eval(), ModelMetadata(), model_capabilities
-)
+atomistic_model = AtomisticModel(model.eval(), ModelMetadata(), model_capabilities)
 
 
 # %%
@@ -343,7 +341,7 @@ atomistic_model = MetatensorAtomisticModel(
 # To start the simulation we first set the ``atomistic_model`` as the calculator for our
 # plasma.
 
-ewald_mta_calculator = MetatensorCalculator(atomistic_model)
+ewald_mta_calculator = MetatomicCalculator(atomistic_model)
 atoms.calc = ewald_mta_calculator
 
 # %%
@@ -476,11 +474,11 @@ pme_calculator = torchpme.metatensor.PMECalculator(
 
 pme_model = CalculatorModel(calculator=pme_calculator, cutoff=cutoff)
 
-pme_atomistic_model = MetatensorAtomisticModel(
+pme_atomistic_model = AtomisticModel(
     pme_model.eval(), ModelMetadata(), model_capabilities
 )
 
-pme_mta_calculator = MetatensorCalculator(pme_atomistic_model)
+pme_mta_calculator = MetatomicCalculator(pme_atomistic_model)
 
 # P3M
 p3m_calculator = torchpme.metatensor.P3MCalculator(
@@ -491,11 +489,11 @@ p3m_calculator = torchpme.metatensor.P3MCalculator(
 
 p3m_model = CalculatorModel(calculator=p3m_calculator, cutoff=cutoff)
 
-p3m_atomistic_model = MetatensorAtomisticModel(
+p3m_atomistic_model = AtomisticModel(
     p3m_model.eval(), ModelMetadata(), model_capabilities
 )
 
-p3m_mta_calculator = MetatensorCalculator(p3m_atomistic_model)
+p3m_mta_calculator = MetatomicCalculator(p3m_atomistic_model)
 
 # %%
 # We can then compare the values obtained with the two Ewald engines
