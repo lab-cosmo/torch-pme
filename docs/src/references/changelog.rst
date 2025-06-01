@@ -27,8 +27,25 @@ changelog <https://keepachangelog.com/en/1.1.0/>`_ format. This project follows
 Added
 #####
 
+`Version 0.3.1 <https://github.com/lab-cosmo/torch-pme/releases/tag/v0.3.1>`_ - 2025-06-01
+------------------------------------------------------------------------------------------
+
+Added
+#####
+
 * Add a nan check for ``KSpaceFilter``
 * Allow passing ``full_neighbor_list`` and ``prefactor`` to tuning functions
+* Added backlink to the Cookbook
+* Fix the lr_wavelength in the combined potential example to make the results coincide with the theoretical ones
+* Update paper reference to JCP
+* Introduce a new cutoff function for more aggressive exclusion.
+
+Fixed
+#####
+
+* Fix gradient recording in Quickstart
+* Update metatensor bindings to metatomic
+
 
 `Version 0.3.0 <https://github.com/lab-cosmo/torch-pme/releases/tag/v0.3.0>`_ - 2025-02-21
 ------------------------------------------------------------------------------------------
