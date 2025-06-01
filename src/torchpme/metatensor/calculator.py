@@ -2,11 +2,18 @@ import torch
 
 try:
     from metatensor.torch import Labels, TensorBlock, TensorMap
-    from metatensor.torch.atomistic import System
 except ImportError:
     raise ImportError(
         "metatensor.torch is required for torchpme.metatensor but is not installed. "
         "Try installing it with:\npip install metatensor[torch]"
+    ) from None
+
+try:
+    from metatomic.torch import System
+except ImportError:
+    raise ImportError(
+        "metatomic is required for torchpme.metatensor but is not installed. "
+        "Try installing it with:\npip install metatomic"
     ) from None
 
 from .. import calculators as torch_calculators
@@ -109,13 +116,13 @@ class Calculator(torch.nn.Module):
 
         :param system: System to run the calculations. The system must have attached
             ``"charges"`` using the :meth:`add_data
-            <metatensor.torch.atomistic.System.add_data>` method.
+            <metatomic.torch.System.add_data>` method.
         :param neighbors: The neighbor list. If a neighbor list is attached to a
-            :class:`metatensor.torch.atomistic.System` it can be extracted with the
+            :class:`metatomic.torch.System` it can be extracted with the
             :meth:`get_neighborlist
-            <metatensor.torch.atomistic.System.get_neighborlist>` method using a
+            <metatomic.torch.System.get_neighborlist>` method using a
             :class:`NeighborListOptions
-            <metatensor.torch.atomistic.NeighborListOptions>`. Note to use the same
+            <metatomic.torch.NeighborListOptions>`. Note to use the same
             ``full_list`` option for these options as provided for
             ``full_neighbor_list`` in the constructor.
 
@@ -125,7 +132,7 @@ class Calculator(torch.nn.Module):
                 required to be passed explicitly here. While it's possible to design the
                 class to automatically extract the neighbor list by accepting a
                 :class:`NeighborListOptions
-                <metatensor.torch.atomistic.NeighborListOptions>` directly in the
+                <metatomic.torch.NeighborListOptions>` directly in the
                 constructor, we chose explicit passing for consistency with the torch
                 interface.
 
