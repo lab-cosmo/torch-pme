@@ -174,6 +174,6 @@ Thanks goes to all people that make *torch-pme* possible:
    :alt: Code coverage
    :target: https://codecov.io/gh/lab-cosmo/torch-pme
 
-.. |docs| image:: https://img.shields.io/badge/documentation-latest-sucess
+.. |docs| image:: https://img.shields.io/badge/📚_documentation-latest-sucess
    :alt: Documentation
    :target: `documentation`_
