@@ -174,7 +174,7 @@ class EwaldErrorBounds(TuningErrorBounds):
         return (
             self.prefac**0.5
             / smearing
-            / torch.sqrt(2 * torch.pi**2 * self.volume / lr_wavelength)
+            / torch.sqrt(torch.pi**2 * self.volume / lr_wavelength)
             * torch.exp(-2 * torch.pi**2 * smearing**2 / lr_wavelength**2)
         )
 
