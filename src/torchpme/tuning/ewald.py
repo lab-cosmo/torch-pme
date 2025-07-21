@@ -174,8 +174,9 @@ class EwaldErrorBounds(TuningErrorBounds):
         return (
             self.prefac**0.5
             / smearing
-            / torch.sqrt(torch.pi**2 * self.volume / lr_wavelength)
-            * torch.exp(-2 * torch.pi**2 * smearing**2 / lr_wavelength**2)
+            / torch.pi
+            / torch.sqrt(self.volume / lr_wavelength)
+            * torch.exp(-2 * (torch.pi * smearing / lr_wavelength) ** 2)
         )
 
     def err_rspace(self, smearing: torch.Tensor, cutoff: torch.Tensor) -> torch.Tensor:
