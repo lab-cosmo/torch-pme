@@ -27,13 +27,6 @@ potential at the atomic positions as output. To use torch-pme as a modular libra
 provide a set of building blocks that can be combined to build custom range-separated
 architectures, as shown in the figure below.
 
-.. note::
-
-   ``torch-pme`` adopts a different parameter convention. Instead of using the usual
-   parameters, the inverse width of Gaussian charge cloud :math:`\alpha` and the Fourier
-   space cutoff :math:`K`, we use the smearing :math:`\sigma=\frac{1}{\sqrt{2}\alpha}`
-   and the long-range resolution :math:`h=\frac{2\pi}{K}`.
-
 .. figure:: ../static/images/pme-structure.*
     :width: 650px
     :align: center
@@ -44,3 +37,11 @@ architectures, as shown in the figure below.
     local interatomic distance information with the evaluation of the long-range part
     :math:`v_\mathrm{LR}(k)` using grids via a :ref:`mesh_interpolator` and a
     :ref:`kspace_filter`.
+
+.. note::
+
+   ``torch-pme`` uses parameters like smearing :math:`\sigma` and the long-range
+   resolution :math:`h` to control the long-range part of the potential. Another common
+   set of parameters are the inverse width of a Gaussian charge cloud :math:`\alpha` and
+   the Fourier space cutoff :math:`K`. These two definitions are related by
+   :math:`\sigma=\frac{1}{\sqrt{2}\alpha}` and :math:`h=\frac{2\pi}{K}`.
