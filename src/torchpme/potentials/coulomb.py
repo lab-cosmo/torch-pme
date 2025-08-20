@@ -39,14 +39,21 @@ class CoulombPotential(Potential):
     ):
         super().__init__(smearing, exclusion_radius, exclusion_degree)
 
-    def from_dist(self, dist: torch.Tensor) -> torch.Tensor:
+    def from_dist(
+        self, dist: torch.Tensor, pair_mask: torch.Tensor | None = None
+    ) -> torch.Tensor:
         """
         Full :math:`1/r` potential as a function of :math:`r`.
 
         :param dist: torch.tensor containing the distances at which the potential is to
             be evaluated.
         """
-        return 1.0 / dist
+        result = 1.0 / dist.clamp(min=1e-12)
+
+        if pair_mask is not None:
+            result = result * pair_mask  # elementwise multiply, keeps shape fixed
+
+        return result
 
     def lr_from_dist(self, dist: torch.Tensor) -> torch.Tensor:
         """
