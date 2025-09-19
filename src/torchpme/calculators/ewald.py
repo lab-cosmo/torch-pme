@@ -158,13 +158,13 @@ class EwaldCalculator(Calculator):
             q_z_squared = torch.sum(charges * z_i**2, dim=0)
             V = torch.abs(torch.linalg.det(cell))
             E_slab = (
-                (2.0 * torch.pi / V)
+                (4.0 * torch.pi / V)
                 * (
                     M_axis**2
                     - charge_tot * q_z_squared
                     - charge_tot**2 / 12.0 * basis_len**2
                 )
-                / charges
+                / (charges * len(charges))
             )
             energy += E_slab
 
