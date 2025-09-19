@@ -152,15 +152,20 @@ class EwaldCalculator(Calculator):
 
         if self.periodicity == 2:
             axis = self.nonperiodic_axis
-
-            cell_inv = torch.linalg.inv(cell)
-            frac = positions @ cell_inv.T
-
-            basis_len = torch.linalg.norm(cell, dim=1)[axis]
-            coord_axis = ((frac[:, axis] - 0.5) * basis_len).view(-1, 1)
-            M_axis = torch.sum(charges * coord_axis, dim=0)
+            z_i = positions[:, axis].view(-1, 1)
+            basis_len = torch.linalg.norm(cell[axis])
+            M_axis = torch.sum(charges * z_i, dim=0)
+            q_z_squared = torch.sum(charges * z_i**2, dim=0)
             V = torch.abs(torch.linalg.det(cell))
-            E_slab = (4.0 * torch.pi / V) * M_axis**2 / charges
-            energy += self.prefactor * E_slab
+            E_slab = (
+                (2.0 * torch.pi / V)
+                * (
+                    M_axis**2
+                    - charge_tot * q_z_squared
+                    - charge_tot**2 / 12.0 * basis_len**2
+                )
+                / charges
+            )
+            energy += E_slab
 
         return energy / 2
