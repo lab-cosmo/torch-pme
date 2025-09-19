@@ -61,6 +61,7 @@ class EwaldCalculator(Calculator):
         lr_wavelength: float,
         full_neighbor_list: bool = False,
         prefactor: float = 1.0,
+        periodic: tuple[bool, bool, bool] = (True, True, True),
     ):
         super().__init__(
             potential=potential,
@@ -72,6 +73,23 @@ class EwaldCalculator(Calculator):
                 "Must specify range radius to use a potential with EwaldCalculator"
             )
         self.lr_wavelength: float = lr_wavelength
+
+        if not (isinstance(periodic, (list, tuple)) and len(periodic) == 3):
+            raise ValueError("`periodic` must be a 3-tuple of booleans")
+        self.periodic = tuple(bool(p) for p in periodic)
+        n_periodic = sum(self.periodic)
+        if n_periodic == 3:
+            self.periodicity = 3
+            self.nonperiodic_axis = None
+        elif n_periodic == 2:
+            self.periodicity = 2
+            self.nonperiodic_axis = int(
+                [i for i, p in enumerate(self.periodic) if not p][0]
+            )
+        else:
+            raise NotImplementedError(
+                "Only 3D periodic and single-nonperiodic (slab) modes are supported by this calculator"
+            )
 
     def _compute_kspace(
         self,
@@ -131,4 +149,20 @@ class EwaldCalculator(Calculator):
         prefac = self.potential.background_correction()
         energy -= 2 * prefac * charge_tot * ivolume
         # Compensate for double counting of pairs (i,j) and (j,i)
+
+        if self.periodicity == 2:
+            axis = self.nonperiodic_axis
+
+            cell_inv = torch.linalg.inv(cell)
+            frac = positions @ cell_inv.T
+
+            basis_len = torch.linalg.norm(cell, dim=1)[axis]
+            coord_axis = (frac[:, axis] - 0.5) * basis_len
+            M_axis = torch.sum(charges * coord_axis.view(-1, 1), dim=0)
+
+            V = torch.abs(torch.linalg.det(cell))
+            E_slab = (2.0 * torch.pi / V) * (M_axis * M_axis)
+
+            energy = energy + self.prefactor * E_slab
+
         return energy / 2
