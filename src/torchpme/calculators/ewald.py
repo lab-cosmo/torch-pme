@@ -158,10 +158,9 @@ class EwaldCalculator(Calculator):
 
             basis_len = torch.linalg.norm(cell, dim=1)[axis]
             coord_axis = ((frac[:, axis] - 0.5) * basis_len).view(-1, 1)
-            M_axis = torch.sum(charges * coord_axis.view(-1, 1), dim=0)
-
+            M_axis = torch.sum(charges * coord_axis, dim=0)
             V = torch.abs(torch.linalg.det(cell))
-            E_slab = (4.0 * torch.pi / V) * M_axis * coord_axis
-            energy -= self.prefactor * E_slab
+            E_slab = (4.0 * torch.pi / V) * M_axis**2 / charges
+            energy += self.prefactor * E_slab
 
         return energy / 2
