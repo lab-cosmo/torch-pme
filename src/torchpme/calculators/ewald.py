@@ -90,10 +90,13 @@ class EwaldCalculator(Calculator):
         elif n_periodic == 2:
             self.periodicity = 2
             self.nonperiodic_axis = int([i for i, p in enumerate(periodic) if not p][0])
+        elif n_periodic == 1:
+            self.periodicity = 1
+            self.nonperiodic_axis_1, self.nonperiodic_axis_2 = [
+                i for i, p in enumerate(periodic) if not p
+            ]
         else:
-            raise NotImplementedError(
-                "Only 3D periodic and single-nonperiodic (slab) modes are supported by this calculator"
-            )
+            raise ValueError("Ewald summation requires at least 1 periodic directions")
 
         # Define k-space cutoff from required real-space resolution
         k_cutoff = 2 * torch.pi / self.lr_wavelength
@@ -153,11 +156,28 @@ class EwaldCalculator(Calculator):
             z_i = positions[:, axis].view(-1, 1)
             basis_len = torch.linalg.norm(cell[axis])
             M_axis = torch.sum(charges * z_i, dim=0)
-            q_z_squared = torch.sum(charges * z_i**2, dim=0)
+            M_axis_sq = torch.sum(charges * z_i**2, dim=0)
             V = torch.abs(torch.linalg.det(cell))
             E_slab = (4.0 * torch.pi / V) * (
-                M_axis * z_i - q_z_squared - charge_tot / 12.0 * basis_len**2
+                z_i * M_axis
+                - 0.5 * (M_axis_sq + charge_tot * z_i**2)
+                - charge_tot / 12.0 * basis_len**2
             )
             energy += E_slab
+
+        elif self.periodicity == 1:
+            axis1 = self.nonperiodic_axis_1
+            axis2 = self.nonperiodic_axis_2
+            x_i = positions[:, axis1].view(-1, 1)
+            y_i = positions[:, axis2].view(-1, 1)
+            M_axis_x = torch.sum(charges * x_i, dim=0)
+            M_axis_y = torch.sum(charges * y_i, dim=0)
+            M_axis_x_sq = torch.sum(charges * x_i**2, dim=0)
+            M_axis_y_sq = torch.sum(charges * y_i**2, dim=0)
+            V = torch.abs(torch.linalg.det(cell))
+            E_wire = (2.0 * torch.pi / V) * (
+                x_i * M_axis_x + y_i * M_axis_y - 0.5 * (M_axis_x_sq + M_axis_y_sq)
+            )
+            energy += E_wire
 
         return energy / 2
