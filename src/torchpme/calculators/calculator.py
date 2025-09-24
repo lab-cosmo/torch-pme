@@ -106,6 +106,7 @@ class Calculator(torch.nn.Module):
         positions: torch.Tensor,
         neighbor_indices: torch.Tensor,
         neighbor_distances: torch.Tensor,
+        periodic: tuple[bool, bool, bool] = (True, True, True),
     ):
         r"""
         Compute the potential "energy".
@@ -163,6 +164,7 @@ class Calculator(torch.nn.Module):
             charges=charges,
             cell=cell,
             positions=positions,
+            periodic=periodic,
         )
 
         return self.prefactor * (potential_sr + potential_lr)

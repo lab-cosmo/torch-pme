@@ -61,7 +61,6 @@ class EwaldCalculator(Calculator):
         lr_wavelength: float,
         full_neighbor_list: bool = False,
         prefactor: float = 1.0,
-        periodic: tuple[bool, bool, bool] = (True, True, True),
     ):
         super().__init__(
             potential=potential,
@@ -74,29 +73,28 @@ class EwaldCalculator(Calculator):
             )
         self.lr_wavelength: float = lr_wavelength
 
-        if not (isinstance(periodic, (list, tuple)) and len(periodic) == 3):
-            raise ValueError("`periodic` must be a 3-tuple of booleans")
-        self.periodic = tuple(bool(p) for p in periodic)
-        n_periodic = sum(self.periodic)
-        if n_periodic == 3:
-            self.periodicity = 3
-            self.nonperiodic_axis = None
-        elif n_periodic == 2:
-            self.periodicity = 2
-            self.nonperiodic_axis = int(
-                [i for i, p in enumerate(self.periodic) if not p][0]
-            )
-        else:
-            raise NotImplementedError(
-                "Only 3D periodic and single-nonperiodic (slab) modes are supported by this calculator"
-            )
-
     def _compute_kspace(
         self,
         charges: torch.Tensor,
         cell: torch.Tensor,
         positions: torch.Tensor,
+        periodic: tuple[bool, bool, bool] = (True, True, True),
     ) -> torch.Tensor:
+        if not (isinstance(periodic, (list, tuple)) and len(periodic) == 3):
+            raise ValueError("`periodic` must be a 3-tuple of booleans")
+        periodic = tuple(bool(p) for p in periodic)
+        n_periodic = sum(periodic)
+        if n_periodic == 3:
+            self.periodicity = 3
+            self.nonperiodic_axis = None
+        elif n_periodic == 2:
+            self.periodicity = 2
+            self.nonperiodic_axis = int([i for i, p in enumerate(periodic) if not p][0])
+        else:
+            raise NotImplementedError(
+                "Only 3D periodic and single-nonperiodic (slab) modes are supported by this calculator"
+            )
+
         # Define k-space cutoff from required real-space resolution
         k_cutoff = 2 * torch.pi / self.lr_wavelength
 
