@@ -10,6 +10,7 @@ def _validate_parameters(
     neighbor_indices: torch.Tensor,
     neighbor_distances: torch.Tensor,
     smearing: Union[float, None],
+    periodic: Union[torch.Tensor, None] = None,
 ) -> None:
     dtype = positions.dtype
     device = positions.device
@@ -106,3 +107,16 @@ def _validate_parameters(
             f"type of `neighbor_distances` ({neighbor_distances.dtype}) must be same "
             f"as that of the `positions` class ({dtype})"
         )
+
+    if periodic is not None:
+        if periodic.shape != (3,):
+            raise ValueError(
+                "`periodic` must be a tensor of shape (3,), got "
+                f"tensor with shape {list(periodic.shape)}"
+            )
+
+        if periodic.device != device:
+            raise ValueError(
+                f"device of `periodic` ({periodic.device}) must be same as that of "
+                f"the `positions` class ({device})"
+            )

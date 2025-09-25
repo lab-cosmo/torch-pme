@@ -1,3 +1,5 @@
+from typing import Optional
+
 import torch
 from torch import profiler
 
@@ -106,7 +108,7 @@ class Calculator(torch.nn.Module):
         positions: torch.Tensor,
         neighbor_indices: torch.Tensor,
         neighbor_distances: torch.Tensor,
-        periodic: tuple[bool, bool, bool] = (True, True, True),
+        periodic: Optional[torch.Tensor] = None,
     ):
         r"""
         Compute the potential "energy".
@@ -148,6 +150,7 @@ class Calculator(torch.nn.Module):
             neighbor_indices=neighbor_indices,
             neighbor_distances=neighbor_distances,
             smearing=self.potential.smearing,
+            periodic=periodic,
         )
 
         # Compute short-range (SR) part using a real space sum

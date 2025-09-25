@@ -1,3 +1,5 @@
+from typing import Optional
+
 import torch
 
 from ..lib import generate_kvectors_for_ewald
@@ -12,7 +14,7 @@ class EwaldCalculator(Calculator):
     Scaling as :math:`\mathcal{O}(N^2)` with respect to the number of particles
     :math:`N`.
 
-    For getting reasonable values for the ``smaring`` of the potential class and  the
+    For getting reasonable values for the ``smearing`` of the potential class and  the
     ``lr_wavelength`` based on a given accuracy for a specific structure you should use
     :func:`torchpme.tuning.tune_ewald`. This function will also find the optimal
     ``cutoff`` for the  **neighborlist**.
@@ -78,25 +80,31 @@ class EwaldCalculator(Calculator):
         charges: torch.Tensor,
         cell: torch.Tensor,
         positions: torch.Tensor,
-        periodic: tuple[bool, bool, bool] = (True, True, True),
+        periodic: Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
-        if not (isinstance(periodic, (list, tuple)) and len(periodic) == 3):
-            raise ValueError("`periodic` must be a 3-tuple of booleans")
-        periodic = tuple(bool(p) for p in periodic)
-        n_periodic = sum(periodic)
+        if periodic is None:
+            periodic = torch.tensor([True, True, True], device=cell.device)
+
+        n_periodic = torch.sum(periodic).item()
         if n_periodic == 3:
-            self.periodicity = 3
-            self.nonperiodic_axis = None
+            periodicity = 3
+            nonperiodic_axis = None
         elif n_periodic == 2:
-            self.periodicity = 2
-            self.nonperiodic_axis = int([i for i, p in enumerate(periodic) if not p][0])
-        elif n_periodic == 1:
-            self.periodicity = 1
-            self.nonperiodic_axis_1, self.nonperiodic_axis_2 = [
-                i for i, p in enumerate(periodic) if not p
-            ]
+            periodicity = 2
+            nonperiodic_axis = torch.where(~periodic)[0]
+            max_distance = torch.max(positions[:, nonperiodic_axis]) - torch.min(
+                positions[:, nonperiodic_axis]
+            )
+            cell_size = torch.linalg.norm(cell[nonperiodic_axis])
+            if max_distance > cell_size / 3:
+                raise ValueError(
+                    f"Maximum distance along non-periodic axis ({max_distance}) "
+                    f"exceeds one third of cell size ({cell_size})."
+                )
         else:
-            raise ValueError("Ewald summation requires at least 1 periodic directions")
+            raise ValueError(
+                "K-space summation is not implemented for 1D or non-periodic systems"
+            )
 
         # Define k-space cutoff from required real-space resolution
         k_cutoff = 2 * torch.pi / self.lr_wavelength
@@ -151,8 +159,8 @@ class EwaldCalculator(Calculator):
         energy -= 2 * prefac * charge_tot * ivolume
         # Compensate for double counting of pairs (i,j) and (j,i)
 
-        if self.periodicity == 2:
-            axis = self.nonperiodic_axis
+        if periodicity == 2:
+            axis = nonperiodic_axis
             z_i = positions[:, axis].view(-1, 1)
             basis_len = torch.linalg.norm(cell[axis])
             M_axis = torch.sum(charges * z_i, dim=0)
@@ -164,20 +172,5 @@ class EwaldCalculator(Calculator):
                 - charge_tot / 12.0 * basis_len**2
             )
             energy += E_slab
-
-        elif self.periodicity == 1:
-            axis1 = self.nonperiodic_axis_1
-            axis2 = self.nonperiodic_axis_2
-            x_i = positions[:, axis1].view(-1, 1)
-            y_i = positions[:, axis2].view(-1, 1)
-            M_axis_x = torch.sum(charges * x_i, dim=0)
-            M_axis_y = torch.sum(charges * y_i, dim=0)
-            M_axis_x_sq = torch.sum(charges * x_i**2, dim=0)
-            M_axis_y_sq = torch.sum(charges * y_i**2, dim=0)
-            V = torch.abs(torch.linalg.det(cell))
-            E_wire = (2.0 * torch.pi / V) * (
-                x_i * M_axis_x + y_i * M_axis_y - 0.5 * (M_axis_x_sq + M_axis_y_sq)
-            )
-            energy += E_wire
 
         return energy / 2
