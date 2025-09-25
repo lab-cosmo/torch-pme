@@ -73,9 +73,7 @@ class TestWorkflow:
         )
 
         tensor = mts_torch.TensorMap(
-            keys=mts_torch.Labels(
-                "_", torch.zeros(1, 1, dtype=torch.int32, device=device)
-            ),
+            keys=mts_torch.Labels("_", torch.zeros(1, 1, dtype=torch.int32)),
             blocks=[block],
         )
 
