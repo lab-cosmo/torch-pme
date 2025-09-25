@@ -103,7 +103,7 @@ class EwaldCalculator(Calculator):
                 )
         else:
             raise ValueError(
-                "K-space summation is not implemented for 1D or non-periodic systems"
+                "K-space summation is not implemented for 1D or non-periodic systems."
             )
 
         # Define k-space cutoff from required real-space resolution

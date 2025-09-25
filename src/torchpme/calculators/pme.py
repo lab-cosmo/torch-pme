@@ -121,7 +121,7 @@ class PMECalculator(Calculator):
                 )
         else:
             raise ValueError(
-                "K-space summation is not implemented for 1D or non-periodic systems"
+                "K-space summation is not implemented for 1D or non-periodic systems."
             )
 
         # TODO: Kernel function `G` and initialization of `MeshInterpolator` only depend

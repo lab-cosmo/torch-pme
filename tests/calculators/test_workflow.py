@@ -17,11 +17,12 @@ from torchpme import (
     P3MCalculator,
     PMECalculator,
 )
+from torchpme.prefactors import kcalmol_A
 
 sys.path.append(str(Path(__file__).parents[1]))
 from helpers import DEVICES, DTYPES
 
-SMEARING = 0.1
+SMEARING = 1
 LR_WAVELENGTH = SMEARING / 4
 MESH_SPACING = SMEARING / 4
 
@@ -183,6 +184,83 @@ class TestWorkflow:
                 torch.autograd.grad(energy, system[2], retain_graph=True)[0]
             ).any()
 
+    def test_smearing_incompatability(self, CalculatorClass, params, device, dtype):
+        """Test that the calculator raises an error if the potential and calculator are incompatible."""
+        if type(CalculatorClass) in [EwaldCalculator, PMECalculator, P3MCalculator]:
+            params["smearing"] = None
+            with pytest.raises(
+                TypeError, match="Must specify smearing to use a potential with .*"
+            ):
+                CalculatorClass(**params)
+
+    def test_periodicity_incompatability(
+        self,
+        CalculatorClass,
+        params,
+        device,
+        dtype,
+    ):
+        if CalculatorClass in [PMECalculator, P3MCalculator, EwaldCalculator]:
+            charges, cell, positions, neighbor_indices, neighbor_distances = (
+                self.cscl_system(device=device, dtype=dtype)
+            )
+            match = (
+                "K-space summation is not implemented for 1D or non-periodic systems."
+            )
+            with pytest.raises(ValueError, match=match):
+                CalculatorClass(**params).to(device).forward(
+                    charges=charges,
+                    cell=cell * 4,
+                    positions=positions,
+                    neighbor_indices=neighbor_indices,
+                    neighbor_distances=neighbor_distances,
+                    periodic=torch.tensor([True, False, False], device=device),
+                )
+            match = r"Maximum distance along non-periodic axis \(.*\) exceeds one third of cell size \(.*\)\."
+            with pytest.raises(ValueError, match=match):
+                CalculatorClass(**params).to(device).forward(
+                    charges=charges,
+                    cell=cell,
+                    positions=positions,
+                    neighbor_indices=neighbor_indices,
+                    neighbor_distances=neighbor_distances,
+                    periodic=torch.tensor([True, True, False], device=device),
+                )
+
+    def test_periodicity_true_value(
+        self,
+        CalculatorClass,
+        params,
+        device,
+        dtype,
+    ):
+        """Test that values coincide with values from LAMMPS"""
+        true_value = -383.44635
+        if CalculatorClass in [EwaldCalculator]:
+            charges, cell, positions, neighbor_indices, neighbor_distances = (
+                self.cscl_system(device=device, dtype=dtype)
+            )
+            cell = torch.tensor([10, 10, 30], dtype=dtype, device=device).diag()
+            res = (
+                CalculatorClass(**params)
+                .to(device)
+                .forward(
+                    charges=charges,
+                    cell=cell,
+                    positions=positions,
+                    neighbor_indices=neighbor_indices,
+                    neighbor_distances=neighbor_distances,
+                    periodic=torch.tensor([True, True, False], device=device),
+                )
+                .T
+                @ charges
+            )
+            assert torch.allclose(
+                res * kcalmol_A,
+                torch.tensor(true_value, dtype=dtype, device=device),
+                rtol=1e-3,
+            )
+
     def test_potential_and_calculator_incompatability(
         self,
         CalculatorClass,
@@ -196,15 +274,6 @@ class TestWorkflow:
             TypeError, match="Potential must be an instance of Potential, got.*"
         ):
             CalculatorClass(**params)
-
-    def test_smearing_incompatability(self, CalculatorClass, params, device, dtype):
-        """Test that the calculator raises an error if the potential and calculator are incompatible."""
-        if type(CalculatorClass) in [EwaldCalculator, PMECalculator, P3MCalculator]:
-            params["smearing"] = None
-            with pytest.raises(
-                TypeError, match="Must specify smearing to use a potential with .*"
-            ):
-                CalculatorClass(**params)
 
 
 def test_kspace_filter_error_catch():
