@@ -173,7 +173,7 @@ class Potential(torch.nn.Module):
         )
 
     @torch.jit.export
-    def _2d_correction(
+    def pbc_correction(
         self,
         periodic: Optional[torch.Tensor],
         positions: torch.Tensor,

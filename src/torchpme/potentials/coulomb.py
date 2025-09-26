@@ -104,7 +104,7 @@ class CoulombPotential(Potential):
         return torch.pi * self.smearing**2
 
     @staticmethod
-    def _2d_correction(
+    def pbc_correction(
         periodic: Optional[torch.Tensor],
         positions: torch.Tensor,
         cell: torch.Tensor,
@@ -155,4 +155,4 @@ class CoulombPotential(Potential):
 
     self_contribution.__doc__ = Potential.self_contribution.__doc__
     background_correction.__doc__ = Potential.background_correction.__doc__
-    _2d_correction.__doc__ = Potential._2d_correction.__doc__
+    pbc_correction.__doc__ = Potential.pbc_correction.__doc__

@@ -142,6 +142,9 @@ class Calculator(torch.nn.Module):
             which the potential should be computed in real space.
         :param neighbor_distances: torch.tensor with the pair distances of the neighbors
             for which the potential should be computed in real space.
+        :param periodic: optional torch.tensor of shape ``(3,)`` indicating which
+            directions are periodic (True) and which are not (False). If not
+            provided, full periodicity is assumed.
         """
         _validate_parameters(
             charges=charges,

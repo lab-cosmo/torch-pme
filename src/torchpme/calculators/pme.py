@@ -137,7 +137,7 @@ class PMECalculator(Calculator):
         prefac = self.potential.background_correction()
         interpolated_potential -= 2 * prefac * charge_tot * ivolume
 
-        interpolated_potential += self.potential._2d_correction(
+        interpolated_potential += self.potential.pbc_correction(
             periodic, positions, cell, charges
         )
 

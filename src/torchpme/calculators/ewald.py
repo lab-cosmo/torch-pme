@@ -134,5 +134,5 @@ class EwaldCalculator(Calculator):
         prefac = self.potential.background_correction()
         energy -= 2 * prefac * charge_tot * ivolume
         # Compensate for double counting of pairs (i,j) and (j,i)
-        energy += self.potential._2d_correction(periodic, positions, cell, charges)
+        energy += self.potential.pbc_correction(periodic, positions, cell, charges)
         return energy / 2
