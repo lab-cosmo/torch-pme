@@ -5,6 +5,7 @@ from torch.special import gammainc
 
 from torchpme.lib import gamma, gammaincc_over_powerlaw
 
+from .coulomb import CoulombPotential
 from .potential import Potential
 
 
@@ -141,5 +142,11 @@ class InversePowerLawPotential(Potential):
         prefac /= (3 - self.exponent) * gamma(self.exponent / 2)
         return prefac
 
+    def _2d_correction(self, periodic, positions, cell, charges):
+        if self.exponent == 1:
+            return CoulombPotential._2d_correction(periodic, positions, cell, charges)
+        return super()._2d_correction(periodic, positions, cell, charges)
+
     self_contribution.__doc__ = Potential.self_contribution.__doc__
     background_correction.__doc__ = Potential.background_correction.__doc__
+    _2d_correction.__doc__ = Potential._2d_correction.__doc__

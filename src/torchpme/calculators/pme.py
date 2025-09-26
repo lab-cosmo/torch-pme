@@ -100,30 +100,6 @@ class PMECalculator(Calculator):
         positions: torch.Tensor,
         periodic: Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
-        if periodic is None:
-            periodic = torch.tensor([True, True, True], device=cell.device)
-
-        n_periodic = torch.sum(periodic).item()
-        if n_periodic == 3:
-            periodicity = 3
-            nonperiodic_axis = None
-        elif n_periodic == 2:
-            periodicity = 2
-            nonperiodic_axis = torch.where(~periodic)[0]
-            max_distance = torch.max(positions[:, nonperiodic_axis]) - torch.min(
-                positions[:, nonperiodic_axis]
-            )
-            cell_size = torch.linalg.norm(cell[nonperiodic_axis])
-            if max_distance > cell_size / 3:
-                raise ValueError(
-                    f"Maximum distance along non-periodic axis ({max_distance}) "
-                    f"exceeds one third of cell size ({cell_size})."
-                )
-        else:
-            raise ValueError(
-                "K-space summation is not implemented for 1D or non-periodic systems."
-            )
-
         # TODO: Kernel function `G` and initialization of `MeshInterpolator` only depend
         # on `cell`. Caching may save up to 15% but issues with AD need to be resolved.
 
@@ -161,19 +137,9 @@ class PMECalculator(Calculator):
         prefac = self.potential.background_correction()
         interpolated_potential -= 2 * prefac * charge_tot * ivolume
 
-        if periodicity == 2:
-            axis = nonperiodic_axis
-            z_i = positions[:, axis].view(-1, 1)
-            basis_len = torch.linalg.norm(cell[axis])
-            M_axis = torch.sum(charges * z_i, dim=0)
-            M_axis_sq = torch.sum(charges * z_i**2, dim=0)
-            V = torch.abs(torch.linalg.det(cell))
-            E_slab = (4.0 * torch.pi / V) * (
-                z_i * M_axis
-                - 0.5 * (M_axis_sq + charge_tot * z_i**2)
-                - charge_tot / 12.0 * basis_len**2
-            )
-            interpolated_potential += E_slab
+        interpolated_potential += self.potential._2d_correction(
+            periodic, positions, cell, charges
+        )
 
         # Compensate for double counting of pairs (i,j) and (j,i)
         return interpolated_potential / 2
