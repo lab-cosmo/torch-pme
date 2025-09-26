@@ -184,4 +184,4 @@ class Potential(torch.nn.Module):
         if periodic is None or torch.all(periodic):
             return torch.zeros_like(charges)
 
-        raise NotImplementedError(f"_2d_correction is not implemented for {self}")
+        raise NotImplementedError(f"pbc_correction is not implemented for {self}")
