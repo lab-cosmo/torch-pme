@@ -152,12 +152,8 @@ class SplinePotential(Potential):
     def background_correction(self) -> torch.Tensor:
         return torch.zeros(1)
 
-    def _2d_correction(self, periodic, positions, cell, charges):
-        return super()._2d_correction(periodic, positions, cell, charges)
-
     from_dist.__doc__ = Potential.from_dist.__doc__
     lr_from_dist.__doc__ = Potential.lr_from_dist.__doc__
     lr_from_k_sq.__doc__ = Potential.lr_from_k_sq.__doc__
     self_contribution.__doc__ = Potential.self_contribution.__doc__
     background_correction.__doc__ = Potential.background_correction.__doc__
-    _2d_correction.__doc__ = Potential._2d_correction.__doc__
