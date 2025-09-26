@@ -1,3 +1,5 @@
+from typing import Optional
+
 import torch
 
 from ..lib import generate_kvectors_for_ewald
@@ -12,7 +14,7 @@ class EwaldCalculator(Calculator):
     Scaling as :math:`\mathcal{O}(N^2)` with respect to the number of particles
     :math:`N`.
 
-    For getting reasonable values for the ``smaring`` of the potential class and  the
+    For getting reasonable values for the ``smearing`` of the potential class and  the
     ``lr_wavelength`` based on a given accuracy for a specific structure you should use
     :func:`torchpme.tuning.tune_ewald`. This function will also find the optimal
     ``cutoff`` for the  **neighborlist**.
@@ -78,6 +80,7 @@ class EwaldCalculator(Calculator):
         charges: torch.Tensor,
         cell: torch.Tensor,
         positions: torch.Tensor,
+        periodic: Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
         # Define k-space cutoff from required real-space resolution
         k_cutoff = 2 * torch.pi / self.lr_wavelength
@@ -131,4 +134,5 @@ class EwaldCalculator(Calculator):
         prefac = self.potential.background_correction()
         energy -= 2 * prefac * charge_tot * ivolume
         # Compensate for double counting of pairs (i,j) and (j,i)
+        energy += self.potential.pbc_correction(periodic, positions, cell, charges)
         return energy / 2

@@ -171,3 +171,17 @@ class Potential(torch.nn.Module):
         raise NotImplementedError(
             f"background_correction is not implemented for {self.__class__.__name__}"
         )
+
+    @torch.jit.export
+    def pbc_correction(
+        self,
+        periodic: Optional[torch.Tensor],
+        positions: torch.Tensor,
+        cell: torch.Tensor,
+        charges: torch.Tensor,
+    ) -> torch.Tensor:
+        """A correction term that is only relevant for systems with 2D periodicity."""
+        if periodic is None or torch.all(periodic):
+            return torch.zeros_like(charges)
+
+        raise NotImplementedError(f"pbc_correction is not implemented for {self}")

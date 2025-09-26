@@ -27,6 +27,8 @@ changelog <https://keepachangelog.com/en/1.1.0/>`_ format. This project follows
 Added
 #####
 
+* Add support for slab geometries in Ewald and PME calculators
+
 Fixed
 #####
 

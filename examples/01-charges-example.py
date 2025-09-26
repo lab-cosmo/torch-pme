@@ -31,8 +31,8 @@ manipulating atomic structures.
 # %%
 
 import torch
+import vesin.metatomic
 import vesin.torch
-import vesin.torch.metatensor
 from metatensor.torch import Labels, TensorBlock, TensorMap
 from metatomic.torch import NeighborListOptions, System
 
@@ -231,7 +231,7 @@ system = System(types=types, positions=positions, cell=cell, pbc=pbc)
 # the cutoff and the type of list.
 
 options = NeighborListOptions(cutoff=4.0, full_list=True, strict=False)
-nl_mts = vesin.torch.metatensor.NeighborList(options, length_unit="Angstrom")
+nl_mts = vesin.metatomic.NeighborList(options, length_unit="Angstrom")
 neighbors = nl_mts.compute(system)
 
 # %%

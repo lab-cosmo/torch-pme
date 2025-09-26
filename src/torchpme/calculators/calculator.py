@@ -1,3 +1,5 @@
+from typing import Optional
+
 import torch
 from torch import profiler
 
@@ -106,6 +108,7 @@ class Calculator(torch.nn.Module):
         positions: torch.Tensor,
         neighbor_indices: torch.Tensor,
         neighbor_distances: torch.Tensor,
+        periodic: Optional[torch.Tensor] = None,
     ):
         r"""
         Compute the potential "energy".
@@ -139,6 +142,9 @@ class Calculator(torch.nn.Module):
             which the potential should be computed in real space.
         :param neighbor_distances: torch.tensor with the pair distances of the neighbors
             for which the potential should be computed in real space.
+        :param periodic: optional torch.tensor of shape ``(3,)`` indicating which
+            directions are periodic (True) and which are not (False). If not
+            provided, full periodicity is assumed.
         """
         _validate_parameters(
             charges=charges,
@@ -147,6 +153,7 @@ class Calculator(torch.nn.Module):
             neighbor_indices=neighbor_indices,
             neighbor_distances=neighbor_distances,
             smearing=self.potential.smearing,
+            periodic=periodic,
         )
 
         # Compute short-range (SR) part using a real space sum
@@ -163,6 +170,7 @@ class Calculator(torch.nn.Module):
             charges=charges,
             cell=cell,
             positions=positions,
+            periodic=periodic,
         )
 
         return self.prefactor * (potential_sr + potential_lr)
