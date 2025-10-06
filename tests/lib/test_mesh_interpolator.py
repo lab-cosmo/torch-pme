@@ -404,25 +404,6 @@ def test_update_different_devices_cell_ns_mesh():
         mesh_interpolator.update(cell=torch.eye(3, device="meta"))
 
 
-def test_interpolation_nodes_not_allowed():
-    cell = torch.eye(3)
-    ns_mesh = torch.tensor([2, 2, 2])
-    interpolation_nodes = 6  # not allowed
-    match = "Only `interpolation_nodes` from 1 to 5 are allowed"
-
-    with pytest.raises(ValueError, match=match):
-        MeshInterpolator(
-            cell, ns_mesh, interpolation_nodes, method="P3M"
-        )._compute_1d_weights(torch.tensor([0]))
-
-    for interpolation_nodes in [1, 8]:  # not allowed
-        match = "Only `interpolation_nodes` from 3 to 7 are allowed"
-        with pytest.raises(ValueError, match=match):
-            MeshInterpolator(
-                cell, ns_mesh, interpolation_nodes, method="Lagrange"
-            )._compute_1d_weights(torch.tensor([0]))
-
-
 def test_interpolation_nodes_not_allowed_private():
     cell = torch.eye(3)
     ns_mesh = torch.tensor([2, 2, 2])
@@ -542,6 +523,24 @@ def test_mesh_to_points_wrong_dim(mesh_interpolator, request):
 
     with pytest.raises(ValueError, match=match):
         mesh_interpolator.mesh_to_points(mesh_vals)
+
+
+def test_wrong_interpolation_nodes_lagrange():
+    match = (
+        "`interpolation_nodes` is 2 but only values from 3 to 7 for method "
+        "'Lagrange' are allowed"
+    )
+    with pytest.raises(ValueError, match=match):
+        MeshInterpolator(torch.eye(3), torch.ones(3), 2, method="Lagrange")
+
+
+def test_wrong_interpolation_nodes_p3m():
+    match = (
+        "`interpolation_nodes` is 6 but only values from 1 to 5 for method "
+        "'P3M' are allowed"
+    )
+    with pytest.raises(ValueError, match=match):
+        MeshInterpolator(torch.eye(3), torch.ones(3), 6, method="P3M")
 
 
 def test_wrong_method():

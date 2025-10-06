@@ -52,34 +52,26 @@ class P3MCalculator(PMECalculator):
         full_neighbor_list: bool = False,
         prefactor: float = 1.0,
     ):
-        self.mesh_spacing: float = mesh_spacing
-
-        if interpolation_nodes not in [1, 2, 3, 4, 5]:
-            raise ValueError("Only `interpolation_nodes` from 1 to 5 are allowed")
-        self.interpolation_nodes: int = interpolation_nodes
-
-        super(PMECalculator, self).__init__(
+        # Don't pass `interpolation_nodes` to super as the PME requires a different
+        # range of values.
+        super().__init__(
             potential=potential,
+            mesh_spacing=mesh_spacing,
             full_neighbor_list=full_neighbor_list,
             prefactor=prefactor,
         )
 
-        if potential.smearing is None:
-            raise ValueError(
-                "Must specify smearing to use a potential with P3MCalculator"
-            )
-
         cell = torch.eye(
             3,
-            device=self.potential.smearing.device,
-            dtype=self.potential.smearing.dtype,
+            device=self.potential.smearing.device,  # type: ignore
+            dtype=self.potential.smearing.dtype,  # type: ignore
         )
         ns_mesh = torch.ones(3, dtype=int, device=cell.device)
 
         self.kspace_filter: P3MKSpaceFilter = P3MKSpaceFilter(
             cell=cell,
             ns_mesh=ns_mesh,
-            interpolation_nodes=self.interpolation_nodes,
+            interpolation_nodes=interpolation_nodes,
             kernel=self.potential,
             mode=0,  # Green's function for point-charge potentials
             differential_order=2,  # Order of the discretization of the differential operator
@@ -90,6 +82,7 @@ class P3MCalculator(PMECalculator):
         self.mesh_interpolator: MeshInterpolator = MeshInterpolator(
             cell=cell,
             ns_mesh=ns_mesh,
-            interpolation_nodes=self.interpolation_nodes,
+            interpolation_nodes=interpolation_nodes,
             method="P3M",
         )
+        self.interpolation_nodes: int = interpolation_nodes
