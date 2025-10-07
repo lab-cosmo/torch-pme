@@ -75,31 +75,39 @@ class TestWorkflow:
         return charges, cell, positions, neighbor_indices, neighbor_distances
 
     def test_smearing_non_positive(self, CalculatorClass, params, device, dtype):
-        match = r"`smearing` .* has to be positive"
-        if type(CalculatorClass) in [EwaldCalculator, PMECalculator]:
-            params["smearing"] = 0
+        if CalculatorClass in [EwaldCalculator, PMECalculator, P3MCalculator]:
+            params_mod = params.copy()
+            params_mod["potential"] = CoulombPotential(smearing=0.0)
+            match = r"`smearing` is 0.0 but must be positive"
             with pytest.raises(ValueError, match=match):
-                CalculatorClass(**params)
-            params["smearing"] = -0.1
+                CalculatorClass(**params_mod)
+
+            match = r"`smearing` is -0.1 but must be positive"
+            params_mod["potential"] = CoulombPotential(smearing=-0.1)
             with pytest.raises(ValueError, match=match):
-                CalculatorClass(**params)
+                CalculatorClass(**params_mod)
 
     def test_interpolation_order_error(self, CalculatorClass, params, device, dtype):
-        if type(CalculatorClass) in [PMECalculator]:
-            match = "Only `interpolation_nodes` from 1 to 5"
-            params["interpolation_nodes"] = 10
+        if CalculatorClass in [PMECalculator, P3MCalculator]:
+            match = "`interpolation_nodes` is 10"
+            params_mod = params.copy()
+            params_mod["interpolation_nodes"] = 10
             with pytest.raises(ValueError, match=match):
-                CalculatorClass(**params)
+                CalculatorClass(**params_mod)
 
     def test_lr_wavelength_non_positive(self, CalculatorClass, params, device, dtype):
-        match = r"`lr_wavelength` .* has to be positive"
-        if type(CalculatorClass) in [EwaldCalculator]:
-            params["lr_wavelength"] = 0
+        if CalculatorClass in [EwaldCalculator]:
+            params_mod = params.copy()
+            params_mod["lr_wavelength"] = 0.0
+
+            match = "`lr_wavelength` is 0.0 but must be positive"
             with pytest.raises(ValueError, match=match):
-                CalculatorClass(**params)
-            params["lr_wavelength"] = -0.1
+                CalculatorClass(**params_mod)
+
+            params_mod["lr_wavelength"] = -0.1
+            match = "`lr_wavelength` is -0.1 but must be positive"
             with pytest.raises(ValueError, match=match):
-                CalculatorClass(**params)
+                CalculatorClass(**params_mod)
 
     def test_dtype_device(self, CalculatorClass, params, device, dtype):
         """Test that the output dtype and device are the same as the input."""
@@ -187,7 +195,7 @@ class TestWorkflow:
     def test_smearing_incompatability(self, CalculatorClass, params, device, dtype):
         """Test that the calculator raises an error if the potential and calculator are incompatible."""
         if type(CalculatorClass) in [EwaldCalculator, PMECalculator, P3MCalculator]:
-            params["smearing"] = None
+            params["potential"] = CoulombPotential(smearing=None)
             with pytest.raises(
                 TypeError, match="Must specify smearing to use a potential with .*"
             ):

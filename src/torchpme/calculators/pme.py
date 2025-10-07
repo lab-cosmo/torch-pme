@@ -66,6 +66,8 @@ class PMECalculator(Calculator):
             raise ValueError(
                 "Must specify smearing to use a potential with PMECalculator"
             )
+        if potential.smearing <= 0:
+            raise ValueError(f"`smearing` is {potential.smearing} but must be positive")
 
         self.mesh_spacing: float = mesh_spacing
 
@@ -84,14 +86,13 @@ class PMECalculator(Calculator):
             ifft_norm="forward",
         )
 
-        self.interpolation_nodes: int = interpolation_nodes
-
         self.mesh_interpolator: MeshInterpolator = MeshInterpolator(
             cell=cell,
             ns_mesh=ns_mesh,
-            interpolation_nodes=self.interpolation_nodes,
+            interpolation_nodes=interpolation_nodes,
             method="Lagrange",  # convention for classic PME
         )
+        self.interpolation_nodes: int = interpolation_nodes
 
     def _compute_kspace(
         self,

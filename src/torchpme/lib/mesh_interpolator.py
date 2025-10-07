@@ -47,7 +47,19 @@ class MeshInterpolator(torch.nn.Module):
     ):
         super().__init__()
 
-        if method not in ["Lagrange", "P3M"]:
+        if method == "Lagrange":
+            if interpolation_nodes not in [3, 4, 5, 6, 7]:
+                raise ValueError(
+                    f"`interpolation_nodes` is {interpolation_nodes} but only values "
+                    f"from 3 to 7 for method 'Lagrange' are allowed"
+                )
+        elif method == "P3M":
+            if interpolation_nodes not in [1, 2, 3, 4, 5]:
+                raise ValueError(
+                    f"`interpolation_nodes` is {interpolation_nodes} but only values "
+                    "from 1 to 5 for method 'P3M' are allowed"
+                )
+        else:
             raise ValueError(
                 f"method '{method}' is not supported. Choose from 'Lagrange' or 'P3M'"
             )
