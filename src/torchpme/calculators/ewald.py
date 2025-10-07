@@ -73,6 +73,11 @@ class EwaldCalculator(Calculator):
             raise ValueError(
                 "Must specify range radius to use a potential with EwaldCalculator"
             )
+        if potential.smearing <= 0:
+            raise ValueError(f"`smearing` is {potential.smearing} but must be positive")
+
+        if lr_wavelength <= 0:
+            raise ValueError(f"`lr_wavelength` is {lr_wavelength} but must be positive")
         self.lr_wavelength: float = lr_wavelength
 
     def _compute_kspace(
