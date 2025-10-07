@@ -24,6 +24,9 @@ changelog <https://keepachangelog.com/en/1.1.0/>`_ format. This project follows
 `Unreleased <https://github.com/lab-cosmo/torch-pme/>`_
 -------------------------------------------------------
 
+`Version 0.3.2 <https://github.com/lab-cosmo/torch-pme/releases/tag/v0.3.2>`_ - 2025-10-07
+------------------------------------------------------------------------------------------
+
 Added
 #####
 
@@ -33,6 +36,7 @@ Fixed
 #####
 
 * Fix the error formula of Ewald used in tuning
+* Fix wrong parameter checking
 
 `Version 0.3.1 <https://github.com/lab-cosmo/torch-pme/releases/tag/v0.3.1>`_ - 2025-06-01
 ------------------------------------------------------------------------------------------
