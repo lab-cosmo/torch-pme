@@ -40,13 +40,13 @@ def _validate_parameters(
             f"device of `cell` ({cell.device}) must be same as that of the `positions` class ({device})"
         )
 
-    if smearing is not None and torch.equal(
-        cell.det(), torch.tensor(0.0, dtype=cell.dtype, device=cell.device)
-    ):
-        raise ValueError(
-            "provided `cell` has a determinant of 0 and therefore is not valid for "
-            "periodic calculation"
-        )
+    # if smearing is not None and torch.equal(
+    #     cell.det(), torch.tensor(0.0, dtype=cell.dtype, device=cell.device)
+    # ):
+    #     raise ValueError(
+    #         "provided `cell` has a determinant of 0 and therefore is not valid for "
+    #         "periodic calculation"
+    #     )
 
     # check shape, dtype & device of `charges`
     if charges.dim() != 2:

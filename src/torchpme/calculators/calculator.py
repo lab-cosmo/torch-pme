@@ -67,7 +67,7 @@ class Calculator(torch.nn.Module):
                         neighbor_distances, pair_mask=pair_mask
                     ) * (1 - self.potential.f_cutoff(neighbor_distances))
             else:
-                potentials_bare = self.potential.sr_from_dist(neighbor_distances)
+                potentials_bare = self.potential.sr_from_dist(neighbor_distances, pair_mask=pair_mask)
 
         # Multiply the bare potential terms V(r_ij) with the corresponding charges
         # of ``atom j'' to obtain q_j*V(r_ij). Since each atom j can be a neighbor of
@@ -115,6 +115,7 @@ class Calculator(torch.nn.Module):
         periodic: Optional[torch.Tensor] = None,
         node_mask: Optional[torch.Tensor] = None,
         pair_mask: Optional[torch.Tensor] = None,
+        kvectors: Optional[torch.Tensor] = None,
     ):
         r"""
         Compute the potential "energy".
@@ -179,6 +180,7 @@ class Calculator(torch.nn.Module):
             cell=cell,
             positions=positions,
             periodic=periodic,
+            kvectors=kvectors,
         )
-
+        print(potential_sr, potential_lr)
         return self.prefactor * (potential_sr + potential_lr)

@@ -55,7 +55,7 @@ class CoulombPotential(Potential):
 
         return result
 
-    def lr_from_dist(self, dist: torch.Tensor) -> torch.Tensor:
+    def lr_from_dist(self, dist: torch.Tensor, pair_mask: Optional[torch.Tensor] = None) -> torch.Tensor:
         """
         Long range of the range-separated :math:`1/r` potential.
 
@@ -69,8 +69,10 @@ class CoulombPotential(Potential):
             raise ValueError(
                 "Cannot compute long-range contribution without specifying `smearing`."
             )
-
-        return torch.erf(dist / self.smearing / 2.0**0.5) / dist
+        result = torch.erf(dist / self.smearing / 2.0**0.5) / dist.clamp(min=1e-12)
+        if pair_mask is not None:
+            result = result * pair_mask  # elementwise multiply, keeps shape fixed
+        return result
 
     def lr_from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
         r"""
