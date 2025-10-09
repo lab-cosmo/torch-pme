@@ -1,5 +1,5 @@
 import torch
-
+from torch.nn.utils.rnn import pad_sequence
 
 def get_ns_mesh(cell: torch.Tensor, mesh_spacing: float):
     """
@@ -133,3 +133,32 @@ def generate_kvectors_for_ewald(
         calculators like PME.
     """
     return _generate_kvectors(cell=cell, ns=ns, for_ewald=True).reshape(-1, 3)
+
+def compute_batched_kvectors(
+    lr_wavelength: float,
+    cells: torch.Tensor,
+) -> torch.Tensor:
+    r"""
+    Generate k-vectors for multiple systems in batches.
+
+    :param lr_wavelength: Spatial resolution used for the long-range (reciprocal space)
+        part of the Ewald sum. More concretely, all Fourier space vectors with a
+        wavelength >= this value will be kept. If not set to a global value, it will be
+        set to half the smearing parameter to ensure convergence of the
+        long-range part to a relative precision of 1e-5.
+    :param cell: torch.tensor of shape ``(B, 3, 3)``, where ``cell[i]`` is the i-th
+        basis vector of the unit cell for system i in the batch of size B.
+
+    """
+    all_kvectors = []
+    k_cutoff = 2 * torch.pi / lr_wavelength
+    for cell in cells:
+        basis_norms = torch.linalg.norm(cell, dim=1)
+        ns_float = k_cutoff * basis_norms / 2 / torch.pi
+        ns = torch.ceil(ns_float).long()
+        kvectors = generate_kvectors_for_ewald(ns=ns, cell=cell)
+        all_kvectors.append(kvectors)
+    # We do not return masks here; instead, we rely on the fact that for the Coulomb
+    # potential, the k = 0 vector is ignored in the calculations and can therefore be
+    # safely padded with zeros.
+    return pad_sequence(all_kvectors, batch_first=True)

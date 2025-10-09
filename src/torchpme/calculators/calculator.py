@@ -51,8 +51,8 @@ class Calculator(torch.nn.Module):
         charges: torch.Tensor,
         neighbor_indices: torch.Tensor,
         neighbor_distances: torch.Tensor,
-        node_mask: torch.Tensor | None = None,
-        pair_mask: torch.Tensor | None = None,
+        node_mask: Optional[torch.Tensor] = None,
+        pair_mask: Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
         # Compute the pair potential terms V(r_ij) for each pair of atoms (i,j)
         # contained in the neighbor list
@@ -113,8 +113,8 @@ class Calculator(torch.nn.Module):
         neighbor_indices: torch.Tensor,
         neighbor_distances: torch.Tensor,
         periodic: Optional[torch.Tensor] = None,
-        node_mask: torch.Tensor | None = None,
-        pair_mask: torch.Tensor | None = None,
+        node_mask: Optional[torch.Tensor] = None,
+        pair_mask: Optional[torch.Tensor] = None,
     ):
         r"""
         Compute the potential "energy".

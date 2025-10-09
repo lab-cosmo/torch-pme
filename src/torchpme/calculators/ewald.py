@@ -86,6 +86,7 @@ class EwaldCalculator(Calculator):
         cell: torch.Tensor,
         positions: torch.Tensor,
         periodic: Optional[torch.Tensor] = None,
+        kvectors: Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
         # Define k-space cutoff from required real-space resolution
         k_cutoff = 2 * torch.pi / self.lr_wavelength

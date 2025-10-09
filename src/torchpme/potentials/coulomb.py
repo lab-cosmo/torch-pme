@@ -40,7 +40,7 @@ class CoulombPotential(Potential):
         super().__init__(smearing, exclusion_radius, exclusion_degree)
 
     def from_dist(
-        self, dist: torch.Tensor, pair_mask: torch.Tensor | None = None
+        self, dist: torch.Tensor, pair_mask: Optional[torch.Tensor] = None
     ) -> torch.Tensor:
         """
         Full :math:`1/r` potential as a function of :math:`r`.
