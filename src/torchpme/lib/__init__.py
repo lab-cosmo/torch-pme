@@ -1,9 +1,9 @@
 from .kspace_filter import KSpaceFilter, KSpaceKernel, P3MKSpaceFilter
 from .kvectors import (
+    compute_batched_kvectors,
     generate_kvectors_for_ewald,
     generate_kvectors_for_mesh,
     get_ns_mesh,
-    compute_batched_kvectors,
 )
 from .math import exp1, gamma, gammaincc_over_powerlaw
 from .mesh_interpolator import MeshInterpolator

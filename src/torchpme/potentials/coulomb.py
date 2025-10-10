@@ -55,7 +55,9 @@ class CoulombPotential(Potential):
 
         return result
 
-    def lr_from_dist(self, dist: torch.Tensor, pair_mask: Optional[torch.Tensor] = None) -> torch.Tensor:
+    def lr_from_dist(
+        self, dist: torch.Tensor, pair_mask: Optional[torch.Tensor] = None
+    ) -> torch.Tensor:
         """
         Long range of the range-separated :math:`1/r` potential.
 
@@ -122,45 +124,30 @@ class CoulombPotential(Potential):
         # "2D periodicity" correction for 1/r potential
         if periodic is None:
             periodic = torch.tensor([True, True, True], device=cell.device)
+        n_periodic = torch.sum(periodic)
+        is_2d = n_periodic == 2
+        axis = torch.argmax(
+            torch.where(
+                is_2d.unsqueeze(-1),
+                (~periodic).to(torch.int64),
+                torch.zeros_like(periodic, dtype=torch.int64),
+            ),
+            dim=-1,
+        )
+        E_slab = torch.zeros_like(charges)
+        z_i = torch.gather(positions, 1, axis.expand(positions.shape[0]).unsqueeze(-1))
+        basis_len = torch.gather(torch.linalg.norm(cell, dim=-1), 0, axis)
+        V = torch.abs(torch.linalg.det(cell))
+        charge_tot = torch.sum(charges, dim=0)
+        M_axis = torch.sum(charges * z_i, dim=0)
+        M_axis_sq = torch.sum(charges * z_i**2, dim=0)
+        E_slab_2d = (4.0 * torch.pi / V) * (
+            z_i * M_axis
+            - 0.5 * (M_axis_sq + charge_tot * z_i**2)
+            - charge_tot / 12.0 * basis_len**2
+        )
 
-        n_periodic = torch.sum(periodic).item()
-        if n_periodic == 3:
-            periodicity = 3
-            nonperiodic_axis = None
-        elif n_periodic == 2:
-            periodicity = 2
-            nonperiodic_axis = torch.where(~periodic)[0]
-            max_distance = torch.max(positions[:, nonperiodic_axis]) - torch.min(
-                positions[:, nonperiodic_axis]
-            )
-            cell_size = torch.linalg.norm(cell[nonperiodic_axis])
-            if max_distance > cell_size / 3:
-                raise ValueError(
-                    f"Maximum distance along non-periodic axis ({max_distance}) "
-                    f"exceeds one third of cell size ({cell_size})."
-                )
-        else:
-            raise ValueError(
-                "K-space summation is not implemented for 1D or non-periodic systems."
-            )
-
-        if periodicity == 2:
-            charge_tot = torch.sum(charges, dim=0)
-            axis = nonperiodic_axis
-            z_i = positions[:, axis].view(-1, 1)
-            basis_len = torch.linalg.norm(cell[axis])
-            M_axis = torch.sum(charges * z_i, dim=0)
-            M_axis_sq = torch.sum(charges * z_i**2, dim=0)
-            V = torch.abs(torch.linalg.det(cell))
-            E_slab = (4.0 * torch.pi / V) * (
-                z_i * M_axis
-                - 0.5 * (M_axis_sq + charge_tot * z_i**2)
-                - charge_tot / 12.0 * basis_len**2
-            )
-        else:
-            E_slab = torch.zeros_like(charges)
-
-        return E_slab
+        return torch.where(is_2d.unsqueeze(-1), E_slab_2d, E_slab)
 
     self_contribution.__doc__ = Potential.self_contribution.__doc__
     background_correction.__doc__ = Potential.background_correction.__doc__

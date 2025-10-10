@@ -1,6 +1,7 @@
 import torch
 from torch.nn.utils.rnn import pad_sequence
 
+
 def get_ns_mesh(cell: torch.Tensor, mesh_spacing: float):
     """
     Computes the mesh size given a target mesh spacing and cell
@@ -133,6 +134,7 @@ def generate_kvectors_for_ewald(
         calculators like PME.
     """
     return _generate_kvectors(cell=cell, ns=ns, for_ewald=True).reshape(-1, 3)
+
 
 def compute_batched_kvectors(
     lr_wavelength: float,

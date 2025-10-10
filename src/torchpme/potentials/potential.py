@@ -54,7 +54,9 @@ class Potential(torch.nn.Module):
         self.exclusion_degree = exclusion_degree
 
     @torch.jit.export
-    def f_cutoff(self, dist: torch.Tensor, pair_mask: Optional[torch.Tensor] = None) -> torch.Tensor:
+    def f_cutoff(
+        self, dist: torch.Tensor, pair_mask: Optional[torch.Tensor] = None
+    ) -> torch.Tensor:
         r"""
         Default cutoff function defining the *local* region that should be excluded from
         the computation of a long-range model. Defaults to a shifted cosine
@@ -81,7 +83,9 @@ class Potential(torch.nn.Module):
         return result
 
     @torch.jit.export
-    def from_dist(self, dist: torch.Tensor, pair_mask: Optional[torch.Tensor] = None) -> torch.Tensor:
+    def from_dist(
+        self, dist: torch.Tensor, pair_mask: Optional[torch.Tensor] = None
+    ) -> torch.Tensor:
         """
         Computes a pair potential given a tensor of interatomic distances.
 
@@ -93,7 +97,9 @@ class Potential(torch.nn.Module):
         )
 
     @torch.jit.export
-    def sr_from_dist(self, dist: torch.Tensor, pair_mask: Optional[torch.Tensor] = None) -> torch.Tensor:
+    def sr_from_dist(
+        self, dist: torch.Tensor, pair_mask: Optional[torch.Tensor] = None
+    ) -> torch.Tensor:
         r"""
         Short-range (SR) part of the pair potential in real space.
 
@@ -113,11 +119,17 @@ class Potential(torch.nn.Module):
                 "Cannot compute range-separated potential when `smearing` is not specified."
             )
         if self.exclusion_radius is None:
-            return self.from_dist(dist, pair_mask=pair_mask) - self.lr_from_dist(dist, pair_mask=pair_mask)
-        return -self.lr_from_dist(dist, pair_mask=pair_mask) * self.f_cutoff(dist, pair_mask=pair_mask)
+            return self.from_dist(dist, pair_mask=pair_mask) - self.lr_from_dist(
+                dist, pair_mask=pair_mask
+            )
+        return -self.lr_from_dist(dist, pair_mask=pair_mask) * self.f_cutoff(
+            dist, pair_mask=pair_mask
+        )
 
     @torch.jit.export
-    def lr_from_dist(self, dist: torch.Tensor, pair_mask: Optional[torch.Tensor] = None) -> torch.Tensor:
+    def lr_from_dist(
+        self, dist: torch.Tensor, pair_mask: Optional[torch.Tensor] = None
+    ) -> torch.Tensor:
         r"""
         Computes the long-range part of the pair potential :math:`V_\mathrm{LR}(r)`. in
         real space, given a tensor of interatomic distances.

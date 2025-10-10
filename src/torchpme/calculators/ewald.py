@@ -87,6 +87,7 @@ class EwaldCalculator(Calculator):
         positions: torch.Tensor,
         periodic: Optional[torch.Tensor] = None,
         kvectors: Optional[torch.Tensor] = None,
+        node_mask: Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
         # Define k-space cutoff from required real-space resolution
         if kvectors is None:
@@ -115,30 +116,14 @@ class EwaldCalculator(Calculator):
         # follows directly from the Poisson summation formula.
         # For this, we precompute trigonometric factors for optimization, which leads
         # to N^2 rather than N^3 scaling.
-        print(kvectors.shape, positions.shape)
         trig_args = kvectors @ (positions.T)  # [k, i]
 
-        # ensure all tensors have a batch dim
-        if trig_args.dim() == 2:  # [k, i] → [1, k, i]
-            trig_args = trig_args.unsqueeze(0)
-        if G.dim() == 1:          # [k] → [1, k]
-            G = G.unsqueeze(0)
-        if charges.dim() == 2:    # [i, c] → [1, i, c]
-            charges = charges.unsqueeze(0)
-        if cell.det().dim() == 0: # scalar → [1]
-            cell_det = cell.det().unsqueeze(0)
-        else:
-            cell_det = cell.det()
-
-        # original logic (only add batch index 'b' in einsums)
-        c = torch.cos(trig_args)  # [b, k, i]
-        s = torch.sin(trig_args)  # [b, k, i]
-        sc = torch.stack([c, s], dim=1)  # [b, 2, k, i]
-        sc_summed_G = torch.einsum("bfki,bic,bk->bfkc", sc, charges, G)
-        energy = torch.einsum("bfkc,bfki->bic", sc_summed_G, sc)
-        energy /= torch.abs(cell_det).unsqueeze(-1).unsqueeze(-1)
-
-        # drop batch if it was not there originally
+        c = torch.cos(trig_args)  # [k, i]
+        s = torch.sin(trig_args)  # [k, i]
+        sc = torch.stack([c, s], dim=0)  # [2 "f", k, i]
+        sc_summed_G = torch.einsum("fki,ic, k->fkc", sc, charges, G)
+        energy = torch.einsum("fkc,fki->ic", sc_summed_G, sc)
+        energy /= torch.abs(cell.det())
 
         # Remove the self-contribution: Using the Coulomb potential as an
         # example, this is the potential generated at the origin by the fictituous
@@ -146,6 +131,7 @@ class EwaldCalculator(Calculator):
         # This contribution always should be subtracted since it depends on the smearing
         # parameter, which is purely a convergence parameter.
         energy -= charges * self.potential.self_contribution()
+
         # Step 5: The method requires that the unit cell is charge-neutral.
         # If the cell has a net charge (i.e. if sum(charges) != 0), the method
         # implicitly assumes that a homogeneous background charge of the opposite sign
@@ -153,11 +139,11 @@ class EwaldCalculator(Calculator):
         # adjusted to compensate for this.
         # An extra factor of 2 is added to compensate for the division by 2 later on
         ivolume = torch.abs(cell.det()).pow(-1)
-        charge_tot = torch.sum(charges, dim=1)
+        charge_tot = torch.sum(charges, dim=0)
         prefac = self.potential.background_correction()
         energy -= 2 * prefac * charge_tot * ivolume
         # Compensate for double counting of pairs (i,j) and (j,i)
-        # energy += self.potential.pbc_correction(periodic, positions, cell, charges)
-        if energy.shape[0] == 1:
-            energy = energy.squeeze(0)
+        energy += self.potential.pbc_correction(periodic, positions, cell, charges)
+        if node_mask is not None:
+            energy = energy * node_mask.unsqueeze(-1)
         return energy / 2

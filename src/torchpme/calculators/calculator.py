@@ -51,7 +51,6 @@ class Calculator(torch.nn.Module):
         charges: torch.Tensor,
         neighbor_indices: torch.Tensor,
         neighbor_distances: torch.Tensor,
-        node_mask: Optional[torch.Tensor] = None,
         pair_mask: Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
         # Compute the pair potential terms V(r_ij) for each pair of atoms (i,j)
@@ -60,14 +59,16 @@ class Calculator(torch.nn.Module):
             if self.potential.smearing is None:
                 if self.potential.exclusion_radius is None:
                     potentials_bare = self.potential.from_dist(
-                        neighbor_distances, pair_mask=pair_mask
+                        neighbor_distances, pair_mask
                     )
                 else:
                     potentials_bare = self.potential.from_dist(
-                        neighbor_distances, pair_mask=pair_mask
-                    ) * (1 - self.potential.f_cutoff(neighbor_distances))
+                        neighbor_distances, pair_mask
+                    ) * (1 - self.potential.f_cutoff(neighbor_distances, pair_mask))
             else:
-                potentials_bare = self.potential.sr_from_dist(neighbor_distances, pair_mask=pair_mask)
+                potentials_bare = self.potential.sr_from_dist(
+                    neighbor_distances, pair_mask
+                )
 
         # Multiply the bare potential terms V(r_ij) with the corresponding charges
         # of ``atom j'' to obtain q_j*V(r_ij). Since each atom j can be a neighbor of
@@ -168,7 +169,6 @@ class Calculator(torch.nn.Module):
             charges=charges,
             neighbor_indices=neighbor_indices,
             neighbor_distances=neighbor_distances,
-            node_mask=node_mask,
             pair_mask=pair_mask,
         )
 
@@ -181,6 +181,7 @@ class Calculator(torch.nn.Module):
             positions=positions,
             periodic=periodic,
             kvectors=kvectors,
+            node_mask=node_mask,
         )
-        print(potential_sr, potential_lr)
+
         return self.prefactor * (potential_sr + potential_lr)
