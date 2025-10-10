@@ -166,8 +166,10 @@ class Calculator(torch.nn.Module):
             positions=positions,
             neighbor_indices=neighbor_indices,
             neighbor_distances=neighbor_distances,
-            smearing=self.potential.smearing,
             periodic=periodic,
+            pair_mask=pair_mask,
+            node_mask=node_mask,
+            kvectors=kvectors,
         )
 
         # Compute short-range (SR) part using a real space sum

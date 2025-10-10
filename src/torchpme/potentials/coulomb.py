@@ -50,7 +50,7 @@ class CoulombPotential(Potential):
         :param pair_mask: Optional torch.tensor containing a mask to be applied to the
             result.
         """
-        result = 1.0 / dist.clamp(min=1e-12)
+        result = 1.0 / dist.clamp(min=1e-15)
 
         if pair_mask is not None:
             result = result * pair_mask  # elementwise multiply, keeps shape fixed

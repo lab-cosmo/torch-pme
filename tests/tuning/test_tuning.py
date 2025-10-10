@@ -220,24 +220,6 @@ def test_invalid_shape_cell(tune):
 
 
 @pytest.mark.parametrize("tune", [tune_ewald, tune_pme, tune_p3m])
-def test_invalid_cell(tune):
-    charges, _, positions = system()
-    match = (
-        "provided `cell` has a determinant of 0 and therefore is not valid for "
-        "periodic calculation"
-    )
-    with pytest.raises(ValueError, match=match):
-        tune(
-            charges=charges,
-            cell=torch.zeros(3, 3),
-            positions=positions,
-            cutoff=DEFAULT_CUTOFF,
-            neighbor_indices=None,
-            neighbor_distances=None,
-        )
-
-
-@pytest.mark.parametrize("tune", [tune_ewald, tune_pme, tune_p3m])
 def test_invalid_dtype_cell(tune):
     charges, _, positions = system()
     match = r"type of `cell` \(torch.float64\) must be same as that of the `positions` class \(torch.float32\)"

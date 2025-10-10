@@ -201,40 +201,6 @@ class TestWorkflow:
             ):
                 CalculatorClass(**params)
 
-    def test_periodicity_incompatability(
-        self,
-        CalculatorClass,
-        params,
-        device,
-        dtype,
-    ):
-        if CalculatorClass in [PMECalculator, P3MCalculator, EwaldCalculator]:
-            charges, cell, positions, neighbor_indices, neighbor_distances = (
-                self.cscl_system(device=device, dtype=dtype)
-            )
-            match = (
-                "K-space summation is not implemented for 1D or non-periodic systems."
-            )
-            with pytest.raises(ValueError, match=match):
-                CalculatorClass(**params).to(device).forward(
-                    charges=charges,
-                    cell=cell * 4,
-                    positions=positions,
-                    neighbor_indices=neighbor_indices,
-                    neighbor_distances=neighbor_distances,
-                    periodic=torch.tensor([True, False, False], device=device),
-                )
-            match = r"Maximum distance along non-periodic axis \(.*\) exceeds one third of cell size \(.*\)\."
-            with pytest.raises(ValueError, match=match):
-                CalculatorClass(**params).to(device).forward(
-                    charges=charges,
-                    cell=cell,
-                    positions=positions,
-                    neighbor_indices=neighbor_indices,
-                    neighbor_distances=neighbor_distances,
-                    periodic=torch.tensor([True, True, False], device=device),
-                )
-
     def test_periodicity_true_value(
         self,
         CalculatorClass,

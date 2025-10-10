@@ -127,11 +127,15 @@ class SplinePotential(Potential):
                 yhat_at_zero, dtype=self.k_grid.dtype, device=self.k_grid.device
             )
 
-    def from_dist(self, dist: torch.Tensor) -> torch.Tensor:
+    def from_dist(
+        self, dist: torch.Tensor, pair_mask: Optional[torch.Tensor] = None
+    ) -> torch.Tensor:
         # if the full spline is not given, falls back on the lr part
-        return self.lr_from_dist(dist) + self.sr_from_dist(dist)
+        return self.lr_from_dist(dist, pair_mask) + self.sr_from_dist(dist, pair_mask)
 
-    def sr_from_dist(self, dist: torch.Tensor) -> torch.Tensor:
+    def sr_from_dist(
+        self, dist: torch.Tensor, pair_mask: Optional[torch.Tensor] = None
+    ) -> torch.Tensor:
         """
         Short-range part of the range-separated potential.
 
@@ -140,7 +144,9 @@ class SplinePotential(Potential):
         """
         return 0.0 * dist
 
-    def lr_from_dist(self, dist: torch.Tensor) -> torch.Tensor:
+    def lr_from_dist(
+        self, dist: torch.Tensor, pair_mask: Optional[torch.Tensor] = None
+    ) -> torch.Tensor:
         return self._spline(dist)
 
     def lr_from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:

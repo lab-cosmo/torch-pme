@@ -62,7 +62,7 @@ class InversePowerLawPotential(Potential):
         :param pair_mask: Optional torch.tensor containing a mask to be applied to the
             result.
         """
-        result = torch.pow(dist.clamp(min=1e-12), -self.exponent)
+        result = torch.pow(dist.clamp(min=1e-15), -self.exponent)
         if pair_mask is not None:
             result = result * pair_mask  # elementwise multiply, keeps shape fixed
         return result
@@ -97,7 +97,9 @@ class InversePowerLawPotential(Potential):
         x = 0.5 * dist**2 / self.smearing**2
         peff = self.exponent / 2
         prefac = 1.0 / (2 * self.smearing**2) ** peff
-        result = prefac * gammainc(peff, x) / x**peff
+        result = (
+            prefac * gammainc(peff, x.clamp(min=1e-15)) / (x.clamp(min=1e-15) ** peff)
+        )
         if pair_mask is not None:
             result = result * pair_mask
         return result

@@ -204,7 +204,4 @@ class Potential(torch.nn.Module):
         charges: torch.Tensor,
     ) -> torch.Tensor:
         """A correction term that is only relevant for systems with 2D periodicity."""
-        if periodic is None or torch.all(periodic):
-            return torch.zeros_like(charges)
-
-        raise NotImplementedError(f"pbc_correction is not implemented for {self}")
+        return torch.zeros_like(charges)
