@@ -47,6 +47,8 @@ class CoulombPotential(Potential):
 
         :param dist: torch.tensor containing the distances at which the potential is to
             be evaluated.
+        :param pair_mask: Optional torch.tensor containing a mask to be applied to the
+            result.
         """
         result = 1.0 / dist.clamp(min=1e-12)
 
@@ -66,6 +68,8 @@ class CoulombPotential(Potential):
 
         :param dist: torch.tensor containing the distances at which the potential is to
             be evaluated.
+        :param pair_mask: Optional torch.tensor containing a mask to be applied to the
+            result.
         """
         if self.smearing is None:
             raise ValueError(

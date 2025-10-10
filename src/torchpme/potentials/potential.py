@@ -65,6 +65,8 @@ class Potential(torch.nn.Module):
 
         :param dist: a torc.Tensor containing the interatomic distances over which the
             cutoff function should be computed.
+        :param pair_mask: Optional torch.tensor containing a mask to be applied to the
+            result.
         """
         if self.exclusion_radius is None:
             raise ValueError(
@@ -91,6 +93,8 @@ class Potential(torch.nn.Module):
 
         :param dist: torch.tensor containing the distances at which the potential
             is to be evaluated.
+        :param pair_mask: Optional torch.tensor containing a mask to be applied to the
+            result.
         """
         raise NotImplementedError(
             f"from_dist is not implemented for {self.__class__.__name__}"
@@ -113,6 +117,8 @@ class Potential(torch.nn.Module):
 
         :param dist: torch.tensor containing the distances at which the potential is to
             be evaluated.
+        :param pair_mask: Optional torch.tensor containing a mask to be applied to the
+            result.
         """
         if self.smearing is None:
             raise ValueError(
@@ -136,6 +142,8 @@ class Potential(torch.nn.Module):
 
         :param dist: torch.tensor containing the distances at which the potential is to
             be evaluated.
+        :param pair_mask: Optional torch.tensor containing a mask to be applied to the
+            result.
         """
         raise NotImplementedError(
             f"lr_from_dist is not implemented for {self.__class__.__name__}"

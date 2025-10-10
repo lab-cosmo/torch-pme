@@ -51,17 +51,26 @@ class InversePowerLawPotential(Potential):
         self.register_buffer("exponent", torch.tensor(exponent, dtype=torch.float64))
 
     @torch.jit.export
-    def from_dist(self, dist: torch.Tensor) -> torch.Tensor:
+    def from_dist(
+        self, dist: torch.Tensor, pair_mask: Optional[torch.Tensor] = None
+    ) -> torch.Tensor:
         """
         Full :math:`1/r^p` potential as a function of :math:`r`.
 
         :param dist: torch.tensor containing the distances at which the potential is to
             be evaluated.
+        :param pair_mask: Optional torch.tensor containing a mask to be applied to the
+            result.
         """
-        return torch.pow(dist, -self.exponent)
+        result = torch.pow(dist.clamp(min=1e-12), -self.exponent)
+        if pair_mask is not None:
+            result = result * pair_mask  # elementwise multiply, keeps shape fixed
+        return result
 
     @torch.jit.export
-    def lr_from_dist(self, dist: torch.Tensor) -> torch.Tensor:
+    def lr_from_dist(
+        self, dist: torch.Tensor, pair_mask: Optional[torch.Tensor] = None
+    ) -> torch.Tensor:
         """
         Long range of the range-separated :math:`1/r^p` potential.
 
@@ -77,6 +86,8 @@ class InversePowerLawPotential(Potential):
 
         :param dist: torch.tensor containing the distances at which the potential is to
             be evaluated.
+        :param pair_mask: Optional torch.tensor containing a mask to be applied to the
+            result.
         """
         if self.smearing is None:
             raise ValueError(
@@ -86,7 +97,10 @@ class InversePowerLawPotential(Potential):
         x = 0.5 * dist**2 / self.smearing**2
         peff = self.exponent / 2
         prefac = 1.0 / (2 * self.smearing**2) ** peff
-        return prefac * gammainc(peff, x) / x**peff
+        result = prefac * gammainc(peff, x) / x**peff
+        if pair_mask is not None:
+            result = result * pair_mask
+        return result
 
     @torch.jit.export
     def lr_from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:

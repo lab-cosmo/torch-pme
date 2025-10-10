@@ -153,6 +153,12 @@ class Calculator(torch.nn.Module):
         :param periodic: optional torch.tensor of shape ``(3,)`` indicating which
             directions are periodic (True) and which are not (False). If not
             provided, full periodicity is assumed.
+        :param node_mask: Optional torch.tensor of shape ``(len(positions),)`` that
+            indicates which of the atoms are masked.
+        :param pair_mask: Optional torch.tensor containing a mask to be applied to the
+            result.
+        :param kvectors: Optional precomputed k-vectors to be used in the Fourier
+            space part of the calculation.
         """
         _validate_parameters(
             charges=charges,
