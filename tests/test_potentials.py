@@ -673,3 +673,25 @@ def test_inversp_exp_background(exponent):
         prefac = torch.pi**1.5 * (2 * smearing**2) ** ((3 - exponent) / 2)
         prefac /= (3 - exponent) * gamma(exponent / 2)
         assert torch.allclose(bg, prefac)
+
+
+@pytest.mark.parametrize("exponent", ps)
+def test_padded_potential(exponent):
+    """Test that potentials can handle padded input without errors."""
+    smearing = 1.0
+    ipl = InversePowerLawPotential(exponent=exponent, smearing=smearing)
+    ipl.to(dtype=dtype)
+
+    # Create padded distances and mask
+    dists = torch.tensor([0.1, 0.2, 0.3, 0.0, 0.0], dtype=dtype)
+    pair_mask = torch.tensor([1, 1, 1, 0, 0], dtype=dtype)
+
+    # Compute potential with and without mask
+    pot_no_mask = ipl.sr_from_dist(dists)
+    pot_with_mask = ipl.sr_from_dist(dists, pair_mask=pair_mask)
+
+    # Check that masked values are zeroed out
+    assert torch.allclose(pot_with_mask * pair_mask, pot_with_mask)
+    # Check that unmasked values match the no-mask computation
+    assert torch.allclose(pot_with_mask[:3], pot_no_mask[:3])
+    assert torch.allclose(pot_with_mask[3:], torch.tensor([0.0, 0.0], dtype=dtype))

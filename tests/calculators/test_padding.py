@@ -101,33 +101,42 @@ def test_batched_ewald_values():
 
 def test_batched_ewald_speed():
     # Time vmap version
-    start_batched = time.time()
-    _ = torch.vmap(calc.forward)(
-        charges_batch.unsqueeze(-1),
-        cell_batch,
-        pos_batch,
-        torch.stack((i_batch, j_batch), dim=-1),
-        d_batch,
-        periodic_batch,
-        node_mask,
-        pair_mask,
-        kvectors,
-    )
-    batched_time = time.time() - start_batched
-
-    # Time for-loop version
-    start_loop = time.time()
-    values_loop = []
-    for idx in range(len(systems)):
-        values_loop.append(
-            calc.forward(
-                charges_list[idx].unsqueeze(-1),
-                cell_list[idx],
-                pos_list[idx],
-                torch.stack((i_list[idx], j_list[idx]), dim=-1),
-                d_list[idx],
-                periodic_list[idx],
-            )
+    batched_time_total = 0.0
+    for _ in range(5):
+        start_batched = time.time()
+        _ = torch.vmap(calc.forward)(
+            charges_batch.unsqueeze(-1),
+            cell_batch,
+            pos_batch,
+            torch.stack((i_batch, j_batch), dim=-1),
+            d_batch,
+            periodic_batch,
+            node_mask,
+            pair_mask,
+            kvectors,
         )
-    loop_time = time.time() - start_loop
+        batched_time = time.time() - start_batched
+        batched_time_total += batched_time
+    batched_time = batched_time_total / 5
+
+    loop_time_total = 0.0
+    for _ in range(5):
+        # Time for-loop version
+        start_loop = time.time()
+        values_loop = []
+        for idx in range(len(systems)):
+            values_loop.append(
+                calc.forward(
+                    charges_list[idx].unsqueeze(-1),
+                    cell_list[idx],
+                    pos_list[idx],
+                    torch.stack((i_list[idx], j_list[idx]), dim=-1),
+                    d_list[idx],
+                    periodic_list[idx],
+                )
+            )
+        loop_time = time.time() - start_loop
+        loop_time_total += loop_time
+    loop_time = loop_time_total / 5
+
     assert batched_time < loop_time, "Batched version should be faster than loop"

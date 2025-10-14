@@ -109,7 +109,9 @@ class PMECalculator(Calculator):
         # Compute number of times each basis vector of the reciprocal space can be
         # scaled until the cutoff is reached
         if node_mask is not None or kvectors is not None:
-            raise ValueError("Batching not implemented for mesh-based calculators")
+            raise NotImplementedError(
+                "Batching not implemented for mesh-based calculators"
+            )
         ns = get_ns_mesh(cell, self.mesh_spacing)
 
         self.mesh_interpolator.update(cell, ns)

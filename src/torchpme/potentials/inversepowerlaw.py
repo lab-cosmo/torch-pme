@@ -86,7 +86,7 @@ class InversePowerLawPotential(Potential):
 
         :param dist: torch.tensor containing the distances at which the potential is to
             be evaluated.
-        :param pair_mask: Optional torch.tensor containing a mask to be applied to the
+        :param pair_mask: Optional :class:`torch.tensor` containing a mask to be applied to the
             result.
         """
         if self.smearing is None:
