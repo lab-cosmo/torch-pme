@@ -1,6 +1,6 @@
 """
 Batched Ewald Computation with Padding
-====================================
+======================================
 
 This example demonstrates how to compute Ewald potentials for a batch of systems
 with different numbers of atoms using padding. The idea is to pad atomic positions,
