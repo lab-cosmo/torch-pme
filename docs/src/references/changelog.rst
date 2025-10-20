@@ -23,6 +23,11 @@ changelog <https://keepachangelog.com/en/1.1.0/>`_ format. This project follows
 
 `Unreleased <https://github.com/lab-cosmo/torch-pme/>`_
 -------------------------------------------------------
+Added
+#####
+
+* Add support for batched calculations
+
 
 `Version 0.3.2 <https://github.com/lab-cosmo/torch-pme/releases/tag/v0.3.2>`_ - 2025-10-07
 ------------------------------------------------------------------------------------------

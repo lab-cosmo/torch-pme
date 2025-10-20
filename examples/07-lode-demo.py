@@ -443,6 +443,9 @@ class LODECalculator(torchpme.Calculator):
         neighbor_indices: Optional[torch.Tensor] = None,
         neighbor_distances: Optional[torch.Tensor] = None,
         periodic: Optional[torch.Tensor] = None,
+        node_mask: Optional[torch.Tensor] = None,
+        pair_mask: Optional[torch.Tensor] = None,
+        kvectors: Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
         # Update meshes
         assert self.potential.smearing is not None  # otherwise mypy complains

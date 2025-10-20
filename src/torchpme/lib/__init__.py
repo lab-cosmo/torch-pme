@@ -1,5 +1,6 @@
 from .kspace_filter import KSpaceFilter, KSpaceKernel, P3MKSpaceFilter
 from .kvectors import (
+    compute_batched_kvectors,
     generate_kvectors_for_ewald,
     generate_kvectors_for_mesh,
     get_ns_mesh,
@@ -26,6 +27,7 @@ __all__ = [
     "distances",
     "generate_kvectors_for_ewald",
     "generate_kvectors_for_mesh",
+    "compute_batched_kvectors",
     "get_ns_mesh",
     "gamma",
     "gammaincc_over_powerlaw",

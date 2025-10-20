@@ -104,7 +104,6 @@ class TunerBase:
             neighbor_distances=torch.tensor(
                 [1.0], device=positions.device, dtype=positions.dtype
             ),
-            smearing=1.0,  # dummy value because; always have range-seperated potentials
         )
         self.charges = charges
         self.cell = cell
@@ -325,7 +324,6 @@ class TuningTimings(torch.nn.Module):
             positions=positions,
             neighbor_indices=neighbor_indices,
             neighbor_distances=neighbor_distances,
-            smearing=1.0,  # dummy value because; always have range-seperated potentials
         )
 
         self.charges = charges

@@ -54,7 +54,9 @@ class Potential(torch.nn.Module):
         self.exclusion_degree = exclusion_degree
 
     @torch.jit.export
-    def f_cutoff(self, dist: torch.Tensor) -> torch.Tensor:
+    def f_cutoff(
+        self, dist: torch.Tensor, pair_mask: Optional[torch.Tensor] = None
+    ) -> torch.Tensor:
         r"""
         Default cutoff function defining the *local* region that should be excluded from
         the computation of a long-range model. Defaults to a shifted cosine
@@ -63,34 +65,45 @@ class Potential(torch.nn.Module):
 
         :param dist: a torc.Tensor containing the interatomic distances over which the
             cutoff function should be computed.
+        :param pair_mask: Optional torch.tensor containing a mask to be applied to the
+            result.
         """
         if self.exclusion_radius is None:
             raise ValueError(
                 "Cannot compute cutoff function when `exclusion_radius` is not set"
             )
 
-        return torch.where(
+        result = torch.where(
             dist < self.exclusion_radius,
             1
             - ((1 - torch.cos(torch.pi * (dist / self.exclusion_radius))) * 0.5)
             ** self.exclusion_degree,
             0.0,
         )
+        if pair_mask is not None:
+            result = result * pair_mask
+        return result
 
     @torch.jit.export
-    def from_dist(self, dist: torch.Tensor) -> torch.Tensor:
+    def from_dist(
+        self, dist: torch.Tensor, pair_mask: Optional[torch.Tensor] = None
+    ) -> torch.Tensor:
         """
         Computes a pair potential given a tensor of interatomic distances.
 
         :param dist: torch.tensor containing the distances at which the potential
             is to be evaluated.
+        :param pair_mask: Optional torch.tensor containing a mask to be applied to the
+            result.
         """
         raise NotImplementedError(
             f"from_dist is not implemented for {self.__class__.__name__}"
         )
 
     @torch.jit.export
-    def sr_from_dist(self, dist: torch.Tensor) -> torch.Tensor:
+    def sr_from_dist(
+        self, dist: torch.Tensor, pair_mask: Optional[torch.Tensor] = None
+    ) -> torch.Tensor:
         r"""
         Short-range (SR) part of the pair potential in real space.
 
@@ -104,23 +117,33 @@ class Potential(torch.nn.Module):
 
         :param dist: torch.tensor containing the distances at which the potential is to
             be evaluated.
+        :param pair_mask: Optional torch.tensor containing a mask to be applied to the
+            result.
         """
         if self.smearing is None:
             raise ValueError(
                 "Cannot compute range-separated potential when `smearing` is not specified."
             )
         if self.exclusion_radius is None:
-            return self.from_dist(dist) - self.lr_from_dist(dist)
-        return -self.lr_from_dist(dist) * self.f_cutoff(dist)
+            return self.from_dist(dist, pair_mask=pair_mask) - self.lr_from_dist(
+                dist, pair_mask=pair_mask
+            )
+        return -self.lr_from_dist(dist, pair_mask=pair_mask) * self.f_cutoff(
+            dist, pair_mask=pair_mask
+        )
 
     @torch.jit.export
-    def lr_from_dist(self, dist: torch.Tensor) -> torch.Tensor:
+    def lr_from_dist(
+        self, dist: torch.Tensor, pair_mask: Optional[torch.Tensor] = None
+    ) -> torch.Tensor:
         r"""
         Computes the long-range part of the pair potential :math:`V_\mathrm{LR}(r)`. in
         real space, given a tensor of interatomic distances.
 
         :param dist: torch.tensor containing the distances at which the potential is to
             be evaluated.
+        :param pair_mask: Optional torch.tensor containing a mask to be applied to the
+            result.
         """
         raise NotImplementedError(
             f"lr_from_dist is not implemented for {self.__class__.__name__}"
@@ -181,7 +204,4 @@ class Potential(torch.nn.Module):
         charges: torch.Tensor,
     ) -> torch.Tensor:
         """A correction term that is only relevant for systems with 2D periodicity."""
-        if periodic is None or torch.all(periodic):
-            return torch.zeros_like(charges)
-
-        raise NotImplementedError(f"pbc_correction is not implemented for {self}")
+        return torch.zeros_like(charges)
