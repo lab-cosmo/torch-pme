@@ -2,13 +2,17 @@
 Batched Ewald Computation with Padding
 ======================================
 
-This example demonstrates how to compute Ewald potentials for a batch of systems
-with different numbers of atoms using padding. The idea is to pad atomic positions,
-charges, and neighbor lists to the same length and use masks to ignore padded entries
-during computation.
+This example demonstrates how to compute Ewald potentials for a batch of systems with
+different numbers of atoms using padding. The idea is to pad atomic positions, charges,
+and neighbor lists to the same length and use masks to ignore padded entries during
+computation. Note that batching systems of varying sizes in this way can increase the
+computational cost during model training, since padded atoms are included in the batched
+operations even though they don't contribute physically.
 """
 
 # %%
+import time
+
 import torch
 import vesin
 from torch.nn.utils.rnn import pad_sequence
@@ -19,7 +23,7 @@ dtype = torch.float64
 cutoff = 4.4
 
 # %%
-# Example: two systems with different numbers of atoms
+# Example: two systems with 5 different systems
 systems = [
     {
         "symbols": ("Cs", "Cl"),
@@ -35,6 +39,51 @@ systems = [
         ),
         "charges": torch.tensor([[1.0], [-1.0], [-1.0]], dtype=dtype),
         "cell": torch.eye(3, dtype=dtype) * 4.0,
+        "pbc": torch.tensor([True, True, True]),
+    },
+    {
+        "symbols": ("K", "Br", "Br", "K"),
+        "positions": torch.tensor(
+            [(0, 0, 0), (0.5, 0.5, 0.5), (0.25, 0.25, 0.25), (0.75, 0.75, 0.75)],
+            dtype=dtype,
+        ),
+        "charges": torch.tensor([[1.0], [-1.0], [-1.0], [1.0]], dtype=dtype),
+        "cell": torch.eye(3, dtype=dtype) * 5.0,
+        "pbc": torch.tensor([True, True, True]),
+    },
+    {
+        "symbols": ("Mg", "O", "O", "Mg", "O"),
+        "positions": torch.tensor(
+            [
+                (0, 0, 0),
+                (0.5, 0.5, 0.5),
+                (0.25, 0.25, 0.25),
+                (0.75, 0.75, 0.75),
+                (0.1, 0.1, 0.1),
+            ],
+            dtype=dtype,
+        ),
+        "charges": torch.tensor([[2.0], [-2.0], [-2.0], [2.0], [-2.0]], dtype=dtype),
+        "cell": torch.eye(3, dtype=dtype) * 6.0,
+        "pbc": torch.tensor([True, True, True]),
+    },
+    {
+        "symbols": ("Al", "O", "O", "Al", "O", "O"),
+        "positions": torch.tensor(
+            [
+                (0, 0, 0),
+                (0.5, 0.5, 0.5),
+                (0.25, 0.25, 0.25),
+                (0.75, 0.75, 0.75),
+                (0.1, 0.1, 0.1),
+                (0.9, 0.9, 0.9),
+            ],
+            dtype=dtype,
+        ),
+        "charges": torch.tensor(
+            [[3.0], [-2.0], [-2.0], [3.0], [-2.0], [-2.0]], dtype=dtype
+        ),
+        "cell": torch.eye(3, dtype=dtype) * 7.0,
         "pbc": torch.tensor([True, True, True]),
     },
 ]
@@ -117,4 +166,39 @@ potentials_batch = torch.vmap(calculator.forward)(
 # %%
 print("Batched potentials shape:", potentials_batch.shape)
 print(potentials_batch)
+# %%
+# Compare performance of batched vs. looped computation
+n_iter = 100
+
+t0 = time.perf_counter()
+for _ in range(n_iter):
+    _ = torch.vmap(calculator.forward)(
+        charges_batch,
+        cell_batch,
+        pos_batch,
+        torch.stack((i_batch, j_batch), dim=-1),
+        d_batch,
+        periodic_batch,
+        node_mask,
+        pair_mask,
+        kvectors,
+    )
+t_batch = (time.perf_counter() - t0) / n_iter
+
+t0 = time.perf_counter()
+for _ in range(n_iter):
+    for k in range(len(pos_list)):
+        _ = calculator.forward(
+            charges_list[k],
+            cell_list[k],
+            pos_list[k],
+            torch.stack((i_list[k], j_list[k]), dim=-1),
+            d_list[k],
+            periodic_list[k],
+        )
+t_loop = (time.perf_counter() - t0) / n_iter
+
+print(f"Average time per batched call: {t_batch:.6f} s")
+print(f"Average time per loop call:    {t_loop:.6f} s")
+print("Batched is faster" if t_batch < t_loop else "Loop is faster")
 # %%
