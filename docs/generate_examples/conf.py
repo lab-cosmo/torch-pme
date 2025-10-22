@@ -3,7 +3,6 @@
 import os
 
 from chemiscope.sphinx import ChemiscopeScraper
-from sphinx_gallery.sorting import FileNameSortKey
 
 extensions = [
     "sphinx_gallery.gen_gallery",
@@ -25,5 +24,5 @@ sphinx_gallery_conf = {
     "prefer_full_module": ["torchpme"],
     "reference_url": {"torchpme": None},
     "remove_config_comments": True,
-    "within_subsection_order": FileNameSortKey,
+    "within_subsection_order": "FileNameSortKey",
 }
