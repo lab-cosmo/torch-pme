@@ -13,7 +13,6 @@ os.environ["METATENSOR_IMPORT_FOR_SPHINX"] = "1"
 
 import torchpme  # noqa
 
-suppress_warnings = ["config.cache"]
 
 ROOT = os.path.abspath(os.path.join("..", ".."))
 sys.path.append(os.path.join(ROOT, "docs", "extensions"))
