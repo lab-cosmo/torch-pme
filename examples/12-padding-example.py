@@ -106,7 +106,7 @@ for sys in systems:
     neighbor_indices, neighbor_distances = nl.compute(
         points=sys["positions"],
         box=sys["cell"],
-        periodic=sys["pbc"][0],
+        periodic=sys["pbc"].tolist(),
         quantities="Pd",
     )
     i_list.append(torch.tensor(neighbor_indices[:, 0], dtype=torch.int64))

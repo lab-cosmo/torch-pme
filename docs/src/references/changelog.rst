@@ -107,7 +107,7 @@ Changed
 * Tuning now uses a grid-search based scheme, instead of a gradient based scheme
 * Tuning functions no longer takes the ``cutoff`` parameter, and thus does not
   support a built-in NL calculation.
-* Refactor the :class:`torchpme.InversePowerLawPotential`` class to restrict the
+* Refactor the :class:`torchpme.InversePowerLawPotential` class to restrict the
   exponent to integer values
 
 Fixed
