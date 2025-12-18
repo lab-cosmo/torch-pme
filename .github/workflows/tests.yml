@@ -22,7 +22,7 @@ jobs:
             python-version: "3.13"
 
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
       with:
         fetch-depth: 0
     - name: Set up Python ${{ matrix.python-version }}
@@ -48,7 +48,7 @@ jobs:
             python-version: "3.13"
 
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
       with:
         fetch-depth: 0
     - name: Set up Python ${{ matrix.python-version }}
@@ -63,6 +63,6 @@ jobs:
     - name: upload to codecov.io
       uses: codecov/codecov-action@v5
       with:
-        fail_ci_if_error: true
+        fail_ci_if_error: false
         files: tests/coverage.xml
         token: ${{ secrets.CODECOV_TOKEN }}
