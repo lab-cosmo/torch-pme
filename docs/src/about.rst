@@ -2,8 +2,8 @@ What is torch-pme
 =================
 
 ``torch-pme`` provides an interface in which the ``positions`` of the atoms in a
-structure are stored in :class:`torch.Tensor` objects, or in a :class:`metatensor.System
-<metatensor.torch.atomistic.System>` object.
+structure are stored in :class:`torch.Tensor` objects, or in a :class:`metatomic.System
+<metatomic.torch.System>` object.
 
 The primary goal is to design a library to compute long-range interactions that can be
 easily integrated with existing short-range machine learning (ML) architectures,
