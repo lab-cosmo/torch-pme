@@ -6,12 +6,12 @@ import torchpme
 import torchpme.calculators
 
 mts_torch = pytest.importorskip("metatensor.torch")
-mts_atomistic = pytest.importorskip("metatensor.torch.atomistic")
+mta_torch = pytest.importorskip("metatomic.torch")
 
 
 @pytest.fixture
 def system():
-    system = mts_atomistic.System(
+    system = mta_torch.System(
         types=torch.tensor([1, 2, 2]),
         positions=torch.tensor([[0.0, 0.0, 0.0], [0.0, 0.0, 0.2], [0.0, 0.0, 0.5]]),
         cell=4.2 * torch.eye(3),
@@ -167,7 +167,7 @@ def test_wrong_neighbors_properties(system, neighbors):
 
 
 def test_wrong_system_not_all_charges(system, neighbors):
-    system_nocharge = mts_torch.atomistic.System(
+    system_nocharge = mta_torch.System(
         system.types, system.positions, system.cell, pbc=system.pbc
     )
 
@@ -256,7 +256,7 @@ def test_components_error(system, neighbors):
 
 def test_systems_with_different_number_of_atoms(system, neighbors):
     """Test that systems with different numnber of atoms are supported."""
-    system_more_atoms = mts_atomistic.System(
+    system_more_atoms = mta_torch.System(
         types=torch.tensor([1, 1, 8]),
         positions=torch.tensor([[0.0, 0.0, 0.0], [0.0, 0.0, 2.0], [0.0, 2.0, 2.0]]),
         cell=torch.zeros([3, 3]),

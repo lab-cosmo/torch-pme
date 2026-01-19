@@ -14,7 +14,7 @@ sys.path.append(str(Path(__file__).parents[1]))
 from helpers import DEVICES, DTYPES
 
 mts_torch = pytest.importorskip("metatensor.torch")
-mts_atomistic = pytest.importorskip("metatomic.torch")
+mta_torch = pytest.importorskip("metatomic.torch")
 
 SMEARING = 0.1
 LR_WAVELENGTH = SMEARING / 4
@@ -57,7 +57,7 @@ MESH_SPACING = SMEARING / 4
 )
 class TestWorkflow:
     def system(self, device, dtype):
-        system = mts_atomistic.System(
+        system = mta_torch.System(
             types=torch.tensor([1, 2, 2]),
             positions=torch.tensor([[0.0, 0.0, 0.0], [0.0, 0.0, 0.2], [0.0, 0.0, 0.5]]),
             cell=4.2 * torch.eye(3),
