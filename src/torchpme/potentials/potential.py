@@ -33,6 +33,8 @@ class Potential(torch.nn.Module):
     :param exclusion_degree: Controls the sharpness of the transition in the cutoff function
         applied within the ``exclusion_radius``. The cutoff is computed as a raised cosine
         with exponent ``exclusion_degree``
+    :param prefactor: potential prefactor; see :ref:`prefactors` for details and common
+        values of electrostatic prefactors.
     """
 
     def __init__(
@@ -40,6 +42,7 @@ class Potential(torch.nn.Module):
         smearing: Optional[float] = None,
         exclusion_radius: Optional[float] = None,
         exclusion_degree: int = 1,
+        prefactor: float = 1.0,
     ):
         super().__init__()
 
@@ -52,6 +55,7 @@ class Potential(torch.nn.Module):
 
         self.exclusion_radius = exclusion_radius
         self.exclusion_degree = exclusion_degree
+        self.register_buffer("prefactor", torch.tensor(prefactor, dtype=torch.float64))
 
     @torch.jit.export
     def f_cutoff(
@@ -82,6 +86,7 @@ class Potential(torch.nn.Module):
         )
         if pair_mask is not None:
             result = result * pair_mask
+
         return result
 
     @torch.jit.export
@@ -124,6 +129,8 @@ class Potential(torch.nn.Module):
             raise ValueError(
                 "Cannot compute range-separated potential when `smearing` is not specified."
             )
+
+        # Don't apply prefactor here as it is applied in child classes
         if self.exclusion_radius is None:
             return self.from_dist(dist, pair_mask=pair_mask) - self.lr_from_dist(
                 dist, pair_mask=pair_mask
@@ -204,4 +211,4 @@ class Potential(torch.nn.Module):
         charges: torch.Tensor,
     ) -> torch.Tensor:
         """A correction term that is only relevant for systems with 2D periodicity."""
-        return torch.zeros_like(charges)
+        return self.prefactor * torch.zeros_like(charges)

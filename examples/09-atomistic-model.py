@@ -279,9 +279,8 @@ smearing, ewald_params, cutoff = 8.0, {"lr_wavelength": 64.0}, 32.0
 # We now define an Ewald calculator with a Coulomb potential.
 
 calculator = torchpme.metatensor.EwaldCalculator(
-    torchpme.CoulombPotential(smearing=smearing),
+    torchpme.CoulombPotential(smearing=smearing, prefactor=torchpme.prefactors.eV_A),
     **ewald_params,
-    prefactor=torchpme.prefactors.eV_A,
 )
 
 # %%
@@ -467,9 +466,8 @@ smearing, ewald_params, cutoff = (
 )
 
 pme_calculator = torchpme.metatensor.PMECalculator(
-    torchpme.CoulombPotential(smearing=smearing),
+    torchpme.CoulombPotential(smearing=smearing, prefactor=torchpme.prefactors.eV_A),
     **ewald_params,
-    prefactor=torchpme.prefactors.eV_A,
 )
 
 pme_model = CalculatorModel(calculator=pme_calculator, cutoff=cutoff)
@@ -482,9 +480,8 @@ pme_mta_calculator = MetatomicCalculator(pme_atomistic_model)
 
 # P3M
 p3m_calculator = torchpme.metatensor.P3MCalculator(
-    torchpme.CoulombPotential(smearing=smearing),
+    torchpme.CoulombPotential(smearing=smearing, prefactor=torchpme.prefactors.eV_A),
     **ewald_params,
-    prefactor=torchpme.prefactors.eV_A,
 )
 
 p3m_model = CalculatorModel(calculator=p3m_calculator, cutoff=cutoff)

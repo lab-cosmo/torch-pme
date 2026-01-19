@@ -45,6 +45,8 @@ class SplinePotential(Potential):
     :param exclusion_degree: Controls the sharpness of the transition in the cutoff function
         applied within the ``exclusion_radius``. The cutoff is computed as a raised cosine
         with exponent ``exclusion_degree``
+    :param prefactor: potential prefactor; see :ref:`prefactors` for details and common
+        values of electrostatic prefactors.
     """
 
     def __init__(
@@ -59,11 +61,13 @@ class SplinePotential(Potential):
         smearing: Optional[float] = None,
         exclusion_radius: Optional[float] = None,
         exclusion_degree: int = 1,
+        prefactor: float = 1.0,
     ):
         super().__init__(
             smearing=smearing,
             exclusion_radius=exclusion_radius,
             exclusion_degree=exclusion_degree,
+            prefactor=prefactor,
         )
 
         if len(y_grid) != len(r_grid):
@@ -131,7 +135,9 @@ class SplinePotential(Potential):
         self, dist: torch.Tensor, pair_mask: Optional[torch.Tensor] = None
     ) -> torch.Tensor:
         # if the full spline is not given, falls back on the lr part
-        return self.lr_from_dist(dist, pair_mask) + self.sr_from_dist(dist, pair_mask)
+        return self.prefactor * (
+            self.lr_from_dist(dist, pair_mask) + self.sr_from_dist(dist, pair_mask)
+        )
 
     def sr_from_dist(
         self, dist: torch.Tensor, pair_mask: Optional[torch.Tensor] = None
@@ -147,16 +153,16 @@ class SplinePotential(Potential):
     def lr_from_dist(
         self, dist: torch.Tensor, pair_mask: Optional[torch.Tensor] = None
     ) -> torch.Tensor:
-        return self._spline(dist)
+        return self.prefactor * self._spline(dist)
 
     def lr_from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
-        return self._krn_spline(k_sq)
+        return self.prefactor * self._krn_spline(k_sq)
 
     def self_contribution(self) -> torch.Tensor:
-        return self._y_at_zero
+        return self.prefactor * self._y_at_zero
 
     def background_correction(self) -> torch.Tensor:
-        return torch.zeros(1)
+        return self.prefactor * torch.zeros(1)
 
     from_dist.__doc__ = Potential.from_dist.__doc__
     lr_from_dist.__doc__ = Potential.lr_from_dist.__doc__

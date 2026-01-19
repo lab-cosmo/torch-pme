@@ -5,6 +5,43 @@ import torch
 from .potential import Potential
 
 
+def _pbc_correction(
+    periodic: Optional[torch.Tensor],
+    positions: torch.Tensor,
+    cell: torch.Tensor,
+    charges: torch.Tensor,
+) -> torch.Tensor:
+    # Define this helper function as this function is used in multiple potentials
+
+    # "2D periodicity" correction for 1/r potential
+    if periodic is None:
+        periodic = torch.tensor([True, True, True], device=cell.device)
+    n_periodic = torch.sum(periodic)
+    is_2d = n_periodic == 2
+    axis = torch.argmax(
+        torch.where(
+            is_2d.unsqueeze(-1),
+            (~periodic).to(torch.int64),
+            torch.zeros_like(periodic, dtype=torch.int64),
+        ),
+        dim=-1,
+    )
+    E_slab = torch.zeros_like(charges)
+    z_i = torch.gather(positions, 1, axis.expand(positions.shape[0]).unsqueeze(-1))
+    basis_len = torch.gather(torch.linalg.norm(cell, dim=-1), 0, axis)
+    V = torch.abs(torch.linalg.det(cell))
+    charge_tot = torch.sum(charges, dim=0)
+    M_axis = torch.sum(charges * z_i, dim=0)
+    M_axis_sq = torch.sum(charges * z_i**2, dim=0)
+    E_slab_2d = (4.0 * torch.pi / V) * (
+        z_i * M_axis
+        - 0.5 * (M_axis_sq + charge_tot * z_i**2)
+        - charge_tot / 12.0 * basis_len**2
+    )
+
+    return torch.where(is_2d.unsqueeze(-1), E_slab_2d, E_slab)
+
+
 class CoulombPotential(Potential):
     """
     Smoothed electrostatic Coulomb potential :math:`1/r`.
@@ -29,6 +66,8 @@ class CoulombPotential(Potential):
     :param exclusion_degree: Controls the sharpness of the transition in the cutoff function
         applied within the ``exclusion_radius``. The cutoff is computed as a raised cosine
         with exponent ``exclusion_degree``
+    :param prefactor: electrostatics prefactor; see :ref:`prefactors` for details and
+        common values.
     """
 
     def __init__(
@@ -36,8 +75,9 @@ class CoulombPotential(Potential):
         smearing: Optional[float] = None,
         exclusion_radius: Optional[float] = None,
         exclusion_degree: int = 1,
+        prefactor: float = 1.0,
     ):
-        super().__init__(smearing, exclusion_radius, exclusion_degree)
+        super().__init__(smearing, exclusion_radius, exclusion_degree, prefactor)
 
     def from_dist(
         self, dist: torch.Tensor, pair_mask: Optional[torch.Tensor] = None
@@ -55,7 +95,7 @@ class CoulombPotential(Potential):
         if pair_mask is not None:
             result = result * pair_mask  # elementwise multiply, keeps shape fixed
 
-        return result
+        return self.prefactor * result
 
     def lr_from_dist(
         self, dist: torch.Tensor, pair_mask: Optional[torch.Tensor] = None
@@ -78,7 +118,8 @@ class CoulombPotential(Potential):
         result = torch.erf(dist / self.smearing / 2.0**0.5) / dist.clamp(min=1e-12)
         if pair_mask is not None:
             result = result * pair_mask  # elementwise multiply, keeps shape fixed
-        return result
+
+        return self.prefactor * result
 
     def lr_from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
         r"""
@@ -96,7 +137,7 @@ class CoulombPotential(Potential):
         # https://github.com/jax-ml/jax/issues/1052
         # https://github.com/tensorflow/probability/blob/main/discussion/where-nan.pdf
         masked = torch.where(k_sq == 0, 1.0, k_sq)
-        return torch.where(
+        return self.prefactor * torch.where(
             k_sq == 0,
             0.0,
             4 * torch.pi * torch.exp(-0.5 * self.smearing**2 * masked) / masked,
@@ -108,7 +149,7 @@ class CoulombPotential(Potential):
             raise ValueError(
                 "Cannot compute self contribution without specifying `smearing`."
             )
-        return (2 / torch.pi) ** 0.5 / self.smearing
+        return self.prefactor * (2 / torch.pi) ** 0.5 / self.smearing
 
     def background_correction(self) -> torch.Tensor:
         # "charge neutrality" correction for 1/r potential
@@ -116,42 +157,16 @@ class CoulombPotential(Potential):
             raise ValueError(
                 "Cannot compute background correction without specifying `smearing`."
             )
-        return torch.pi * self.smearing**2
+        return self.prefactor * torch.pi * self.smearing**2
 
-    @staticmethod
     def pbc_correction(
+        self,
         periodic: Optional[torch.Tensor],
         positions: torch.Tensor,
         cell: torch.Tensor,
         charges: torch.Tensor,
     ) -> torch.Tensor:
-        # "2D periodicity" correction for 1/r potential
-        if periodic is None:
-            periodic = torch.tensor([True, True, True], device=cell.device)
-        n_periodic = torch.sum(periodic)
-        is_2d = n_periodic == 2
-        axis = torch.argmax(
-            torch.where(
-                is_2d.unsqueeze(-1),
-                (~periodic).to(torch.int64),
-                torch.zeros_like(periodic, dtype=torch.int64),
-            ),
-            dim=-1,
-        )
-        E_slab = torch.zeros_like(charges)
-        z_i = torch.gather(positions, 1, axis.expand(positions.shape[0]).unsqueeze(-1))
-        basis_len = torch.gather(torch.linalg.norm(cell, dim=-1), 0, axis)
-        V = torch.abs(torch.linalg.det(cell))
-        charge_tot = torch.sum(charges, dim=0)
-        M_axis = torch.sum(charges * z_i, dim=0)
-        M_axis_sq = torch.sum(charges * z_i**2, dim=0)
-        E_slab_2d = (4.0 * torch.pi / V) * (
-            z_i * M_axis
-            - 0.5 * (M_axis_sq + charge_tot * z_i**2)
-            - charge_tot / 12.0 * basis_len**2
-        )
-
-        return torch.where(is_2d.unsqueeze(-1), E_slab_2d, E_slab)
+        return self.prefactor * _pbc_correction(periodic, positions, cell, charges)
 
     self_contribution.__doc__ = Potential.self_contribution.__doc__
     background_correction.__doc__ = Potential.background_correction.__doc__

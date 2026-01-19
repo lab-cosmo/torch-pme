@@ -11,9 +11,8 @@ from torchpme import CoulombPotential, EwaldCalculator
 from torchpme.lib import compute_batched_kvectors
 
 calc = EwaldCalculator(
-    potential=CoulombPotential(smearing=1.0),
+    potential=CoulombPotential(smearing=1.0, prefactor=1.0),
     full_neighbor_list=True,
-    prefactor=1.0,
     lr_wavelength=4.0,
 )
 

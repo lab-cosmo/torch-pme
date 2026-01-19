@@ -272,9 +272,9 @@ class GridSearchTuner(TunerBase):
             potential=InversePowerLawPotential(
                 exponent=self.exponent,  # but only exponent = 1 is supported
                 smearing=smearing,
+                prefactor=self.prefactor,
             ),
             full_neighbor_list=self.full_neighbor_list,
-            prefactor=self.prefactor,
             **k_space_params,
         )
         calculator.to(device=self.positions.device, dtype=self.positions.dtype)

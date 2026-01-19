@@ -17,8 +17,6 @@ class CalculatorDipole(torch.nn.Module):
         well as the parameters that determine the behavior of the potential itself.
     :param full_neighbor_list: parameter indicating whether the neighbor information
         will come from a full (True) or half (False, default) neighbor list.
-    :param prefactor: electrostatics prefactor; see :ref:`prefactors` for details and
-        common values.
     :param lr_wavelength: the wavelength of the long-range part of the potential.
     """
 
@@ -26,7 +24,6 @@ class CalculatorDipole(torch.nn.Module):
         self,
         potential: PotentialDipole,
         full_neighbor_list: bool = False,
-        prefactor: float = 1.0,
         lr_wavelength: Optional[float] = None,
     ):
         super().__init__()
@@ -46,8 +43,6 @@ class CalculatorDipole(torch.nn.Module):
         ), "Either both `lr_wavelength` and `smearing` must be set or both must be None"
 
         self.full_neighbor_list = full_neighbor_list
-
-        self.prefactor = prefactor
 
     def _compute_rspace(
         self,
@@ -185,7 +180,7 @@ class CalculatorDipole(torch.nn.Module):
         )
 
         if self.potential.smearing is None:
-            return self.prefactor * potential_sr
+            return potential_sr
         # Compute long-range (LR) part using a Fourier / reciprocal space sum
         potential_lr = self._compute_kspace(
             dipoles=dipoles,
@@ -193,4 +188,4 @@ class CalculatorDipole(torch.nn.Module):
             positions=positions,
         )
 
-        return self.prefactor * (potential_sr + potential_lr)
+        return potential_sr + potential_lr
