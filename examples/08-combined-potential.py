@@ -67,8 +67,8 @@ lr_wavelength = 0.25 * smearing
 # evaluation, and so one has to set it also for the combined potential, even if it is
 # not used explicitly in the evaluation of the combination.
 
-pot_1 = InversePowerLawPotential(exponent=1, smearing=smearing)
-pot_2 = InversePowerLawPotential(exponent=2, smearing=smearing)
+pot_1 = InversePowerLawPotential(exponent=1, smearing=smearing, prefactor=eV_A)
+pot_2 = InversePowerLawPotential(exponent=2, smearing=smearing, prefactor=eV_A)
 pot_1 = pot_1.to(dtype=dtype)
 pot_2 = pot_2.to(dtype=dtype)
 potential = CombinedPotential(potentials=[pot_1, pot_2], smearing=smearing)
@@ -157,9 +157,7 @@ plt.show()
 # but one can of course also use the :class:`PMECalculator` if one wants to optimize a
 # much bigger system.
 
-calculator = EwaldCalculator(
-    potential=potential, lr_wavelength=lr_wavelength, prefactor=eV_A
-)
+calculator = EwaldCalculator(potential=potential, lr_wavelength=lr_wavelength)
 calculator.to(dtype=dtype)
 
 # %%

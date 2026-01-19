@@ -44,8 +44,6 @@ class PMECalculator(Calculator):
     :param full_neighbor_list: If set to :obj:`True`, a "full" neighbor list
         is expected as input. This means that each atom pair appears twice. If
         set to :obj:`False`, a "half" neighbor list is expected.
-    :param prefactor: electrostatics prefactor; see :ref:`prefactors` for details and
-        common values.
     """
 
     def __init__(
@@ -54,13 +52,8 @@ class PMECalculator(Calculator):
         mesh_spacing: float,
         interpolation_nodes: int = 4,
         full_neighbor_list: bool = False,
-        prefactor: float = 1.0,
     ):
-        super().__init__(
-            potential=potential,
-            full_neighbor_list=full_neighbor_list,
-            prefactor=prefactor,
-        )
+        super().__init__(potential=potential, full_neighbor_list=full_neighbor_list)
 
         if potential.smearing is None:
             raise ValueError(

@@ -38,8 +38,6 @@ class P3MCalculator(PMECalculator):
     :param full_neighbor_list: If set to :py:obj:`True`, a "full" neighbor list
         is expected as input. This means that each atom pair appears twice. If
         set to :py:obj:`False`, a "half" neighbor list is expected.
-    :param prefactor: electrostatics prefactor; see :ref:`prefactors` for details and
-        common values.
 
     For an **example** on the usage for any calculator refer to :ref:`userdoc-how-to`.
     """
@@ -50,7 +48,6 @@ class P3MCalculator(PMECalculator):
         mesh_spacing: float,
         interpolation_nodes: int = 4,
         full_neighbor_list: bool = False,
-        prefactor: float = 1.0,
     ):
         # Don't pass `interpolation_nodes` to super as the PME requires a different
         # range of values.
@@ -58,7 +55,6 @@ class P3MCalculator(PMECalculator):
             potential=potential,
             mesh_spacing=mesh_spacing,
             full_neighbor_list=full_neighbor_list,
-            prefactor=prefactor,
         )
 
         cell = torch.eye(

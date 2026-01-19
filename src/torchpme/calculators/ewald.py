@@ -62,13 +62,8 @@ class EwaldCalculator(Calculator):
         potential: Potential,
         lr_wavelength: float,
         full_neighbor_list: bool = False,
-        prefactor: float = 1.0,
     ):
-        super().__init__(
-            potential=potential,
-            full_neighbor_list=full_neighbor_list,
-            prefactor=prefactor,
-        )
+        super().__init__(potential=potential, full_neighbor_list=full_neighbor_list)
         if potential.smearing is None:
             raise ValueError(
                 "Must specify range radius to use a potential with EwaldCalculator"

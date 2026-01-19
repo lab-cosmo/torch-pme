@@ -126,10 +126,9 @@ class TestDipoles:
             1 / (2 * alpha**2)
         ) ** 0.5  # convert espressomd alpha to torch-pme smearing
         calc = CalculatorDipole(
-            potential=PotentialDipole(smearing=smearing),
+            potential=PotentialDipole(smearing=smearing, prefactor=eV_A),
             full_neighbor_list=False,
             lr_wavelength=0.1,
-            prefactor=eV_A,
         )
         calc.to(device=device, dtype=dtype)
         positions = torch.tensor(frame.get_positions(), dtype=dtype, device=device)

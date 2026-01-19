@@ -3,8 +3,8 @@
 Prefactors
 ==========
 
-This module contains common ``prefactors`` for converting between Gaussian units and
-other unit systems that can be used to set a unit system when initializing a
+This module contains common Coulomb ``prefactors`` for converting between Gaussian units
+and other unit systems that can be used to set a unit system when initializing a
 :ref:`calculator <calculators>`.
 
 Many scientific calculators and computational tools, such as ``torchpme``, are set to

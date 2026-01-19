@@ -150,18 +150,6 @@ class TestWorkflow:
             buffer.seek(0)
             torch.jit.load(buffer)
 
-    def test_prefactor(self, CalculatorClass, params, device, dtype):
-        """Test if the prefactor is applied correctly."""
-        prefactor = 2.0
-        calculator1 = CalculatorClass(**params)
-        calculator2 = CalculatorClass(**params, prefactor=prefactor)
-        calculator1.to(device=device, dtype=dtype)
-        calculator2.to(device=device, dtype=dtype)
-        potentials1 = calculator1.forward(*self.cscl_system(device=device, dtype=dtype))
-        potentials2 = calculator2.forward(*self.cscl_system(device=device, dtype=dtype))
-
-        assert torch.allclose(potentials1 * prefactor, potentials2)
-
     def test_not_nan(self, CalculatorClass, params, device, dtype):
         """Make sure derivatives are not NaN."""
         calculator = CalculatorClass(**params)

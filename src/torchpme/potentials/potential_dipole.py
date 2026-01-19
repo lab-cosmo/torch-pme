@@ -30,6 +30,8 @@ class PotentialDipole(torch.nn.Module):
     :param exclusion_degree: Controls the sharpness of the transition in the cutoff function
         applied within the ``exclusion_radius``. The cutoff is computed as a raised cosine
         with exponent ``exclusion_degree``
+    :param prefactor: potential prefactor; see :ref:`prefactors` for details and common
+        values of electrostatic prefactors.
     """
 
     def __init__(
@@ -38,6 +40,7 @@ class PotentialDipole(torch.nn.Module):
         exclusion_radius: Optional[float] = None,
         exclusion_degree: int = 1,
         epsilon: float = 0.0,
+        prefactor: float = 1.0,
     ):
         super().__init__()
 
@@ -56,6 +59,7 @@ class PotentialDipole(torch.nn.Module):
         else:
             self.exclusion_radius = None
         self.register_buffer("epsilon", torch.tensor(epsilon, dtype=torch.float64))
+        self.register_buffer("prefactor", torch.tensor(prefactor, dtype=torch.float64))
 
     @torch.jit.export
     def f_cutoff(self, vector: torch.Tensor) -> torch.Tensor:
@@ -92,12 +96,13 @@ class PotentialDipole(torch.nn.Module):
         r_mag = torch.norm(vector, dim=1, keepdim=True)
         scalar_potential = 1.0 / (r_mag**3)
         r_outer = torch.bmm(vector.unsqueeze(2), vector.unsqueeze(1))
-        return scalar_potential.unsqueeze(-1) * torch.eye(3).to(r_outer).unsqueeze(
-            0
-        ) - 3.0 * r_outer / (r_mag**5).unsqueeze(-1)
+        return self.prefactor * (
+            scalar_potential.unsqueeze(-1) * torch.eye(3).to(r_outer).unsqueeze(0)
+            - 3.0 * r_outer / (r_mag**5).unsqueeze(-1)
+        )
 
     @torch.jit.export
-    def sr_from_dist(self, vector: torch.Tensor) -> torch.Tensor:
+    def sr_from_dist(self, dist: torch.Tensor) -> torch.Tensor:
         """
         Short-range part of the pair potential in real space.
 
@@ -106,21 +111,25 @@ class PotentialDipole(torch.nn.Module):
         """
         if self.smearing is None:
             raise ValueError(
-                "Cannot compute range-separated potential when `smearing` is not specified."
+                "Cannot compute range-separated potential when `smearing` "
+                "is not specified."
             )
         if self.exclusion_radius is None:
-            return self.from_dist(vector) - self.lr_from_dist(vector)
-        return -self.lr_from_dist(vector) * self.f_cutoff(vector).unsqueeze(-1)
+            result = self.from_dist(dist) - self.lr_from_dist(dist)
+        else:
+            result = -self.lr_from_dist(dist) * self.f_cutoff(dist).unsqueeze(-1)
+
+        return result
 
     @torch.jit.export
-    def lr_from_dist(self, vector: torch.Tensor) -> torch.Tensor:
+    def lr_from_dist(self, dist: torch.Tensor) -> torch.Tensor:
         r"""
         Long-range of the range-separated dipolar potential.
 
         Used to subtract out the interior contributions after computing the long-range
         part in reciprocal (Fourier) space.
 
-        :param vector: torch.tensor containing the vectors at which the potential is to
+        :param dist: torch.tensor containing the vectors at which the potential is to
             be evaluated.
         """
         if self.smearing is None:
@@ -128,8 +137,8 @@ class PotentialDipole(torch.nn.Module):
                 "Cannot compute long-range contribution without specifying `smearing`."
             )
         alpha = 1 / (2 * self.smearing**2)
-        r_mag = torch.norm(vector, dim=1, keepdim=True)
-        r_outer = torch.bmm(vector.unsqueeze(2), vector.unsqueeze(1))
+        r_mag = torch.norm(dist, dim=1, keepdim=True)
+        r_outer = torch.bmm(dist.unsqueeze(2), dist.unsqueeze(1))
         B1 = torch.erfc(torch.sqrt(alpha) * r_mag) / r_mag**3
         B2 = 2 * torch.sqrt(alpha / torch.pi) * torch.exp(-alpha * r_mag**2) / r_mag**2
         B = 1.0 / (r_mag**3) - B1 - B2
@@ -142,9 +151,10 @@ class PotentialDipole(torch.nn.Module):
             / r_mag**2
         )
         C = 3.0 / (r_mag**5) - C1 - C2
-        return B.unsqueeze(-1) * torch.eye(3).to(r_outer).unsqueeze(
-            0
-        ) - r_outer * C.unsqueeze(-1)
+        return self.prefactor * (
+            B.unsqueeze(-1) * torch.eye(3).to(r_outer).unsqueeze(0)
+            - r_outer * C.unsqueeze(-1)
+        )
 
     def lr_from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
         r"""
@@ -162,7 +172,7 @@ class PotentialDipole(torch.nn.Module):
         # https://github.com/jax-ml/jax/issues/1052
         # https://github.com/tensorflow/probability/blob/main/discussion/where-nan.pdf
         masked = torch.where(k_sq == 0, 1.0, k_sq)
-        return torch.where(
+        return self.prefactor * torch.where(
             k_sq == 0,
             0.0,
             4 * torch.pi * torch.exp(-0.5 * self.smearing**2 * masked) / masked,
@@ -174,12 +184,12 @@ class PotentialDipole(torch.nn.Module):
                 "Cannot compute long-range contribution without specifying `smearing`."
             )
         alpha = 1 / (2 * self.smearing**2)
-        return 4 * torch.pi / 3 * torch.sqrt((alpha / torch.pi) ** 3)
+        return self.prefactor * 4 * torch.pi / 3 * torch.sqrt((alpha / torch.pi) ** 3)
 
     def background_correction(self, volume) -> torch.Tensor:
         if self.epsilon == 0.0:
             return self.epsilon
-        return 4 * torch.pi / (2 * self.epsilon + 1) / volume
+        return self.prefactor * 4 * torch.pi / (2 * self.epsilon + 1) / volume
 
     self_contribution.__doc__ = Potential.self_contribution.__doc__
     background_correction.__doc__ = Potential.background_correction.__doc__

@@ -5,7 +5,7 @@ from torch.special import gammainc
 
 from torchpme.lib import gamma, gammaincc_over_powerlaw
 
-from .coulomb import CoulombPotential
+from .coulomb import _pbc_correction
 from .potential import Potential
 
 
@@ -35,6 +35,8 @@ class InversePowerLawPotential(Potential):
     :param exclusion_degree: Controls the sharpness of the transition in the cutoff function
         applied within the ``exclusion_radius``. The cutoff is computed as a raised cosine
         with exponent ``exclusion_degree``
+    :param prefactor: potential prefactor; see :ref:`prefactors` for details and common
+        values of electrostatic prefactors.
     """
 
     def __init__(
@@ -43,8 +45,9 @@ class InversePowerLawPotential(Potential):
         smearing: Optional[float] = None,
         exclusion_radius: Optional[float] = None,
         exclusion_degree: int = 1,
+        prefactor: float = 1.0,
     ):
-        super().__init__(smearing, exclusion_radius, exclusion_degree)
+        super().__init__(smearing, exclusion_radius, exclusion_degree, prefactor)
 
         # function call to check the validity of the exponent
         gammaincc_over_powerlaw(exponent, torch.tensor(1.0))
@@ -65,7 +68,7 @@ class InversePowerLawPotential(Potential):
         result = torch.pow(dist.clamp(min=1e-15), -self.exponent)
         if pair_mask is not None:
             result = result * pair_mask  # elementwise multiply, keeps shape fixed
-        return result
+        return self.prefactor * result
 
     @torch.jit.export
     def lr_from_dist(
@@ -102,7 +105,7 @@ class InversePowerLawPotential(Potential):
         )
         if pair_mask is not None:
             result = result * pair_mask
-        return result
+        return self.prefactor * result
 
     @torch.jit.export
     def lr_from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
@@ -131,7 +134,7 @@ class InversePowerLawPotential(Potential):
         # could instead assign the correct limit. This is not implemented for now
         # for consistency reasons.
         masked = torch.where(x == 0, 1.0, x)  # avoid NaNs in backwards, see Coulomb
-        return torch.where(
+        return self.prefactor * torch.where(
             k_sq == 0, 0.0, prefac * gammaincc_over_powerlaw(self.exponent, masked)
         )
 
@@ -142,7 +145,7 @@ class InversePowerLawPotential(Potential):
                 "Cannot compute self contribution without specifying `smearing`."
             )
         phalf = self.exponent / 2
-        return 1 / gamma(phalf + 1) / (2 * self.smearing**2) ** phalf
+        return self.prefactor / gamma(phalf + 1) / (2 * self.smearing**2) ** phalf
 
     def background_correction(self) -> torch.Tensor:
         # "charge neutrality" correction for 1/r^p potential diverges for exponent p = 3
@@ -156,11 +159,11 @@ class InversePowerLawPotential(Potential):
             return torch.zeros_like(self.smearing)
         prefac = torch.pi**1.5 * (2 * self.smearing**2) ** ((3 - self.exponent) / 2)
         prefac /= (3 - self.exponent) * gamma(self.exponent / 2)
-        return prefac
+        return self.prefactor * prefac
 
     def pbc_correction(self, periodic, positions, cell, charges):
         if self.exponent == 1:
-            return CoulombPotential.pbc_correction(periodic, positions, cell, charges)
+            return self.prefactor * _pbc_correction(periodic, positions, cell, charges)
         return super().pbc_correction(periodic, positions, cell, charges)
 
     self_contribution.__doc__ = Potential.self_contribution.__doc__
