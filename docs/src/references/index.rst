@@ -12,6 +12,7 @@ API reference
      :tag-prefix: v
      :url-suffix: references/index.html
 
+     .. version:: 0.4.0
      .. version:: 0.3.2
      .. version:: 0.3.1
      .. version:: 0.3.0
