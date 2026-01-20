@@ -136,21 +136,115 @@ def generate_kvectors_for_ewald(
     return _generate_kvectors(cell=cell, ns=ns, for_ewald=True).reshape(-1, 3)
 
 
+def generate_kvectors_for_ewald_halfspace(
+    cell: torch.Tensor,
+    ns: torch.Tensor,
+) -> torch.Tensor:
+    """
+    Generate half-space k-vectors exploiting Hermitian symmetry S(-k) = S*(k).
+
+    For real-valued charge densities, the structure factor satisfies S(-k) = S*(k).
+    This means computing both k and -k is redundant. This function returns only
+    k-vectors in the "positive half-space". The caller should multiply the Green's
+    function by 2 to compensate for the missing conjugate contributions.
+
+    The half-space condition selects vectors where:
+    - h > 0, OR
+    - (h == 0 AND k > 0), OR
+    - (h == 0 AND k == 0 AND l > 0)
+
+    where (h, k, l) are the integer indices in reciprocal space. Note that k=0
+    is excluded by this condition.
+
+    :param cell: torch.tensor of shape ``(3, 3)``, where ``cell[i]`` is the i-th basis
+        vector of the unit cell
+    :param ns: torch.tensor of shape ``(3,)`` and dtype int
+        ``ns = [nx, ny, nz]`` contains the number of mesh points in the x-, y- and
+        z-direction, respectively.
+
+    :return: torch.tensor of shape ``(n_half, 3)`` containing the half-space
+        k-vectors (excludes k=0)
+    """
+    # Validate inputs
+    if cell.shape != (3, 3):
+        raise ValueError(f"cell of shape {list(cell.shape)} should be of shape (3, 3)")
+    if ns.shape != (3,):
+        raise ValueError(f"ns of shape {list(ns.shape)} should be of shape (3, )")
+
+    nx = ns[0].item()
+    ny = ns[1].item()
+    nz = ns[2].item()
+
+    # Compute reciprocal cell
+    if cell.is_cuda:
+        inverse_cell = torch.linalg.inv_ex(cell)[0]
+    else:
+        inverse_cell = torch.linalg.inv(cell)
+    reciprocal_cell = 2 * torch.pi * inverse_cell.T
+    bx, by, bz = reciprocal_cell[0], reciprocal_cell[1], reciprocal_cell[2]
+
+    # Full frequency arrays
+    fx = torch.fft.fftfreq(nx, device=cell.device, dtype=cell.dtype)
+    fy = torch.fft.fftfreq(ny, device=cell.device, dtype=cell.dtype)
+    fz = torch.fft.fftfreq(nz, device=cell.device, dtype=cell.dtype)
+
+    kvecs_list = []
+
+    # Part 1: h > 0 (signed indices 1 to nx//2, i.e., array indices 1:nx//2+1)
+    # Combined with all k and all l values
+    n_hpos = nx // 2
+    if n_hpos >= 1:
+        kxs = (bx * nx) * fx[1 : n_hpos + 1].unsqueeze(-1)  # (n_hpos, 3)
+        kys = (by * ny) * fy.unsqueeze(-1)  # (ny, 3)
+        kzs = (bz * nz) * fz.unsqueeze(-1)  # (nz, 3)
+        kvecs1 = kxs[:, None, None] + kys[None, :, None] + kzs[None, None, :]
+        kvecs_list.append(kvecs1.reshape(-1, 3))
+
+    # Part 2: h = 0, k > 0 (signed indices 1 to ny//2 for k)
+    # Combined with all l values
+    n_kpos = ny // 2
+    if n_kpos >= 1:
+        kxs = (bx * nx) * fx[0:1].unsqueeze(-1)  # (1, 3) - h=0
+        kys = (by * ny) * fy[1 : n_kpos + 1].unsqueeze(-1)  # (n_kpos, 3)
+        kzs = (bz * nz) * fz.unsqueeze(-1)  # (nz, 3)
+        kvecs2 = kxs[:, None, None] + kys[None, :, None] + kzs[None, None, :]
+        kvecs_list.append(kvecs2.reshape(-1, 3))
+
+    # Part 3: h = 0, k = 0, l > 0 (signed indices 1 to nz//2 for l)
+    n_lpos = nz // 2
+    if n_lpos >= 1:
+        kxs = (bx * nx) * fx[0:1].unsqueeze(-1)  # (1, 3) - h=0
+        kys = (by * ny) * fy[0:1].unsqueeze(-1)  # (1, 3) - k=0
+        kzs = (bz * nz) * fz[1 : n_lpos + 1].unsqueeze(-1)  # (n_lpos, 3)
+        kvecs3 = kxs[:, None, None] + kys[None, :, None] + kzs[None, None, :]
+        kvecs_list.append(kvecs3.reshape(-1, 3))
+
+    if len(kvecs_list) == 0:
+        # Edge case: ns is so small that half-space is empty (e.g., ns=[1,1,1])
+        return torch.zeros((0, 3), device=cell.device, dtype=cell.dtype)
+
+    return torch.cat(kvecs_list, dim=0)
+
+
 def compute_batched_kvectors(
     lr_wavelength: float,
     cells: torch.Tensor,
 ) -> torch.Tensor:
     r"""
-    Generate k-vectors for multiple systems in batches.
+    Generate half-space k-vectors for multiple systems in batches.
+
+    Uses the half-space optimization to reduce computation by ~2x, exploiting
+    Hermitian symmetry S(-k) = S*(k).
 
     :param lr_wavelength: Spatial resolution used for the long-range (reciprocal space)
         part of the Ewald sum. More concretely, all Fourier space vectors with a
         wavelength >= this value will be kept. If not set to a global value, it will be
         set to half the smearing parameter to ensure convergence of the
         long-range part to a relative precision of 1e-5.
-    :param cell: torch.tensor of shape ``(B, 3, 3)``, where ``cell[i]`` is the i-th
+    :param cells: torch.tensor of shape ``(B, 3, 3)``, where ``cells[i]`` is the i-th
         basis vector of the unit cell for system i in the batch of size B.
 
+    :return: torch.tensor of shape ``(B, max_k, 3)`` padded k-vectors
     """
     all_kvectors = []
     k_cutoff = 2 * torch.pi / lr_wavelength
@@ -158,9 +252,7 @@ def compute_batched_kvectors(
         basis_norms = torch.linalg.norm(cell, dim=1)
         ns_float = k_cutoff * basis_norms / 2 / torch.pi
         ns = torch.ceil(ns_float).long()
-        kvectors = generate_kvectors_for_ewald(ns=ns, cell=cell)
+        kvectors = generate_kvectors_for_ewald_halfspace(ns=ns, cell=cell)
         all_kvectors.append(kvectors)
-    # We do not return masks here; instead, we rely on the fact that for the Coulomb
-    # potential, the k = 0 vector is ignored in the calculations and can therefore be
-    # safely padded with zeros.
+    # Padded with zeros; G(k=0)=0 so padding doesn't contribute to the sum
     return pad_sequence(all_kvectors, batch_first=True)

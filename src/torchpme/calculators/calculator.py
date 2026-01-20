@@ -154,7 +154,8 @@ class Calculator(torch.nn.Module):
         :param pair_mask: Optional torch.tensor containing a mask to be applied to the
             result.
         :param kvectors: Optional precomputed k-vectors to be used in the Fourier
-            space part of the calculation.
+            space part of the calculation. Use ``compute_batched_kvectors()`` to
+            generate these for batched systems.
         """
         _validate_parameters(
             charges=charges,

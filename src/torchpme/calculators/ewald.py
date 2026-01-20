@@ -2,7 +2,7 @@ from typing import Optional
 
 import torch
 
-from ..lib import generate_kvectors_for_ewald
+from ..lib import generate_kvectors_for_ewald_halfspace
 from ..potentials import Potential
 from .calculator import Calculator
 
@@ -94,8 +94,8 @@ class EwaldCalculator(Calculator):
             ns_float = k_cutoff * basis_norms / 2 / torch.pi
             ns = torch.ceil(ns_float).long()
 
-            # Generate k-vectors and evaluate
-            kvectors = generate_kvectors_for_ewald(ns=ns, cell=cell)
+            # Generate half-space k-vectors exploiting Hermitian symmetry S(-k) = S*(k)
+            kvectors = generate_kvectors_for_ewald_halfspace(ns=ns, cell=cell)
 
         knorm_sq = torch.sum(kvectors**2, dim=-1)
 
@@ -106,6 +106,11 @@ class EwaldCalculator(Calculator):
         # to the requirement that the net charge of the cell is zero.
         # G = 4 * torch.pi * torch.exp(-0.5 * smearing**2 * knorm_sq) / knorm_sq
         G = self.potential.lr_from_k_sq(knorm_sq)
+
+        # Factor of 2 for half-space: we only sum over k>0, so double to account
+        # for the -k contributions (exploiting Hermitian symmetry S(-k) = S*(k)).
+        # Padded zeros (k=0) are automatically excluded since G(0) = 0.
+        G = G * 2
 
         # Compute the energy using the explicit method that
         # follows directly from the Poisson summation formula.
