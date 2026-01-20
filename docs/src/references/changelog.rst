@@ -24,6 +24,9 @@ changelog <https://keepachangelog.com/en/1.1.0/>`_ format. This project follows
 `Unreleased <https://github.com/lab-cosmo/torch-pme/>`_
 -------------------------------------------------------
 
+`Version 0.4.0 <https://github.com/lab-cosmo/torch-pme/releases/tag/v0.4.0>`_ - 2026-01-20
+------------------------------------------------------------------------------------------
+
 Added
 #####
 
