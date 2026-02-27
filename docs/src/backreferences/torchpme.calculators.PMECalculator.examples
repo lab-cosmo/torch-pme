@@ -1,0 +1,42 @@
+
+
+Examples using ``torchpme.calculators.PMECalculator``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+.. start-sphx-glr-thumbnails
+
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbnails">
+
+.. thumbnail-parent-div-open
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="Accurately calculating forces as derivatives from energy is crucial for predicting system dynamics as well as in training machine learning models. In systems where forces are derived from the gradients of the potential energy, it is essential that the distance calculations between particles are included in the computational graph. This ensures that the force computations respect the dependencies between particle positions and distances, allowing for accurate gradients during backpropagation.">
+
+.. only:: html
+
+  .. image:: /examples/images/thumb/sphx_glr_2-neighbor-lists-usage_thumb.png
+    :alt:
+
+  :ref:`sphx_glr_examples_2-neighbor-lists-usage.py`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">Advanced neighbor list usage</div>
+    </div>
+
+
+.. only:: not html
+
+ * :ref:`sphx_glr_examples_2-neighbor-lists-usage.py`
+
+.. thumbnail-parent-div-close
+
+.. raw:: html
+
+    </div>
+

@@ -1,0 +1,84 @@
+
+
+Examples using ``torchpme.KSpaceFilter``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+.. start-sphx-glr-thumbnails
+
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbnails">
+
+.. thumbnail-parent-div-open
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip=":Authors: Michele Ceriotti @ceriottm">
+
+.. only:: html
+
+  .. image:: /examples/images/thumb/sphx_glr_4-kspace-demo_thumb.png
+    :alt:
+
+  :ref:`sphx_glr_examples_4-kspace-demo.py`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">Examples of the KSpaceFilter class</div>
+    </div>
+
+
+.. only:: not html
+
+ * :ref:`sphx_glr_examples_4-kspace-demo.py`
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip=":Authors: Michele Ceriotti @ceriottm">
+
+.. only:: html
+
+  .. image:: /examples/images/thumb/sphx_glr_5-autograd-demo_thumb.png
+    :alt:
+
+  :ref:`sphx_glr_examples_5-autograd-demo.py`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">Custom models with automatic differentiation</div>
+    </div>
+
+
+.. only:: not html
+
+ * :ref:`sphx_glr_examples_5-autograd-demo.py`
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip=":Authors: Michele Ceriotti @ceriottm">
+
+.. only:: html
+
+  .. image:: /examples/images/thumb/sphx_glr_6-splined-potential_thumb.png
+    :alt:
+
+  :ref:`sphx_glr_examples_6-splined-potential.py`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">Splined potentials</div>
+    </div>
+
+
+.. only:: not html
+
+ * :ref:`sphx_glr_examples_6-splined-potential.py`
+
+.. thumbnail-parent-div-close
+
+.. raw:: html
+
+    </div>
+
