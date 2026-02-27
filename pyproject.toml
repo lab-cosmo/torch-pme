@@ -91,6 +91,7 @@ addopts = [
 ]
 filterwarnings = [
     "error",
+    "ignore:`torch.jit\\..+` is deprecated:DeprecationWarning",
     "ignore:ast.Str is deprecated and will be removed in Python 3.14:DeprecationWarning",
     "ignore:Attribute s is deprecated and will be removed in Python 3.14:DeprecationWarning",
     "ignore:ast.NameConstant is deprecated and will be removed in Python 3.14:DeprecationWarning",
