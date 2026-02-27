@@ -49,8 +49,8 @@ examples = [
     "matplotlib",
     "metatensor-operations",
     "scipy",
-    "vesin >= 0.5.0",
-    "vesin-torch >= 0.5.0",
+    "vesin >= 0.4.0",
+    "vesin-torch >= 0.4.0",
 ]
 metatensor = ["metatensor-torch <0.9,>=0.7", "metatomic-torch"]
 
