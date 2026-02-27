@@ -130,12 +130,16 @@ class InversePowerLawPotential(Potential):
         # dimension, there is a divergence to +infinity. Setting this value manually
         # to zero physically corresponds to the addition of a uniform background charge
         # to make the system charge-neutral. For p>3, on the other hand, the
-        # Fourier-transformed LR potential does not diverge as k->0, and one
-        # could instead assign the correct limit. This is not implemented for now
-        # for consistency reasons.
+        # Fourier-transformed LR potential does not diverge as k->0, and the value
+        # is instead assigned to the correct limit. 
         masked = torch.where(x == 0, 1.0, x)  # avoid NaNs in backwards, see Coulomb
+        k0_limit = 0.0
+    
+        if self.exponent > 3:
+            k0_limit = -prefac/peff # correct limit for p>3
+
         return self.prefactor * torch.where(
-            k_sq == 0, 0.0, prefac * gammaincc_over_powerlaw(self.exponent, masked)
+            k_sq == 0, k0_limit, prefac * gammaincc_over_powerlaw(self.exponent, masked)
         )
 
     def self_contribution(self) -> torch.Tensor:

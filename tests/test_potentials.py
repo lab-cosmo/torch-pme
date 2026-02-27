@@ -695,3 +695,52 @@ def test_padded_potential(exponent):
     # Check that unmasked values match the no-mask computation
     assert torch.allclose(pot_with_mask[:3], pot_no_mask[:3])
     assert torch.allclose(pot_with_mask[3:], torch.tensor([0.0, 0.0], dtype=dtype))
+  
+def estimate_loglog_slope(x, y):
+    """Estimate the slope of log(y) vs log(x) using linear regression."""
+    mask = y > 0 # remove zeros where log is undefined
+    logx = torch.log(x[mask])
+    logy = torch.log(y[mask])
+    A = torch.stack([logx, torch.ones_like(logx)], dim=1)
+    return torch.linalg.lstsq(A, logy).solution[0]
+
+@pytest.mark.parametrize("exponent", [4, 5, 6])
+@pytest.mark.parametrize("smearing", smearinges)
+def test_small_k_scaling(exponent, smearing):
+    """
+    Test that the limit k->0 is correct for p>3 by asserting 
+    the k^(p-3) scaling behavior for small k.
+    """
+    ipl = InversePowerLawPotential(exponent=exponent, smearing=smearing)
+    ipl.to(dtype=dtype)
+
+    k_sq_small = torch.logspace(-8, -4, 200, dtype=dtype, requires_grad=True) # small k^2 values
+
+    # -- Deviation scaling --
+    V = ipl.lr_from_k_sq(k_sq_small)
+    V0 = ipl.lr_from_k_sq(torch.zeros(1, dtype=dtype))
+    deviation = (V - V0).abs()
+
+    scaling = estimate_loglog_slope(k_sq_small, deviation)
+    expected = min((exponent - 3)/2, 1.0)
+
+    assert torch.isclose(
+        scaling,
+        torch.tensor(expected, dtype=dtype),
+        atol=0.1,
+        rtol=0.1,
+    ), f"Scaling in small-k limit incorrect for p={exponent}, expected {expected}, got {scaling}"
+
+    # -- Gradient scaling --
+    V.sum().backward()
+    grad = k_sq_small.grad.abs()
+
+    grad_scaling = estimate_loglog_slope(k_sq_small, grad)
+    expected_grad = min((exponent - 5)/2, 0.0)
+
+    assert torch.isclose(
+        grad_scaling,
+        torch.tensor(expected_grad, dtype=dtype),
+        atol=0.1,
+        rtol=0.1,
+    ), f"Gradient scaling in small-k limit incorrect for p={exponent}, expected {expected_grad}, got {grad_scaling}"
