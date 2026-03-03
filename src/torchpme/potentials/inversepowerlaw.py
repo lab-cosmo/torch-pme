@@ -131,10 +131,10 @@ class InversePowerLawPotential(Potential):
         # to zero physically corresponds to the addition of a uniform background charge
         # to make the system charge-neutral. For p>3, on the other hand, the
         # Fourier-transformed LR potential does not diverge as k->0, and the value
-        # is instead assigned to the correct limit. 
+        # is instead assigned to the correct limit.
         masked = torch.where(x == 0, 1.0, x)  # avoid NaNs in backwards, see Coulomb
         k0_limit = 0.0
-    
+
         if self.exponent > 3:
             k0_limit = -prefac/peff # correct limit for p>3
 

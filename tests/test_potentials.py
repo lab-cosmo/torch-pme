@@ -695,7 +695,7 @@ def test_padded_potential(exponent):
     # Check that unmasked values match the no-mask computation
     assert torch.allclose(pot_with_mask[:3], pot_no_mask[:3])
     assert torch.allclose(pot_with_mask[3:], torch.tensor([0.0, 0.0], dtype=dtype))
-  
+
 def estimate_loglog_slope(x, y):
     """Estimate the slope of log(y) vs log(x) using linear regression."""
     mask = y > 0 # remove zeros where log is undefined
@@ -708,7 +708,7 @@ def estimate_loglog_slope(x, y):
 @pytest.mark.parametrize("smearing", smearinges)
 def test_small_k_scaling(exponent, smearing):
     """
-    Test that the limit k->0 is correct for p>3 by asserting 
+    Test that the limit k->0 is correct for p>3 by asserting
     the k^(p-3) scaling behavior for small k.
     """
     ipl = InversePowerLawPotential(exponent=exponent, smearing=smearing)
