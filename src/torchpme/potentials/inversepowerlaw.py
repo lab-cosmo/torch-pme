@@ -136,7 +136,7 @@ class InversePowerLawPotential(Potential):
         k0_limit = 0.0
 
         if self.exponent > 3:
-            k0_limit = -prefac/peff # correct limit for p>3
+            k0_limit = -prefac / peff  # correct limit for p>3
 
         return self.prefactor * torch.where(
             k_sq == 0, k0_limit, prefac * gammaincc_over_powerlaw(self.exponent, masked)
