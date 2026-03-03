@@ -262,11 +262,14 @@ def neighbor_list(
         quantities="PdS",
     )
 
-    neighbor_indices = torch.from_numpy(neighbor_indices.astype(int)).to(
-        device=positions.device
-    )
-    d = torch.from_numpy(d).to(dtype=positions.dtype, device=positions.device)
-    S = torch.from_numpy(S).to(dtype=positions.dtype, device=positions.device)
+    if not isinstance(neighbor_indices, torch.Tensor):
+        neighbor_indices = torch.from_numpy(neighbor_indices.astype(int))
+        d = torch.from_numpy(d)
+        S = torch.from_numpy(S)
+
+    neighbor_indices = neighbor_indices.to(dtype=torch.long, device=positions.device)
+    d = d.to(dtype=positions.dtype, device=positions.device)
+    S = S.to(dtype=positions.dtype, device=positions.device)
 
     if not neighbor_shifts:
         return neighbor_indices, d
