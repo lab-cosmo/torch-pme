@@ -167,10 +167,12 @@ Thanks goes to all people that make *torch-pme* possible:
    :target: https://github.com/lab-cosmo/torch-pme/graphs/contributors
 
 This project is `maintained
-<https://github.com/lab-cosmo/.github/blob/main/Maintainers.md>`_ by @E-Rum,
-@PicoCentauri, and @sirmarcel, who will reply to issues and pull requests opened
-on this repository as soon as possible. You can mention them directly if you did
-not receive an answer after a couple of days.
+<https://github.com/lab-cosmo/.github/blob/main/Maintainers.md>`_ by `@E-Rum
+<https://github.com/E-Rum>`_, `@PicoCentauri
+<https://github.com/PicoCentauri>`_, and `@sirmarcel
+<https://github.com/sirmarcel>`_, who will reply to issues and pull requests
+opened on this repository as soon as possible. You can mention them directly if
+you did not receive an answer after a couple of days.
 
 .. |tests| image:: https://github.com/lab-cosmo/torch-pme/workflows/Tests/badge.svg
    :alt: Github Actions Tests Job Status
