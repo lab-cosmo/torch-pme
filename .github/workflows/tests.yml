@@ -61,7 +61,7 @@ jobs:
         tox -e tests
         coverage xml
     - name: upload to codecov.io
-      uses: codecov/codecov-action@v5
+      uses: codecov/codecov-action@v6
       with:
         fail_ci_if_error: false
         files: tests/coverage.xml
