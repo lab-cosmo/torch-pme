@@ -17,8 +17,8 @@ def get_ns_mesh(cell: torch.Tensor, mesh_spacing: float):
     basis_norms = torch.linalg.norm(cell, dim=1)
     ns_approx = basis_norms / mesh_spacing
     ns_actual_approx = 2 * ns_approx + 1  # actual number of mesh points
-    # ns = [nx, ny, nz], closest power of 2 (helps for FT efficiency)
-    return torch.tensor(2).pow(torch.ceil(torch.log2(ns_actual_approx)).long())
+    # ns = [nx, ny, nz], closest power of 2 (helps for FT efficiency).
+    return torch.pow(2, torch.ceil(torch.log2(ns_actual_approx)).long())
 
 
 def _generate_kvectors(

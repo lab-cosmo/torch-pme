@@ -1,3 +1,6 @@
+import sys
+from pathlib import Path
+
 import pytest
 import torch
 from torch.testing import assert_close
@@ -5,7 +8,11 @@ from torch.testing import assert_close
 from torchpme.lib import (
     generate_kvectors_for_ewald,
     generate_kvectors_for_mesh,
+    get_ns_mesh,
 )
+
+sys.path.append(str(Path(__file__).parents[1]))
+from helpers import DEVICES
 
 # Generate random cells and mesh parameters
 cells = []
@@ -129,3 +136,13 @@ def test_different_devices_mesh_values_cell(generate_kvectors):
     match = "`ns` and `cell` are not on the same device, got cpu and meta"
     with pytest.raises(ValueError, match=match):
         generate_kvectors(cell=cell, ns=ns)
+
+
+@pytest.mark.parametrize("device", DEVICES)
+def test_get_ns_mesh_on_device(device):
+    """``get_ns_mesh`` must produce a tensor on the same device as ``cell``."""
+    cell = torch.eye(3, device=device) * 10.0
+    ns = get_ns_mesh(cell, 0.5)
+    assert ns.device.type == torch.device(device).type
+    assert ns.shape == (3,)
+    assert (ns > 0).all()
