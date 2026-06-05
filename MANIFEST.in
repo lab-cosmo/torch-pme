@@ -9,6 +9,7 @@ prune examples
 prune tests
 prune .github
 prune .tox
+prune benchmark
 
 exclude CODE_OF_CONDUCT.md
 exclude CONTRIBUTING.rst
