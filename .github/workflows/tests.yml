@@ -29,6 +29,9 @@ jobs:
       uses: actions/setup-python@v6
       with:
         python-version: ${{ matrix.python-version }}
+    - name: activate MSVC (for torch.compile)
+      if: runner.os == 'Windows'
+      uses: ilammy/msvc-dev-cmd@v1
     - run: python -m pip install tox coverage[toml]
     - name: run Python minimal tests
       run: tox -e tests-min
@@ -55,11 +58,14 @@ jobs:
       uses: actions/setup-python@v6
       with:
         python-version: ${{ matrix.python-version }}
+    - name: activate MSVC (for torch.compile / inductor codegen)
+      if: runner.os == 'Windows'
+      uses: ilammy/msvc-dev-cmd@v1
     - run: python -m pip install tox coverage[toml]
     - name: run Python tests
-      run: |
-        tox -e tests
-        coverage xml
+      run: tox -e tests
+    - name: generate coverage report
+      run: coverage xml
     - name: upload to codecov.io
       uses: codecov/codecov-action@v6
       with:

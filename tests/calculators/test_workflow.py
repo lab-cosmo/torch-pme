@@ -140,6 +140,17 @@ class TestWorkflow:
         scripted = torch.jit.script(calculator)
         self.check_operation(calculator=scripted, device=device, dtype=dtype)
 
+    # Inductor falls back to eager for the complex FFT ops
+    @pytest.mark.filterwarnings(
+        "ignore:Torchinductor does not support code generation for complex operators"
+    )
+    def test_operation_as_torch_compile(self, CalculatorClass, params, device, dtype):
+        """Run `check_operation` as a `torch.compile`d module."""
+        calculator = CalculatorClass(**params)
+        calculator.to(device=device, dtype=dtype)
+        compiled = torch.compile(calculator)
+        self.check_operation(calculator=compiled, device=device, dtype=dtype)
+
     def test_save_load(self, CalculatorClass, params, device, dtype):
         """Test if the calculator can be saved and loaded."""
         calculator = CalculatorClass(**params)
