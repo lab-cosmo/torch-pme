@@ -77,7 +77,7 @@ class TestWorkflow:
             blocks=[block],
         )
 
-        system.add_data(name="charges", tensor=tensor)
+        system.add_data(name="charge", tensor=tensor)
 
         sample_values = torch.tensor([[0, 1, 0, 0, 0]])
         samples = mts_torch.Labels(

@@ -117,7 +117,7 @@ class TestDipoles:
 
     @pytest.mark.parametrize(
         ("frame", "cutoff", "alpha", "energy", "force"),
-        zip(frames, cutoffs, alphas, energies, forces),
+        list(zip(frames, cutoffs, alphas, energies, forces)),
     )
     def test_magnetostatic_ewald_crystal(
         self, frame, cutoff, alpha, energy, force, device, dtype

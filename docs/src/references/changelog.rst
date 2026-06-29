@@ -15,8 +15,10 @@ changelog <https://keepachangelog.com/en/1.1.0/>`_ format. This project follows
 .. Fixed
 .. #####
 
-.. Changed
-.. #######
+Changed
+#######
+
+* Updates to latest metatensor and metatomic versions
 
 .. Removed
 .. #######

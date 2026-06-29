@@ -89,10 +89,10 @@ class Calculator(torch.nn.Module):
                 "'distance'=0 property"
             )
 
-        if "charges" not in system.known_data():
-            raise ValueError("`system` does not contain `charges` data")
+        if "charge" not in system.known_data():
+            raise ValueError("`system` does not contain `charge` data")
 
-        charge_tensor = system.get_data("charges")
+        charge_tensor = system.get_data("charge")
         if len(charge_tensor) != 1:
             raise ValueError(
                 f"Charge tensor have exactlty one block but has {len(charge_tensor)} "
@@ -141,14 +141,20 @@ class Calculator(torch.nn.Module):
         self._validate_compute_parameters(system, neighbors)
 
         device = system.positions.device
-        charges = system.get_data("charges").block().values
+        charges = system.get_data("charge").block().values
 
         n_atoms = len(system)
         samples = torch.zeros((n_atoms, 2), device=device, dtype=torch.int32)
         samples[:, 0] = 0
         samples[:, 1] = torch.arange(n_atoms, device=device, dtype=torch.int32)
 
-        neighbor_indices = neighbors.samples.view(["first_atom", "second_atom"]).values
+        neighbor_indices = torch.stack(
+            [
+                neighbors.samples.column("first_atom"),
+                neighbors.samples.column("second_atom"),
+            ],
+            dim=1,
+        )
 
         if device.type == "cpu":
             # move to 64-bit integers, for some reason indexing 64-bit is a lot faster
