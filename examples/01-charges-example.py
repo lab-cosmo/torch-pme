@@ -259,9 +259,9 @@ tensor = TensorMap(
 
 # %%
 #
-# Add the charges data to the system
+# Add the charge data to the system
 
-system.add_data(name="charges", tensor=tensor)
+system.add_data(name="charge", tensor=tensor)
 
 # %%
 #
@@ -318,10 +318,10 @@ tensor_one_hot = TensorMap(
 
 # %%
 #
-# Add the charges data to the system. We use the ``override=True`` to overwrite the
+# Add the charge data to the system. We use the ``override=True`` to overwrite the
 # already existing charge data from above.
 
-system.add_data(name="charges", tensor=tensor_one_hot, override=True)
+system.add_data(name="charge", tensor=tensor_one_hot, override=True)
 
 # %%
 #

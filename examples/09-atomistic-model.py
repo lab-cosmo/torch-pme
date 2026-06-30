@@ -109,7 +109,7 @@ def add_charges(system: System) -> None:
         keys=Labels("_", torch.zeros(1, 1, dtype=torch.int32)), blocks=[block]
     )
 
-    system.add_data(name="charges", tensor=tensor)
+    system.add_data(name="charge", tensor=tensor)
 
 
 # %%
@@ -136,7 +136,7 @@ system = System(
 
 add_charges(system)
 
-print(system.get_data("charges").block().values)
+print(system.get_data("charge").block().values)
 
 # %%
 #
@@ -172,7 +172,7 @@ class CalculatorModel(torch.nn.Module):
     def _setup_systems(
         self,
         systems: list[System],
-        selected_atoms: Labels | None = None,
+        selected_atoms: Optional[Labels] = None,  # noqa: UP045
     ) -> tuple[System, TensorBlock]:
         """Remove possible ghost atoms and add charges to the system."""
         if len(systems) > 1:
@@ -202,7 +202,7 @@ class CalculatorModel(torch.nn.Module):
         self,
         systems: List[System],  # noqa
         outputs: Dict[str, ModelOutput],  # noqa
-        selected_atoms: Labels | None = None,
+        selected_atoms: Optional[Labels] = None,  # noqa: UP045
     ) -> Dict[str, TensorMap]:  # noqa
         if list(outputs.keys()) != ["energy"]:
             raise ValueError(
@@ -218,7 +218,7 @@ class CalculatorModel(torch.nn.Module):
         # Create a reference charge block with the same metadata as the potential to
         # allow multiplcation which requries same metadata
         charges_block = TensorBlock(
-            values=system.get_data("charges").block().values,
+            values=system.get_data("charge").block().values,
             samples=potential[0].samples,
             components=potential[0].components,
             properties=potential[0].properties,
@@ -347,7 +347,9 @@ atoms.calc = ewald_mta_calculator
 #
 # Set initial velocities according to the Maxwell-Boltzmann distribution
 
-ase.md.velocitydistribution.MaxwellBoltzmannDistribution(atoms, 10_000 * ase.units.kB)
+ase.md.velocitydistribution.MaxwellBoltzmannDistribution(
+    atoms, temperature_K=10_000 * ase.units.kB
+)
 
 # %%
 #
