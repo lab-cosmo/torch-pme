@@ -242,7 +242,7 @@ def get_theta_phi_quadrature(L):
         w = 2 * np.pi * w_index / (2 * L - 1)
         roots_legendre_now, weights_now = scipy.special.roots_legendre(L)
         all_v = np.arccos(roots_legendre_now)
-        for v, weight in zip(all_v, weights_now, strict=False):
+        for v, weight in zip(all_v, weights_now, strict=True):
             quads.append([v, w])
             weights.append(weight)
     norm = 4 * torch.pi / np.sum(weights)
