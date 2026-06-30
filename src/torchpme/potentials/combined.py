@@ -1,5 +1,3 @@
-from typing import Optional
-
 import torch
 
 from .potential import Potential
@@ -35,10 +33,10 @@ class CombinedPotential(Potential):
     def __init__(
         self,
         potentials: list[Potential],
-        initial_weights: Optional[torch.Tensor] = None,
-        learnable_weights: Optional[bool] = True,
-        smearing: Optional[float] = None,
-        exclusion_radius: Optional[float] = None,
+        initial_weights: torch.Tensor | None = None,
+        learnable_weights: bool | None = True,
+        smearing: float | None = None,
+        exclusion_radius: float | None = None,
         exclusion_degree: int = 1,
     ):
         super().__init__(
@@ -81,21 +79,21 @@ class CombinedPotential(Potential):
             self.register_buffer("weights", initial_weights)
 
     def from_dist(
-        self, dist: torch.Tensor, pair_mask: Optional[torch.Tensor] = None
+        self, dist: torch.Tensor, pair_mask: torch.Tensor | None = None
     ) -> torch.Tensor:
         potentials = [pot.from_dist(dist, pair_mask) for pot in self.potentials]
         potentials = torch.stack(potentials, dim=-1)
         return torch.inner(self.weights, potentials)
 
     def sr_from_dist(
-        self, dist: torch.Tensor, pair_mask: Optional[torch.Tensor] = None
+        self, dist: torch.Tensor, pair_mask: torch.Tensor | None = None
     ) -> torch.Tensor:
         potentials = [pot.sr_from_dist(dist, pair_mask) for pot in self.potentials]
         potentials = torch.stack(potentials, dim=-1)
         return torch.inner(self.weights, potentials)
 
     def lr_from_dist(
-        self, dist: torch.Tensor, pair_mask: Optional[torch.Tensor] = None
+        self, dist: torch.Tensor, pair_mask: torch.Tensor | None = None
     ) -> torch.Tensor:
         potentials = [pot.lr_from_dist(dist, pair_mask) for pot in self.potentials]
         potentials = torch.stack(potentials, dim=-1)

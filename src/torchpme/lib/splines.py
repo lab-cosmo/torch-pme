@@ -1,5 +1,3 @@
-from typing import Optional
-
 import torch
 
 
@@ -65,7 +63,7 @@ class CubicSplineReciprocal(torch.nn.Module):
         self,
         x_points: torch.Tensor,
         y_points: torch.Tensor,
-        y_at_zero: Optional[torch.Tensor] = None,
+        y_at_zero: torch.Tensor | None = None,
     ):
         super().__init__()
 

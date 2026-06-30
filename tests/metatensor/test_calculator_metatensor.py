@@ -30,7 +30,7 @@ def system():
         keys=mts_torch.Labels("_", torch.zeros(1, 1, dtype=torch.int32)), blocks=[block]
     )
 
-    system.add_data(name="charges", tensor=tensor)
+    system.add_data(name="charge", tensor=tensor)
 
     return system
 
@@ -173,7 +173,7 @@ def test_wrong_system_not_all_charges(system, neighbors):
 
     calculator = CalculatorTest()
 
-    match = r"`system` does not contain `charges` data"
+    match = r"`system` does not contain `charge` data"
     with pytest.raises(ValueError, match=match):
         calculator.forward(system_nocharge, neighbors)
 
@@ -193,7 +193,7 @@ def test_different_number_charge_channels(system, neighbors):
         blocks=[block],
     )
 
-    system.add_data(name="charges", tensor=tensor, override=True)
+    system.add_data(name="charge", tensor=tensor, override=True)
 
     calculator = CalculatorTest()
 
@@ -210,19 +210,20 @@ def test_2_blocks_error(system, neighbors):
     """Test that a charges TensorMap with 2 blocks raises an error."""
     charges = torch.zeros(2, 2)
 
-    block = mts_torch.TensorBlock(
-        values=charges,
-        samples=mts_torch.Labels.range("atom", charges.shape[0]),
-        components=[],
-        properties=mts_torch.Labels.range("charge", charges.shape[1]),
-    )
+    def make_block():
+        return mts_torch.TensorBlock(
+            values=charges,
+            samples=mts_torch.Labels.range("atom", charges.shape[0]),
+            components=[],
+            properties=mts_torch.Labels.range("charge", charges.shape[1]),
+        )
 
     tensor = mts_torch.TensorMap(
         keys=mts_torch.Labels("_", torch.arange(2, dtype=torch.int32).reshape(-1, 1)),
-        blocks=[block, block],
+        blocks=[make_block(), make_block()],
     )
 
-    system.add_data(name="charges", tensor=tensor, override=True)
+    system.add_data(name="charge", tensor=tensor, override=True)
 
     calculator = CalculatorTest()
 
@@ -245,7 +246,7 @@ def test_components_error(system, neighbors):
     )
 
     tensor = mts_torch.TensorMap(keys=single_label, blocks=[block])
-    system.add_data(name="charges", tensor=tensor, override=True)
+    system.add_data(name="charge", tensor=tensor, override=True)
 
     calculator = CalculatorTest()
 
@@ -275,7 +276,7 @@ def test_systems_with_different_number_of_atoms(system, neighbors):
         keys=mts_torch.Labels("_", torch.zeros(1, 1, dtype=torch.int32)), blocks=[block]
     )
 
-    system_more_atoms.add_data(name="charges", tensor=tensor)
+    system_more_atoms.add_data(name="charge", tensor=tensor)
 
     calculator = CalculatorTest()
     calculator.forward(system, neighbors)

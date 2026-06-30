@@ -1,6 +1,5 @@
 import math
 import time
-from typing import Optional
 
 import torch
 
@@ -314,7 +313,7 @@ class TuningTimings(torch.nn.Module):
         neighbor_distances: torch.Tensor,
         n_repeat: int = 4,
         n_warmup: int = 4,
-        run_backward: Optional[bool] = True,
+        run_backward: bool | None = True,
     ):
         super().__init__()
 

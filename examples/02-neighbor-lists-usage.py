@@ -35,7 +35,6 @@ calculations remain differentiable.
 """
 
 # %%
-from typing import Optional
 
 import ase
 import chemiscope
@@ -142,8 +141,8 @@ neighbor_indices, S = nl.compute(
 def distances(
     positions: torch.Tensor,
     neighbor_indices: torch.Tensor,
-    cell: Optional[torch.Tensor] = None,
-    neighbor_shifts: Optional[torch.Tensor] = None,
+    cell: torch.Tensor | None = None,
+    neighbor_shifts: torch.Tensor | None = None,
 ) -> torch.Tensor:
     """Compute pairwise distances."""
     atom_is = neighbor_indices[:, 0]

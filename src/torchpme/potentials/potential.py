@@ -1,5 +1,3 @@
-from typing import Optional
-
 import torch
 
 
@@ -39,8 +37,8 @@ class Potential(torch.nn.Module):
 
     def __init__(
         self,
-        smearing: Optional[float] = None,
-        exclusion_radius: Optional[float] = None,
+        smearing: float | None = None,
+        exclusion_radius: float | None = None,
         exclusion_degree: int = 1,
         prefactor: float = 1.0,
     ):
@@ -59,7 +57,7 @@ class Potential(torch.nn.Module):
 
     @torch.jit.export
     def f_cutoff(
-        self, dist: torch.Tensor, pair_mask: Optional[torch.Tensor] = None
+        self, dist: torch.Tensor, pair_mask: torch.Tensor | None = None
     ) -> torch.Tensor:
         r"""
         Default cutoff function defining the *local* region that should be excluded from
@@ -91,7 +89,7 @@ class Potential(torch.nn.Module):
 
     @torch.jit.export
     def from_dist(
-        self, dist: torch.Tensor, pair_mask: Optional[torch.Tensor] = None
+        self, dist: torch.Tensor, pair_mask: torch.Tensor | None = None
     ) -> torch.Tensor:
         """
         Computes a pair potential given a tensor of interatomic distances.
@@ -107,7 +105,7 @@ class Potential(torch.nn.Module):
 
     @torch.jit.export
     def sr_from_dist(
-        self, dist: torch.Tensor, pair_mask: Optional[torch.Tensor] = None
+        self, dist: torch.Tensor, pair_mask: torch.Tensor | None = None
     ) -> torch.Tensor:
         r"""
         Short-range (SR) part of the pair potential in real space.
@@ -141,7 +139,7 @@ class Potential(torch.nn.Module):
 
     @torch.jit.export
     def lr_from_dist(
-        self, dist: torch.Tensor, pair_mask: Optional[torch.Tensor] = None
+        self, dist: torch.Tensor, pair_mask: torch.Tensor | None = None
     ) -> torch.Tensor:
         r"""
         Computes the long-range part of the pair potential :math:`V_\mathrm{LR}(r)`. in
@@ -205,7 +203,7 @@ class Potential(torch.nn.Module):
     @torch.jit.export
     def pbc_correction(
         self,
-        periodic: Optional[torch.Tensor],
+        periodic: torch.Tensor | None,
         positions: torch.Tensor,
         cell: torch.Tensor,
         charges: torch.Tensor,

@@ -1,5 +1,3 @@
-from typing import Optional
-
 import torch
 from torch import profiler
 
@@ -24,7 +22,7 @@ class CalculatorDipole(torch.nn.Module):
         self,
         potential: PotentialDipole,
         full_neighbor_list: bool = False,
-        lr_wavelength: Optional[float] = None,
+        lr_wavelength: float | None = None,
     ):
         super().__init__()
 

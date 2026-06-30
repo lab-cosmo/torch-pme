@@ -40,7 +40,7 @@ keywords = [
 license = "BSD-3-Clause"
 name = "torch-pme"
 readme = "README.rst"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 
 [project.optional-dependencies]
 examples = [
@@ -52,7 +52,7 @@ examples = [
     "vesin >= 0.4.0",
     "vesin-torch >= 0.4.0",
 ]
-metatensor = ["metatensor-torch <0.9,>=0.7", "metatomic-torch"]
+metatensor = ["metatensor-torch <0.11,>=0.7", "metatomic-torch <0.2,>=0.1.15"]
 
 [project.urls]
 homepage = "https://lab-cosmo.github.io/torch-pme"
@@ -91,11 +91,14 @@ addopts = [
 ]
 filterwarnings = [
     "error",
-    "ignore:`torch.jit\\..+` is deprecated:DeprecationWarning",
+    # Numpy deprecation warnings from ase
     "ignore:ast.Str is deprecated and will be removed in Python 3.14:DeprecationWarning",
     "ignore:Attribute s is deprecated and will be removed in Python 3.14:DeprecationWarning",
     "ignore:ast.NameConstant is deprecated and will be removed in Python 3.14:DeprecationWarning",
-    "ignore:custom data 'charges' is experimental, please contact metatensor's developers to add this data as a member of the `System` class:UserWarning",
+    "ignore:Setting the shape on a NumPy array has been deprecated in NumPy 2.5.:DeprecationWarning",
+    # TorchScript deprecation warnings
+    "ignore:`torch.jit\\..+` is deprecated:DeprecationWarning",
+    "ignore:`torch.jit\\..+` is not supported in Python 3.14:DeprecationWarning",
 ]
 
 [tool.ruff]

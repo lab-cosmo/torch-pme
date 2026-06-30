@@ -1,5 +1,3 @@
-from typing import Optional
-
 import torch
 
 from .potential import Potential
@@ -36,8 +34,8 @@ class PotentialDipole(torch.nn.Module):
 
     def __init__(
         self,
-        smearing: Optional[float] = None,
-        exclusion_radius: Optional[float] = None,
+        smearing: float | None = None,
+        exclusion_radius: float | None = None,
         exclusion_degree: int = 1,
         epsilon: float = 0.0,
         prefactor: float = 1.0,

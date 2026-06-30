@@ -104,7 +104,7 @@ autodoc_typehints = "both"
 autodoc_typehints_format = "short"
 
 intersphinx_mapping = {
-    "ase": ("https://wiki.fysik.dtu.dk/ase/", None),
+    "ase": ("https://docs.ase-lib.org", None),
     "metatensor": ("https://docs.metatensor.org/latest/", None),
     "numpy": ("https://numpy.org/doc/stable/", None),
     "python": ("https://docs.python.org/3", None),

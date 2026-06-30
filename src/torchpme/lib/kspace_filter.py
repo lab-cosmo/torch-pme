@@ -1,5 +1,3 @@
-from typing import Optional
-
 import torch
 
 # from ..potentials import Potential
@@ -99,8 +97,8 @@ class KSpaceFilter(torch.nn.Module):
     @torch.jit.export
     def update(
         self,
-        cell: Optional[torch.Tensor] = None,
-        ns_mesh: Optional[torch.Tensor] = None,
+        cell: torch.Tensor | None = None,
+        ns_mesh: torch.Tensor | None = None,
     ) -> None:
         """
         Update buffers and derived attributes of the instance.
@@ -198,9 +196,7 @@ class KSpaceFilter(torch.nn.Module):
 
         return result
 
-    def _prep_kvectors(
-        self, cell: Optional[torch.Tensor], ns_mesh: Optional[torch.Tensor]
-    ):
+    def _prep_kvectors(self, cell: torch.Tensor | None, ns_mesh: torch.Tensor | None):
         if cell is not None:
             if cell.shape != (3, 3):
                 raise ValueError(
@@ -297,8 +293,8 @@ class P3MKSpaceFilter(KSpaceFilter):
     @torch.jit.export
     def update(
         self,
-        cell: Optional[torch.Tensor] = None,
-        ns_mesh: Optional[torch.Tensor] = None,
+        cell: torch.Tensor | None = None,
+        ns_mesh: torch.Tensor | None = None,
     ) -> None:
         # Cannot reuse code from `KSpaceFilter` by `super` because of `TorchScript`
         self._prep_kvectors(cell, ns_mesh)
