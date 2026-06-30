@@ -172,7 +172,7 @@ class CalculatorModel(torch.nn.Module):
     def _setup_systems(
         self,
         systems: list[System],
-        selected_atoms: Optional[Labels] = None,
+        selected_atoms: Labels | None = None,
     ) -> tuple[System, TensorBlock]:
         """Remove possible ghost atoms and add charges to the system."""
         if len(systems) > 1:
@@ -202,7 +202,7 @@ class CalculatorModel(torch.nn.Module):
         self,
         systems: List[System],  # noqa
         outputs: Dict[str, ModelOutput],  # noqa
-        selected_atoms: Optional[Labels] = None,
+        selected_atoms: Labels | None = None,
     ) -> Dict[str, TensorMap]:  # noqa
         if list(outputs.keys()) != ["energy"]:
             raise ValueError(

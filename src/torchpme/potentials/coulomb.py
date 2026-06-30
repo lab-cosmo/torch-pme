@@ -1,12 +1,10 @@
-from typing import Optional
-
 import torch
 
 from .potential import Potential
 
 
 def _pbc_correction(
-    periodic: Optional[torch.Tensor],
+    periodic: torch.Tensor | None,
     positions: torch.Tensor,
     cell: torch.Tensor,
     charges: torch.Tensor,
@@ -72,15 +70,15 @@ class CoulombPotential(Potential):
 
     def __init__(
         self,
-        smearing: Optional[float] = None,
-        exclusion_radius: Optional[float] = None,
+        smearing: float | None = None,
+        exclusion_radius: float | None = None,
         exclusion_degree: int = 1,
         prefactor: float = 1.0,
     ):
         super().__init__(smearing, exclusion_radius, exclusion_degree, prefactor)
 
     def from_dist(
-        self, dist: torch.Tensor, pair_mask: Optional[torch.Tensor] = None
+        self, dist: torch.Tensor, pair_mask: torch.Tensor | None = None
     ) -> torch.Tensor:
         """
         Full :math:`1/r` potential as a function of :math:`r`.
@@ -98,7 +96,7 @@ class CoulombPotential(Potential):
         return self.prefactor * result
 
     def lr_from_dist(
-        self, dist: torch.Tensor, pair_mask: Optional[torch.Tensor] = None
+        self, dist: torch.Tensor, pair_mask: torch.Tensor | None = None
     ) -> torch.Tensor:
         """
         Long range of the range-separated :math:`1/r` potential.
@@ -161,7 +159,7 @@ class CoulombPotential(Potential):
 
     def pbc_correction(
         self,
-        periodic: Optional[torch.Tensor],
+        periodic: torch.Tensor | None,
         positions: torch.Tensor,
         cell: torch.Tensor,
         charges: torch.Tensor,

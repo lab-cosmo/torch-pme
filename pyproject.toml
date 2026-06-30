@@ -97,6 +97,7 @@ filterwarnings = [
     "ignore:ast.NameConstant is deprecated and will be removed in Python 3.14:DeprecationWarning",
     "ignore:custom data 'charges' is experimental, please contact metatensor's developers to add this data as a member of the `System` class:UserWarning",
     "ignore:Setting the shape on a NumPy array has been deprecated in NumPy 2.5.:DeprecationWarning",
+    "ignore:`torch.jit.script` is not supported in Python 3.14+ and may break.:DeprecationWarning",
 ]
 
 [tool.ruff]

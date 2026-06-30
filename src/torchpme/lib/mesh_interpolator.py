@@ -1,5 +1,3 @@
-from typing import Optional
-
 import torch
 
 
@@ -82,8 +80,8 @@ class MeshInterpolator(torch.nn.Module):
 
     def update(
         self,
-        cell: Optional[torch.Tensor] = None,
-        ns_mesh: Optional[torch.Tensor] = None,
+        cell: torch.Tensor | None = None,
+        ns_mesh: torch.Tensor | None = None,
     ) -> None:
         """
         Update buffers and derived attributes of the instance.

@@ -1,5 +1,3 @@
-from typing import Optional
-
 import torch
 from torch.special import gammainc
 
@@ -42,8 +40,8 @@ class InversePowerLawPotential(Potential):
     def __init__(
         self,
         exponent: int,
-        smearing: Optional[float] = None,
-        exclusion_radius: Optional[float] = None,
+        smearing: float | None = None,
+        exclusion_radius: float | None = None,
         exclusion_degree: int = 1,
         prefactor: float = 1.0,
     ):
@@ -55,7 +53,7 @@ class InversePowerLawPotential(Potential):
 
     @torch.jit.export
     def from_dist(
-        self, dist: torch.Tensor, pair_mask: Optional[torch.Tensor] = None
+        self, dist: torch.Tensor, pair_mask: torch.Tensor | None = None
     ) -> torch.Tensor:
         """
         Full :math:`1/r^p` potential as a function of :math:`r`.
@@ -72,7 +70,7 @@ class InversePowerLawPotential(Potential):
 
     @torch.jit.export
     def lr_from_dist(
-        self, dist: torch.Tensor, pair_mask: Optional[torch.Tensor] = None
+        self, dist: torch.Tensor, pair_mask: torch.Tensor | None = None
     ) -> torch.Tensor:
         """
         Long range of the range-separated :math:`1/r^p` potential.

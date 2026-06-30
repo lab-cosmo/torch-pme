@@ -1,5 +1,3 @@
-from typing import Optional
-
 import torch
 
 from ..lib import (
@@ -53,13 +51,13 @@ class SplinePotential(Potential):
         self,
         r_grid: torch.Tensor,
         y_grid: torch.Tensor,
-        k_grid: Optional[torch.Tensor] = None,
-        yhat_grid: Optional[torch.Tensor] = None,
-        reciprocal: Optional[bool] = False,
-        y_at_zero: Optional[float] = None,
-        yhat_at_zero: Optional[float] = None,
-        smearing: Optional[float] = None,
-        exclusion_radius: Optional[float] = None,
+        k_grid: torch.Tensor | None = None,
+        yhat_grid: torch.Tensor | None = None,
+        reciprocal: bool | None = False,
+        y_at_zero: float | None = None,
+        yhat_at_zero: float | None = None,
+        smearing: float | None = None,
+        exclusion_radius: float | None = None,
         exclusion_degree: int = 1,
         prefactor: float = 1.0,
     ):
@@ -132,7 +130,7 @@ class SplinePotential(Potential):
             )
 
     def from_dist(
-        self, dist: torch.Tensor, pair_mask: Optional[torch.Tensor] = None
+        self, dist: torch.Tensor, pair_mask: torch.Tensor | None = None
     ) -> torch.Tensor:
         # if the full spline is not given, falls back on the lr part
         return self.prefactor * (
@@ -140,7 +138,7 @@ class SplinePotential(Potential):
         )
 
     def sr_from_dist(
-        self, dist: torch.Tensor, pair_mask: Optional[torch.Tensor] = None
+        self, dist: torch.Tensor, pair_mask: torch.Tensor | None = None
     ) -> torch.Tensor:
         """
         Short-range part of the range-separated potential.
@@ -151,7 +149,7 @@ class SplinePotential(Potential):
         return 0.0 * dist
 
     def lr_from_dist(
-        self, dist: torch.Tensor, pair_mask: Optional[torch.Tensor] = None
+        self, dist: torch.Tensor, pair_mask: torch.Tensor | None = None
     ) -> torch.Tensor:
         return self.prefactor * self._spline(dist)
 

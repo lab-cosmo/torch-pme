@@ -1,5 +1,3 @@
-from typing import Optional
-
 import torch
 
 from ..lib.kspace_filter import KSpaceFilter
@@ -92,9 +90,9 @@ class PMECalculator(Calculator):
         charges: torch.Tensor,
         cell: torch.Tensor,
         positions: torch.Tensor,
-        periodic: Optional[torch.Tensor] = None,
-        node_mask: Optional[torch.Tensor] = None,
-        kvectors: Optional[torch.Tensor] = None,
+        periodic: torch.Tensor | None = None,
+        node_mask: torch.Tensor | None = None,
+        kvectors: torch.Tensor | None = None,
     ) -> torch.Tensor:
         # TODO: Kernel function `G` and initialization of `MeshInterpolator` only depend
         # on `cell`. Caching may save up to 15% but issues with AD need to be resolved.

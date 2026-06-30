@@ -2,7 +2,6 @@
 
 import math
 from pathlib import Path
-from typing import Optional
 
 import torch
 from vesin import NeighborList
@@ -241,8 +240,8 @@ def define_crystal(crystal_name="CsCl", dtype=None, device=None):
 def neighbor_list(
     positions: torch.tensor,
     periodic: bool = True,
-    box: Optional[torch.tensor] = None,
-    cutoff: Optional[float] = None,
+    box: torch.tensor | None = None,
+    cutoff: float | None = None,
     full_neighbor_list: bool = False,
     neighbor_shifts: bool = False,
 ) -> tuple[torch.tensor, torch.tensor]:
@@ -279,8 +278,8 @@ def neighbor_list(
 def compute_distances(
     positions: torch.tensor,
     neighbor_indices: torch.tensor,
-    cell: Optional[torch.tensor] = None,
-    neighbor_shifts: Optional[torch.tensor] = None,
+    cell: torch.tensor | None = None,
+    neighbor_shifts: torch.tensor | None = None,
     norm: bool = True,
 ) -> torch.tensor:
     """Compute pairwise distance vectors or scalar distances."""

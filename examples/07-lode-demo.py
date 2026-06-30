@@ -18,8 +18,6 @@ also available in the `featomic package <https://github.com/metatensor/featomic>
 
 # %%
 
-from typing import Optional
-
 import ase
 import chemiscope
 import matplotlib
@@ -244,7 +242,7 @@ def get_theta_phi_quadrature(L):
         w = 2 * np.pi * w_index / (2 * L - 1)
         roots_legendre_now, weights_now = scipy.special.roots_legendre(L)
         all_v = np.arccos(roots_legendre_now)
-        for v, weight in zip(all_v, weights_now):
+        for v, weight in zip(all_v, weights_now, strict=False):
             quads.append([v, w])
             weights.append(weight)
     norm = 4 * torch.pi / np.sum(weights)
@@ -375,7 +373,7 @@ print(f"LODE features: {lode_i}")
 
 class SmoothCutoffCoulomb(SplinePotential):
     def __init__(
-        self, smearing: float, exclusion_radius: float, n_points: Optional[int] = 1000
+        self, smearing: float, exclusion_radius: float, n_points: int | None = 1000
     ):
         coulomb = CoulombPotential(smearing=smearing, exclusion_radius=exclusion_radius)
         x_grid = torch.logspace(-3, 3, n_points)
@@ -440,12 +438,12 @@ class LODECalculator(torchpme.Calculator):
         charges: torch.Tensor,
         cell: torch.Tensor,
         positions: torch.Tensor,
-        neighbor_indices: Optional[torch.Tensor] = None,
-        neighbor_distances: Optional[torch.Tensor] = None,
-        periodic: Optional[torch.Tensor] = None,
-        node_mask: Optional[torch.Tensor] = None,
-        pair_mask: Optional[torch.Tensor] = None,
-        kvectors: Optional[torch.Tensor] = None,
+        neighbor_indices: torch.Tensor | None = None,
+        neighbor_distances: torch.Tensor | None = None,
+        periodic: torch.Tensor | None = None,
+        node_mask: torch.Tensor | None = None,
+        pair_mask: torch.Tensor | None = None,
+        kvectors: torch.Tensor | None = None,
     ) -> torch.Tensor:
         # Update meshes
         assert self.potential.smearing is not None  # otherwise mypy complains
