@@ -15,17 +15,29 @@ changelog <https://keepachangelog.com/en/1.1.0/>`_ format. This project follows
 .. Fixed
 .. #####
 
-Changed
-#######
-
-* Updates to latest ``metatensor`` and ``metatomic`` versions
-* Bump minimum Python version to 3.10
+.. Changed
+.. #######
 
 .. Removed
 .. #######
 
 `Unreleased <https://github.com/lab-cosmo/torch-pme/>`_
 -------------------------------------------------------
+
+`Version 0.5.0 <https://github.com/lab-cosmo/torch-pme/releases/tag/v0.5.0>`_ - 2026-06-30
+------------------------------------------------------------------------------------------
+
+Fixed
+#####
+
+*  Correct limit for k -> 0 limit for p larger than 3
+*  Fix get_ns_mesh under torch.compile on CUDA
+*  Fixed issue with latest ``metatensor`` and ``metatomic`` versions
+
+Removed
+#######
+
+* Removed support for Python 3.9
 
 `Version 0.4.0 <https://github.com/lab-cosmo/torch-pme/releases/tag/v0.4.0>`_ - 2026-01-20
 ------------------------------------------------------------------------------------------
