@@ -18,7 +18,8 @@ changelog <https://keepachangelog.com/en/1.1.0/>`_ format. This project follows
 Changed
 #######
 
-* Updates to latest metatensor and metatomic versions
+* Updates to latest ``metatensor`` and ``metatomic`` versions
+* Bump minimum Python version to 3.10
 
 .. Removed
 .. #######

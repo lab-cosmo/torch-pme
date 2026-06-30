@@ -40,7 +40,7 @@ keywords = [
 license = "BSD-3-Clause"
 name = "torch-pme"
 readme = "README.rst"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 
 [project.optional-dependencies]
 examples = [
