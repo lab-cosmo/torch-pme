@@ -238,13 +238,13 @@ def define_crystal(crystal_name="CsCl", dtype=None, device=None):
 
 
 def neighbor_list(
-    positions: torch.tensor,
+    positions: torch.Tensor,
     periodic: bool = True,
-    box: torch.tensor | None = None,
+    box: torch.Tensor | None = None,
     cutoff: float | None = None,
     full_neighbor_list: bool = False,
     neighbor_shifts: bool = False,
-) -> tuple[torch.tensor, torch.tensor]:
+) -> tuple[torch.Tensor, torch.Tensor]:
     if box is None:
         box = torch.zeros(3, 3, dtype=positions.dtype, device=positions.device)
 
@@ -276,12 +276,12 @@ def neighbor_list(
 
 
 def compute_distances(
-    positions: torch.tensor,
-    neighbor_indices: torch.tensor,
-    cell: torch.tensor | None = None,
-    neighbor_shifts: torch.tensor | None = None,
+    positions: torch.Tensor,
+    neighbor_indices: torch.Tensor,
+    cell: torch.Tensor | None = None,
+    neighbor_shifts: torch.Tensor | None = None,
     norm: bool = True,
-) -> torch.tensor:
+) -> torch.Tensor:
     """Compute pairwise distance vectors or scalar distances."""
     atom_is = neighbor_indices[:, 0]
     atom_js = neighbor_indices[:, 1]
