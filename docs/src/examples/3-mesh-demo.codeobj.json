@@ -1,0 +1,1580 @@
+{
+ "ase.Atoms": [
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "ase.atoms",
+   "module_short": "ase",
+   "name": "Atoms"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "ase",
+   "module_short": "ase",
+   "name": "Atoms"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "ase",
+   "module_short": "ase",
+   "name": "Atoms"
+  }
+ ],
+ "ax": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.axes._axes",
+   "module_short": "matplotlib.axes",
+   "name": "Axes"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.axes",
+   "module_short": "matplotlib.axes",
+   "name": "Axes"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib",
+   "module_short": "matplotlib",
+   "name": "Axes"
+  }
+ ],
+ "ax.plot": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.axes._axes",
+   "module_short": "matplotlib.axes",
+   "name": "Axes.plot"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.axes",
+   "module_short": "matplotlib.axes",
+   "name": "Axes.plot"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib",
+   "module_short": "matplotlib",
+   "name": "Axes.plot"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.axes._base",
+   "module_short": "matplotlib.axes._base",
+   "name": "_AxesBase.plot"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.axes",
+   "module_short": "matplotlib.axes",
+   "name": "_AxesBase.plot"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib",
+   "module_short": "matplotlib",
+   "name": "_AxesBase.plot"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.artist",
+   "module_short": "matplotlib.artist",
+   "name": "Artist.plot"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib",
+   "module_short": "matplotlib",
+   "name": "Artist.plot"
+  }
+ ],
+ "ax.scatter": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.axes._axes",
+   "module_short": "matplotlib.axes",
+   "name": "Axes.scatter"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.axes",
+   "module_short": "matplotlib.axes",
+   "name": "Axes.scatter"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib",
+   "module_short": "matplotlib",
+   "name": "Axes.scatter"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.axes._base",
+   "module_short": "matplotlib.axes._base",
+   "name": "_AxesBase.scatter"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.axes",
+   "module_short": "matplotlib.axes",
+   "name": "_AxesBase.scatter"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib",
+   "module_short": "matplotlib",
+   "name": "_AxesBase.scatter"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.artist",
+   "module_short": "matplotlib.artist",
+   "name": "Artist.scatter"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib",
+   "module_short": "matplotlib",
+   "name": "Artist.scatter"
+  }
+ ],
+ "ax.set_xlabel": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.axes._axes",
+   "module_short": "matplotlib.axes",
+   "name": "Axes.set_xlabel"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.axes",
+   "module_short": "matplotlib.axes",
+   "name": "Axes.set_xlabel"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib",
+   "module_short": "matplotlib",
+   "name": "Axes.set_xlabel"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.axes._base",
+   "module_short": "matplotlib.axes._base",
+   "name": "_AxesBase.set_xlabel"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.axes",
+   "module_short": "matplotlib.axes",
+   "name": "_AxesBase.set_xlabel"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib",
+   "module_short": "matplotlib",
+   "name": "_AxesBase.set_xlabel"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.artist",
+   "module_short": "matplotlib.artist",
+   "name": "Artist.set_xlabel"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib",
+   "module_short": "matplotlib",
+   "name": "Artist.set_xlabel"
+  }
+ ],
+ "ax.set_ylabel": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.axes._axes",
+   "module_short": "matplotlib.axes",
+   "name": "Axes.set_ylabel"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.axes",
+   "module_short": "matplotlib.axes",
+   "name": "Axes.set_ylabel"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib",
+   "module_short": "matplotlib",
+   "name": "Axes.set_ylabel"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.axes._base",
+   "module_short": "matplotlib.axes._base",
+   "name": "_AxesBase.set_ylabel"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.axes",
+   "module_short": "matplotlib.axes",
+   "name": "_AxesBase.set_ylabel"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib",
+   "module_short": "matplotlib",
+   "name": "_AxesBase.set_ylabel"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.artist",
+   "module_short": "matplotlib.artist",
+   "name": "Artist.set_ylabel"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib",
+   "module_short": "matplotlib",
+   "name": "Artist.set_ylabel"
+  }
+ ],
+ "cell": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "cf": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.image",
+   "module_short": "matplotlib.image",
+   "name": "AxesImage"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib",
+   "module_short": "matplotlib",
+   "name": "AxesImage"
+  }
+ ],
+ "cf_fine": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.image",
+   "module_short": "matplotlib.image",
+   "name": "AxesImage"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib",
+   "module_short": "matplotlib",
+   "name": "AxesImage"
+  }
+ ],
+ "charges": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "charges.flatten": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "builtin_function_or_method"
+  }
+ ],
+ "chemiscope.all_atomic_environments": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "function"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "chemiscope",
+   "module_short": "chemiscope",
+   "name": "all_atomic_environments"
+  }
+ ],
+ "chemiscope.quick_settings": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "function"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "chemiscope",
+   "module_short": "chemiscope",
+   "name": "quick_settings"
+  }
+ ],
+ "chemiscope.show": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "function"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "chemiscope",
+   "module_short": "chemiscope",
+   "name": "show"
+  }
+ ],
+ "device": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "str"
+  }
+ ],
+ "displacement": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "displacement.numpy": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "builtin_function_or_method"
+  }
+ ],
+ "dtype": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "dtype"
+  }
+ ],
+ "dummy": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "ase.atoms",
+   "module_short": "ase",
+   "name": "Atoms"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "ase",
+   "module_short": "ase",
+   "name": "Atoms"
+  }
+ ],
+ "f_mesh": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "f_mesh.flatten": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "builtin_function_or_method"
+  }
+ ],
+ "f_points": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "f_points.flatten": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "builtin_function_or_method"
+  }
+ ],
+ "fig": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.figure",
+   "module_short": "matplotlib.figure",
+   "name": "Figure"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib",
+   "module_short": "matplotlib",
+   "name": "Figure"
+  }
+ ],
+ "fig.colorbar": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.figure",
+   "module_short": "matplotlib.figure",
+   "name": "Figure.colorbar"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib",
+   "module_short": "matplotlib",
+   "name": "Figure.colorbar"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.figure",
+   "module_short": "matplotlib.figure",
+   "name": "FigureBase.colorbar"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib",
+   "module_short": "matplotlib",
+   "name": "FigureBase.colorbar"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.artist",
+   "module_short": "matplotlib.artist",
+   "name": "Artist.colorbar"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib",
+   "module_short": "matplotlib",
+   "name": "Artist.colorbar"
+  }
+ ],
+ "fig.show": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.figure",
+   "module_short": "matplotlib.figure",
+   "name": "Figure.show"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib",
+   "module_short": "matplotlib",
+   "name": "Figure.show"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.figure",
+   "module_short": "matplotlib.figure",
+   "name": "FigureBase.show"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib",
+   "module_short": "matplotlib",
+   "name": "FigureBase.show"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.artist",
+   "module_short": "matplotlib.artist",
+   "name": "Artist.show"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib",
+   "module_short": "matplotlib",
+   "name": "Artist.show"
+  }
+ ],
+ "interpolator": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.lib.mesh_interpolator",
+   "module_short": "torchpme.lib",
+   "name": "MeshInterpolator"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.lib",
+   "module_short": "torchpme.lib",
+   "name": "MeshInterpolator"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "MeshInterpolator"
+  }
+ ],
+ "interpolator.cell": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "interpolator.compute_weights": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.lib.mesh_interpolator",
+   "module_short": "torchpme.lib",
+   "name": "MeshInterpolator.compute_weights"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.lib",
+   "module_short": "torchpme.lib",
+   "name": "MeshInterpolator.compute_weights"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "MeshInterpolator.compute_weights"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn.modules.module",
+   "module_short": "torch.nn.modules.module",
+   "name": "Module.compute_weights"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn.modules",
+   "module_short": "torch.nn.modules",
+   "name": "Module.compute_weights"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn",
+   "module_short": "torch.nn",
+   "name": "Module.compute_weights"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Module.compute_weights"
+  }
+ ],
+ "interpolator.get_mesh_xyz": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.lib.mesh_interpolator",
+   "module_short": "torchpme.lib",
+   "name": "MeshInterpolator.get_mesh_xyz"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.lib",
+   "module_short": "torchpme.lib",
+   "name": "MeshInterpolator.get_mesh_xyz"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "MeshInterpolator.get_mesh_xyz"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn.modules.module",
+   "module_short": "torch.nn.modules.module",
+   "name": "Module.get_mesh_xyz"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn.modules",
+   "module_short": "torch.nn.modules",
+   "name": "Module.get_mesh_xyz"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn",
+   "module_short": "torch.nn",
+   "name": "Module.get_mesh_xyz"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Module.get_mesh_xyz"
+  }
+ ],
+ "interpolator.points_to_mesh": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.lib.mesh_interpolator",
+   "module_short": "torchpme.lib",
+   "name": "MeshInterpolator.points_to_mesh"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.lib",
+   "module_short": "torchpme.lib",
+   "name": "MeshInterpolator.points_to_mesh"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "MeshInterpolator.points_to_mesh"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn.modules.module",
+   "module_short": "torch.nn.modules.module",
+   "name": "Module.points_to_mesh"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn.modules",
+   "module_short": "torch.nn.modules",
+   "name": "Module.points_to_mesh"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn",
+   "module_short": "torch.nn",
+   "name": "Module.points_to_mesh"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Module.points_to_mesh"
+  }
+ ],
+ "interpolator_fine": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.lib.mesh_interpolator",
+   "module_short": "torchpme.lib",
+   "name": "MeshInterpolator"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.lib",
+   "module_short": "torchpme.lib",
+   "name": "MeshInterpolator"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "MeshInterpolator"
+  }
+ ],
+ "interpolator_fine.cell": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "interpolator_fine.compute_weights": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.lib.mesh_interpolator",
+   "module_short": "torchpme.lib",
+   "name": "MeshInterpolator.compute_weights"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.lib",
+   "module_short": "torchpme.lib",
+   "name": "MeshInterpolator.compute_weights"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "MeshInterpolator.compute_weights"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn.modules.module",
+   "module_short": "torch.nn.modules.module",
+   "name": "Module.compute_weights"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn.modules",
+   "module_short": "torch.nn.modules",
+   "name": "Module.compute_weights"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn",
+   "module_short": "torch.nn",
+   "name": "Module.compute_weights"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Module.compute_weights"
+  }
+ ],
+ "interpolator_fine.get_mesh_xyz": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.lib.mesh_interpolator",
+   "module_short": "torchpme.lib",
+   "name": "MeshInterpolator.get_mesh_xyz"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.lib",
+   "module_short": "torchpme.lib",
+   "name": "MeshInterpolator.get_mesh_xyz"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "MeshInterpolator.get_mesh_xyz"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn.modules.module",
+   "module_short": "torch.nn.modules.module",
+   "name": "Module.get_mesh_xyz"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn.modules",
+   "module_short": "torch.nn.modules",
+   "name": "Module.get_mesh_xyz"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn",
+   "module_short": "torch.nn",
+   "name": "Module.get_mesh_xyz"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Module.get_mesh_xyz"
+  }
+ ],
+ "interpolator_fine.mesh_to_points": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.lib.mesh_interpolator",
+   "module_short": "torchpme.lib",
+   "name": "MeshInterpolator.mesh_to_points"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.lib",
+   "module_short": "torchpme.lib",
+   "name": "MeshInterpolator.mesh_to_points"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "MeshInterpolator.mesh_to_points"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn.modules.module",
+   "module_short": "torch.nn.modules.module",
+   "name": "Module.mesh_to_points"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn.modules",
+   "module_short": "torch.nn.modules",
+   "name": "Module.mesh_to_points"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn",
+   "module_short": "torch.nn",
+   "name": "Module.mesh_to_points"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Module.mesh_to_points"
+  }
+ ],
+ "interpolator_fine.points_to_mesh": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.lib.mesh_interpolator",
+   "module_short": "torchpme.lib",
+   "name": "MeshInterpolator.points_to_mesh"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.lib",
+   "module_short": "torchpme.lib",
+   "name": "MeshInterpolator.points_to_mesh"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "MeshInterpolator.points_to_mesh"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn.modules.module",
+   "module_short": "torch.nn.modules.module",
+   "name": "Module.points_to_mesh"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn.modules",
+   "module_short": "torch.nn.modules",
+   "name": "Module.points_to_mesh"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn",
+   "module_short": "torch.nn",
+   "name": "Module.points_to_mesh"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Module.points_to_mesh"
+  }
+ ],
+ "lib.MeshInterpolator": [
+  {
+   "is_class": false,
+   "is_explicit": true,
+   "module": "lib",
+   "module_short": "lib",
+   "name": "MeshInterpolator"
+  },
+  {
+   "is_class": false,
+   "is_explicit": true,
+   "module": "lib",
+   "module_short": "lib",
+   "name": "MeshInterpolator"
+  },
+  {
+   "is_class": false,
+   "is_explicit": true,
+   "module": "lib",
+   "module_short": "lib",
+   "name": "MeshInterpolator"
+  }
+ ],
+ "lib.MeshInterpolator.mesh_to_points": [
+  {
+   "is_class": false,
+   "is_explicit": true,
+   "module": "lib.MeshInterpolator",
+   "module_short": "lib.MeshInterpolator",
+   "name": "mesh_to_points"
+  }
+ ],
+ "mesh_2pil": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "mesh_2pil.shape": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Size"
+  }
+ ],
+ "mesh_charges": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "mesh_charges.flatten": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "builtin_function_or_method"
+  }
+ ],
+ "mesh_extent": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "list"
+  }
+ ],
+ "new_f": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "new_f.flatten": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "builtin_function_or_method"
+  }
+ ],
+ "new_points": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "new_points.shape": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Size"
+  }
+ ],
+ "new_ref": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "new_ref.flatten": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "builtin_function_or_method"
+  }
+ ],
+ "np.concatenate": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "_ArrayFunctionDispatcher"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "concatenate"
+  }
+ ],
+ "np.hstack": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "_ArrayFunctionDispatcher"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "hstack"
+  }
+ ],
+ "np.pi": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "float"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "pi"
+  }
+ ],
+ "np.vstack": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "_ArrayFunctionDispatcher"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "vstack"
+  }
+ ],
+ "plt.subplots": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "function"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.pyplot",
+   "module_short": "matplotlib.pyplot",
+   "name": "subplots"
+  }
+ ],
+ "positions": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "pseudo_charges": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "pseudo_mesh": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "pseudo_mesh.shape": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Size"
+  }
+ ],
+ "rho_mesh": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "rho_mesh_fine": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "rng": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch._C",
+   "module_short": "torch",
+   "name": "Generator"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Generator"
+  }
+ ],
+ "rng.manual_seed": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "builtin_function_or_method"
+  }
+ ],
+ "structure": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "ase.atoms",
+   "module_short": "ase",
+   "name": "Atoms"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "ase",
+   "module_short": "ase",
+   "name": "Atoms"
+  }
+ ],
+ "structure.cell.array": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "ase.atoms",
+   "module_short": "ase",
+   "name": "Atoms.cell"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "ase",
+   "module_short": "ase",
+   "name": "Atoms.cell"
+  }
+ ],
+ "structure.positions": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "ase.atoms",
+   "module_short": "ase",
+   "name": "Atoms.positions"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "ase",
+   "module_short": "ase",
+   "name": "Atoms.positions"
+  }
+ ],
+ "torch.Generator": [
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torch._C",
+   "module_short": "torch",
+   "name": "Generator"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Generator"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Generator"
+  }
+ ],
+ "torch.cos": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "builtin_function_or_method"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "cos"
+  }
+ ],
+ "torch.float64": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "dtype"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "float64"
+  }
+ ],
+ "torch.from_numpy": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "builtin_function_or_method"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "from_numpy"
+  }
+ ],
+ "torch.normal": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "builtin_function_or_method"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "normal"
+  }
+ ],
+ "torch.tensor": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "builtin_function_or_method"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "tensor"
+  }
+ ],
+ "torchpme.lib.MeshInterpolator": [
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torchpme.lib.mesh_interpolator",
+   "module_short": "torchpme.lib",
+   "name": "MeshInterpolator"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torchpme.lib",
+   "module_short": "torchpme.lib",
+   "name": "MeshInterpolator"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "MeshInterpolator"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torch.nn.modules.module",
+   "module_short": "torch.nn",
+   "name": "Module"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torch.nn.modules",
+   "module_short": "torch.nn",
+   "name": "Module"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torch.nn",
+   "module_short": "torch.nn",
+   "name": "Module"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Module"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.lib",
+   "module_short": "torchpme.lib",
+   "name": "MeshInterpolator"
+  }
+ ],
+ "torchpme.lib.MeshInterpolator.compute_weights": [
+  {
+   "is_class": false,
+   "is_explicit": true,
+   "module": "torchpme.lib.MeshInterpolator",
+   "module_short": "torchpme.lib.MeshInterpolator",
+   "name": "compute_weights"
+  }
+ ],
+ "torchpme.lib.MeshInterpolator.points_to_mesh": [
+  {
+   "is_class": false,
+   "is_explicit": true,
+   "module": "torchpme.lib.MeshInterpolator",
+   "module_short": "torchpme.lib.MeshInterpolator",
+   "name": "points_to_mesh"
+  }
+ ],
+ "xyz_mesh": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "xyz_mesh.reshape": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "builtin_function_or_method"
+  }
+ ],
+ "z_max": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "float64"
+  }
+ ],
+ "z_min": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "float64"
+  }
+ ],
+ "z_plot": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "ndarray"
+  }
+ ],
+ "z_plot.max": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "builtin_function_or_method"
+  }
+ ],
+ "z_plot.min": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "builtin_function_or_method"
+  }
+ ]
+}

@@ -1,0 +1,2873 @@
+{
+ "CoulombPotential": [
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torchpme.potentials.coulomb",
+   "module_short": "torchpme",
+   "name": "CoulombPotential"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torchpme.potentials",
+   "module_short": "torchpme",
+   "name": "CoulombPotential"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "CoulombPotential"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torchpme.potentials.potential",
+   "module_short": "torchpme",
+   "name": "Potential"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torchpme.potentials",
+   "module_short": "torchpme",
+   "name": "Potential"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "Potential"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torch.nn.modules.module",
+   "module_short": "torch.nn",
+   "name": "Module"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torch.nn.modules",
+   "module_short": "torch.nn",
+   "name": "Module"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torch.nn",
+   "module_short": "torch.nn",
+   "name": "Module"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Module"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials",
+   "module_short": "torchpme",
+   "name": "CoulombPotential"
+  }
+ ],
+ "SplinePotential": [
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torchpme.potentials.spline",
+   "module_short": "torchpme",
+   "name": "SplinePotential"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torchpme.potentials",
+   "module_short": "torchpme",
+   "name": "SplinePotential"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "SplinePotential"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torchpme.potentials.potential",
+   "module_short": "torchpme",
+   "name": "Potential"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torchpme.potentials",
+   "module_short": "torchpme",
+   "name": "Potential"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "Potential"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torch.nn.modules.module",
+   "module_short": "torch.nn",
+   "name": "Module"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torch.nn.modules",
+   "module_short": "torch.nn",
+   "name": "Module"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torch.nn",
+   "module_short": "torch.nn",
+   "name": "Module"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Module"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials",
+   "module_short": "torchpme",
+   "name": "SplinePotential"
+  },
+  {
+   "is_class": false,
+   "is_explicit": true,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "SplinePotential"
+  },
+  {
+   "is_class": false,
+   "is_explicit": true,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "SplinePotential"
+  }
+ ],
+ "ase.Atoms": [
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "ase.atoms",
+   "module_short": "ase",
+   "name": "Atoms"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "ase",
+   "module_short": "ase",
+   "name": "Atoms"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "ase",
+   "module_short": "ase",
+   "name": "Atoms"
+  }
+ ],
+ "ax": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "ndarray"
+  }
+ ],
+ "ax.axvspan": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "ndarray"
+  }
+ ],
+ "ax.legend": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "ndarray"
+  }
+ ],
+ "ax.loglog": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "ndarray"
+  }
+ ],
+ "ax.plot": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "ndarray"
+  }
+ ],
+ "ax.semilogx": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "ndarray"
+  }
+ ],
+ "ax.set_xlabel": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "ndarray"
+  }
+ ],
+ "ax.set_xlim": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "ndarray"
+  }
+ ],
+ "ax.set_ylabel": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "ndarray"
+  }
+ ],
+ "ax.set_ylim": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "ndarray"
+  }
+ ],
+ "cell": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "cell.det": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "builtin_function_or_method"
+  }
+ ],
+ "cf_coulomb": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.image",
+   "module_short": "matplotlib.image",
+   "name": "AxesImage"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib",
+   "module_short": "matplotlib",
+   "name": "AxesImage"
+  }
+ ],
+ "cf_spline": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.image",
+   "module_short": "matplotlib.image",
+   "name": "AxesImage"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib",
+   "module_short": "matplotlib",
+   "name": "AxesImage"
+  }
+ ],
+ "charges": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "coulomb": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials.coulomb",
+   "module_short": "torchpme",
+   "name": "CoulombPotential"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials",
+   "module_short": "torchpme",
+   "name": "CoulombPotential"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "CoulombPotential"
+  }
+ ],
+ "coulomb.kernel_from_k_sq": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials.coulomb",
+   "module_short": "torchpme",
+   "name": "CoulombPotential.kernel_from_k_sq"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials",
+   "module_short": "torchpme",
+   "name": "CoulombPotential.kernel_from_k_sq"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "CoulombPotential.kernel_from_k_sq"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials.potential",
+   "module_short": "torchpme",
+   "name": "Potential.kernel_from_k_sq"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials",
+   "module_short": "torchpme",
+   "name": "Potential.kernel_from_k_sq"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "Potential.kernel_from_k_sq"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn.modules.module",
+   "module_short": "torch.nn.modules.module",
+   "name": "Module.kernel_from_k_sq"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn.modules",
+   "module_short": "torch.nn.modules",
+   "name": "Module.kernel_from_k_sq"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn",
+   "module_short": "torch.nn",
+   "name": "Module.kernel_from_k_sq"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Module.kernel_from_k_sq"
+  }
+ ],
+ "coulomb.lr_from_dist": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials.coulomb",
+   "module_short": "torchpme",
+   "name": "CoulombPotential.lr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials",
+   "module_short": "torchpme",
+   "name": "CoulombPotential.lr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "CoulombPotential.lr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials.potential",
+   "module_short": "torchpme",
+   "name": "Potential.lr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials",
+   "module_short": "torchpme",
+   "name": "Potential.lr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "Potential.lr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn.modules.module",
+   "module_short": "torch.nn.modules.module",
+   "name": "Module.lr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn.modules",
+   "module_short": "torch.nn.modules",
+   "name": "Module.lr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn",
+   "module_short": "torch.nn",
+   "name": "Module.lr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Module.lr_from_dist"
+  }
+ ],
+ "coulomb_exclude": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials.coulomb",
+   "module_short": "torchpme",
+   "name": "CoulombPotential"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials",
+   "module_short": "torchpme",
+   "name": "CoulombPotential"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "CoulombPotential"
+  }
+ ],
+ "coulomb_exclude.lr_from_dist": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials.coulomb",
+   "module_short": "torchpme",
+   "name": "CoulombPotential.lr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials",
+   "module_short": "torchpme",
+   "name": "CoulombPotential.lr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "CoulombPotential.lr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials.potential",
+   "module_short": "torchpme",
+   "name": "Potential.lr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials",
+   "module_short": "torchpme",
+   "name": "Potential.lr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "Potential.lr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn.modules.module",
+   "module_short": "torch.nn.modules.module",
+   "name": "Module.lr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn.modules",
+   "module_short": "torch.nn.modules",
+   "name": "Module.lr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn",
+   "module_short": "torch.nn",
+   "name": "Module.lr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Module.lr_from_dist"
+  }
+ ],
+ "coulomb_exclude.sr_from_dist": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials.coulomb",
+   "module_short": "torchpme",
+   "name": "CoulombPotential.sr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials",
+   "module_short": "torchpme",
+   "name": "CoulombPotential.sr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "CoulombPotential.sr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials.potential",
+   "module_short": "torchpme",
+   "name": "Potential.sr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials",
+   "module_short": "torchpme",
+   "name": "Potential.sr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "Potential.sr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn.modules.module",
+   "module_short": "torch.nn.modules.module",
+   "name": "Module.sr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn.modules",
+   "module_short": "torch.nn.modules",
+   "name": "Module.sr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn",
+   "module_short": "torch.nn",
+   "name": "Module.sr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Module.sr_from_dist"
+  }
+ ],
+ "coulomb_mesh": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "device": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "str"
+  }
+ ],
+ "displacement": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "displacement.numpy": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "builtin_function_or_method"
+  }
+ ],
+ "dtype": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "dtype"
+  }
+ ],
+ "fig": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.figure",
+   "module_short": "matplotlib.figure",
+   "name": "Figure"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib",
+   "module_short": "matplotlib",
+   "name": "Figure"
+  }
+ ],
+ "fig.colorbar": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.figure",
+   "module_short": "matplotlib.figure",
+   "name": "Figure.colorbar"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib",
+   "module_short": "matplotlib",
+   "name": "Figure.colorbar"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.figure",
+   "module_short": "matplotlib.figure",
+   "name": "FigureBase.colorbar"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib",
+   "module_short": "matplotlib",
+   "name": "FigureBase.colorbar"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.artist",
+   "module_short": "matplotlib.artist",
+   "name": "Artist.colorbar"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib",
+   "module_short": "matplotlib",
+   "name": "Artist.colorbar"
+  }
+ ],
+ "fig.show": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.figure",
+   "module_short": "matplotlib.figure",
+   "name": "Figure.show"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib",
+   "module_short": "matplotlib",
+   "name": "Figure.show"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.figure",
+   "module_short": "matplotlib.figure",
+   "name": "FigureBase.show"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib",
+   "module_short": "matplotlib",
+   "name": "FigureBase.show"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.artist",
+   "module_short": "matplotlib.artist",
+   "name": "Artist.show"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib",
+   "module_short": "matplotlib",
+   "name": "Artist.show"
+  }
+ ],
+ "ivolume": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "k_grid": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "k_test": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "kernel_exclusion": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.lib.kspace_filter",
+   "module_short": "torchpme.lib",
+   "name": "KSpaceFilter"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.lib",
+   "module_short": "torchpme.lib",
+   "name": "KSpaceFilter"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "KSpaceFilter"
+  }
+ ],
+ "kernel_exclusion.forward": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.lib.kspace_filter",
+   "module_short": "torchpme.lib",
+   "name": "KSpaceFilter.forward"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.lib",
+   "module_short": "torchpme.lib",
+   "name": "KSpaceFilter.forward"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "KSpaceFilter.forward"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn.modules.module",
+   "module_short": "torch.nn",
+   "name": "Module.forward"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn.modules",
+   "module_short": "torch.nn",
+   "name": "Module.forward"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn",
+   "module_short": "torch.nn",
+   "name": "Module.forward"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Module.forward"
+  }
+ ],
+ "kernel_exclusion.update": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.lib.kspace_filter",
+   "module_short": "torchpme.lib",
+   "name": "KSpaceFilter.update"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.lib",
+   "module_short": "torchpme.lib",
+   "name": "KSpaceFilter.update"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "KSpaceFilter.update"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn.modules.module",
+   "module_short": "torch.nn.modules.module",
+   "name": "Module.update"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn.modules",
+   "module_short": "torch.nn.modules",
+   "name": "Module.update"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn",
+   "module_short": "torch.nn",
+   "name": "Module.update"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Module.update"
+  }
+ ],
+ "kernel_spline": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.lib.kspace_filter",
+   "module_short": "torchpme.lib",
+   "name": "KSpaceFilter"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.lib",
+   "module_short": "torchpme.lib",
+   "name": "KSpaceFilter"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "KSpaceFilter"
+  }
+ ],
+ "kernel_spline.forward": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.lib.kspace_filter",
+   "module_short": "torchpme.lib",
+   "name": "KSpaceFilter.forward"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.lib",
+   "module_short": "torchpme.lib",
+   "name": "KSpaceFilter.forward"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "KSpaceFilter.forward"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn.modules.module",
+   "module_short": "torch.nn",
+   "name": "Module.forward"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn.modules",
+   "module_short": "torch.nn",
+   "name": "Module.forward"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn",
+   "module_short": "torch.nn",
+   "name": "Module.forward"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Module.forward"
+  }
+ ],
+ "kernel_spline.update": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.lib.kspace_filter",
+   "module_short": "torchpme.lib",
+   "name": "KSpaceFilter.update"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.lib",
+   "module_short": "torchpme.lib",
+   "name": "KSpaceFilter.update"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "KSpaceFilter.update"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn.modules.module",
+   "module_short": "torch.nn.modules.module",
+   "name": "Module.update"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn.modules",
+   "module_short": "torch.nn.modules",
+   "name": "Module.update"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn",
+   "module_short": "torch.nn",
+   "name": "Module.update"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Module.update"
+  }
+ ],
+ "krn_coul": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "krn_spline": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "krn_spline_hiq": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "mesh_extent": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "list"
+  }
+ ],
+ "mesh_interpolator": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.lib.mesh_interpolator",
+   "module_short": "torchpme.lib",
+   "name": "MeshInterpolator"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.lib",
+   "module_short": "torchpme.lib",
+   "name": "MeshInterpolator"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "MeshInterpolator"
+  }
+ ],
+ "mesh_interpolator.compute_weights": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.lib.mesh_interpolator",
+   "module_short": "torchpme.lib",
+   "name": "MeshInterpolator.compute_weights"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.lib",
+   "module_short": "torchpme.lib",
+   "name": "MeshInterpolator.compute_weights"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "MeshInterpolator.compute_weights"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn.modules.module",
+   "module_short": "torch.nn.modules.module",
+   "name": "Module.compute_weights"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn.modules",
+   "module_short": "torch.nn.modules",
+   "name": "Module.compute_weights"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn",
+   "module_short": "torch.nn",
+   "name": "Module.compute_weights"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Module.compute_weights"
+  }
+ ],
+ "mesh_interpolator.points_to_mesh": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.lib.mesh_interpolator",
+   "module_short": "torchpme.lib",
+   "name": "MeshInterpolator.points_to_mesh"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.lib",
+   "module_short": "torchpme.lib",
+   "name": "MeshInterpolator.points_to_mesh"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "MeshInterpolator.points_to_mesh"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn.modules.module",
+   "module_short": "torch.nn.modules.module",
+   "name": "Module.points_to_mesh"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn.modules",
+   "module_short": "torch.nn.modules",
+   "name": "Module.points_to_mesh"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn",
+   "module_short": "torch.nn",
+   "name": "Module.points_to_mesh"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Module.points_to_mesh"
+  }
+ ],
+ "np.hstack": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "_ArrayFunctionDispatcher"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "hstack"
+  }
+ ],
+ "np.vstack": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "_ArrayFunctionDispatcher"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "vstack"
+  }
+ ],
+ "ns": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "plt.subplots": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "function"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.pyplot",
+   "module_short": "matplotlib.pyplot",
+   "name": "subplots"
+  }
+ ],
+ "positions": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "rho_mesh": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "rng": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch._C",
+   "module_short": "torch",
+   "name": "Generator"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Generator"
+  }
+ ],
+ "rng.manual_seed": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "builtin_function_or_method"
+  }
+ ],
+ "smearing": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "float"
+  }
+ ],
+ "spline": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials.spline",
+   "module_short": "torchpme",
+   "name": "SplinePotential"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials",
+   "module_short": "torchpme",
+   "name": "SplinePotential"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "SplinePotential"
+  }
+ ],
+ "spline.kernel_from_k_sq": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials.spline",
+   "module_short": "torchpme",
+   "name": "SplinePotential.kernel_from_k_sq"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials",
+   "module_short": "torchpme",
+   "name": "SplinePotential.kernel_from_k_sq"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "SplinePotential.kernel_from_k_sq"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials.potential",
+   "module_short": "torchpme",
+   "name": "Potential.kernel_from_k_sq"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials",
+   "module_short": "torchpme",
+   "name": "Potential.kernel_from_k_sq"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "Potential.kernel_from_k_sq"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn.modules.module",
+   "module_short": "torch.nn.modules.module",
+   "name": "Module.kernel_from_k_sq"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn.modules",
+   "module_short": "torch.nn.modules",
+   "name": "Module.kernel_from_k_sq"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn",
+   "module_short": "torch.nn",
+   "name": "Module.kernel_from_k_sq"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Module.kernel_from_k_sq"
+  }
+ ],
+ "spline.lr_from_dist": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials.spline",
+   "module_short": "torchpme",
+   "name": "SplinePotential.lr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials",
+   "module_short": "torchpme",
+   "name": "SplinePotential.lr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "SplinePotential.lr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials.potential",
+   "module_short": "torchpme",
+   "name": "Potential.lr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials",
+   "module_short": "torchpme",
+   "name": "Potential.lr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "Potential.lr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn.modules.module",
+   "module_short": "torch.nn.modules.module",
+   "name": "Module.lr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn.modules",
+   "module_short": "torch.nn.modules",
+   "name": "Module.lr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn",
+   "module_short": "torch.nn",
+   "name": "Module.lr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Module.lr_from_dist"
+  }
+ ],
+ "spline_2": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials.spline",
+   "module_short": "torchpme",
+   "name": "SplinePotential"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials",
+   "module_short": "torchpme",
+   "name": "SplinePotential"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "SplinePotential"
+  }
+ ],
+ "spline_2.lr_from_dist": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials.spline",
+   "module_short": "torchpme",
+   "name": "SplinePotential.lr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials",
+   "module_short": "torchpme",
+   "name": "SplinePotential.lr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "SplinePotential.lr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials.potential",
+   "module_short": "torchpme",
+   "name": "Potential.lr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials",
+   "module_short": "torchpme",
+   "name": "Potential.lr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "Potential.lr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn.modules.module",
+   "module_short": "torch.nn.modules.module",
+   "name": "Module.lr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn.modules",
+   "module_short": "torch.nn.modules",
+   "name": "Module.lr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn",
+   "module_short": "torch.nn",
+   "name": "Module.lr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Module.lr_from_dist"
+  }
+ ],
+ "spline_2_direct": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials.spline",
+   "module_short": "torchpme",
+   "name": "SplinePotential"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials",
+   "module_short": "torchpme",
+   "name": "SplinePotential"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "SplinePotential"
+  }
+ ],
+ "spline_2_direct.lr_from_dist": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials.spline",
+   "module_short": "torchpme",
+   "name": "SplinePotential.lr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials",
+   "module_short": "torchpme",
+   "name": "SplinePotential.lr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "SplinePotential.lr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials.potential",
+   "module_short": "torchpme",
+   "name": "Potential.lr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials",
+   "module_short": "torchpme",
+   "name": "Potential.lr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "Potential.lr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn.modules.module",
+   "module_short": "torch.nn.modules.module",
+   "name": "Module.lr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn.modules",
+   "module_short": "torch.nn.modules",
+   "name": "Module.lr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn",
+   "module_short": "torch.nn",
+   "name": "Module.lr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Module.lr_from_dist"
+  }
+ ],
+ "spline_direct": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials.spline",
+   "module_short": "torchpme",
+   "name": "SplinePotential"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials",
+   "module_short": "torchpme",
+   "name": "SplinePotential"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "SplinePotential"
+  }
+ ],
+ "spline_direct.lr_from_dist": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials.spline",
+   "module_short": "torchpme",
+   "name": "SplinePotential.lr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials",
+   "module_short": "torchpme",
+   "name": "SplinePotential.lr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "SplinePotential.lr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials.potential",
+   "module_short": "torchpme",
+   "name": "Potential.lr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials",
+   "module_short": "torchpme",
+   "name": "Potential.lr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "Potential.lr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn.modules.module",
+   "module_short": "torch.nn.modules.module",
+   "name": "Module.lr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn.modules",
+   "module_short": "torch.nn.modules",
+   "name": "Module.lr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn",
+   "module_short": "torch.nn",
+   "name": "Module.lr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Module.lr_from_dist"
+  }
+ ],
+ "spline_fine": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials.spline",
+   "module_short": "torchpme",
+   "name": "SplinePotential"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials",
+   "module_short": "torchpme",
+   "name": "SplinePotential"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "SplinePotential"
+  }
+ ],
+ "spline_fine.kernel_from_k_sq": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials.spline",
+   "module_short": "torchpme",
+   "name": "SplinePotential.kernel_from_k_sq"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials",
+   "module_short": "torchpme",
+   "name": "SplinePotential.kernel_from_k_sq"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "SplinePotential.kernel_from_k_sq"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials.potential",
+   "module_short": "torchpme",
+   "name": "Potential.kernel_from_k_sq"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials",
+   "module_short": "torchpme",
+   "name": "Potential.kernel_from_k_sq"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "Potential.kernel_from_k_sq"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn.modules.module",
+   "module_short": "torch.nn.modules.module",
+   "name": "Module.kernel_from_k_sq"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn.modules",
+   "module_short": "torch.nn.modules",
+   "name": "Module.kernel_from_k_sq"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn",
+   "module_short": "torch.nn",
+   "name": "Module.kernel_from_k_sq"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Module.kernel_from_k_sq"
+  }
+ ],
+ "spline_fine.lr_from_dist": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials.spline",
+   "module_short": "torchpme",
+   "name": "SplinePotential.lr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials",
+   "module_short": "torchpme",
+   "name": "SplinePotential.lr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "SplinePotential.lr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials.potential",
+   "module_short": "torchpme",
+   "name": "Potential.lr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials",
+   "module_short": "torchpme",
+   "name": "Potential.lr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "Potential.lr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn.modules.module",
+   "module_short": "torch.nn.modules.module",
+   "name": "Module.lr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn.modules",
+   "module_short": "torch.nn.modules",
+   "name": "Module.lr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn",
+   "module_short": "torch.nn",
+   "name": "Module.lr_from_dist"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Module.lr_from_dist"
+  }
+ ],
+ "spline_hiq": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials.spline",
+   "module_short": "torchpme",
+   "name": "SplinePotential"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials",
+   "module_short": "torchpme",
+   "name": "SplinePotential"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "SplinePotential"
+  }
+ ],
+ "spline_hiq.kernel_from_k_sq": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials.spline",
+   "module_short": "torchpme",
+   "name": "SplinePotential.kernel_from_k_sq"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials",
+   "module_short": "torchpme",
+   "name": "SplinePotential.kernel_from_k_sq"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "SplinePotential.kernel_from_k_sq"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials.potential",
+   "module_short": "torchpme",
+   "name": "Potential.kernel_from_k_sq"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials",
+   "module_short": "torchpme",
+   "name": "Potential.kernel_from_k_sq"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "Potential.kernel_from_k_sq"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn.modules.module",
+   "module_short": "torch.nn.modules.module",
+   "name": "Module.kernel_from_k_sq"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn.modules",
+   "module_short": "torch.nn.modules",
+   "name": "Module.kernel_from_k_sq"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn",
+   "module_short": "torch.nn",
+   "name": "Module.kernel_from_k_sq"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Module.kernel_from_k_sq"
+  }
+ ],
+ "spline_kgrid": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials.spline",
+   "module_short": "torchpme",
+   "name": "SplinePotential"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials",
+   "module_short": "torchpme",
+   "name": "SplinePotential"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "SplinePotential"
+  }
+ ],
+ "spline_kgrid.kernel_from_k_sq": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials.spline",
+   "module_short": "torchpme",
+   "name": "SplinePotential.kernel_from_k_sq"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials",
+   "module_short": "torchpme",
+   "name": "SplinePotential.kernel_from_k_sq"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "SplinePotential.kernel_from_k_sq"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials.potential",
+   "module_short": "torchpme",
+   "name": "Potential.kernel_from_k_sq"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.potentials",
+   "module_short": "torchpme",
+   "name": "Potential.kernel_from_k_sq"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "Potential.kernel_from_k_sq"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn.modules.module",
+   "module_short": "torch.nn.modules.module",
+   "name": "Module.kernel_from_k_sq"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn.modules",
+   "module_short": "torch.nn.modules",
+   "name": "Module.kernel_from_k_sq"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn",
+   "module_short": "torch.nn",
+   "name": "Module.kernel_from_k_sq"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Module.kernel_from_k_sq"
+  }
+ ],
+ "spline_mesh": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "structure": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "ase.atoms",
+   "module_short": "ase",
+   "name": "Atoms"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "ase",
+   "module_short": "ase",
+   "name": "Atoms"
+  }
+ ],
+ "structure.cell.array": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "ase.atoms",
+   "module_short": "ase",
+   "name": "Atoms.cell"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "ase",
+   "module_short": "ase",
+   "name": "Atoms.cell"
+  }
+ ],
+ "structure.positions": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "ase.atoms",
+   "module_short": "ase",
+   "name": "Atoms.positions"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "ase",
+   "module_short": "ase",
+   "name": "Atoms.positions"
+  }
+ ],
+ "structure.repeat": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "ase.atoms",
+   "module_short": "ase",
+   "name": "Atoms.repeat"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "ase",
+   "module_short": "ase",
+   "name": "Atoms.repeat"
+  }
+ ],
+ "t_grid": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "torch.Generator": [
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torch._C",
+   "module_short": "torch",
+   "name": "Generator"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Generator"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Generator"
+  }
+ ],
+ "torch.abs": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "builtin_function_or_method"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "abs"
+  }
+ ],
+ "torch.exp": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "builtin_function_or_method"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "exp"
+  }
+ ],
+ "torch.float64": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "dtype"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "float64"
+  }
+ ],
+ "torch.from_numpy": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "builtin_function_or_method"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "from_numpy"
+  }
+ ],
+ "torch.linspace": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "builtin_function_or_method"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "linspace"
+  }
+ ],
+ "torch.logspace": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "builtin_function_or_method"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "logspace"
+  }
+ ],
+ "torch.normal": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "builtin_function_or_method"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "normal"
+  }
+ ],
+ "torch.pi": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "float"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "pi"
+  }
+ ],
+ "torch.pow": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "builtin_function_or_method"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "pow"
+  }
+ ],
+ "torch.tensor": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "builtin_function_or_method"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "tensor"
+  }
+ ],
+ "torchpme.lib.KSpaceFilter": [
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torchpme.lib.kspace_filter",
+   "module_short": "torchpme.lib",
+   "name": "KSpaceFilter"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torchpme.lib",
+   "module_short": "torchpme.lib",
+   "name": "KSpaceFilter"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "KSpaceFilter"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torch.nn.modules.module",
+   "module_short": "torch.nn",
+   "name": "Module"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torch.nn.modules",
+   "module_short": "torch.nn",
+   "name": "Module"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torch.nn",
+   "module_short": "torch.nn",
+   "name": "Module"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Module"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.lib",
+   "module_short": "torchpme.lib",
+   "name": "KSpaceFilter"
+  },
+  {
+   "is_class": false,
+   "is_explicit": true,
+   "module": "torchpme.lib",
+   "module_short": "torchpme.lib",
+   "name": "KSpaceFilter"
+  }
+ ],
+ "torchpme.lib.MeshInterpolator": [
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torchpme.lib.mesh_interpolator",
+   "module_short": "torchpme.lib",
+   "name": "MeshInterpolator"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torchpme.lib",
+   "module_short": "torchpme.lib",
+   "name": "MeshInterpolator"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "MeshInterpolator"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torch.nn.modules.module",
+   "module_short": "torch.nn",
+   "name": "Module"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torch.nn.modules",
+   "module_short": "torch.nn",
+   "name": "Module"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torch.nn",
+   "module_short": "torch.nn",
+   "name": "Module"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Module"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.lib",
+   "module_short": "torchpme.lib",
+   "name": "MeshInterpolator"
+  },
+  {
+   "is_class": false,
+   "is_explicit": true,
+   "module": "torchpme.lib",
+   "module_short": "torchpme.lib",
+   "name": "MeshInterpolator"
+  }
+ ],
+ "torchpme.lib.SplinePotential": [
+  {
+   "is_class": false,
+   "is_explicit": true,
+   "module": "torchpme.lib",
+   "module_short": "torchpme.lib",
+   "name": "SplinePotential"
+  },
+  {
+   "is_class": false,
+   "is_explicit": true,
+   "module": "torchpme.lib",
+   "module_short": "torchpme.lib",
+   "name": "SplinePotential"
+  }
+ ],
+ "torchpme.lib.SplinePotential.lr_from_dist": [
+  {
+   "is_class": false,
+   "is_explicit": true,
+   "module": "torchpme.lib.SplinePotential",
+   "module_short": "torchpme.lib.SplinePotential",
+   "name": "lr_from_dist"
+  }
+ ],
+ "torchpme.lib.kvectors.get_ns_mesh": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "function"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.lib.kvectors",
+   "module_short": "torchpme.lib",
+   "name": "get_ns_mesh"
+  }
+ ],
+ "x_grid": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "x_grid_fine": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "x_grid_hiq": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "x_test": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "y_bare": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "y_exclude": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "y_grid": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "y_grid_2": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "y_grid_fine": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "y_grid_hiq": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "y_spline": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "y_spline_fine": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "y_test": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "yhat_spline": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "yhat_spline_fine": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "yhat_spline_kgrid": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "yhat_test": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "z_coul": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "z_coul_2": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "z_direct": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "z_max": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "float64"
+  }
+ ],
+ "z_min": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "float64"
+  }
+ ],
+ "z_plot": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "ndarray"
+  }
+ ],
+ "z_plot.max": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "builtin_function_or_method"
+  }
+ ],
+ "z_plot.min": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "builtin_function_or_method"
+  }
+ ],
+ "z_spline": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "z_spline_2": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "z_spline_2_direct": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ]
+}

@@ -1,0 +1,1021 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="../">
+  <head><meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="author" title="About these documents" href="../about.html" /><link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="Optimizing a linear combination of potentials" href="08-combined-potential.html" /><link rel="prev" title="Splined potentials" href="06-splined-potential.html" />
+
+    <link rel="shortcut icon" href="../_static/torch-pme-64.png"/><!-- Generated with Sphinx 8.1.3 and Furo 2024.08.06 -->
+        <title>Computing LODE descriptors - torch-pme</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=354aac6f" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css?v=d2d258e8" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=302659d7" />
+    <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/fontawesome.min.css" />
+    <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/solid.min.css" />
+    <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/brands.min.css" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f8f8f8;
+  --color-code-foreground: black;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc">
+<label class="overlay sidebar-overlay" for="__navigation">
+  <div class="visually-hidden">Hide navigation sidebar</div>
+</label>
+<label class="overlay toc-overlay" for="__toc">
+  <div class="visually-hidden">Hide table of contents sidebar</div>
+</label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <div class="visually-hidden">Toggle site navigation sidebar</div>
+        <i class="icon"><svg><use href="#svg-menu"></use></svg></i>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../index.html"><div class="brand">torch-pme</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle">
+          <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <div class="visually-hidden">Toggle table of contents sidebar</div>
+        <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
+  
+  <div class="sidebar-logo-container">
+    <img class="sidebar-logo only-light" src="../_static/images/torch-pme.png" alt="Light Logo"/>
+    <img class="sidebar-logo only-dark" src="../_static/images/torch-pme-dark.png" alt="Dark Logo"/>
+  </div>
+  
+  
+</a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../about.html">What is torch-pme</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="basic-usage.html">Basic Usage</a></li>
+<li class="toctree-l1 current has-children"><a class="reference internal" href="index.html">Examples</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of Examples</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="01-charges-example.html">Computations with Multiple Charge Channels</a></li>
+<li class="toctree-l2"><a class="reference internal" href="02-neighbor-lists-usage.html">Advanced neighbor list usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="03-mesh-demo.html">Examples of the <code class="docutils literal notranslate"><span class="pre">MeshInterpolator</span></code> class</a></li>
+<li class="toctree-l2"><a class="reference internal" href="04-kspace-demo.html">Examples of the <code class="docutils literal notranslate"><span class="pre">KSpaceFilter</span></code> class</a></li>
+<li class="toctree-l2"><a class="reference internal" href="05-autograd-demo.html">Custom models with automatic differentiation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="06-splined-potential.html">Splined potentials</a></li>
+<li class="toctree-l2 current current-page"><a class="current reference internal" href="#">Computing LODE descriptors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="08-combined-potential.html">Optimizing a linear combination of potentials</a></li>
+<li class="toctree-l2"><a class="reference internal" href="09-atomistic-model.html">Atomistic model for molecular dynamics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="09-atomistic-model.html#a-comparison-between-calculators">A comparison between calculators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="10-tuning.html">Parameter tuning for range-separated models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="11-4-site-water.html">4-site water models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="basic-usage.html">Basic Usage</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../references/index.html">API reference</a><input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle navigation of API reference</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../references/potentials/index.html">Potentials</a><input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><div class="visually-hidden">Toggle navigation of Potentials</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../references/potentials/combined.html">CombinedPotential</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../references/potentials/coulomb.html">CoulombPotential</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../references/potentials/inversepowerlaw.html">InversePowerLawPotential</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../references/potentials/potential.html">Potential</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../references/potentials/potential-dipole.html">PotentialDipole</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../references/potentials/spline.html">SplinePotential</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../references/calculators/index.html">Calculators</a><input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><div class="visually-hidden">Toggle navigation of Calculators</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../references/calculators/calculator.html">Calculator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../references/calculators/calculator-dipole.html">CalculatorDipole</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../references/calculators/ewald.html">EwaldCalculator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../references/calculators/p3m.html">P3MCalculator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../references/calculators/pme.html">PMECalculator</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../references/tuning/index.html">Tuning</a><input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><div class="visually-hidden">Toggle navigation of Tuning</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../references/tuning/base_classes.html">Base Classes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../references/tuning/tune_ewald.html">Tune Ewald</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../references/tuning/tune_p3m.html">Tune P3M</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../references/tuning/tune_pme.html">Tune PME</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../references/prefactors.html">Prefactors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../references/metatensor.html">Metatensor Bindings</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../references/lib/index.html">Library Functions</a><input class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><div class="visually-hidden">Toggle navigation of Library Functions</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../references/lib/kspace_filter.html">Kspace filter</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../references/lib/kvectors.html">Kvectors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../references/lib/math.html">Math</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../references/lib/mesh_interpolator.html">Mesh Interpolator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../references/lib/splines.html">Splines</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../references/changelog.html">Changelog</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="view-this-page">
+  <a class="muted-link" href="../_sources/examples/07-lode-demo.rst.txt" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div>
+<div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle">
+              <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <div class="visually-hidden">Toggle table of contents sidebar</div>
+            <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <div class="sphx-glr-download-link-note admonition note">
+<p class="admonition-title">Note</p>
+<p><a class="reference internal" href="#sphx-glr-download-examples-07-lode-demo-py"><span class="std std-ref">Go to the end</span></a>
+to download the full example code.</p>
+</div>
+<section class="sphx-glr-example-title" id="computing-lode-descriptors">
+<span id="example-lode-demo"></span><span id="sphx-glr-examples-07-lode-demo-py"></span><h1>Computing LODE descriptors<a class="headerlink" href="#computing-lode-descriptors" title="Link to this heading">¶</a></h1>
+<dl class="field-list simple">
+<dt class="field-odd">Authors<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Michele Ceriotti <a class="reference external" href="https://github.com/ceriottm/">&#64;ceriottm</a></p>
+</dd>
+</dl>
+<p>This notebook demonstrates the use of some advanced features of
+<code class="docutils literal notranslate"><span class="pre">torch-pme</span></code> to compute long-distance equivariants (LODE) features
+as in <a class="reference external" href="http://doi.org/10.1063/1.5128375">Grisafi and Ceriotti, J. Chem. Phys. (2019)</a>
+and <a class="reference external" href="10.1021/acs.jpclett.3c02375">Huguenin-Dumittan et al., J. Phys. Chem. Lett. (2023)</a>.
+Note that a compiled-language CPU implementation of LODE features is
+also available in the <a class="reference external" href="https://github.com/metatensor/featomic">featomic package</a>.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <a href="https://docs.python.org/3/library/typing.html#typing.Optional" title="typing.Optional" class="sphx-glr-backref-module-typing sphx-glr-backref-type-py-data"><span class="n">Optional</span></a>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">ase</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">chemiscope</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">scipy</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">matplotlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">pyplot</span> <span class="k">as</span> <span class="n">plt</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">torchpme</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">torchpme.potentials</span><span class="w"> </span><span class="kn">import</span> <a href="https://pytorch.org/docs/stable/generated/torch.nn.Module.html#torch.nn.Module" title="torch.nn.Module" class="sphx-glr-backref-module-torch-nn sphx-glr-backref-type-py-class"><span class="n">CoulombPotential</span></a><span class="p">,</span> <a href="https://pytorch.org/docs/stable/generated/torch.nn.Module.html#torch.nn.Module" title="torch.nn.Module" class="sphx-glr-backref-module-torch-nn sphx-glr-backref-type-py-class"><span class="n">Potential</span></a><span class="p">,</span> <a href="https://pytorch.org/docs/stable/generated/torch.nn.Module.html#torch.nn.Module" title="torch.nn.Module" class="sphx-glr-backref-module-torch-nn sphx-glr-backref-type-py-class"><span class="n">SplinePotential</span></a>
+
+<a href="https://docs.python.org/3/library/stdtypes.html#str" title="builtins.str" class="sphx-glr-backref-module-builtins sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">device</span></a> <span class="o">=</span> <span class="s2">&quot;cpu&quot;</span>
+<a href="https://pytorch.org/docs/stable/tensor_attributes.html#torch.dtype" title="torch.dtype" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">dtype</span></a> <span class="o">=</span> <a href="https://pytorch.org/docs/stable/tensor_attributes.html#torch.dtype" title="torch.dtype" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">torch</span><span class="o">.</span><span class="n">float64</span></a>
+<a href="https://pytorch.org/docs/stable/generated/torch.Generator.html#torch.Generator" title="torch.Generator" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">rng</span></a> <span class="o">=</span> <a href="https://pytorch.org/docs/stable/generated/torch.Generator.html#torch.Generator" title="torch.Generator" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class"><span class="n">torch</span><span class="o">.</span><span class="n">Generator</span></a><span class="p">()</span>
+<a href="https://pytorch.org/docs/stable/generated/torch.Generator.html#torch.Generator" title="torch.Generator" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">rng</span></a><span class="o">.</span><span class="n">manual_seed</span><span class="p">(</span><span class="mi">42</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>&lt;torch._C.Generator object at 0x7f2ef9da0530&gt;
+</pre></div>
+</div>
+<section id="long-distance-equivariant-descriptors">
+<h2>Long-distance equivariant descriptors<a class="headerlink" href="#long-distance-equivariant-descriptors" title="Link to this heading">¶</a></h2>
+<figure class="align-default" id="id1">
+<img alt="../_images/long-range.jpg" src="../_images/long-range.jpg" />
+<figcaption>
+<p><span class="caption-text">A schematic view of the process of evaluating LODE features.
+Rather than computing an expansion of the neighbor density (the
+operation that underlies short-range models, from SOAP to NICE)
+one first transforms the density in the Fourier domain, then back
+to obtain a real-space “potential field” that is then expanded on
+an atom-centered basis.</span><a class="headerlink" href="#id1" title="Link to this image">¶</a></p>
+</figcaption>
+</figure>
+<p>The basic idea behind the LODE framework is to evaluate a
+“potential field”, convoluting the neighbor density with a suitable
+kernel</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[V(\mathbf{x})=\int \mathrm{d}\mathbf{x}'
+\rho(\mathbf{x}') K(|\mathbf{x}-\mathbf{x}'|)\]</div>
+</div>
+<p>and then expand it on an atom-centered basis, so as to obtain a
+set of features that describe the environment of each atom.</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[\langle nlm|V_i\rangle =\int \mathrm{d}\mathbf{x}\,
+V(\mathbf{x}) R_{nl}(x) Y_l^m(\hat{\mathbf{x}})\]</div>
+</div>
+<p>By choosing a slowly-decaying kernel that emphasizes long-range correlations, and that
+and that is consistent with the asymptotic behavior of e.g. electrostatic
+interactions, one achieves a description of the long-range interaction,
+rather than of the immediate vicinity of each atom. By choosing a basis of
+spherical harmonics for the angular part, one achieves descriptors that
+transform as irreducible representations of the rotation group.</p>
+<section id="initialize-a-trial-structure">
+<h3>Initialize a trial structure<a class="headerlink" href="#initialize-a-trial-structure" title="Link to this heading">¶</a></h3>
+<p>We use as an example a distorted rocksalt structure
+with perturbed positions and charges</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><a href="https://wiki.fysik.dtu.dk/ase/ase/atoms.html#ase.Atoms" title="ase.Atoms" class="sphx-glr-backref-module-ase sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">structure</span></a> <span class="o">=</span> <a href="https://wiki.fysik.dtu.dk/ase/ase/atoms.html#ase.Atoms" title="ase.Atoms" class="sphx-glr-backref-module-ase sphx-glr-backref-type-py-class"><span class="n">ase</span><span class="o">.</span><span class="n">Atoms</span></a><span class="p">(</span>
+    <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">positions</span></a><span class="o">=</span><span class="p">[</span>
+        <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+        <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+        <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+        <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+        <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span>
+        <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span>
+        <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span>
+        <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span>
+    <span class="p">],</span>
+    <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">cell</span></a><span class="o">=</span><span class="p">[</span><span class="mi">6</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">6</span><span class="p">],</span>
+    <span class="n">symbols</span><span class="o">=</span><span class="s2">&quot;NaClClNaClNaNaCl&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+<a href="https://wiki.fysik.dtu.dk/ase/ase/atoms.html#ase.Atoms" title="ase.Atoms" class="sphx-glr-backref-module-ase sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">structure</span></a> <span class="o">=</span> <a href="https://wiki.fysik.dtu.dk/ase/ase/atoms.html#ase.Atoms.repeat" title="ase.Atoms.repeat" class="sphx-glr-backref-module-ase sphx-glr-backref-type-py-method"><span class="n">structure</span><span class="o">.</span><span class="n">repeat</span></a><span class="p">([</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
+
+<a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">displacement</span></a> <span class="o">=</span> <a href="https://pytorch.org/docs/stable/generated/torch.normal.html#torch.normal" title="torch.normal" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-function"><span class="n">torch</span><span class="o">.</span><span class="n">normal</span></a><span class="p">(</span>
+    <span class="n">mean</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">std</span><span class="o">=</span><span class="mf">2.5e-1</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><a href="https://wiki.fysik.dtu.dk/ase/ase/atoms.html#ase.Atoms" title="ase.Atoms" class="sphx-glr-backref-module-ase sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">structure</span></a><span class="p">),</span> <span class="mi">3</span><span class="p">),</span> <span class="n">generator</span><span class="o">=</span><a href="https://pytorch.org/docs/stable/generated/torch.Generator.html#torch.Generator" title="torch.Generator" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">rng</span></a>
+<span class="p">)</span>
+<a href="https://wiki.fysik.dtu.dk/ase/ase/atoms.html#ase.Atoms.positions" title="ase.Atoms.positions" class="sphx-glr-backref-module-ase sphx-glr-backref-type-py-property"><span class="n">structure</span><span class="o">.</span><span class="n">positions</span></a> <span class="o">+=</span> <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">displacement</span></a><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+
+<a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">charges</span></a> <span class="o">=</span> <a href="https://pytorch.org/docs/stable/generated/torch.tensor.html#torch.tensor" title="torch.tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-function"><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span></a><span class="p">(</span>
+    <span class="p">[[</span><span class="mf">1.0</span><span class="p">],</span> <span class="p">[</span><span class="o">-</span><span class="mf">1.0</span><span class="p">],</span> <span class="p">[</span><span class="o">-</span><span class="mf">1.0</span><span class="p">],</span> <span class="p">[</span><span class="mf">1.0</span><span class="p">],</span> <span class="p">[</span><span class="o">-</span><span class="mf">1.0</span><span class="p">],</span> <span class="p">[</span><span class="mf">1.0</span><span class="p">],</span> <span class="p">[</span><span class="mf">1.0</span><span class="p">],</span> <span class="p">[</span><span class="o">-</span><span class="mf">1.0</span><span class="p">]]</span>
+    <span class="o">*</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><a href="https://wiki.fysik.dtu.dk/ase/ase/atoms.html#ase.Atoms" title="ase.Atoms" class="sphx-glr-backref-module-ase sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">structure</span></a><span class="p">)</span> <span class="o">//</span> <span class="mi">8</span><span class="p">),</span>
+    <a href="https://pytorch.org/docs/stable/tensor_attributes.html#torch.dtype" title="torch.dtype" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">dtype</span></a><span class="o">=</span><a href="https://pytorch.org/docs/stable/tensor_attributes.html#torch.dtype" title="torch.dtype" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">dtype</span></a><span class="p">,</span>
+    <a href="https://docs.python.org/3/library/stdtypes.html#str" title="builtins.str" class="sphx-glr-backref-module-builtins sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">device</span></a><span class="o">=</span><a href="https://docs.python.org/3/library/stdtypes.html#str" title="builtins.str" class="sphx-glr-backref-module-builtins sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">device</span></a><span class="p">,</span>
+<span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">charges</span></a> <span class="o">+=</span> <a href="https://pytorch.org/docs/stable/generated/torch.normal.html#torch.normal" title="torch.normal" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-function"><span class="n">torch</span><span class="o">.</span><span class="n">normal</span></a><span class="p">(</span><span class="n">mean</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">std</span><span class="o">=</span><span class="mf">1e-1</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">charges</span></a><span class="p">),</span> <span class="mi">1</span><span class="p">),</span> <span class="n">generator</span><span class="o">=</span><a href="https://pytorch.org/docs/stable/generated/torch.Generator.html#torch.Generator" title="torch.Generator" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">rng</span></a><span class="p">)</span>
+<a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">positions</span></a> <span class="o">=</span> <a href="https://pytorch.org/docs/stable/generated/torch.from_numpy.html#torch.from_numpy" title="torch.from_numpy" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-function"><span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span></a><span class="p">(</span><a href="https://wiki.fysik.dtu.dk/ase/ase/atoms.html#ase.Atoms.positions" title="ase.Atoms.positions" class="sphx-glr-backref-module-ase sphx-glr-backref-type-py-property"><span class="n">structure</span><span class="o">.</span><span class="n">positions</span></a><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><a href="https://docs.python.org/3/library/stdtypes.html#str" title="builtins.str" class="sphx-glr-backref-module-builtins sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">device</span></a><span class="o">=</span><a href="https://docs.python.org/3/library/stdtypes.html#str" title="builtins.str" class="sphx-glr-backref-module-builtins sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">device</span></a><span class="p">,</span> <a href="https://pytorch.org/docs/stable/tensor_attributes.html#torch.dtype" title="torch.dtype" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">dtype</span></a><span class="o">=</span><a href="https://pytorch.org/docs/stable/tensor_attributes.html#torch.dtype" title="torch.dtype" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">dtype</span></a><span class="p">)</span>
+<a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">cell</span></a> <span class="o">=</span> <a href="https://pytorch.org/docs/stable/generated/torch.from_numpy.html#torch.from_numpy" title="torch.from_numpy" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-function"><span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span></a><span class="p">(</span><a href="https://wiki.fysik.dtu.dk/ase/ase/atoms.html#ase.Atoms.cell" title="ase.Atoms.cell" class="sphx-glr-backref-module-ase sphx-glr-backref-type-py-property"><span class="n">structure</span><span class="o">.</span><span class="n">cell</span><span class="o">.</span><span class="n">array</span></a><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><a href="https://docs.python.org/3/library/stdtypes.html#str" title="builtins.str" class="sphx-glr-backref-module-builtins sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">device</span></a><span class="o">=</span><a href="https://docs.python.org/3/library/stdtypes.html#str" title="builtins.str" class="sphx-glr-backref-module-builtins sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">device</span></a><span class="p">,</span> <a href="https://pytorch.org/docs/stable/tensor_attributes.html#torch.dtype" title="torch.dtype" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">dtype</span></a><span class="o">=</span><a href="https://pytorch.org/docs/stable/tensor_attributes.html#torch.dtype" title="torch.dtype" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">dtype</span></a><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="an-excluded-range-smooth-coulomb-potential">
+<h3>An “excluded-range” smooth Coulomb potential<a class="headerlink" href="#an-excluded-range-smooth-coulomb-potential" title="Link to this heading">¶</a></h3>
+<p>We use <code class="xref py py-class docutils literal notranslate"><span class="pre">SplinePotential</span></code> to
+compute a smooth Coulomb potential with the “short-range” part cut out.
+This is important as otherwise the potential carries information on the
+local atomic arrangement, which is redundant (as it is usually described
+by another part of the model).</p>
+<p><a class="reference internal" href="../references/potentials/coulomb.html#torchpme.CoulombPotential" title="torchpme.CoulombPotential"><code class="xref py py-class docutils literal notranslate"><span class="pre">CoulombPotential</span></code></a> does this by
+first computing the potential generated by Gaussian densities, and then
+removing <em>in real space</em> the contributions in the vicinity of each atom.
+For LODE we must get the potential directly on the grid, and so it is
+better to use a numerical kernel that achieves this using only k-space
+operations.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><a href="https://docs.python.org/3/library/functions.html#float" title="builtins.float" class="sphx-glr-backref-module-builtins sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">smearing</span></a> <span class="o">=</span> <span class="mf">0.5</span>
+<a href="https://docs.python.org/3/library/functions.html#float" title="builtins.float" class="sphx-glr-backref-module-builtins sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">exclusion_radius</span></a> <span class="o">=</span> <span class="mf">8.0</span>
+<span class="n">coulomb</span> <span class="o">=</span> <a href="https://pytorch.org/docs/stable/generated/torch.nn.Module.html#torch.nn.Module" title="torch.nn.Module" class="sphx-glr-backref-module-torch-nn sphx-glr-backref-type-py-class"><span class="n">CoulombPotential</span></a><span class="p">(</span><a href="https://docs.python.org/3/library/functions.html#float" title="builtins.float" class="sphx-glr-backref-module-builtins sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">smearing</span></a><span class="o">=</span><a href="https://docs.python.org/3/library/functions.html#float" title="builtins.float" class="sphx-glr-backref-module-builtins sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">smearing</span></a><span class="p">,</span> <a href="https://docs.python.org/3/library/functions.html#float" title="builtins.float" class="sphx-glr-backref-module-builtins sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">exclusion_radius</span></a><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+<span class="n">coulomb_exclude</span> <span class="o">=</span> <a href="https://pytorch.org/docs/stable/generated/torch.nn.Module.html#torch.nn.Module" title="torch.nn.Module" class="sphx-glr-backref-module-torch-nn sphx-glr-backref-type-py-class"><span class="n">CoulombPotential</span></a><span class="p">(</span><a href="https://docs.python.org/3/library/functions.html#float" title="builtins.float" class="sphx-glr-backref-module-builtins sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">smearing</span></a><span class="o">=</span><a href="https://docs.python.org/3/library/functions.html#float" title="builtins.float" class="sphx-glr-backref-module-builtins sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">smearing</span></a><span class="p">,</span> <a href="https://docs.python.org/3/library/functions.html#float" title="builtins.float" class="sphx-glr-backref-module-builtins sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">exclusion_radius</span></a><span class="o">=</span><a href="https://docs.python.org/3/library/functions.html#float" title="builtins.float" class="sphx-glr-backref-module-builtins sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">exclusion_radius</span></a><span class="p">)</span>
+
+<a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">x_grid</span></a> <span class="o">=</span> <a href="https://pytorch.org/docs/stable/generated/torch.logspace.html#torch.logspace" title="torch.logspace" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-function"><span class="n">torch</span><span class="o">.</span><span class="n">logspace</span></a><span class="p">(</span><span class="o">-</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">1000</span><span class="p">)</span>
+<a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">y_grid</span></a> <span class="o">=</span> <span class="n">coulomb_exclude</span><span class="o">.</span><span class="n">lr_from_dist</span><span class="p">(</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">x_grid</span></a><span class="p">)</span> <span class="o">+</span> <span class="n">coulomb_exclude</span><span class="o">.</span><span class="n">sr_from_dist</span><span class="p">(</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">x_grid</span></a><span class="p">)</span>
+
+<span class="c1"># create a spline potential for with the exclusion range built in</span>
+<span class="n">spline</span> <span class="o">=</span> <a href="https://pytorch.org/docs/stable/generated/torch.nn.Module.html#torch.nn.Module" title="torch.nn.Module" class="sphx-glr-backref-module-torch-nn sphx-glr-backref-type-py-class"><span class="n">SplinePotential</span></a><span class="p">(</span>
+    <span class="n">r_grid</span><span class="o">=</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">x_grid</span></a><span class="p">,</span> <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">y_grid</span></a><span class="o">=</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">y_grid</span></a><span class="p">,</span> <a href="https://docs.python.org/3/library/functions.html#float" title="builtins.float" class="sphx-glr-backref-module-builtins sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">smearing</span></a><span class="o">=</span><a href="https://docs.python.org/3/library/functions.html#float" title="builtins.float" class="sphx-glr-backref-module-builtins sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">smearing</span></a><span class="p">,</span> <span class="n">reciprocal</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">yhat_at_zero</span><span class="o">=</span><span class="mf">0.0</span>
+<span class="p">)</span>
+
+<a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">t_grid</span></a> <span class="o">=</span> <a href="https://pytorch.org/docs/stable/generated/torch.logspace.html#torch.logspace" title="torch.logspace" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-function"><span class="n">torch</span><span class="o">.</span><span class="n">logspace</span></a><span class="p">(</span><span class="o">-</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">1000</span><span class="p">)</span>
+<a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">y_bare</span></a> <span class="o">=</span> <span class="n">coulomb</span><span class="o">.</span><span class="n">lr_from_dist</span><span class="p">(</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">t_grid</span></a><span class="p">)</span>
+<a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">y_spline</span></a> <span class="o">=</span> <span class="n">spline</span><span class="o">.</span><span class="n">lr_from_dist</span><span class="p">(</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">t_grid</span></a><span class="p">)</span>
+
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span>
+    <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">sharey</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">sharex</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">constrained_layout</span><span class="o">=</span><span class="kc">True</span>
+<span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">t_grid</span></a><span class="p">,</span> <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">y_spline</span></a><span class="p">,</span> <span class="s2">&quot;b-&quot;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><a href="https://docs.python.org/3/library/functions.html#float" title="builtins.float" class="sphx-glr-backref-module-builtins sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">exclusion_radius</span></a><span class="si">}</span><span class="s2">Å exclusion (spline)&quot;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">t_grid</span></a><span class="p">,</span> <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">y_bare</span></a><span class="p">,</span> <span class="s2">&quot;k:&quot;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;smooth Coulomb&quot;</span><span class="p">)</span>
+
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;$r$ / Å&quot;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;$V$ / a.u.&quot;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">20</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">1.75</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+<span class="n">fig</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+<img src="../_images/sphx_glr_07-lode-demo_001.png" srcset="../_images/sphx_glr_07-lode-demo_001.png" alt="07 lode demo" class = "sphx-glr-single-img"/></section>
+<section id="compute-the-potential-on-a-mesh">
+<h3>Compute the potential on a mesh<a class="headerlink" href="#compute-the-potential-on-a-mesh" title="Link to this heading">¶</a></h3>
+<p>We use <a class="reference internal" href="../references/lib/mesh_interpolator.html#torchpme.lib.MeshInterpolator" title="torchpme.lib.MeshInterpolator"><code class="xref py py-class docutils literal notranslate"><span class="pre">MeshInterpolator</span></code></a>
+and <a class="reference internal" href="../references/lib/kspace_filter.html#torchpme.lib.KSpaceFilter" title="torchpme.lib.KSpaceFilter"><code class="xref py py-class docutils literal notranslate"><span class="pre">KSpaceFilter</span></code></a>
+to compute the potential on a grid.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Determines grid resolution and initialize utility classes</span>
+<a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">ns</span></a> <span class="o">=</span> <span class="n">torchpme</span><span class="o">.</span><span class="n">lib</span><span class="o">.</span><span class="n">kvectors</span><span class="o">.</span><span class="n">get_ns_mesh</span><span class="p">(</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">cell</span></a><span class="p">,</span> <a href="https://docs.python.org/3/library/functions.html#float" title="builtins.float" class="sphx-glr-backref-module-builtins sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">smearing</span></a> <span class="o">*</span> <span class="mf">0.5</span><span class="p">)</span>
+<span class="n">MI</span> <span class="o">=</span> <a href="https://pytorch.org/docs/stable/generated/torch.nn.Module.html#torch.nn.Module" title="torch.nn.Module" class="sphx-glr-backref-module-torch-nn sphx-glr-backref-type-py-class"><span class="n">torchpme</span><span class="o">.</span><span class="n">lib</span><span class="o">.</span><span class="n">MeshInterpolator</span></a><span class="p">(</span>
+    <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">cell</span></a><span class="o">=</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">cell</span></a><span class="p">,</span> <span class="n">ns_mesh</span><span class="o">=</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">ns</span></a><span class="p">,</span> <span class="n">interpolation_nodes</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;P3M&quot;</span>
+<span class="p">)</span>
+<span class="n">KF</span> <span class="o">=</span> <a href="https://pytorch.org/docs/stable/generated/torch.nn.Module.html#torch.nn.Module" title="torch.nn.Module" class="sphx-glr-backref-module-torch-nn sphx-glr-backref-type-py-class"><span class="n">torchpme</span><span class="o">.</span><span class="n">lib</span><span class="o">.</span><span class="n">KSpaceFilter</span></a><span class="p">(</span>
+    <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">cell</span></a><span class="o">=</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">cell</span></a><span class="p">,</span>
+    <span class="n">ns_mesh</span><span class="o">=</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">ns</span></a><span class="p">,</span>
+    <span class="n">kernel</span><span class="o">=</span><span class="n">spline</span><span class="p">,</span>
+    <span class="n">fft_norm</span><span class="o">=</span><span class="s2">&quot;backward&quot;</span><span class="p">,</span>
+    <span class="n">ifft_norm</span><span class="o">=</span><span class="s2">&quot;forward&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># Computes particle density on the grid (weighted by the &quot;charges&quot;)</span>
+<span class="n">MI</span><span class="o">.</span><span class="n">compute_weights</span><span class="p">(</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">positions</span></a><span class="p">)</span>
+<a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">rho_mesh</span></a> <span class="o">=</span> <span class="n">MI</span><span class="o">.</span><span class="n">points_to_mesh</span><span class="p">(</span><span class="n">particle_weights</span><span class="o">=</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">charges</span></a><span class="p">)</span>
+
+<span class="c1"># Computes the potential using the Fourier filter</span>
+<a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">ivolume</span></a> <span class="o">=</span> <a href="https://pytorch.org/docs/stable/generated/torch.abs.html#torch.abs" title="torch.abs" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-function"><span class="n">torch</span><span class="o">.</span><span class="n">abs</span></a><span class="p">(</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">cell</span></a><span class="o">.</span><span class="n">det</span><span class="p">())</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+<a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">potential_mesh</span></a> <span class="o">=</span> <span class="n">KF</span><span class="p">(</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">rho_mesh</span></a><span class="p">)</span> <span class="o">*</span> <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">ivolume</span></a>
+</pre></div>
+</div>
+<p>Plotting a slice of the potential demonstrates the smoothness of the
+potential, as the “core” region is damped out.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span>
+    <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">sharey</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">sharex</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">constrained_layout</span><span class="o">=</span><span class="kc">True</span>
+<span class="p">)</span>
+<a href="https://docs.python.org/3/library/stdtypes.html#list" title="builtins.list" class="sphx-glr-backref-module-builtins sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">mesh_extent</span></a> <span class="o">=</span> <span class="p">[</span>
+    <span class="mi">0</span><span class="p">,</span>
+    <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">cell</span></a><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+    <span class="mi">0</span><span class="p">,</span>
+    <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">cell</span></a><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+<span class="p">]</span>
+
+<a href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="numpy.ndarray" class="sphx-glr-backref-module-numpy sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">z_plot</span></a> <span class="o">=</span> <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">potential_mesh</span></a><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+<a href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="numpy.ndarray" class="sphx-glr-backref-module-numpy sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">z_plot</span></a> <span class="o">=</span> <a href="https://numpy.org/doc/stable/reference/generated/numpy.vstack.html#numpy.vstack" title="numpy.vstack" class="sphx-glr-backref-module-numpy sphx-glr-backref-type-py-function"><span class="n">np</span><span class="o">.</span><span class="n">vstack</span></a><span class="p">([</span><a href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="numpy.ndarray" class="sphx-glr-backref-module-numpy sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">z_plot</span></a><span class="p">,</span> <a href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="numpy.ndarray" class="sphx-glr-backref-module-numpy sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">z_plot</span></a><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:]])</span>  <span class="c1"># Add first row at the bottom</span>
+<a href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="numpy.ndarray" class="sphx-glr-backref-module-numpy sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">z_plot</span></a> <span class="o">=</span> <a href="https://numpy.org/doc/stable/reference/generated/numpy.hstack.html#numpy.hstack" title="numpy.hstack" class="sphx-glr-backref-module-numpy sphx-glr-backref-type-py-function"><span class="n">np</span><span class="o">.</span><span class="n">hstack</span></a><span class="p">(</span>
+    <span class="p">[</span><a href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="numpy.ndarray" class="sphx-glr-backref-module-numpy sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">z_plot</span></a><span class="p">,</span> <a href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="numpy.ndarray" class="sphx-glr-backref-module-numpy sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">z_plot</span></a><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)]</span>
+<span class="p">)</span>  <span class="c1"># Add first column at the right</span>
+
+<a href="https://numpy.org/doc/stable/reference/arrays.scalars.html#numpy.float64" title="numpy.float64" class="sphx-glr-backref-module-numpy sphx-glr-backref-type-py-attribute"><span class="n">z_min</span></a><span class="p">,</span> <a href="https://numpy.org/doc/stable/reference/arrays.scalars.html#numpy.float64" title="numpy.float64" class="sphx-glr-backref-module-numpy sphx-glr-backref-type-py-attribute"><span class="n">z_max</span></a> <span class="o">=</span> <span class="p">(</span><a href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="numpy.ndarray" class="sphx-glr-backref-module-numpy sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">z_plot</span></a><span class="o">.</span><span class="n">min</span><span class="p">(),</span> <a href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="numpy.ndarray" class="sphx-glr-backref-module-numpy sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">z_plot</span></a><span class="o">.</span><span class="n">max</span><span class="p">())</span>
+<a href="https://numpy.org/doc/stable/reference/arrays.scalars.html#numpy.float64" title="numpy.float64" class="sphx-glr-backref-module-numpy sphx-glr-backref-type-py-attribute"><span class="n">z_range</span></a> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><a href="https://numpy.org/doc/stable/reference/arrays.scalars.html#numpy.float64" title="numpy.float64" class="sphx-glr-backref-module-numpy sphx-glr-backref-type-py-attribute"><span class="n">z_min</span></a><span class="p">),</span> <span class="nb">abs</span><span class="p">(</span><a href="https://numpy.org/doc/stable/reference/arrays.scalars.html#numpy.float64" title="numpy.float64" class="sphx-glr-backref-module-numpy sphx-glr-backref-type-py-attribute"><span class="n">z_max</span></a><span class="p">))</span>
+
+<span class="n">cf</span> <span class="o">=</span> <span class="n">ax</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span>
+    <a href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="numpy.ndarray" class="sphx-glr-backref-module-numpy sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">z_plot</span></a><span class="p">,</span>
+    <span class="n">extent</span><span class="o">=</span><a href="https://docs.python.org/3/library/stdtypes.html#list" title="builtins.list" class="sphx-glr-backref-module-builtins sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">mesh_extent</span></a><span class="p">,</span>
+    <span class="n">vmin</span><span class="o">=-</span><a href="https://numpy.org/doc/stable/reference/arrays.scalars.html#numpy.float64" title="numpy.float64" class="sphx-glr-backref-module-numpy sphx-glr-backref-type-py-attribute"><span class="n">z_range</span></a><span class="p">,</span>
+    <span class="n">vmax</span><span class="o">=</span><a href="https://numpy.org/doc/stable/reference/arrays.scalars.html#numpy.float64" title="numpy.float64" class="sphx-glr-backref-module-numpy sphx-glr-backref-type-py-attribute"><span class="n">z_range</span></a><span class="p">,</span>
+    <span class="n">origin</span><span class="o">=</span><span class="s2">&quot;lower&quot;</span><span class="p">,</span>
+    <span class="n">interpolation</span><span class="o">=</span><span class="s2">&quot;bilinear&quot;</span><span class="p">,</span>
+    <span class="n">cmap</span><span class="o">=</span><span class="s2">&quot;seismic&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;$x$ / Å&quot;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;$y$ / Å&quot;</span><span class="p">)</span>
+<span class="n">fig</span><span class="o">.</span><span class="n">colorbar</span><span class="p">(</span><span class="n">cf</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="sa">r</span><span class="s2">&quot;potential / a.u.&quot;</span><span class="p">)</span>
+<span class="n">fig</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+<img src="../_images/sphx_glr_07-lode-demo_002.png" srcset="../_images/sphx_glr_07-lode-demo_002.png" alt="07 lode demo" class = "sphx-glr-single-img"/></section>
+<section id="atom-centered-grids">
+<h3>Atom-centered grids<a class="headerlink" href="#atom-centered-grids" title="Link to this heading">¶</a></h3>
+<p>To evaluate LODE features, we have to now project the potential
+within an atom-centered region. To do this, we define an atom-centered
+grid. Note that the quadrature here is not especially smart, and
+is only used for demonstrative purposes.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">get_theta_phi_quadrature</span><span class="p">(</span><span class="n">L</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Legendre quadrature nodes for integrals over theta, phi&quot;&quot;&quot;</span>
+    <span class="n">quads</span> <span class="o">=</span> <span class="p">[]</span>
+    <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">weights</span></a> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">w_index</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">L</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="n">w</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <a href="https://docs.python.org/3/library/functions.html#float" title="builtins.float" class="sphx-glr-backref-module-builtins sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">np</span><span class="o">.</span><span class="n">pi</span></a> <span class="o">*</span> <span class="n">w_index</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">L</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">roots_legendre_now</span><span class="p">,</span> <span class="n">weights_now</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">special</span><span class="o">.</span><span class="n">roots_legendre</span><span class="p">(</span><span class="n">L</span><span class="p">)</span>
+        <span class="n">all_v</span> <span class="o">=</span> <a href="https://numpy.org/doc/stable/reference/generated/numpy.ufunc.html#numpy.ufunc" title="numpy.ufunc" class="sphx-glr-backref-module-numpy sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">np</span><span class="o">.</span><span class="n">arccos</span></a><span class="p">(</span><span class="n">roots_legendre_now</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">v</span><span class="p">,</span> <span class="n">weight</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">all_v</span><span class="p">,</span> <span class="n">weights_now</span><span class="p">):</span>
+            <span class="n">quads</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">v</span><span class="p">,</span> <span class="n">w</span><span class="p">])</span>
+            <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">weights</span><span class="o">.</span><span class="n">append</span></a><span class="p">(</span><span class="n">weight</span><span class="p">)</span>
+    <span class="n">norm</span> <span class="o">=</span> <span class="mi">4</span> <span class="o">*</span> <a href="https://docs.python.org/3/library/functions.html#float" title="builtins.float" class="sphx-glr-backref-module-builtins sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">torch</span><span class="o">.</span><span class="n">pi</span></a> <span class="o">/</span> <a href="https://numpy.org/doc/stable/reference/generated/numpy.sum.html#numpy.sum" title="numpy.sum" class="sphx-glr-backref-module-numpy sphx-glr-backref-type-py-function"><span class="n">np</span><span class="o">.</span><span class="n">sum</span></a><span class="p">(</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">weights</span></a><span class="p">)</span>
+    <span class="k">return</span> <a href="https://pytorch.org/docs/stable/generated/torch.tensor.html#torch.tensor" title="torch.tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-function"><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span></a><span class="p">(</span><span class="n">quads</span><span class="p">),</span> <a href="https://pytorch.org/docs/stable/generated/torch.tensor.html#torch.tensor" title="torch.tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-function"><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span></a><span class="p">(</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">weights</span></a><span class="p">)</span> <span class="o">*</span> <span class="n">norm</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">get_radial_quadrature</span><span class="p">(</span><span class="n">order</span><span class="p">,</span> <span class="n">R</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Generates Gauss-Legendre quadrature nodes and weights for radial integration</span>
+<span class="sd">    in spherical coordinates over the interval [0, R].</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">gl_nodes</span><span class="p">,</span> <span class="n">gl_weights</span> <span class="o">=</span> <a href="https://numpy.org/doc/stable/reference/generated/numpy.polynomial.legendre.leggauss.html#numpy.polynomial.legendre.leggauss" title="numpy.polynomial.legendre.leggauss" class="sphx-glr-backref-module-numpy-polynomial-legendre sphx-glr-backref-type-py-function"><span class="n">np</span><span class="o">.</span><span class="n">polynomial</span><span class="o">.</span><span class="n">legendre</span><span class="o">.</span><span class="n">leggauss</span></a><span class="p">(</span><span class="n">order</span><span class="p">)</span>
+    <span class="n">nodes</span> <span class="o">=</span> <span class="p">(</span><span class="n">R</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">gl_nodes</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+    <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">weights</span></a> <span class="o">=</span> <span class="p">(</span><span class="n">R</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span> <span class="o">**</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">gl_weights</span> <span class="o">*</span> <span class="p">(</span><span class="n">gl_nodes</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
+
+    <span class="k">return</span> <a href="https://pytorch.org/docs/stable/generated/torch.from_numpy.html#torch.from_numpy" title="torch.from_numpy" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-function"><span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span></a><span class="p">(</span><span class="n">nodes</span><span class="p">),</span> <a href="https://pytorch.org/docs/stable/generated/torch.from_numpy.html#torch.from_numpy" title="torch.from_numpy" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-function"><span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span></a><span class="p">(</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">weights</span></a><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">get_full_grid</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">R</span><span class="p">):</span>
+    <span class="n">lm_nodes</span><span class="p">,</span> <span class="n">lm_weights</span> <span class="o">=</span> <span class="n">get_theta_phi_quadrature</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+    <span class="n">r_nodes</span><span class="p">,</span> <span class="n">r_weights</span> <span class="o">=</span> <span class="n">get_radial_quadrature</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">R</span><span class="p">)</span>
+
+    <span class="n">full_weights</span> <span class="o">=</span> <span class="p">(</span><span class="n">r_weights</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">lm_weights</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+
+    <span class="n">cos_nodes</span> <span class="o">=</span> <a href="https://pytorch.org/docs/stable/generated/torch.cos.html#torch.cos" title="torch.cos" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-function"><span class="n">torch</span><span class="o">.</span><span class="n">cos</span></a><span class="p">(</span><span class="n">lm_nodes</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">sin_nodes</span> <span class="o">=</span> <a href="https://pytorch.org/docs/stable/generated/torch.sin.html#torch.sin" title="torch.sin" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-function"><span class="n">torch</span><span class="o">.</span><span class="n">sin</span></a><span class="p">(</span><span class="n">lm_nodes</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">xyz_nodes</span> <span class="o">=</span> <a href="https://pytorch.org/docs/stable/generated/torch.vstack.html#torch.vstack" title="torch.vstack" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-function"><span class="n">torch</span><span class="o">.</span><span class="n">vstack</span></a><span class="p">(</span>
+        <span class="p">[</span>
+            <span class="p">(</span><span class="n">r_nodes</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">cos_nodes</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span>
+            <span class="p">(</span>
+                <span class="n">r_nodes</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">sin_nodes</span> <span class="o">*</span> <a href="https://pytorch.org/docs/stable/generated/torch.cos.html#torch.cos" title="torch.cos" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-function"><span class="n">torch</span><span class="o">.</span><span class="n">cos</span></a><span class="p">(</span><span class="n">lm_nodes</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]))</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span>
+            <span class="p">(</span>
+                <span class="n">r_nodes</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">sin_nodes</span> <span class="o">*</span> <a href="https://pytorch.org/docs/stable/generated/torch.sin.html#torch.sin" title="torch.sin" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-function"><span class="n">torch</span><span class="o">.</span><span class="n">sin</span></a><span class="p">(</span><span class="n">lm_nodes</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]))</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span>
+        <span class="p">]</span>
+    <span class="p">)</span><span class="o">.</span><span class="n">T</span>
+
+    <span class="k">return</span> <span class="n">xyz_nodes</span><span class="p">,</span> <span class="n">full_weights</span>
+
+
+<a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">xyz</span></a><span class="p">,</span> <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">weights</span></a> <span class="o">=</span> <span class="n">get_full_grid</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <a href="https://docs.python.org/3/library/functions.html#float" title="builtins.float" class="sphx-glr-backref-module-builtins sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">exclusion_radius</span></a> <span class="o">/</span> <span class="mi">4</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The grid can then be centered on each atom, and the
+back-interpolation of <code class="docutils literal notranslate"><span class="pre">MeshInterpolator</span></code> be used to
+evaluate the potential values</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">grid_i</span></a> <span class="o">=</span> <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">positions</span></a><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">+</span> <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">xyz</span></a>
+<span class="n">MI</span><span class="o">.</span><span class="n">compute_weights</span><span class="p">(</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">grid_i</span></a><span class="p">)</span>
+<a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">pots_i</span></a> <span class="o">=</span> <span class="n">MI</span><span class="o">.</span><span class="n">mesh_to_points</span><span class="p">(</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">potential_mesh</span></a><span class="p">)</span><span class="o">.</span><span class="n">squeeze</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>The grid can be shown in the context of the atomic structure</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><a href="https://wiki.fysik.dtu.dk/ase/ase/atoms.html#ase.Atoms" title="ase.Atoms" class="sphx-glr-backref-module-ase sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">dummy</span></a> <span class="o">=</span> <a href="https://wiki.fysik.dtu.dk/ase/ase/atoms.html#ase.Atoms" title="ase.Atoms" class="sphx-glr-backref-module-ase sphx-glr-backref-type-py-class"><span class="n">ase</span><span class="o">.</span><span class="n">Atoms</span></a><span class="p">(</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">positions</span></a><span class="o">=</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">grid_i</span></a><span class="o">.</span><span class="n">numpy</span><span class="p">(),</span> <span class="n">symbols</span><span class="o">=</span><span class="s2">&quot;H&quot;</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">grid_i</span></a><span class="p">))</span>
+<span class="n">chemiscope</span><span class="o">.</span><span class="n">show</span><span class="p">(</span>
+    <span class="n">frames</span><span class="o">=</span><span class="p">[</span><a href="https://wiki.fysik.dtu.dk/ase/ase/atoms.html#ase.Atoms" title="ase.Atoms" class="sphx-glr-backref-module-ase sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">structure</span></a> <span class="o">+</span> <a href="https://wiki.fysik.dtu.dk/ase/ase/atoms.html#ase.Atoms" title="ase.Atoms" class="sphx-glr-backref-module-ase sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">dummy</span></a><span class="p">],</span>
+    <span class="n">properties</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;potential&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;target&quot;</span><span class="p">:</span> <span class="s2">&quot;atom&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;values&quot;</span><span class="p">:</span> <a href="https://numpy.org/doc/stable/reference/generated/numpy.concatenate.html#numpy.concatenate" title="numpy.concatenate" class="sphx-glr-backref-module-numpy sphx-glr-backref-type-py-function"><span class="n">np</span><span class="o">.</span><span class="n">concatenate</span></a><span class="p">([[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">positions</span></a><span class="p">),</span> <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">pots_i</span></a><span class="o">.</span><span class="n">flatten</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()]),</span>
+        <span class="p">},</span>
+        <span class="s2">&quot;grid weights&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;target&quot;</span><span class="p">:</span> <span class="s2">&quot;atom&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;values&quot;</span><span class="p">:</span> <a href="https://numpy.org/doc/stable/reference/generated/numpy.concatenate.html#numpy.concatenate" title="numpy.concatenate" class="sphx-glr-backref-module-numpy sphx-glr-backref-type-py-function"><span class="n">np</span><span class="o">.</span><span class="n">concatenate</span></a><span class="p">([[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">positions</span></a><span class="p">),</span> <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">weights</span></a><span class="o">.</span><span class="n">flatten</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()]),</span>
+        <span class="p">},</span>
+    <span class="p">},</span>
+    <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;structure&quot;</span><span class="p">,</span>
+    <span class="n">settings</span><span class="o">=</span><span class="n">chemiscope</span><span class="o">.</span><span class="n">quick_settings</span><span class="p">(</span>
+        <span class="n">structure_settings</span><span class="o">=</span><span class="p">{</span>
+            <span class="s2">&quot;unitCell&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+            <span class="s2">&quot;bonds&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+            <span class="s2">&quot;environments&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;activated&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">},</span>
+            <span class="s2">&quot;color&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s2">&quot;property&quot;</span><span class="p">:</span> <span class="s2">&quot;potential&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;min&quot;</span><span class="p">:</span> <span class="o">-</span><span class="mf">0.15</span><span class="p">,</span>
+                <span class="s2">&quot;max&quot;</span><span class="p">:</span> <span class="mf">0.15</span><span class="p">,</span>
+                <span class="s2">&quot;transform&quot;</span><span class="p">:</span> <span class="s2">&quot;linear&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;palette&quot;</span><span class="p">:</span> <span class="s2">&quot;seismic&quot;</span><span class="p">,</span>
+            <span class="p">},</span>
+        <span class="p">}</span>
+    <span class="p">),</span>
+    <span class="n">environments</span><span class="o">=</span><span class="n">chemiscope</span><span class="o">.</span><span class="n">all_atomic_environments</span><span class="p">([</span><a href="https://wiki.fysik.dtu.dk/ase/ase/atoms.html#ase.Atoms" title="ase.Atoms" class="sphx-glr-backref-module-ase sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">structure</span></a> <span class="o">+</span> <a href="https://wiki.fysik.dtu.dk/ase/ase/atoms.html#ase.Atoms" title="ase.Atoms" class="sphx-glr-backref-module-ase sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">dummy</span></a><span class="p">]),</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<!-- begin headers -->
+<!-- Load all dependencies -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.0.4/pako.min.js"></script>
+
+<!-- JS scripts -->
+<script src="../_static/chemiscope.min.js"></script>
+<script src="../_static/chemiscope-sphinx.js"></script>
+
+<!-- CSS styles -->
+<link rel="stylesheet" href="../_static/chemiscope-sphinx.css" type="text/css" />
+<!-- end headers -->
+
+<!-- Warning Display -->
+<div id="chsp-e70cf7cf-6268-4635-a308-01b593a26106-warning-display" class="chemiscope-sphinx-warning">
+    <p></p>
+    <button type="button" aria-label="Close" onclick="hideElement('chsp-e70cf7cf-6268-4635-a308-01b593a26106-warning-display')">
+        &times;
+    </button>
+</div>
+<div style="padding: 0.5rem 1.25rem" />
+
+<!-- Loading Spinner -->
+<div id="chsp-e70cf7cf-6268-4635-a308-01b593a26106-loading" class="chemiscope-sphinx-spinner">
+    <img src="../_static/chemiscope-loading.svg" alt="Loading icon" />
+</div>
+
+<!-- Chemiscope Visualization -->
+<div id="chsp-e70cf7cf-6268-4635-a308-01b593a26106">
+    <!-- This will be replaced by the chemiscope HTML -->
+</div>
+
+<!-- Load Visualization Script -->
+<script>
+    loadChemiscopeSphinx('chsp-e70cf7cf-6268-4635-a308-01b593a26106', '../_datasets/d4526a4358b8bc42cd01a5e19688670e9da83328417634451fc4481f359b742b-fig_07-lode-demo_007.json.gz', 'structure');
+</script>
+<div class="output_subarea output_html rendered_html output_result">
+
+</div>
+<br />
+<br /></section>
+<section id="computing-the-projection">
+<h3>Computing the projection<a class="headerlink" href="#computing-the-projection" title="Link to this heading">¶</a></h3>
+<p>In order to compute the LODE coefficients, we simply have to evaluate
+the basis on the same atom-centered grid. Here for example we just use
+<span class="math notranslate nohighlight">\((1,x,y,z)\)</span> as basis</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># define the basis</span>
+
+<a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">f0</span></a> <span class="o">=</span> <a href="https://pytorch.org/docs/stable/generated/torch.ones.html#torch.ones" title="torch.ones" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-function"><span class="n">torch</span><span class="o">.</span><span class="n">ones</span></a><span class="p">(</span><span class="nb">len</span><span class="p">(</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">xyz</span></a><span class="p">))</span>
+<a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">fx</span></a> <span class="o">=</span> <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">xyz</span></a><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span>
+<a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">fy</span></a> <span class="o">=</span> <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">xyz</span></a><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span>
+<a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">fz</span></a> <span class="o">=</span> <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">xyz</span></a><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span>
+
+<span class="c1"># normalize the basis</span>
+
+<a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">f0</span></a> <span class="o">=</span> <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">f0</span></a> <span class="o">/</span> <a href="https://pytorch.org/docs/stable/generated/torch.sqrt.html#torch.sqrt" title="torch.sqrt" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-function"><span class="n">torch</span><span class="o">.</span><span class="n">sqrt</span></a><span class="p">((</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">weights</span></a> <span class="o">*</span> <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">f0</span></a><span class="o">**</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span>
+<a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">fx</span></a> <span class="o">=</span> <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">fx</span></a> <span class="o">/</span> <a href="https://pytorch.org/docs/stable/generated/torch.sqrt.html#torch.sqrt" title="torch.sqrt" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-function"><span class="n">torch</span><span class="o">.</span><span class="n">sqrt</span></a><span class="p">((</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">weights</span></a> <span class="o">*</span> <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">fx</span></a><span class="o">**</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span>
+<a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">fy</span></a> <span class="o">=</span> <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">fy</span></a> <span class="o">/</span> <a href="https://pytorch.org/docs/stable/generated/torch.sqrt.html#torch.sqrt" title="torch.sqrt" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-function"><span class="n">torch</span><span class="o">.</span><span class="n">sqrt</span></a><span class="p">((</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">weights</span></a> <span class="o">*</span> <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">fy</span></a><span class="o">**</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span>
+<a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">fz</span></a> <span class="o">=</span> <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">fz</span></a> <span class="o">/</span> <a href="https://pytorch.org/docs/stable/generated/torch.sqrt.html#torch.sqrt" title="torch.sqrt" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-function"><span class="n">torch</span><span class="o">.</span><span class="n">sqrt</span></a><span class="p">((</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">weights</span></a> <span class="o">*</span> <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">fz</span></a><span class="o">**</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span>
+
+<span class="c1"># compute</span>
+<a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">lode_i</span></a> <span class="o">=</span> <a href="https://pytorch.org/docs/stable/generated/torch.tensor.html#torch.tensor" title="torch.tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-function"><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span></a><span class="p">(</span>
+    <span class="p">[</span>
+        <span class="p">(</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">weights</span></a> <span class="o">*</span> <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">f0</span></a> <span class="o">*</span> <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">pots_i</span></a><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(),</span>
+        <span class="p">(</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">weights</span></a> <span class="o">*</span> <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">fx</span></a> <span class="o">*</span> <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">pots_i</span></a><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(),</span>
+        <span class="p">(</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">weights</span></a> <span class="o">*</span> <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">fy</span></a> <span class="o">*</span> <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">pots_i</span></a><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(),</span>
+        <span class="p">(</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">weights</span></a> <span class="o">*</span> <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">fz</span></a> <span class="o">*</span> <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">pots_i</span></a><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(),</span>
+    <span class="p">]</span>
+<span class="p">)</span><span class="o">.</span><span class="n">squeeze</span><span class="p">()</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;LODE features: </span><span class="si">{</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">lode_i</span></a><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>LODE features: tensor([-0.4658, -0.0362,  0.0017,  0.0364], dtype=torch.float64)
+</pre></div>
+</div>
+</section>
+</section>
+<section id="defines-a-lode-calculator">
+<h2>Defines a LODE calculator<a class="headerlink" href="#defines-a-lode-calculator" title="Link to this heading">¶</a></h2>
+<p>All these pieces can be combined in a relatively concise <a class="reference internal" href="../references/calculators/calculator.html#torchpme.Calculator" title="torchpme.Calculator"><code class="xref py py-class docutils literal notranslate"><span class="pre">Calculator</span></code></a>
+class that computes LODE features.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">SmoothCutoffCoulomb</span><span class="p">(</span><a href="https://pytorch.org/docs/stable/generated/torch.nn.Module.html#torch.nn.Module" title="torch.nn.Module" class="sphx-glr-backref-module-torch-nn sphx-glr-backref-type-py-class"><span class="n">SplinePotential</span></a><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <a href="https://docs.python.org/3/library/functions.html#float" title="builtins.float" class="sphx-glr-backref-module-builtins sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">smearing</span></a><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <a href="https://docs.python.org/3/library/functions.html#float" title="builtins.float" class="sphx-glr-backref-module-builtins sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">exclusion_radius</span></a><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">n_points</span><span class="p">:</span> <a href="https://docs.python.org/3/library/typing.html#typing.Optional" title="typing.Optional" class="sphx-glr-backref-module-typing sphx-glr-backref-type-py-data"><span class="n">Optional</span></a><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1000</span>
+    <span class="p">):</span>
+        <span class="n">coulomb</span> <span class="o">=</span> <a href="https://pytorch.org/docs/stable/generated/torch.nn.Module.html#torch.nn.Module" title="torch.nn.Module" class="sphx-glr-backref-module-torch-nn sphx-glr-backref-type-py-class"><span class="n">CoulombPotential</span></a><span class="p">(</span><a href="https://docs.python.org/3/library/functions.html#float" title="builtins.float" class="sphx-glr-backref-module-builtins sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">smearing</span></a><span class="o">=</span><a href="https://docs.python.org/3/library/functions.html#float" title="builtins.float" class="sphx-glr-backref-module-builtins sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">smearing</span></a><span class="p">,</span> <a href="https://docs.python.org/3/library/functions.html#float" title="builtins.float" class="sphx-glr-backref-module-builtins sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">exclusion_radius</span></a><span class="o">=</span><a href="https://docs.python.org/3/library/functions.html#float" title="builtins.float" class="sphx-glr-backref-module-builtins sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">exclusion_radius</span></a><span class="p">)</span>
+        <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">x_grid</span></a> <span class="o">=</span> <a href="https://pytorch.org/docs/stable/generated/torch.logspace.html#torch.logspace" title="torch.logspace" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-function"><span class="n">torch</span><span class="o">.</span><span class="n">logspace</span></a><span class="p">(</span><span class="o">-</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">n_points</span><span class="p">)</span>
+        <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">y_grid</span></a> <span class="o">=</span> <span class="n">coulomb</span><span class="o">.</span><span class="n">lr_from_dist</span><span class="p">(</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">x_grid</span></a><span class="p">)</span> <span class="o">+</span> <span class="n">coulomb</span><span class="o">.</span><span class="n">sr_from_dist</span><span class="p">(</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">x_grid</span></a><span class="p">)</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">r_grid</span><span class="o">=</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">x_grid</span></a><span class="p">,</span>
+            <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">y_grid</span></a><span class="o">=</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">y_grid</span></a><span class="p">,</span>
+            <a href="https://docs.python.org/3/library/functions.html#float" title="builtins.float" class="sphx-glr-backref-module-builtins sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">smearing</span></a><span class="o">=</span><a href="https://docs.python.org/3/library/functions.html#float" title="builtins.float" class="sphx-glr-backref-module-builtins sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">smearing</span></a><span class="p">,</span>
+            <a href="https://docs.python.org/3/library/functions.html#float" title="builtins.float" class="sphx-glr-backref-module-builtins sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">exclusion_radius</span></a><span class="o">=</span><a href="https://docs.python.org/3/library/functions.html#float" title="builtins.float" class="sphx-glr-backref-module-builtins sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">exclusion_radius</span></a><span class="p">,</span>
+            <span class="n">reciprocal</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">yhat_at_zero</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+        <span class="p">)</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">LODECalculator</span><span class="p">(</span><a href="../references/calculators/calculator.html#torchpme.Calculator" title="torchpme.Calculator" class="sphx-glr-backref-module-torchpme sphx-glr-backref-type-py-class"><span class="n">torchpme</span><span class="o">.</span><span class="n">Calculator</span></a><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Compute expansions of the local potential in an atom-centered basis.</span>
+
+<span class="sd">    :param potential: A :class:`Potential` implementing the convolution</span>
+<span class="sd">        kernel. Real-space components are not used.</span>
+<span class="sd">    :param n_grid: Atom-centered grid size; this is the number of nodes per</span>
+<span class="sd">        dimension, so the overall number of points is ``n_grid**3``.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">potential</span><span class="p">:</span> <a href="https://pytorch.org/docs/stable/generated/torch.nn.Module.html#torch.nn.Module" title="torch.nn.Module" class="sphx-glr-backref-module-torch-nn sphx-glr-backref-type-py-class"><span class="n">Potential</span></a><span class="p">,</span> <span class="n">n_grid</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">potential</span><span class="o">=</span><span class="n">potential</span><span class="p">)</span>
+
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">potential</span><span class="o">.</span><a href="https://docs.python.org/3/library/functions.html#float" title="builtins.float" class="sphx-glr-backref-module-builtins sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">exclusion_radius</span></a> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">potential</span><span class="o">.</span><a href="https://docs.python.org/3/library/functions.html#float" title="builtins.float" class="sphx-glr-backref-module-builtins sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">smearing</span></a> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+
+        <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">cell</span></a> <span class="o">=</span> <a href="https://pytorch.org/docs/stable/generated/torch.eye.html#torch.eye" title="torch.eye" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-function"><span class="n">torch</span><span class="o">.</span><span class="n">eye</span></a><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+        <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">ns</span></a> <span class="o">=</span> <a href="https://pytorch.org/docs/stable/generated/torch.tensor.html#torch.tensor" title="torch.tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-function"><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span></a><span class="p">([</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_MI</span> <span class="o">=</span> <a href="https://pytorch.org/docs/stable/generated/torch.nn.Module.html#torch.nn.Module" title="torch.nn.Module" class="sphx-glr-backref-module-torch-nn sphx-glr-backref-type-py-class"><span class="n">torchpme</span><span class="o">.</span><span class="n">lib</span><span class="o">.</span><span class="n">MeshInterpolator</span></a><span class="p">(</span>
+            <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">cell</span></a><span class="o">=</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">cell</span></a><span class="p">,</span> <span class="n">ns_mesh</span><span class="o">=</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">ns</span></a><span class="p">,</span> <span class="n">interpolation_nodes</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;P3M&quot;</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_KF</span> <span class="o">=</span> <a href="https://pytorch.org/docs/stable/generated/torch.nn.Module.html#torch.nn.Module" title="torch.nn.Module" class="sphx-glr-backref-module-torch-nn sphx-glr-backref-type-py-class"><span class="n">torchpme</span><span class="o">.</span><span class="n">lib</span><span class="o">.</span><span class="n">KSpaceFilter</span></a><span class="p">(</span>
+            <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">cell</span></a><span class="o">=</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">cell</span></a><span class="p">,</span>
+            <span class="n">ns_mesh</span><span class="o">=</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">ns</span></a><span class="p">,</span>
+            <span class="n">kernel</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">potential</span><span class="p">,</span>
+            <span class="n">fft_norm</span><span class="o">=</span><span class="s2">&quot;backward&quot;</span><span class="p">,</span>
+            <span class="n">ifft_norm</span><span class="o">=</span><span class="s2">&quot;forward&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="c1"># assumes a smooth exclusion region so sets the integration cutoff to half that</span>
+        <span class="n">nodes</span><span class="p">,</span> <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">weights</span></a> <span class="o">=</span> <span class="n">get_full_grid</span><span class="p">(</span><span class="n">n_grid</span><span class="p">,</span> <span class="n">potential</span><span class="o">.</span><a href="https://docs.python.org/3/library/functions.html#float" title="builtins.float" class="sphx-glr-backref-module-builtins sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">exclusion_radius</span></a> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
+
+        <span class="c1"># these are the &quot;stencils&quot; used to project the potential</span>
+        <span class="c1"># on an atom-centered basis. NB: weights might also be incorporated</span>
+        <span class="c1"># in here saving multiplications later on</span>
+        <span class="n">stencils</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="p">(</span><span class="n">nodes</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="mf">0.0</span> <span class="o">+</span> <span class="mf">1.0</span><span class="p">)</span> <span class="o">/</span> <a href="https://pytorch.org/docs/stable/generated/torch.sqrt.html#torch.sqrt" title="torch.sqrt" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-function"><span class="n">torch</span><span class="o">.</span><span class="n">sqrt</span></a><span class="p">((</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">weights</span></a><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()),</span>  <span class="c1"># constant</span>
+            <span class="p">(</span><span class="n">nodes</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">])</span> <span class="o">/</span> <a href="https://pytorch.org/docs/stable/generated/torch.sqrt.html#torch.sqrt" title="torch.sqrt" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-function"><span class="n">torch</span><span class="o">.</span><span class="n">sqrt</span></a><span class="p">((</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">weights</span></a> <span class="o">*</span> <span class="n">nodes</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()),</span>  <span class="c1"># x</span>
+            <span class="p">(</span><span class="n">nodes</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">])</span> <span class="o">/</span> <a href="https://pytorch.org/docs/stable/generated/torch.sqrt.html#torch.sqrt" title="torch.sqrt" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-function"><span class="n">torch</span><span class="o">.</span><span class="n">sqrt</span></a><span class="p">((</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">weights</span></a> <span class="o">*</span> <span class="n">nodes</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()),</span>  <span class="c1"># y</span>
+            <span class="p">(</span><span class="n">nodes</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">])</span> <span class="o">/</span> <a href="https://pytorch.org/docs/stable/generated/torch.sqrt.html#torch.sqrt" title="torch.sqrt" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-function"><span class="n">torch</span><span class="o">.</span><span class="n">sqrt</span></a><span class="p">((</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">weights</span></a> <span class="o">*</span> <span class="n">nodes</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()),</span>  <span class="c1"># z</span>
+        <span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_basis</span> <span class="o">=</span> <a href="https://pytorch.org/docs/stable/generated/torch.stack.html#torch.stack" title="torch.stack" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-function"><span class="n">torch</span><span class="o">.</span><span class="n">stack</span></a><span class="p">(</span><span class="n">stencils</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_nodes</span> <span class="o">=</span> <span class="n">nodes</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_weights</span> <span class="o">=</span> <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">weights</span></a>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">charges</span></a><span class="p">:</span> <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class"><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span></a><span class="p">,</span>
+        <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">cell</span></a><span class="p">:</span> <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class"><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span></a><span class="p">,</span>
+        <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">positions</span></a><span class="p">:</span> <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class"><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span></a><span class="p">,</span>
+        <span class="n">neighbor_indices</span><span class="p">:</span> <a href="https://docs.python.org/3/library/typing.html#typing.Optional" title="typing.Optional" class="sphx-glr-backref-module-typing sphx-glr-backref-type-py-data"><span class="n">Optional</span></a><span class="p">[</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class"><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span></a><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">neighbor_distances</span><span class="p">:</span> <a href="https://docs.python.org/3/library/typing.html#typing.Optional" title="typing.Optional" class="sphx-glr-backref-module-typing sphx-glr-backref-type-py-data"><span class="n">Optional</span></a><span class="p">[</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class"><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span></a><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class"><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span></a><span class="p">:</span>
+        <span class="c1"># Update meshes</span>
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">potential</span><span class="o">.</span><a href="https://docs.python.org/3/library/functions.html#float" title="builtins.float" class="sphx-glr-backref-module-builtins sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">smearing</span></a> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>  <span class="c1"># otherwise mypy complains</span>
+        <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">ns</span></a> <span class="o">=</span> <span class="n">torchpme</span><span class="o">.</span><span class="n">lib</span><span class="o">.</span><span class="n">kvectors</span><span class="o">.</span><span class="n">get_ns_mesh</span><span class="p">(</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">cell</span></a><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">potential</span><span class="o">.</span><a href="https://docs.python.org/3/library/functions.html#float" title="builtins.float" class="sphx-glr-backref-module-builtins sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">smearing</span></a> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_MI</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">cell</span></a><span class="p">,</span> <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">ns</span></a><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_KF</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">cell</span></a><span class="p">,</span> <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">ns</span></a><span class="p">)</span>
+
+        <span class="c1"># Compute potential</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_MI</span><span class="o">.</span><span class="n">compute_weights</span><span class="p">(</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">positions</span></a><span class="p">)</span>
+        <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">rho_mesh</span></a> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_MI</span><span class="o">.</span><span class="n">points_to_mesh</span><span class="p">(</span><span class="n">particle_weights</span><span class="o">=</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">charges</span></a><span class="p">)</span>
+        <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">ivolume</span></a> <span class="o">=</span> <a href="https://pytorch.org/docs/stable/generated/torch.abs.html#torch.abs" title="torch.abs" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-function"><span class="n">torch</span><span class="o">.</span><span class="n">abs</span></a><span class="p">(</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">cell</span></a><span class="o">.</span><span class="n">det</span><span class="p">())</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">potential_mesh</span></a> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_KF</span><span class="p">(</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">rho_mesh</span></a><span class="p">)</span> <span class="o">*</span> <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">ivolume</span></a>
+
+        <span class="c1"># Places integration grids around each atom</span>
+        <span class="n">all_points</span> <span class="o">=</span> <a href="https://pytorch.org/docs/stable/generated/torch.stack.html#torch.stack" title="torch.stack" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-function"><span class="n">torch</span><span class="o">.</span><span class="n">stack</span></a><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">_nodes</span> <span class="o">+</span> <span class="n">pos</span> <span class="k">for</span> <span class="n">pos</span> <span class="ow">in</span> <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">positions</span></a><span class="p">])</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span>
+            <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Evaluate the potential on the grids</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_MI</span><span class="o">.</span><span class="n">compute_weights</span><span class="p">(</span><span class="n">all_points</span><span class="p">)</span>
+        <span class="n">all_potentials</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_MI</span><span class="o">.</span><span class="n">mesh_to_points</span><span class="p">(</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">potential_mesh</span></a><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span>
+            <span class="nb">len</span><span class="p">(</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">positions</span></a><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_nodes</span><span class="p">),</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Compute lode as an integral</span>
+        <span class="k">return</span> <a href="https://pytorch.org/docs/stable/generated/torch.einsum.html#torch.einsum" title="torch.einsum" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-function"><span class="n">torch</span><span class="o">.</span><span class="n">einsum</span></a><span class="p">(</span><span class="s2">&quot;ijq,bj,j-&gt;ibq&quot;</span><span class="p">,</span> <span class="n">all_potentials</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_basis</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_weights</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Instantiates the calculator and evaluates it for the NaCl structure</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><a href="https://docs.python.org/3/library/functions.html#float" title="builtins.float" class="sphx-glr-backref-module-builtins sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">smearing</span></a> <span class="o">=</span> <span class="mf">0.5</span>
+<a href="https://docs.python.org/3/library/functions.html#float" title="builtins.float" class="sphx-glr-backref-module-builtins sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">exclusion_radius</span></a> <span class="o">=</span> <span class="mf">8.0</span>
+<span class="n">my_pot</span> <span class="o">=</span> <a href="https://pytorch.org/docs/stable/generated/torch.nn.Module.html#torch.nn.Module" title="torch.nn.Module" class="sphx-glr-backref-module-torch-nn sphx-glr-backref-type-py-class"><span class="n">SmoothCutoffCoulomb</span></a><span class="p">(</span><a href="https://docs.python.org/3/library/functions.html#float" title="builtins.float" class="sphx-glr-backref-module-builtins sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">smearing</span></a><span class="o">=</span><a href="https://docs.python.org/3/library/functions.html#float" title="builtins.float" class="sphx-glr-backref-module-builtins sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">smearing</span></a><span class="p">,</span> <a href="https://docs.python.org/3/library/functions.html#float" title="builtins.float" class="sphx-glr-backref-module-builtins sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">exclusion_radius</span></a><span class="o">=</span><a href="https://docs.python.org/3/library/functions.html#float" title="builtins.float" class="sphx-glr-backref-module-builtins sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">exclusion_radius</span></a><span class="p">)</span>
+<span class="n">my_lode</span> <span class="o">=</span> <a href="../references/calculators/calculator.html#torchpme.Calculator" title="torchpme.Calculator" class="sphx-glr-backref-module-torchpme sphx-glr-backref-type-py-class"><span class="n">LODECalculator</span></a><span class="p">(</span><span class="n">potential</span><span class="o">=</span><span class="n">my_pot</span><span class="p">,</span> <span class="n">n_grid</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span>
+
+<a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">lode_features</span></a> <span class="o">=</span> <a href="https://pytorch.org/docs/stable/generated/torch.nn.Module.html#torch.nn.Module.forward" title="torch.nn.Module.forward" class="sphx-glr-backref-module-torch-nn sphx-glr-backref-type-py-method"><span class="n">my_lode</span><span class="o">.</span><span class="n">forward</span></a><span class="p">(</span>
+    <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">charges</span></a><span class="o">=</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">charges</span></a><span class="p">,</span> <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">cell</span></a><span class="o">=</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">cell</span></a><span class="p">,</span> <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">positions</span></a><span class="o">=</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">positions</span></a>
+<span class="p">)</span><span class="o">.</span><span class="n">squeeze</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>The basis function hardcoded in the <cite>LODECalculator</cite> class have a scalar
+(mean potential) and vectorial (roughly corresponding to the mean electric
+field) nature, so we can plot it with color corresponding to the constant part,
+and arrows proportional to the vectorial component.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">value_to_seismic</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">vrange</span><span class="o">=</span><span class="mf">0.1</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Map values to RGB color string using the &#39;seismic&#39; colormap.&quot;&quot;&quot;</span>
+    <span class="n">vmin</span><span class="p">,</span> <span class="n">vmax</span> <span class="o">=</span> <span class="o">-</span><span class="n">vrange</span><span class="p">,</span> <span class="n">vrange</span>
+    <span class="c1"># Ensure the value is within the specified range</span>
+    <span class="n">clipped_value</span> <span class="o">=</span> <a href="https://numpy.org/doc/stable/reference/generated/numpy.clip.html#numpy.clip" title="numpy.clip" class="sphx-glr-backref-module-numpy sphx-glr-backref-type-py-function"><span class="n">np</span><span class="o">.</span><span class="n">clip</span></a><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">vmin</span><span class="p">,</span> <span class="n">vmax</span><span class="p">)</span>
+    <span class="n">norm</span> <span class="o">=</span> <span class="p">(</span><span class="n">clipped_value</span> <span class="o">-</span> <span class="n">vmin</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">vmax</span> <span class="o">-</span> <span class="n">vmin</span><span class="p">)</span>
+
+    <span class="n">rgba</span> <span class="o">=</span> <span class="n">matplotlib</span><span class="o">.</span><span class="n">colormaps</span><span class="p">[</span><span class="s2">&quot;seismic&quot;</span><span class="p">](</span><span class="n">norm</span><span class="p">)</span>
+    <span class="n">rgb</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="mi">255</span> <span class="o">*</span> <span class="n">c</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">rgba</span><span class="p">[:</span><span class="mi">3</span><span class="p">])</span>
+    <span class="k">return</span> <span class="s2">&quot;#</span><span class="si">{:02x}{:02x}{:02x}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">*</span><span class="n">rgb</span><span class="p">)</span>
+
+
+<span class="n">chemiscope</span><span class="o">.</span><span class="n">show</span><span class="p">(</span>
+    <span class="n">frames</span><span class="o">=</span><span class="p">[</span><a href="https://wiki.fysik.dtu.dk/ase/ase/atoms.html#ase.Atoms" title="ase.Atoms" class="sphx-glr-backref-module-ase sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">structure</span></a><span class="p">],</span>
+    <span class="n">properties</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;lode[1]&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;target&quot;</span><span class="p">:</span> <span class="s2">&quot;atom&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;values&quot;</span><span class="p">:</span> <a href="https://numpy.org/doc/stable/reference/generated/numpy.concatenate.html#numpy.concatenate" title="numpy.concatenate" class="sphx-glr-backref-module-numpy sphx-glr-backref-type-py-function"><span class="n">np</span><span class="o">.</span><span class="n">concatenate</span></a><span class="p">([</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">lode_features</span></a><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()]),</span>
+        <span class="p">},</span>
+        <span class="s2">&quot;lode[x]&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;target&quot;</span><span class="p">:</span> <span class="s2">&quot;atom&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;values&quot;</span><span class="p">:</span> <a href="https://numpy.org/doc/stable/reference/generated/numpy.concatenate.html#numpy.concatenate" title="numpy.concatenate" class="sphx-glr-backref-module-numpy sphx-glr-backref-type-py-function"><span class="n">np</span><span class="o">.</span><span class="n">concatenate</span></a><span class="p">([</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">lode_features</span></a><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()]),</span>
+        <span class="p">},</span>
+        <span class="s2">&quot;lode[y]&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;target&quot;</span><span class="p">:</span> <span class="s2">&quot;atom&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;values&quot;</span><span class="p">:</span> <a href="https://numpy.org/doc/stable/reference/generated/numpy.concatenate.html#numpy.concatenate" title="numpy.concatenate" class="sphx-glr-backref-module-numpy sphx-glr-backref-type-py-function"><span class="n">np</span><span class="o">.</span><span class="n">concatenate</span></a><span class="p">([</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">lode_features</span></a><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()]),</span>
+        <span class="p">},</span>
+        <span class="s2">&quot;lode[z]&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;target&quot;</span><span class="p">:</span> <span class="s2">&quot;atom&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;values&quot;</span><span class="p">:</span> <a href="https://numpy.org/doc/stable/reference/generated/numpy.concatenate.html#numpy.concatenate" title="numpy.concatenate" class="sphx-glr-backref-module-numpy sphx-glr-backref-type-py-function"><span class="n">np</span><span class="o">.</span><span class="n">concatenate</span></a><span class="p">([</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">lode_features</span></a><span class="p">[:,</span> <span class="mi">3</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()]),</span>
+        <span class="p">},</span>
+    <span class="p">},</span>
+    <span class="n">shapes</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;lode&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;kind&quot;</span><span class="p">:</span> <span class="s2">&quot;arrow&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;parameters&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s2">&quot;global&quot;</span><span class="p">:</span> <span class="p">{</span>
+                    <span class="s2">&quot;baseRadius&quot;</span><span class="p">:</span> <span class="mf">0.2</span><span class="p">,</span>
+                    <span class="s2">&quot;headRadius&quot;</span><span class="p">:</span> <span class="mf">0.3</span><span class="p">,</span>
+                    <span class="s2">&quot;headLength&quot;</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">,</span>
+                <span class="p">},</span>
+                <span class="s2">&quot;atom&quot;</span><span class="p">:</span> <span class="p">[</span>
+                    <span class="p">{</span>
+                        <span class="s2">&quot;vector&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mi">4</span> <span class="o">*</span> <a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">lode_features</span></a><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">1</span><span class="p">:])</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span>
+                        <span class="s2">&quot;color&quot;</span><span class="p">:</span> <span class="n">value_to_seismic</span><span class="p">(</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">lode_features</span></a><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="mf">0.6</span><span class="p">),</span>
+                    <span class="p">}</span>
+                    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><a href="https://pytorch.org/docs/stable/tensors.html#torch.Tensor" title="torch.Tensor" class="sphx-glr-backref-module-torch sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">lode_features</span></a><span class="p">))</span>
+                <span class="p">],</span>
+            <span class="p">},</span>
+        <span class="p">}</span>
+    <span class="p">},</span>
+    <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;structure&quot;</span><span class="p">,</span>
+    <span class="n">settings</span><span class="o">=</span><span class="n">chemiscope</span><span class="o">.</span><span class="n">quick_settings</span><span class="p">(</span>
+        <span class="n">structure_settings</span><span class="o">=</span><span class="p">{</span>
+            <span class="s2">&quot;unitCell&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+            <span class="s2">&quot;bonds&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+            <span class="s2">&quot;environments&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;activated&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">},</span>
+            <span class="s2">&quot;shape&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;lode&quot;</span><span class="p">],</span>
+        <span class="p">}</span>
+    <span class="p">),</span>
+    <span class="n">environments</span><span class="o">=</span><span class="n">chemiscope</span><span class="o">.</span><span class="n">all_atomic_environments</span><span class="p">([</span><a href="https://wiki.fysik.dtu.dk/ase/ase/atoms.html#ase.Atoms" title="ase.Atoms" class="sphx-glr-backref-module-ase sphx-glr-backref-type-py-class sphx-glr-backref-instance"><span class="n">structure</span></a><span class="p">]),</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+
+
+<!-- Warning Display -->
+<div id="chsp-dfcdedb5-e048-4e74-995a-32b441a49754-warning-display" class="chemiscope-sphinx-warning">
+    <p></p>
+    <button type="button" aria-label="Close" onclick="hideElement('chsp-dfcdedb5-e048-4e74-995a-32b441a49754-warning-display')">
+        &times;
+    </button>
+</div>
+<div style="padding: 0.5rem 1.25rem" />
+
+<!-- Loading Spinner -->
+<div id="chsp-dfcdedb5-e048-4e74-995a-32b441a49754-loading" class="chemiscope-sphinx-spinner">
+    <img src="../_static/chemiscope-loading.svg" alt="Loading icon" />
+</div>
+
+<!-- Chemiscope Visualization -->
+<div id="chsp-dfcdedb5-e048-4e74-995a-32b441a49754">
+    <!-- This will be replaced by the chemiscope HTML -->
+</div>
+
+<!-- Load Visualization Script -->
+<script>
+    loadChemiscopeSphinx('chsp-dfcdedb5-e048-4e74-995a-32b441a49754', '../_datasets/3e728ce7de987e4d35d07dce58604289e4565f9b71b2d309589c7a6d6a64f513-fig_07-lode-demo_008.json.gz', 'structure');
+</script>
+<div class="output_subarea output_html rendered_html output_result">
+
+</div>
+<br />
+<br /><p class="sphx-glr-timing"><strong>Total running time of the script:</strong> (0 minutes 3.407 seconds)</p>
+<div class="sphx-glr-footer sphx-glr-footer-example docutils container" id="sphx-glr-download-examples-07-lode-demo-py">
+<div class="sphx-glr-download sphx-glr-download-jupyter docutils container">
+<p><a class="reference download internal" download="" href="../_downloads/7fc0b9ad138b568cfa3b9cc88064c5c3/07-lode-demo.ipynb"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Jupyter</span> <span class="pre">notebook:</span> <span class="pre">07-lode-demo.ipynb</span></code></a></p>
+</div>
+<div class="sphx-glr-download sphx-glr-download-python docutils container">
+<p><a class="reference download internal" download="" href="../_downloads/bc91236eb923d4659b49d81c569920bd/07-lode-demo.py"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Python</span> <span class="pre">source</span> <span class="pre">code:</span> <span class="pre">07-lode-demo.py</span></code></a></p>
+</div>
+<div class="sphx-glr-download sphx-glr-download-zip docutils container">
+<p><a class="reference download internal" download="" href="../_downloads/e82cfe0865695968573cf1104a1eb4a0/07-lode-demo.zip"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">zipped:</span> <span class="pre">07-lode-demo.zip</span></code></a></p>
+</div>
+</div>
+<p class="sphx-glr-signature"><a class="reference external" href="https://sphinx-gallery.github.io">Gallery generated by Sphinx-Gallery</a></p>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="08-combined-potential.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">Optimizing a linear combination of potentials</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="06-splined-potential.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">Splined potentials</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2025, torch-pme developers
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            <div class="icons">
+              <a class="muted-link fa-brands fa-github fa-2x" href="https://github.com/lab-cosmo/torch-pme" aria-label="GitHub"></a>
+              
+            </div>
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Computing LODE descriptors</a><ul>
+<li><a class="reference internal" href="#long-distance-equivariant-descriptors">Long-distance equivariant descriptors</a><ul>
+<li><a class="reference internal" href="#initialize-a-trial-structure">Initialize a trial structure</a></li>
+<li><a class="reference internal" href="#an-excluded-range-smooth-coulomb-potential">An “excluded-range” smooth Coulomb potential</a></li>
+<li><a class="reference internal" href="#compute-the-potential-on-a-mesh">Compute the potential on a mesh</a></li>
+<li><a class="reference internal" href="#atom-centered-grids">Atom-centered grids</a></li>
+<li><a class="reference internal" href="#computing-the-projection">Computing the projection</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#defines-a-lode-calculator">Defines a LODE calculator</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script src="../_static/documentation_options.js?v=e259d695"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/scripts/furo.js?v=5fa4622c"></script>
+    <script src="../_static/toggleprompt.js?v=5801b3bb"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    </body>
+</html>
