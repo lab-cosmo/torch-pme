@@ -13,6 +13,10 @@ dependencies.
 
 For a plain :class:`torch.Tensor` refer to :ref:`calculators`.
 
+For evaluating many systems in a single call through this interface, see the
+:ref:`batched evaluation with tiling <batched-tiling>` page, which also documents
+:func:`torchpme.metatensor.prepare_tiled_batch`.
+
 Implemented Calculators
 -----------------------
 
@@ -20,7 +24,7 @@ Implemented Calculators
     :members:
 
 .. autoclass:: torchpme.metatensor.EwaldCalculator
-    :members: forward
+    :members: forward, forward_batched
 
 .. autoclass:: torchpme.metatensor.P3MCalculator
     :members: forward

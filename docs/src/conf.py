@@ -3,7 +3,7 @@
 import os
 import subprocess
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 
 import tomli
 
@@ -39,7 +39,7 @@ with open(os.path.join(ROOT, "pyproject.toml"), "rb") as fp:
 project = project_dict["name"]
 author = ", ".join(a["name"] for a in project_dict["authors"])
 
-copyright = f"{datetime.now().date().year}, {author}"
+copyright = f"{datetime.now(tz=timezone.utc).date().year}, {author}"
 
 # The full version, including alpha/beta/rc tags
 release = torchpme.__version__
@@ -55,7 +55,7 @@ def generate_examples():
     # include the corresponding output later.
     del os.environ["METATENSOR_IMPORT_FOR_SPHINX"]
     script = os.path.join(ROOT, "docs", "generate_examples", "generate-examples.py")
-    subprocess.run([sys.executable, script])
+    subprocess.run([sys.executable, script], check=True)
     os.environ["METATENSOR_IMPORT_FOR_SPHINX"] = "1"
 
 

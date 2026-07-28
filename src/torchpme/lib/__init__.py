@@ -1,3 +1,4 @@
+from .batching import ewald_params_from_num_k, prepare_tiled_batch, shrink_2d_cell
 from .kspace_filter import KSpaceFilter, KSpaceKernel, P3MKSpaceFilter
 from .kvectors import (
     compute_batched_kvectors,
@@ -17,19 +18,22 @@ from .splines import (
 __all__ = [
     "CubicSpline",
     "CubicSplineReciprocal",
-    "compute_spline_ft",
-    "compute_second_derivatives",
     "KSpaceFilter",
     "KSpaceKernel",
     "MeshInterpolator",
     "P3MKSpaceFilter",
     "all_neighbor_indices",
-    "distances",
-    "generate_kvectors_for_ewald",
-    "generate_kvectors_for_mesh",
     "compute_batched_kvectors",
-    "get_ns_mesh",
+    "compute_second_derivatives",
+    "compute_spline_ft",
+    "distances",
+    "ewald_params_from_num_k",
+    "exp1",
     "gamma",
     "gammaincc_over_powerlaw",
-    "exp1",
+    "generate_kvectors_for_ewald",
+    "generate_kvectors_for_mesh",
+    "get_ns_mesh",
+    "prepare_tiled_batch",
+    "shrink_2d_cell",
 ]

@@ -132,7 +132,9 @@ class TunerBase:
         :return: a float, the estimated smearing
         """
         if not isinstance(accuracy, float):
-            raise ValueError(f"'{accuracy}' is not a float.")
+            # TRY004 would have this be a TypeError, but the ValueError is the
+            # documented behavior of a released API; changing it is a breaking change
+            raise ValueError(f"'{accuracy}' is not a float.")  # noqa: TRY004
         ratio = math.sqrt(
             -2
             * math.log(
@@ -252,7 +254,9 @@ class GridSearchTuner(TunerBase):
         :return: a list of errors and a list of timings
         """
         if not isinstance(accuracy, float):
-            raise ValueError(f"'{accuracy}' is not a float.")
+            # TRY004 would have this be a TypeError, but the ValueError is the
+            # documented behavior of a released API; changing it is a breaking change
+            raise ValueError(f"'{accuracy}' is not a float.")  # noqa: TRY004
         smearing = self.estimate_smearing(accuracy)
         param_errors = []
         param_timings = []

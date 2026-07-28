@@ -105,7 +105,10 @@ class Potential(torch.nn.Module):
 
     @torch.jit.export
     def sr_from_dist(
-        self, dist: torch.Tensor, pair_mask: torch.Tensor | None = None
+        self,
+        dist: torch.Tensor,
+        pair_mask: torch.Tensor | None = None,
+        smearing: torch.Tensor | None = None,
     ) -> torch.Tensor:
         r"""
         Short-range (SR) part of the pair potential in real space.
@@ -122,8 +125,11 @@ class Potential(torch.nn.Module):
             be evaluated.
         :param pair_mask: Optional torch.tensor containing a mask to be applied to the
             result.
+        :param smearing: Optional torch.tensor overriding the ``smearing`` buffer,
+            broadcastable against ``dist`` (e.g. a per-pair smearing in a batched
+            evaluation).
         """
-        if self.smearing is None:
+        if self.smearing is None and smearing is None:
             raise ValueError(
                 "Cannot compute range-separated potential when `smearing` is not specified."
             )
@@ -131,15 +137,18 @@ class Potential(torch.nn.Module):
         # Don't apply prefactor here as it is applied in child classes
         if self.exclusion_radius is None:
             return self.from_dist(dist, pair_mask=pair_mask) - self.lr_from_dist(
-                dist, pair_mask=pair_mask
+                dist, pair_mask=pair_mask, smearing=smearing
             )
-        return -self.lr_from_dist(dist, pair_mask=pair_mask) * self.f_cutoff(
-            dist, pair_mask=pair_mask
-        )
+        return -self.lr_from_dist(
+            dist, pair_mask=pair_mask, smearing=smearing
+        ) * self.f_cutoff(dist, pair_mask=pair_mask)
 
     @torch.jit.export
     def lr_from_dist(
-        self, dist: torch.Tensor, pair_mask: torch.Tensor | None = None
+        self,
+        dist: torch.Tensor,
+        pair_mask: torch.Tensor | None = None,
+        smearing: torch.Tensor | None = None,
     ) -> torch.Tensor:
         r"""
         Computes the long-range part of the pair potential :math:`V_\mathrm{LR}(r)`. in
@@ -149,13 +158,17 @@ class Potential(torch.nn.Module):
             be evaluated.
         :param pair_mask: Optional torch.tensor containing a mask to be applied to the
             result.
+        :param smearing: Optional torch.tensor overriding the ``smearing`` buffer,
+            broadcastable against ``dist``.
         """
         raise NotImplementedError(
             f"lr_from_dist is not implemented for {self.__class__.__name__}"
         )
 
     @torch.jit.export
-    def lr_from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
+    def lr_from_k_sq(
+        self, k_sq: torch.Tensor, smearing: torch.Tensor | None = None
+    ) -> torch.Tensor:
         r"""
         Computes the Fourier-domain version of the long-range part of the pair potential
         :math:`\hat{V}_\mathrm{LR}(k)`. The function is expressed in terms of
@@ -163,6 +176,9 @@ class Potential(torch.nn.Module):
         root operation.
         :param k_sq: torch.tensor containing the squared norm of the Fourier domain
         vectors at which :math:`\hat{V}_\mathrm{LR}` must be evaluated.
+        :param smearing: Optional torch.tensor overriding the ``smearing`` buffer,
+        broadcastable against ``k_sq`` (e.g. a per-system smearing in a batched
+        evaluation).
         """
         raise NotImplementedError(
             f"lr_from_k_sq is not implemented for {self.__class__.__name__}"
@@ -177,24 +193,32 @@ class Potential(torch.nn.Module):
         return self.lr_from_k_sq(k_sq)
 
     @torch.jit.export
-    def self_contribution(self) -> torch.Tensor:
+    def self_contribution(self, smearing: torch.Tensor | None = None) -> torch.Tensor:
         """
         A correction that depends exclusively on the "charge" on every particle and on
         the range splitting parameter. Foe example, in the case of a Coulomb potential,
         this is the potential generated at the origin by the fictituous Gaussian charge
         density in order to split the potential into a SR and LR part.
+
+        :param smearing: Optional torch.tensor overriding the ``smearing`` buffer
+            (e.g. a per-system smearing in a batched evaluation).
         """
         raise NotImplementedError(
             f"self_contribution is not implemented for {self.__class__.__name__}"
         )
 
     @torch.jit.export
-    def background_correction(self) -> torch.Tensor:
+    def background_correction(
+        self, smearing: torch.Tensor | None = None
+    ) -> torch.Tensor:
         """
         A correction designed to compensate for the presence of divergent terms. For
         instance, the energy of a periodic electrostatic system is infinite when the
         cell is not charge-neutral. This term then implicitly assumes that a homogeneous
         background charge of the opposite sign is present to make the cell neutral.
+
+        :param smearing: Optional torch.tensor overriding the ``smearing`` buffer
+            (e.g. a per-system smearing in a batched evaluation).
         """
         raise NotImplementedError(
             f"background_correction is not implemented for {self.__class__.__name__}"
@@ -210,3 +234,35 @@ class Potential(torch.nn.Module):
     ) -> torch.Tensor:
         """A correction term that is only relevant for systems with 2D periodicity."""
         return self.prefactor * torch.zeros_like(charges)
+
+    @torch.jit.export
+    def pbc_correction_batched(
+        self,
+        periodic: torch.Tensor,
+        positions: torch.Tensor,
+        cell: torch.Tensor,
+        charges: torch.Tensor,
+        system_index: torch.Tensor,
+    ) -> torch.Tensor:
+        """
+        Batched version of :func:`pbc_correction` for a concatenated batch of systems.
+
+        The 2D slab correction is potential-specific; the base implementation fails
+        loudly by returning ``NaN`` for atoms of 2D-periodic systems (rather than a
+        silently wrong result) and zero elsewhere.
+
+        :param periodic: torch.tensor of shape ``(n_systems, 3)`` and dtype bool
+            indicating the periodic directions of each system.
+        :param positions: torch.tensor of shape ``(n_atoms, 3)`` with the concatenated
+            atomic positions.
+        :param cell: torch.tensor of shape ``(n_systems, 3, 3)`` with the (effective)
+            cell of each system.
+        :param charges: torch.tensor of shape ``(n_atoms, n_channels)``.
+        :param system_index: torch.tensor of shape ``(n_atoms,)`` mapping each atom to
+            its system.
+        """
+        is_2d = periodic.sum(dim=-1) == 2
+        nan = torch.full_like(charges, float("nan"))
+        return self.prefactor * torch.where(
+            is_2d[system_index].unsqueeze(-1), nan, torch.zeros_like(charges)
+        )

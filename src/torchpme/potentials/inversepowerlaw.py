@@ -3,7 +3,7 @@ from torch.special import gammainc
 
 from torchpme.lib import gamma, gammaincc_over_powerlaw
 
-from .coulomb import _pbc_correction
+from .coulomb import _pbc_correction, _pbc_correction_batched
 from .potential import Potential
 
 
@@ -51,7 +51,6 @@ class InversePowerLawPotential(Potential):
         gammaincc_over_powerlaw(exponent, torch.tensor(1.0))
         self.register_buffer("exponent", torch.tensor(exponent, dtype=torch.float64))
 
-    @torch.jit.export
     def from_dist(
         self, dist: torch.Tensor, pair_mask: torch.Tensor | None = None
     ) -> torch.Tensor:
@@ -68,9 +67,11 @@ class InversePowerLawPotential(Potential):
             result = result * pair_mask  # elementwise multiply, keeps shape fixed
         return self.prefactor * result
 
-    @torch.jit.export
     def lr_from_dist(
-        self, dist: torch.Tensor, pair_mask: torch.Tensor | None = None
+        self,
+        dist: torch.Tensor,
+        pair_mask: torch.Tensor | None = None,
+        smearing: torch.Tensor | None = None,
     ) -> torch.Tensor:
         """
         Long range of the range-separated :math:`1/r^p` potential.
@@ -89,15 +90,19 @@ class InversePowerLawPotential(Potential):
             be evaluated.
         :param pair_mask: Optional :class:`torch.tensor` containing a mask to be applied to the
             result.
+        :param smearing: Optional torch.tensor overriding the ``smearing`` buffer,
+            broadcastable against ``dist``.
         """
-        if self.smearing is None:
+        if smearing is None:
+            smearing = self.smearing
+        if smearing is None:
             raise ValueError(
                 "Cannot compute long-range contribution without specifying `smearing`."
             )
 
-        x = 0.5 * dist**2 / self.smearing**2
+        x = 0.5 * dist**2 / smearing**2
         peff = self.exponent / 2
-        prefac = 1.0 / (2 * self.smearing**2) ** peff
+        prefac = 1.0 / (2 * smearing**2) ** peff
         result = (
             prefac * gammainc(peff, x.clamp(min=1e-15)) / (x.clamp(min=1e-15) ** peff)
         )
@@ -105,24 +110,27 @@ class InversePowerLawPotential(Potential):
             result = result * pair_mask
         return self.prefactor * result
 
-    @torch.jit.export
-    def lr_from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
+    def lr_from_k_sq(
+        self, k_sq: torch.Tensor, smearing: torch.Tensor | None = None
+    ) -> torch.Tensor:
         r"""
         Fourier transform of the LR part potential in terms of :math:`\mathbf{k^2}`.
 
         :param k_sq: torch.tensor containing the squared lengths (2-norms) of the wave
             vectors k at which the Fourier-transformed potential is to be evaluated
+        :param smearing: Optional torch.tensor overriding the ``smearing`` buffer,
+            broadcastable against ``k_sq``.
         """
-        if self.smearing is None:
+        if smearing is None:
+            smearing = self.smearing
+        if smearing is None:
             raise ValueError(
                 "Cannot compute long-range kernel without specifying `smearing`."
             )
 
         peff = (3 - self.exponent) / 2
-        prefac = (
-            torch.pi**1.5 / gamma(self.exponent / 2) * (2 * self.smearing**2) ** peff
-        )
-        x = 0.5 * self.smearing**2 * k_sq
+        prefac = torch.pi**1.5 / gamma(self.exponent / 2) * (2 * smearing**2) ** peff
+        x = 0.5 * smearing**2 * k_sq
 
         # The k=0 term often needs to be set separately since for exponents p<=3
         # dimension, there is a divergence to +infinity. Setting this value manually
@@ -140,26 +148,32 @@ class InversePowerLawPotential(Potential):
             k_sq == 0, k0_limit, prefac * gammaincc_over_powerlaw(self.exponent, masked)
         )
 
-    def self_contribution(self) -> torch.Tensor:
+    def self_contribution(self, smearing: torch.Tensor | None = None) -> torch.Tensor:
         # self-correction for 1/r^p potential
-        if self.smearing is None:
+        if smearing is None:
+            smearing = self.smearing
+        if smearing is None:
             raise ValueError(
                 "Cannot compute self contribution without specifying `smearing`."
             )
         phalf = self.exponent / 2
-        return self.prefactor / gamma(phalf + 1) / (2 * self.smearing**2) ** phalf
+        return self.prefactor / gamma(phalf + 1) / (2 * smearing**2) ** phalf
 
-    def background_correction(self) -> torch.Tensor:
+    def background_correction(
+        self, smearing: torch.Tensor | None = None
+    ) -> torch.Tensor:
         # "charge neutrality" correction for 1/r^p potential diverges for exponent p = 3
         # and is not needed for p > 3 , so we set it to zero (see in
         # https://doi.org/10.48550/arXiv.2412.03281 SI section)
-        if self.smearing is None:
+        if smearing is None:
+            smearing = self.smearing
+        if smearing is None:
             raise ValueError(
                 "Cannot compute background correction without specifying `smearing`."
             )
         if self.exponent >= 3:
-            return torch.zeros_like(self.smearing)
-        prefac = torch.pi**1.5 * (2 * self.smearing**2) ** ((3 - self.exponent) / 2)
+            return torch.zeros_like(smearing)
+        prefac = torch.pi**1.5 * (2 * smearing**2) ** ((3 - self.exponent) / 2)
         prefac /= (3 - self.exponent) * gamma(self.exponent / 2)
         return self.prefactor * prefac
 
@@ -168,6 +182,23 @@ class InversePowerLawPotential(Potential):
             return self.prefactor * _pbc_correction(periodic, positions, cell, charges)
         return super().pbc_correction(periodic, positions, cell, charges)
 
+    def pbc_correction_batched(
+        self,
+        periodic: torch.Tensor,
+        positions: torch.Tensor,
+        cell: torch.Tensor,
+        charges: torch.Tensor,
+        system_index: torch.Tensor,
+    ) -> torch.Tensor:
+        if self.exponent == 1:
+            return self.prefactor * _pbc_correction_batched(
+                periodic, positions, cell, charges, system_index
+            )
+        return super().pbc_correction_batched(
+            periodic, positions, cell, charges, system_index
+        )
+
     self_contribution.__doc__ = Potential.self_contribution.__doc__
     background_correction.__doc__ = Potential.background_correction.__doc__
     pbc_correction.__doc__ = Potential.pbc_correction.__doc__
+    pbc_correction_batched.__doc__ = Potential.pbc_correction_batched.__doc__

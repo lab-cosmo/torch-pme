@@ -238,7 +238,7 @@ def get_theta_phi_quadrature(L):
     """Legendre quadrature nodes for integrals over theta, phi"""
     quads = []
     weights = []
-    for w_index in range(0, 2 * L - 1):
+    for w_index in range(2 * L - 1):
         w = 2 * np.pi * w_index / (2 * L - 1)
         roots_legendre_now, weights_now = scipy.special.roots_legendre(L)
         all_v = np.arccos(roots_legendre_now)

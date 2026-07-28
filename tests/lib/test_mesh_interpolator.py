@@ -1,5 +1,7 @@
 """Tests for mesh interpolator class"""
 
+from typing import ClassVar
+
 import pytest
 import torch
 from torch.testing import assert_close
@@ -11,8 +13,8 @@ class TestMeshInterpolatorForward:
     """Tests for the "points_to_mesh" function of the MeshInterpolator class"""
 
     # Define parameters that are common to all tests
-    interpolation_nodes_P3M = [1, 2, 3, 4, 5]
-    interpolation_nodes_Lagrange = [3, 4, 5, 6, 7]
+    interpolation_nodes_P3M: ClassVar = [1, 2, 3, 4, 5]
+    interpolation_nodes_Lagrange: ClassVar = [3, 4, 5, 6, 7]
 
     @pytest.mark.parametrize(
         ("interpolation_nodes", "method"),
@@ -151,7 +153,7 @@ class TestMeshInterpolatorBackward:
     """Tests for the "mesh_to_points" function of the MeshInterpolator class"""
 
     # Define parameters that are common to all tests
-    interpolation_nodes = [1, 2, 3, 4, 5]
+    interpolation_nodes: ClassVar = [1, 2, 3, 4, 5]
     random_runs = torch.arange(10)
 
     torch.random.manual_seed(3482389)

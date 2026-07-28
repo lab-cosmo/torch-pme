@@ -2,7 +2,7 @@ EwaldCalculator
 ###############
 
 .. autoclass:: torchpme.EwaldCalculator
-    :members: forward
+    :members: forward, forward_batched
 
 .. minigallery::
     :add-heading:

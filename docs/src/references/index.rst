@@ -28,6 +28,7 @@ refer to the :ref:`userdoc-how-to` section.
 
     potentials/index
     calculators/index
+    batching
     tuning/index
     prefactors
     metatensor

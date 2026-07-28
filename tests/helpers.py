@@ -4,14 +4,22 @@ import math
 from pathlib import Path
 
 import torch
+from ase.io import read
 from vesin import NeighborList
+
+from torchpme.lib import ewald_params_from_num_k, shrink_2d_cell
 
 SQRT3 = math.sqrt(3)
 
 DIR_PATH = Path(__file__).parent
 EXAMPLES = DIR_PATH / ".." / "examples"
+RESOURCES = DIR_PATH / "resources"
 COULOMB_TEST_FRAMES = EXAMPLES / "coulomb_test_frames.xyz"
 DIPOLES_TEST_FRAMES = EXAMPLES / "dipoles_test_frames.xyz"
+# subsets of the MAD dataset: solvated ions (3D-periodic) and catalytic surfaces
+# (2D-periodic slabs with a large, non-orthogonal vacuum axis)
+MAD_SOL_FRAMES = RESOURCES / "mad_sol_subset.xyz"
+MAD_CAT_FRAMES = RESOURCES / "mad_cat_subset.xyz"
 DEVICES = ["cpu", torch.device("cpu")] + torch.cuda.is_available() * ["cuda"]
 DTYPES = [torch.float32, torch.float64]
 
@@ -235,6 +243,55 @@ def define_crystal(crystal_name="CsCl", dtype=None, device=None):
         torch.tensor(madelung_ref, device=device, dtype=dtype),
         num_formula_units,
     )
+
+
+def mad_sample(
+    frames_path: Path,
+    frame_index: int,
+    num_k: int,
+    dtype: torch.dtype = torch.float64,
+    smearing_factor: float = 2.0,
+) -> dict[str, torch.Tensor]:
+    """
+    Load one frame of a MAD subset as an input sample for the batched Ewald evaluation.
+
+    The frames carry no charges, so an alternating ``±1`` pattern, shifted to make the
+    system neutral, is used instead. The neighbor list is built at the cutoff ``num_k``
+    implies for the frame's *effective* cell, which for the 2D slabs of
+    ``mad_cat_subset.xyz`` is the vacuum-shrunk one, while the list itself uses the
+    frame's true cell.
+
+    :return: a dictionary with the ``positions``, ``charges``, ``cell``, ``periodic``,
+        ``neighbor_indices`` and ``neighbor_distances`` of the frame
+    """
+    frame = read(frames_path, frame_index)
+
+    positions = torch.tensor(frame.positions, dtype=dtype)
+    cell = torch.tensor(frame.cell.array, dtype=dtype)
+    periodic = torch.tensor(frame.pbc.copy())
+
+    charges = torch.ones(len(frame), 1, dtype=dtype)
+    charges[::2] = -1.0
+    charges -= charges.mean()
+
+    effective_cell = shrink_2d_cell(cell, periodic, positions)
+    _, _, cutoff = ewald_params_from_num_k(
+        effective_cell, periodic, num_k, smearing_factor=smearing_factor
+    )
+    neighbor_indices, neighbor_distances = neighbor_list(
+        positions=positions,
+        periodic=bool(periodic.any()),
+        box=cell,
+        cutoff=float(cutoff),
+    )
+    return {
+        "positions": positions,
+        "charges": charges,
+        "cell": cell,
+        "periodic": periodic,
+        "neighbor_indices": neighbor_indices,
+        "neighbor_distances": neighbor_distances,
+    }
 
 
 def neighbor_list(

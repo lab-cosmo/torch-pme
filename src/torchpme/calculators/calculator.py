@@ -100,6 +100,29 @@ class Calculator(torch.nn.Module):
             f"`compute_kspace` not implemented for {self.__class__.__name__}"
         )
 
+    @torch.jit.export
+    def forward_batched(
+        self,
+        charges: torch.Tensor,
+        cell: torch.Tensor,
+        positions: torch.Tensor,
+        neighbor_indices: torch.Tensor,
+        neighbor_distances: torch.Tensor,
+        system_index: torch.Tensor,
+        periodic: torch.Tensor,
+        tiling: dict[str, torch.Tensor],
+    ) -> torch.Tensor:
+        """
+        Evaluate a tiled batch of systems in a single call.
+
+        The batched (tiled) evaluation is only supported by
+        :class:`EwaldCalculator`, which overrides this method; see its documentation
+        for the parameters.
+        """
+        raise NotImplementedError(
+            "batched (tiled) evaluation is only supported by EwaldCalculator"
+        )
+
     def forward(
         self,
         charges: torch.Tensor,

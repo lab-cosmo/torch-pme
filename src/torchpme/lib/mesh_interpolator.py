@@ -347,9 +347,15 @@ class MeshInterpolator(torch.nn.Module):
         # interpolated. For each particle, its weight is "smeared" onto
         # `interpolation_nodes**3` mesh points, which can be achived using meshgrid
         # below.
+        # The clamp is a no-op — a mesh has at least one point per axis — but it keeps
+        # `torch.compile` from tripping over its own vectorization: on CPU, inductor
+        # loads this length-3 divisor into a wider SIMD register and zero-fills the
+        # unused lanes, then runs its integer remainder over *every* lane, so the
+        # padding zeros raise a spurious ZeroDivisionError.
+        ns_mesh = self.ns_mesh.clamp(min=1)
         indices_to_interpolate = torch.stack(
             [
-                (positions_rel_idx + i) % self.ns_mesh
+                (positions_rel_idx + i) % ns_mesh
                 for i in range(
                     1 - (self.interpolation_nodes + 1) // 2,
                     1 + self.interpolation_nodes // 2,

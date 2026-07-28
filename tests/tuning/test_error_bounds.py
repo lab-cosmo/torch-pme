@@ -11,17 +11,27 @@ from torchpme.tuning.pme import PMEErrorBounds
     [
         (
             EwaldErrorBounds,
-            dict(smearing=1.0, lr_wavelength=0.5, cutoff=4.4),
+            {"smearing": 1.0, "lr_wavelength": 0.5, "cutoff": 4.4},
             torch.tensor(8.4304e-05),
         ),
         (
             PMEErrorBounds,
-            dict(smearing=1.0, mesh_spacing=0.5, cutoff=4.4, interpolation_nodes=3),
+            {
+                "smearing": 1.0,
+                "mesh_spacing": 0.5,
+                "cutoff": 4.4,
+                "interpolation_nodes": 3,
+            },
             torch.tensor(0.0011180),
         ),
         (
             P3MErrorBounds,
-            dict(smearing=1.0, mesh_spacing=0.5, cutoff=4.4, interpolation_nodes=3),
+            {
+                "smearing": 1.0,
+                "mesh_spacing": 0.5,
+                "cutoff": 4.4,
+                "interpolation_nodes": 3,
+            },
             torch.tensor(4.5961e-04),
         ),
     ],

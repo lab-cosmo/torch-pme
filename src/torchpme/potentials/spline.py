@@ -138,7 +138,10 @@ class SplinePotential(Potential):
         )
 
     def sr_from_dist(
-        self, dist: torch.Tensor, pair_mask: torch.Tensor | None = None
+        self,
+        dist: torch.Tensor,
+        pair_mask: torch.Tensor | None = None,
+        smearing: torch.Tensor | None = None,
     ) -> torch.Tensor:
         """
         Short-range part of the range-separated potential.
@@ -146,20 +149,37 @@ class SplinePotential(Potential):
         :param dist: torch.tensor containing the distances at which the potential is to
             be evaluated.
         """
+        if smearing is not None:
+            raise ValueError("SplinePotential does not support a `smearing` override.")
         return 0.0 * dist
 
     def lr_from_dist(
-        self, dist: torch.Tensor, pair_mask: torch.Tensor | None = None
+        self,
+        dist: torch.Tensor,
+        pair_mask: torch.Tensor | None = None,
+        smearing: torch.Tensor | None = None,
     ) -> torch.Tensor:
+        if smearing is not None:
+            raise ValueError("SplinePotential does not support a `smearing` override.")
         return self.prefactor * self._spline(dist)
 
-    def lr_from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
+    def lr_from_k_sq(
+        self, k_sq: torch.Tensor, smearing: torch.Tensor | None = None
+    ) -> torch.Tensor:
+        if smearing is not None:
+            raise ValueError("SplinePotential does not support a `smearing` override.")
         return self.prefactor * self._krn_spline(k_sq)
 
-    def self_contribution(self) -> torch.Tensor:
+    def self_contribution(self, smearing: torch.Tensor | None = None) -> torch.Tensor:
+        if smearing is not None:
+            raise ValueError("SplinePotential does not support a `smearing` override.")
         return self.prefactor * self._y_at_zero
 
-    def background_correction(self) -> torch.Tensor:
+    def background_correction(
+        self, smearing: torch.Tensor | None = None
+    ) -> torch.Tensor:
+        if smearing is not None:
+            raise ValueError("SplinePotential does not support a `smearing` override.")
         return self.prefactor * torch.zeros(1)
 
     from_dist.__doc__ = Potential.from_dist.__doc__

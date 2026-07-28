@@ -10,6 +10,6 @@ __all__ = [
     "CoulombPotential",
     "InversePowerLawPotential",
     "Potential",
-    "SplinePotential",
     "PotentialDipole",
+    "SplinePotential",
 ]

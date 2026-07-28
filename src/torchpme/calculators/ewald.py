@@ -1,5 +1,6 @@
 import torch
 
+from .._utils import _validate_batched_parameters
 from ..lib import generate_kvectors_for_ewald
 from ..potentials import Potential
 from .calculator import Calculator
@@ -140,3 +141,256 @@ class EwaldCalculator(Calculator):
         if node_mask is not None:
             energy = energy * node_mask.unsqueeze(-1)
         return energy / 2
+
+    @torch.jit.export
+    def forward_batched(
+        self,
+        charges: torch.Tensor,
+        cell: torch.Tensor,
+        positions: torch.Tensor,
+        neighbor_indices: torch.Tensor,
+        neighbor_distances: torch.Tensor,
+        system_index: torch.Tensor,
+        periodic: torch.Tensor,
+        tiling: dict[str, torch.Tensor],
+    ) -> torch.Tensor:
+        r"""
+        Compute the potential of a *tiled* batch of systems in a single call.
+
+        The batch mixes systems of different sizes and periodicities (3D, 2D slabs and
+        non-periodic) laid out as one concatenation of atoms, and is assembled with
+        :func:`torchpme.lib.prepare_tiled_batch`, which also derives the per-system
+        smearing and k-vectors from a single target k-count ``num_k``. The
+        reciprocal-space sum is evaluated in fixed ``(block_atoms, block_kvecs)`` tiles
+        over the block-diagonal system :math:`\times` k-vector structure, so the dense
+        ``[n_systems, max_atoms, max_kvectors]`` array of a padded batch is never
+        materialized. The per-system smearing set by ``num_k`` overrides the
+        ``smearing`` of the calculator's potential.
+
+        Note that on CUDA the ``index_add_`` reductions used here are
+        non-deterministic by default; call
+        ``torch.use_deterministic_algorithms(True)`` for reproducible (but slower)
+        results and gradients. ``float64`` inputs are recommended, as for all Ewald
+        evaluations.
+
+        :param charges: torch.tensor of shape ``(n_atoms, n_channels)`` with the
+            concatenated (pseudo-)charges of all systems.
+        :param cell: torch.tensor of shape ``(n_systems, 3, 3)``.
+        :param positions: torch.tensor of shape ``(n_atoms, 3)`` with the concatenated
+            Cartesian coordinates.
+        :param neighbor_indices: torch.tensor of shape ``(n_pairs, 2)`` with *global*
+            atom indices, ordered as produced by ``prepare_tiled_batch`` (pairs of
+            periodic systems first, pairs of non-periodic systems after).
+        :param neighbor_distances: torch.tensor of shape ``(n_pairs,)`` with the pair
+            distances; recompute them from ``positions`` in the computational graph if
+            forces are needed.
+        :param system_index: torch.tensor of shape ``(n_atoms,)`` mapping each atom to
+            its system.
+        :param periodic: torch.tensor of shape ``(n_systems, 3)`` and dtype bool.
+        :param tiling: the static tiling data built by ``prepare_tiled_batch``, on the
+            same device as ``positions``.
+        :return: torch.tensor of shape ``(n_atoms, n_channels)`` with the per-atom
+            potential, in the same units and conventions as :func:`forward`.
+        """
+        _validate_batched_parameters(
+            charges=charges,
+            cell=cell,
+            positions=positions,
+            neighbor_indices=neighbor_indices,
+            neighbor_distances=neighbor_distances,
+            system_index=system_index,
+            periodic=periodic,
+            tiling=tiling,
+        )
+
+        potential_sr = self._compute_rspace_batched(
+            charges=charges,
+            neighbor_indices=neighbor_indices,
+            neighbor_distances=neighbor_distances,
+            tiling=tiling,
+        )
+        potential_lr = self._compute_kspace_batched(
+            charges=charges,
+            cell=cell,
+            positions=positions,
+            system_index=system_index,
+            periodic=periodic,
+            tiling=tiling,
+        )
+        return potential_sr + potential_lr
+
+    def _compute_rspace_batched(
+        self,
+        charges: torch.Tensor,
+        neighbor_indices: torch.Tensor,
+        neighbor_distances: torch.Tensor,
+        tiling: dict[str, torch.Tensor],
+    ) -> torch.Tensor:
+        # Real-space part on the concatenated pair list: the screened short-range term
+        # over the pairs of periodic systems (with their per-system smearing), and the
+        # bare potential over the pairs of non-periodic systems, which have no
+        # reciprocal-space part.
+        n_screened = int(tiling["n_screened_pairs"].item())
+        potential = torch.zeros_like(charges)
+
+        screened_indices = neighbor_indices[:n_screened]
+        screened_sr = self.potential.sr_from_dist(
+            neighbor_distances[:n_screened], smearing=tiling["sigma_pair"]
+        )
+
+        bare_indices = neighbor_indices[n_screened:]
+        bare_distances = neighbor_distances[n_screened:]
+        if self.potential.exclusion_radius is None:
+            bare = self.potential.from_dist(bare_distances)
+        else:
+            bare = self.potential.from_dist(bare_distances) * (
+                1 - self.potential.f_cutoff(bare_distances)
+            )
+
+        atom_is = screened_indices[:, 0]
+        atom_js = screened_indices[:, 1]
+        potential.index_add_(0, atom_is, charges[atom_js] * screened_sr.unsqueeze(-1))
+        if not self.full_neighbor_list:
+            potential.index_add_(
+                0, atom_js, charges[atom_is] * screened_sr.unsqueeze(-1)
+            )
+
+        atom_is = bare_indices[:, 0]
+        atom_js = bare_indices[:, 1]
+        potential.index_add_(0, atom_is, charges[atom_js] * bare.unsqueeze(-1))
+        if not self.full_neighbor_list:
+            potential.index_add_(0, atom_js, charges[atom_is] * bare.unsqueeze(-1))
+
+        # Compensate for double counting of pairs (i,j) and (j,i)
+        return potential / 2
+
+    def _compute_kspace_batched(
+        self,
+        charges: torch.Tensor,
+        cell: torch.Tensor,
+        positions: torch.Tensor,
+        system_index: torch.Tensor,
+        periodic: torch.Tensor,
+        tiling: dict[str, torch.Tensor],
+    ) -> torch.Tensor:
+        dtype = positions.dtype
+        device = positions.device
+        n_atoms = positions.shape[0]
+        n_channels = charges.shape[1]
+        n_systems = cell.shape[0]
+
+        block_atoms = int(tiling["block_atoms"].item())
+        block_kvecs = int(tiling["block_kvecs"].item())
+        n_kvec_tiles = int(tiling["n_kvec_tiles"].item())
+
+        sigma = tiling["sigma"]
+        pbc_system = tiling["pbc_system"]
+        n_pbc = pbc_system.shape[0]
+        k_int = tiling["k_int"]
+
+        # k-vectors and weights, kept in the autograd graph so that the cell gradient
+        # (stress) flows through them. For 2D systems the vacuum axis is replaced by
+        # the host-computed shrunk one, whose (detached) row deliberately carries no
+        # cell gradient.
+        cell_eff_pbc = torch.where(
+            tiling["periodic_rows"].unsqueeze(-1),
+            cell[pbc_system],
+            tiling["effective_cell_static"],
+        )
+        reciprocal = 2 * torch.pi * torch.linalg.inv(cell_eff_pbc).transpose(-1, -2)
+        kvectors = k_int.to(dtype) @ reciprocal  # [n_pbc, k_pad, 3]
+        knorm_sq = kvectors.pow(2).sum(-1)  # [n_pbc, k_pad]
+
+        # G(k) with the per-system smearing; padding rows have k = 0, which the
+        # potential maps to a zero kernel, so they are inert. The half-space grid
+        # carries a degeneracy factor of 2 (each k stands in for its -k partner).
+        G = self.potential.lr_from_k_sq(
+            knorm_sq, smearing=sigma[pbc_system].unsqueeze(-1)
+        )
+        volume_pbc = torch.abs(torch.linalg.det(cell_eff_pbc))
+        weights = G * tiling["g_factor"] / volume_pbc.unsqueeze(-1)  # [n_pbc, k_pad]
+
+        # two-pass tiled reciprocal kernel over the on-diagonal
+        # (system, atom_tile, k_tile) blocks enumerated in the dispatch table
+        atom_gather = tiling["atom_gather"]
+        gather_mask = tiling["gather_mask"].unsqueeze(-1).to(dtype)
+        b_col = tiling["b_col"]
+        kt_col = tiling["kt_col"]
+
+        r_tile = positions[atom_gather]  # [T, BM, 3]
+        q_tile = charges[atom_gather] * gather_mask  # [T, BM, C]
+        k_tile = kvectors.reshape(n_pbc, n_kvec_tiles, block_kvecs, 3)[b_col, kt_col]
+
+        theta = torch.bmm(r_tile, k_tile.transpose(-1, -2))  # [T, BM, BK]
+        cos_theta = theta.cos()
+        sin_theta = theta.sin()
+
+        # pass 1: structure factors, reduced over atom tiles of the same
+        # (system, k_tile) block — the only scatter of the kernel
+        sf_real_partial = torch.einsum("tmk,tmc->tkc", cos_theta, q_tile)
+        sf_imag_partial = torch.einsum("tmk,tmc->tkc", sin_theta, q_tile)
+        segment = b_col * n_kvec_tiles + kt_col
+        sf_real = torch.zeros(
+            n_pbc * n_kvec_tiles, block_kvecs, n_channels, dtype=dtype, device=device
+        ).index_add_(0, segment, sf_real_partial)
+        sf_imag = torch.zeros(
+            n_pbc * n_kvec_tiles, block_kvecs, n_channels, dtype=dtype, device=device
+        ).index_add_(0, segment, sf_imag_partial)
+
+        # pass 2: per-atom potentials; each (system, atom_tile) group is n_kvec_tiles
+        # contiguous dispatch rows, so the reduction is an exact reshape + sum
+        w_tile = weights.reshape(n_pbc, n_kvec_tiles, block_kvecs)[b_col, kt_col]
+        sf_real_tile = sf_real.reshape(n_pbc, n_kvec_tiles, block_kvecs, n_channels)[
+            b_col, kt_col
+        ]
+        sf_imag_tile = sf_imag.reshape(n_pbc, n_kvec_tiles, block_kvecs, n_channels)[
+            b_col, kt_col
+        ]
+        phi_partial = torch.einsum(
+            "tmk,tkc->tmc", cos_theta, w_tile.unsqueeze(-1) * sf_real_tile
+        ) + torch.einsum(
+            "tmk,tkc->tmc", sin_theta, w_tile.unsqueeze(-1) * sf_imag_tile
+        )  # [T, BM, C]
+        phi_flat = (
+            phi_partial.reshape(-1, n_kvec_tiles, block_atoms, n_channels)
+            .sum(1)
+            .reshape(-1, n_channels)
+        )  # [n_flat, C]
+
+        # scatter from the flat sum-padded layout back to the concatenated atoms
+        energy = torch.zeros(n_atoms, n_channels, dtype=dtype, device=device)
+        energy.index_add_(
+            0,
+            tiling["flat_to_atom"],
+            phi_flat * tiling["flat_mask"].unsqueeze(-1).to(dtype),
+        )
+
+        # per-system volumes and effective cells scattered over all systems (only the
+        # rows of periodic systems are used; the rest are gated out below)
+        volume = torch.ones(n_systems, dtype=dtype, device=device).index_copy(
+            0, pbc_system, volume_pbc
+        )
+        cell_eff = cell.index_copy(0, pbc_system, cell_eff_pbc)
+
+        # analytic corrections: self-interaction with the screening Gaussian, the
+        # neutralizing background (factor 2 compensates the final division by 2, as in
+        # the serial path) and the 2D slab correction
+        energy -= charges * self.potential.self_contribution(smearing=sigma)[
+            system_index
+        ].unsqueeze(-1)
+        charge_tot = torch.zeros(
+            n_systems, n_channels, dtype=dtype, device=device
+        ).index_add_(0, system_index, charges)
+        prefac = self.potential.background_correction(smearing=sigma)
+        energy -= (
+            2
+            * prefac[system_index].unsqueeze(-1)
+            * (charge_tot / volume.unsqueeze(-1))[system_index]
+        )
+        energy += self.potential.pbc_correction_batched(
+            periodic, positions, cell_eff, charges, system_index
+        )
+
+        # atoms of non-periodic systems have no reciprocal-space part at all
+        pbc_atom = tiling["pbc_atom"].unsqueeze(-1).to(dtype)
+        return energy / 2 * pbc_atom

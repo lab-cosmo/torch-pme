@@ -6,8 +6,8 @@ from .pme import PMECalculator
 
 __all__ = [
     "Calculator",
+    "CalculatorDipole",
     "EwaldCalculator",
     "P3MCalculator",
     "PMECalculator",
-    "CalculatorDipole",
 ]

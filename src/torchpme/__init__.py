@@ -23,14 +23,14 @@ with contextlib.suppress(ImportError):
 
 __all__ = [
     "Calculator",
+    "CalculatorDipole",
+    "CombinedPotential",
+    "CoulombPotential",
     "EwaldCalculator",
+    "InversePowerLawPotential",
     "P3MCalculator",
     "PMECalculator",
-    "CoulombPotential",
     "Potential",
-    "InversePowerLawPotential",
-    "SplinePotential",
-    "CombinedPotential",
     "PotentialDipole",
-    "CalculatorDipole",
+    "SplinePotential",
 ]

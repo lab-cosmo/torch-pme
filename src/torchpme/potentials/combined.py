@@ -86,32 +86,67 @@ class CombinedPotential(Potential):
         return torch.inner(self.weights, potentials)
 
     def sr_from_dist(
-        self, dist: torch.Tensor, pair_mask: torch.Tensor | None = None
+        self,
+        dist: torch.Tensor,
+        pair_mask: torch.Tensor | None = None,
+        smearing: torch.Tensor | None = None,
     ) -> torch.Tensor:
+        if smearing is not None:
+            raise ValueError(
+                "CombinedPotential does not support a `smearing` override; each "
+                "combined potential uses its own smearing."
+            )
         potentials = [pot.sr_from_dist(dist, pair_mask) for pot in self.potentials]
         potentials = torch.stack(potentials, dim=-1)
         return torch.inner(self.weights, potentials)
 
     def lr_from_dist(
-        self, dist: torch.Tensor, pair_mask: torch.Tensor | None = None
+        self,
+        dist: torch.Tensor,
+        pair_mask: torch.Tensor | None = None,
+        smearing: torch.Tensor | None = None,
     ) -> torch.Tensor:
+        if smearing is not None:
+            raise ValueError(
+                "CombinedPotential does not support a `smearing` override; each "
+                "combined potential uses its own smearing."
+            )
         potentials = [pot.lr_from_dist(dist, pair_mask) for pot in self.potentials]
         potentials = torch.stack(potentials, dim=-1)
         return torch.inner(self.weights, potentials)
 
-    def lr_from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
+    def lr_from_k_sq(
+        self, k_sq: torch.Tensor, smearing: torch.Tensor | None = None
+    ) -> torch.Tensor:
+        if smearing is not None:
+            raise ValueError(
+                "CombinedPotential does not support a `smearing` override; each "
+                "combined potential uses its own smearing."
+            )
         potentials = [pot.lr_from_k_sq(k_sq) for pot in self.potentials]
         potentials = torch.stack(potentials, dim=-1)
         return torch.inner(self.weights, potentials)
 
-    def self_contribution(self) -> torch.Tensor:
+    def self_contribution(self, smearing: torch.Tensor | None = None) -> torch.Tensor:
         # self-correction for 1/r^p potential
+        if smearing is not None:
+            raise ValueError(
+                "CombinedPotential does not support a `smearing` override; each "
+                "combined potential uses its own smearing."
+            )
         potentials = [pot.self_contribution() for pot in self.potentials]
         potentials = torch.stack(potentials, dim=-1)
         return torch.inner(self.weights, potentials)
 
-    def background_correction(self) -> torch.Tensor:
+    def background_correction(
+        self, smearing: torch.Tensor | None = None
+    ) -> torch.Tensor:
         # "charge neutrality" correction for 1/r^p potential
+        if smearing is not None:
+            raise ValueError(
+                "CombinedPotential does not support a `smearing` override; each "
+                "combined potential uses its own smearing."
+            )
         potentials = [pot.background_correction() for pot in self.potentials]
         potentials = torch.stack(potentials, dim=-1)
         return torch.inner(self.weights, potentials)

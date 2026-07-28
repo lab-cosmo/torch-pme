@@ -1,6 +1,114 @@
 import torch
 
 
+def _validate_batched_parameters(
+    charges: torch.Tensor,
+    cell: torch.Tensor,
+    positions: torch.Tensor,
+    neighbor_indices: torch.Tensor,
+    neighbor_distances: torch.Tensor,
+    system_index: torch.Tensor,
+    periodic: torch.Tensor,
+    tiling: dict[str, torch.Tensor],
+) -> None:
+    dtype = positions.dtype
+    device = positions.device
+
+    num_atoms = positions.shape[0]
+    if positions.dim() != 2 or positions.shape[1] != 3:
+        raise ValueError(
+            "`positions` must be a tensor with shape [n_atoms, 3], got tensor "
+            f"with shape {list(positions.shape)}"
+        )
+
+    if cell.dim() != 3 or cell.shape[1] != 3 or cell.shape[2] != 3:
+        raise ValueError(
+            "`cell` must be a tensor with shape [n_systems, 3, 3], got tensor with "
+            f"shape {list(cell.shape)}"
+        )
+    if cell.dtype != dtype or cell.device != device:
+        raise ValueError(
+            "`cell` must have the same dtype and device as `positions`, got "
+            f"{cell.dtype} on {cell.device}"
+        )
+    num_systems = cell.shape[0]
+
+    if (
+        periodic.dim() != 2
+        or periodic.shape[0] != num_systems
+        or periodic.shape[1] != 3
+    ):
+        raise ValueError(
+            "`periodic` must be a tensor with shape [n_systems, 3], got tensor with "
+            f"shape {list(periodic.shape)}"
+        )
+    if periodic.dtype != torch.bool:
+        raise TypeError(f"type of `periodic` ({periodic.dtype}) must be torch.bool")
+    if bool((periodic.sum(dim=-1) == 1).any()):
+        raise ValueError("1D-periodic systems are not supported")
+
+    if charges.dim() != 2 or charges.shape[0] != num_atoms:
+        raise ValueError(
+            "`charges` must be a tensor with shape [n_atoms, n_channels], got tensor "
+            f"with shape {list(charges.shape)} for {num_atoms} atoms"
+        )
+    if charges.dtype != dtype or charges.device != device:
+        raise ValueError(
+            "`charges` must have the same dtype and device as `positions`, got "
+            f"{charges.dtype} on {charges.device}"
+        )
+
+    if system_index.dim() != 1 or system_index.shape[0] != num_atoms:
+        raise ValueError(
+            "`system_index` must be a tensor with shape [n_atoms], got tensor with "
+            f"shape {list(system_index.shape)} for {num_atoms} atoms"
+        )
+
+    if neighbor_indices.dim() != 2 or neighbor_indices.shape[1] != 2:
+        raise ValueError(
+            "neighbor_indices is expected to have shape [num_neighbors, 2], but got "
+            f"{list(neighbor_indices.shape)}"
+        )
+    if neighbor_distances.shape != neighbor_indices[:, 0].shape:
+        raise ValueError(
+            "`neighbor_indices` and `neighbor_distances` need to have shapes "
+            "[num_neighbors, 2] and [num_neighbors], but got "
+            f"{list(neighbor_indices.shape)} and {list(neighbor_distances.shape)}"
+        )
+    if neighbor_distances.dtype != dtype or neighbor_distances.device != device:
+        raise ValueError(
+            "`neighbor_distances` must have the same dtype and device as `positions`, "
+            f"got {neighbor_distances.dtype} on {neighbor_distances.device}"
+        )
+
+    required_keys = [
+        "k_int",
+        "sigma",
+        "sigma_pair",
+        "pbc_system",
+        "periodic_rows",
+        "effective_cell_static",
+        "b_col",
+        "kt_col",
+        "atom_gather",
+        "gather_mask",
+        "flat_to_atom",
+        "flat_mask",
+        "pbc_atom",
+        "block_atoms",
+        "block_kvecs",
+        "n_kvec_tiles",
+        "n_screened_pairs",
+        "g_factor",
+    ]
+    for key in required_keys:
+        if key not in tiling:
+            raise ValueError(
+                f"`tiling` is missing the required key '{key}'; build it with "
+                "torchpme.lib.prepare_tiled_batch"
+            )
+
+
 def _validate_parameters(
     charges: torch.Tensor,
     cell: torch.Tensor,
@@ -112,6 +220,9 @@ def _validate_parameters(
                 f"device of `periodic` ({periodic.device}) must be same as that of "
                 f"the `positions` class ({device})"
             )
+
+        if periodic.dtype != torch.bool:
+            raise TypeError(f"type of `periodic` ({periodic.dtype}) must be torch.bool")
 
     if pair_mask is not None:
         if pair_mask.shape != neighbor_indices[:, 0].shape:

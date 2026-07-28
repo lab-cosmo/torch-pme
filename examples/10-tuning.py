@@ -39,7 +39,7 @@ dtype = torch.float64
 rng = torch.Generator()
 rng.manual_seed(42)
 
-# get_ipython().run_line_magic("matplotlib", "inline")  # type: ignore # noqa
+# get_ipython().run_line_magic("matplotlib", "inline")  # type: ignore
 
 # %%
 # Set up a test system, a supercell containing atoms with a NaCl structure
