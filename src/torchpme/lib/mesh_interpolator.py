@@ -1,6 +1,14 @@
 import torch
 
 
+# Runs eagerly: Inductor's CPU backend spuriously raises ZeroDivisionError on
+# vectorized `%` with an odd-length divisor (here always 3), see
+# https://github.com/pytorch/pytorch/issues/143649
+@torch.compiler.disable
+def _mesh_index_remainder(indices: torch.Tensor, ns_mesh: torch.Tensor) -> torch.Tensor:
+    return indices % ns_mesh
+
+
 class MeshInterpolator(torch.nn.Module):
     """
     Class for handling all steps related to interpolations in the context of a mesh
@@ -349,7 +357,7 @@ class MeshInterpolator(torch.nn.Module):
         # below.
         indices_to_interpolate = torch.stack(
             [
-                (positions_rel_idx + i) % self.ns_mesh
+                _mesh_index_remainder(positions_rel_idx + i, self.ns_mesh)
                 for i in range(
                     1 - (self.interpolation_nodes + 1) // 2,
                     1 + self.interpolation_nodes // 2,

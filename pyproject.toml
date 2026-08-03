@@ -107,10 +107,11 @@ line-length = 88
 
 [tool.ruff.lint]
 # See https://docs.astral.sh/ruff/rules for additional details
-extend-select = [
+select = [
     "B",  # Pyflakes checks (e.g., unused imports, undefined variables)
     "D",  # PEP 257 docstring conventions (e.g., formatting, consistency)
     "E",  # Pycodestyle errors (e.g., indentation, whitespace, syntax)
+    "F",  # Pyflakes (e.g., unused imports, undefined names)
     "UP",  # PyUpgrade rules (e.g., upgrading to modern Python syntax)
     "I",  # Import conventions (e.g., sorting imports, duplicate imports)
     "SIM",  # Simplification suggestions (e.g., refactoring redundant code)
