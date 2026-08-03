@@ -1,0 +1,42 @@
+
+
+Examples using ``torchpme.potentials.inversepowerlaw.InversePowerLawPotential.lr_from_kvectors``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+.. start-sphx-glr-thumbnails
+
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbnails">
+
+.. thumbnail-parent-div-open
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip=":Authors: Egor Rumiantsev @E-Rum;    Philip Loche @PicoCentauri">
+
+.. only:: html
+
+  .. image:: /examples/images/thumb/sphx_glr_8-combined-potential_thumb.png
+    :alt:
+
+  :ref:`sphx_glr_examples_8-combined-potential.py`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">Optimizing a linear combination of potentials</div>
+    </div>
+
+
+.. only:: not html
+
+ * :ref:`sphx_glr_examples_8-combined-potential.py`
+
+.. thumbnail-parent-div-close
+
+.. raw:: html
+
+    </div>
+

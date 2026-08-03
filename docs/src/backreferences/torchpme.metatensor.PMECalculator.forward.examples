@@ -1,0 +1,42 @@
+
+
+Examples using ``torchpme.metatensor.PMECalculator.forward``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+.. start-sphx-glr-thumbnails
+
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbnails">
+
+.. thumbnail-parent-div-open
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="In a physical system, the (electrical) charge is a scalar atomic property, and besides the distance between the particles, the charge defines the electrostatic potential. When computing a potential with Meshlode, you can not only pass a (reshaped) 1-D array containing the charges to the compute method of calculators, but you can also pass a 2-D array containing multiple charges per atom. Meshlode will then calculate one potential per so-called charge-channel. For the standard electrostatic potential, the number of charge channels is 1. Additional charge channels are especially useful in a machine learning task where, for example, one wants to create one potential for each species in an atomistic system using a so-called one-hot encoding of charges.">
+
+.. only:: html
+
+  .. image:: /examples/images/thumb/sphx_glr_1-charges-example_thumb.png
+    :alt:
+
+  :ref:`sphx_glr_examples_1-charges-example.py`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">Computations with Multiple Charge Channels</div>
+    </div>
+
+
+.. only:: not html
+
+ * :ref:`sphx_glr_examples_1-charges-example.py`
+
+.. thumbnail-parent-div-close
+
+.. raw:: html
+
+    </div>
+
