@@ -16,7 +16,7 @@ class CombinedPotential(Potential):
 
     :param potentials: List of potential objects, each implementing a compatible
         interface with methods `from_dist`, `lr_from_dist`, `lr_from_k_sq`,
-        `self_contribution`, and `background_correction`.
+        `self_contribution`, `background_correction`, and `pbc_correction`.
     :param initial_weights: Initial weights for combining the potentials. If provided,
         the length must match the number of potentials. If `None`, weights are
         initialized to ones.
@@ -116,9 +116,24 @@ class CombinedPotential(Potential):
         potentials = torch.stack(potentials, dim=-1)
         return torch.inner(self.weights, potentials)
 
+    def pbc_correction(
+        self,
+        periodic: torch.Tensor | None,
+        positions: torch.Tensor,
+        cell: torch.Tensor,
+        charges: torch.Tensor,
+    ) -> torch.Tensor:
+        potentials = [
+            pot.pbc_correction(periodic, positions, cell, charges)
+            for pot in self.potentials
+        ]
+        potentials = torch.stack(potentials, dim=-1)
+        return torch.inner(self.weights, potentials)
+
     from_dist.__doc__ = Potential.from_dist.__doc__
     sr_from_dist.__doc__ = Potential.sr_from_dist.__doc__
     lr_from_dist.__doc__ = Potential.lr_from_dist.__doc__
     lr_from_k_sq.__doc__ = Potential.lr_from_k_sq.__doc__
     self_contribution.__doc__ = Potential.self_contribution.__doc__
     background_correction.__doc__ = Potential.background_correction.__doc__
+    pbc_correction.__doc__ = Potential.pbc_correction.__doc__
