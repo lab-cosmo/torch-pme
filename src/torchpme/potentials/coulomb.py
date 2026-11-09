@@ -25,9 +25,13 @@ def _pbc_correction(
         dim=-1,
     )
     E_slab = torch.zeros_like(charges)
-    z_i = torch.gather(positions, 1, axis.expand(positions.shape[0]).unsqueeze(-1))
-    basis_len = torch.gather(torch.linalg.norm(cell, dim=-1), 0, axis)
+    plane_axes = torch.stack(((axis + 1) % 3, (axis + 2) % 3))
+    plane = torch.index_select(cell, 0, plane_axes)
+    normal = torch.linalg.cross(plane[0], plane[1])
+    area = torch.linalg.vector_norm(normal)
+    z_i = (positions @ normal).unsqueeze(-1) / area
     V = torch.abs(torch.linalg.det(cell))
+    basis_len = V / area
     charge_tot = torch.sum(charges, dim=0)
     M_axis = torch.sum(charges * z_i, dim=0)
     M_axis_sq = torch.sum(charges * z_i**2, dim=0)

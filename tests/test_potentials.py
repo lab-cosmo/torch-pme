@@ -58,6 +58,52 @@ SQRT2 = torch.sqrt(torch.tensor(2.0, dtype=dtype))
 PI = torch.tensor(torch.pi, dtype=dtype)
 
 
+@pytest.mark.parametrize("potential_cls", [CoulombPotential, InversePowerLawPotential])
+@pytest.mark.parametrize("axis", [0, 1, 2])
+@pytest.mark.parametrize("rotated", [False, True])
+def test_slab_correction_lattice_geometry(potential_cls, axis, rotated):
+    kwargs = {"exponent": 1} if potential_cls is InversePowerLawPotential else {}
+    potential = potential_cls(smearing=0.8, prefactor=1.7, **kwargs).to(dtype=dtype)
+    cell = torch.tensor(
+        [[4.0, 0.0, 0.0], [0.5, 5.0, 0.0], [0.9, -0.4, 12.0]], dtype=dtype
+    )
+    positions = torch.tensor(
+        [[0.2, 0.3, 1.0], [2.0, 1.4, 3.0], [0.7, 2.8, 4.2]], dtype=dtype
+    )
+    charges = torch.tensor([[1.0, 1.1], [-0.6, 0.4], [-0.4, -0.3]], dtype=dtype)
+    rotation = (
+        torch.tensor(
+            [[0.8, -0.6, 0.0], [0.48, 0.64, -0.6], [0.36, 0.48, 0.8]],
+            dtype=dtype,
+        )
+        if rotated
+        else torch.eye(3, dtype=dtype)
+    )
+    # One neutral and one charged channel, with a known perpendicular height of 12.
+    z = positions[:, 2:3]
+    total_charge = charges.sum(dim=0)
+    dipole = (charges * z).sum(dim=0)
+    second_moment = (charges * z.square()).sum(dim=0)
+    expected_energy = (1.7 * 2 * torch.pi / 240) * (
+        dipole.square() - total_charge * second_moment - total_charge.square() * 12
+    )
+    expected_force = (
+        -(1.7 * 4 * torch.pi / 240)
+        * (charges * (dipole - total_charge * z)).sum(dim=1, keepdim=True)
+        * rotation[:, 2]
+    )
+    cell = torch.roll(cell @ rotation.T, shifts=axis - 2, dims=0)
+    positions = (positions @ rotation.T).requires_grad_()
+    periodic = torch.arange(3) != axis
+    correction = potential.pbc_correction(
+        periodic=periodic, positions=positions, cell=cell, charges=charges
+    )
+    energy = (charges * correction).sum(dim=0) / 2
+    force = -torch.autograd.grad(energy.sum(), positions)[0]
+    assert_close(energy, expected_energy, rtol=1e-13, atol=1e-13)
+    assert_close(force, expected_force, rtol=1e-13, atol=1e-13)
+
+
 @pytest.mark.parametrize("smearing", smearinges)
 @pytest.mark.parametrize("exponent", ps)
 def test_sr_lr_split(exponent, smearing):

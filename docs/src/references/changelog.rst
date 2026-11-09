@@ -24,6 +24,13 @@ changelog <https://keepachangelog.com/en/1.1.0/>`_ format. This project follows
 `Unreleased <https://github.com/lab-cosmo/torch-pme/>`_
 -------------------------------------------------------
 
+Fixed
+#####
+
+* Slab electrostatic corrections now use the periodic plane's normal and
+  perpendicular cell height, preserving energies and forces under rigid rotations
+  and nonorthogonal cell choices.
+
 `Version 0.5.0 <https://github.com/lab-cosmo/torch-pme/releases/tag/v0.5.0>`_ - 2026-06-30
 ------------------------------------------------------------------------------------------
 
