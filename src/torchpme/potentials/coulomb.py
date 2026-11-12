@@ -15,6 +15,9 @@ def _pbc_correction(
     if periodic is None:
         periodic = torch.tensor([True, True, True], device=cell.device)
     n_periodic = torch.sum(periodic)
+    # Select the unique nonperiodic lattice axis as the slab normal: for 2D
+    # periodicity exactly one of the three axes is aperiodic, and the slab
+    # correction is defined along that normal.
     is_2d = n_periodic == 2
     axis = torch.argmax(
         torch.where(
