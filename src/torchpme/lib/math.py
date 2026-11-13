@@ -13,54 +13,7 @@ def gamma(x: torch.Tensor) -> torch.Tensor:
     return torch.exp(gammaln(x))
 
 
-class _CustomExp1(torch.autograd.Function):
-    @staticmethod
-    def forward(ctx, x):
-        # this implementation is inspired by the one in scipy:
-        # https://github.com/scipy/scipy/blob/34d91ce06d4d05e564b79bf65288284247b1f3e3/scipy/special/xsf/expint.h#L22
-        ctx.save_for_backward(x)
-
-        # Constants
-        SCIPY_EULER = (
-            0.577215664901532860606512090082402431  # Euler-Mascheroni constant
-        )
-        inf = torch.inf
-
-        # Handle case when x == 0
-        result = torch.full_like(x, inf)
-        mask = x > 0
-
-        # Compute for x <= 1
-        x_small = x[mask & (x <= 1)]
-        if x_small.numel() > 0:
-            e1 = torch.ones_like(x_small)
-            r = torch.ones_like(x_small)
-            for k in range(1, 26):
-                r = -r * k * x_small / (k + 1.0) ** 2
-                e1 += r
-                if torch.all(torch.abs(r) <= torch.abs(e1) * 1e-15):
-                    break
-            result[mask & (x <= 1)] = -SCIPY_EULER - torch.log(x_small) + x_small * e1
-
-        # Compute for x > 1
-        x_large = x[mask & (x > 1)]
-        if x_large.numel() > 0:
-            m = 20 + (80.0 / x_large).to(torch.int32)
-            t0 = torch.zeros_like(x_large)
-            for k in range(m.max(), 0, -1):
-                t0 = k / (1.0 + k / (x_large + t0))
-            t = 1.0 / (x_large + t0)
-            result[mask & (x > 1)] = torch.exp(-x_large) * t
-
-        return result
-
-    @staticmethod
-    def backward(ctx, grad_output):
-        (x,) = ctx.saved_tensors
-        return -grad_output * torch.exp(-x) / x
-
-
-def exp1(x):
+def exp1(x: torch.Tensor) -> torch.Tensor:
     r"""
     Exponential integral E1.
 
@@ -73,7 +26,39 @@ def exp1(x):
     :param x: Input tensor (x > 0)
     :return: Exponential integral E1(x)
     """
-    return _CustomExp1.apply(x)
+    # Gradients come from autograd through the series and continued fraction, not
+    # from a custom autograd.Function: TorchScript rejects `Function.apply` since
+    # torch 2.14. Derivative accuracy is checked in tests/lib/test_math.py.
+    #
+    # this implementation is inspired by the one in scipy:
+    # https://github.com/scipy/scipy/blob/34d91ce06d4d05e564b79bf65288284247b1f3e3/scipy/special/xsf/expint.h#L22
+    euler_gamma = 0.577215664901532860606512090082402431
+
+    # E1(0) = inf; E1 is not real for x < 0, so those entries are also set to inf
+    result = torch.full_like(x, torch.inf)
+    small = (x > 0) & (x <= 1)
+    large = x > 1
+
+    x_small = x[small]
+    if x_small.numel() > 0:
+        e1 = torch.ones_like(x_small)
+        r = torch.ones_like(x_small)
+        for k in range(1, 26):
+            r = -r * k * x_small / (k + 1.0) ** 2
+            e1 = e1 + r
+            if bool(torch.all(torch.abs(r) <= torch.abs(e1) * 1e-15)):
+                break
+        result[small] = -euler_gamma - torch.log(x_small) + x_small * e1
+
+    x_large = x[large]
+    if x_large.numel() > 0:
+        m = 20 + (80.0 / x_large).to(torch.int32)
+        t0 = torch.zeros_like(x_large)
+        for k in range(int(m.max()), 0, -1):
+            t0 = k / (1.0 + k / (x_large + t0))
+        result[large] = torch.exp(-x_large) / (x_large + t0)
+
+    return result
 
 
 def gammaincc_over_powerlaw(exponent: torch.Tensor, z: torch.Tensor) -> torch.Tensor:
