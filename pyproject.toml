@@ -92,13 +92,8 @@ addopts = [
 filterwarnings = [
     "error",
     # Numpy deprecation warnings from ase
-    "ignore:ast.Str is deprecated and will be removed in Python 3.14:DeprecationWarning",
-    "ignore:Attribute s is deprecated and will be removed in Python 3.14:DeprecationWarning",
-    "ignore:ast.NameConstant is deprecated and will be removed in Python 3.14:DeprecationWarning",
     "ignore:Setting the shape on a NumPy array has been deprecated in NumPy 2.5.:DeprecationWarning",
-    # TorchScript deprecation warnings
-    "ignore:`torch.jit\\..+` is deprecated:DeprecationWarning",
-    "ignore:`torch.jit\\..+` is not supported in Python 3.14:DeprecationWarning",
+    "ignore:`torch.jit\\..+` is (deprecated|not supported in Python 3.14\\+)",
 ]
 
 [tool.ruff]
