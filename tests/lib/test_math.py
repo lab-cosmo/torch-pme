@@ -5,10 +5,6 @@ import torch
 from torchpme.lib import exp1
 
 
-def finite_difference_derivative(func, x, h=1e-5):
-    return (func(x + h) - func(x - h)) / (2 * h)
-
-
 def test_torch_exp1_consistency_with_scipy():
     seed = 42
     torch.manual_seed(seed)
@@ -21,11 +17,17 @@ def test_torch_exp1_consistency_with_scipy():
 
 
 def test_torch_exp1_derivative():
-    x = torch.rand(1, dtype=torch.float64, requires_grad=True)
-    torch_result = exp1(x)
-    torch_result.backward()
-    torch_exp1_prime = x.grad
-    finite_diff_result = finite_difference_derivative(
-        scipy.special.exp1, x.detach().numpy()
-    )
-    assert np.allclose(torch_exp1_prime.numpy(), finite_diff_result, atol=1e-6)
+    # spans both the series (x <= 1) and the continued fraction (x > 1) branches
+    x = torch.logspace(-6, 2, 1000, dtype=torch.float64, requires_grad=True)
+    exp1(x).sum().backward()
+    expected = -torch.exp(-x.detach()) / x.detach()
+    torch.testing.assert_close(x.grad, expected, rtol=1e-12, atol=0.0)
+
+
+def test_torch_exp1_second_derivative():
+    x = torch.logspace(-6, 2, 1000, dtype=torch.float64, requires_grad=True)
+    (grad,) = torch.autograd.grad(exp1(x).sum(), x, create_graph=True)
+    grad.sum().backward()
+    xd = x.detach()
+    expected = torch.exp(-xd) * (xd + 1) / xd**2
+    torch.testing.assert_close(x.grad, expected, rtol=1e-12, atol=0.0)

@@ -24,6 +24,17 @@ changelog <https://keepachangelog.com/en/1.1.0/>`_ format. This project follows
 `Unreleased <https://github.com/lab-cosmo/torch-pme/>`_
 -------------------------------------------------------
 
+Added
+#####
+
+* Support for Python 3.15.
+
+Fixed
+#####
+
+* ``InversePowerLawPotential`` can be compiled with TorchScript again with torch
+  2.14 and later. ``exp1`` no longer uses a custom ``torch.autograd.Function``.
+
 `Version 0.5.0 <https://github.com/lab-cosmo/torch-pme/releases/tag/v0.5.0>`_ - 2026-06-30
 ------------------------------------------------------------------------------------------
 
