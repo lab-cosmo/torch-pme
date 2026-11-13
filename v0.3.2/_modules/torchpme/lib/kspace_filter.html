@@ -1,0 +1,727 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="../../../">
+  <head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light dark"><link rel="author" title="About these documents" href="../../../about.html"><link rel="index" title="Index" href="../../../genindex.html"><link rel="search" title="Search" href="../../../search.html">
+        <link rel="prefetch" href="../../../_static/images/torch-pme.png" as="image">
+        <link rel="prefetch" href="../../../_static/images/torch-pme-dark.png" as="image">
+
+    <link rel="shortcut icon" href="../../../_static/torch-pme-64.png"><!-- Generated with Sphinx 8.1.3 and Furo 2025.09.25 -->
+        <title>torchpme.lib.kspace_filter - torch-pme</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=d111a655" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=580074bf" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery.css?v=d2d258e8" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=8dab3a3b" />
+    <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/fontawesome.min.css" />
+    <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/solid.min.css" />
+    <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/brands.min.css" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f2f2f2;
+  --color-code-foreground: #1e1e1e;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle site navigation sidebar">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc" aria-label="Toggle table of contents sidebar">
+<label class="overlay sidebar-overlay" for="__navigation"></label>
+<label class="overlay toc-overlay" for="__toc"></label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <span class="icon"><svg><use href="#svg-menu"></use></svg></span>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../../../index.html"><div class="brand">torch-pme</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
+        <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
+  <div class="sidebar-logo-container">
+    <img class="sidebar-logo only-light" src="../../../_static/images/torch-pme.png" alt="Light Logo"/>
+    <img class="sidebar-logo only-dark" src="../../../_static/images/torch-pme-dark.png" alt="Dark Logo"/>
+  </div>
+  
+  
+</a><form class="sidebar-search-container" method="get" action="../../../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../about.html">What is torch-pme</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../examples/basic-usage.html">Basic Usage</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../examples/index.html">Examples</a><input aria-label="Toggle navigation of Examples" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/01-charges-example.html">Computations with Multiple Charge Channels</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/02-neighbor-lists-usage.html">Advanced neighbor list usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/03-mesh-demo.html">Examples of the <code class="docutils literal notranslate"><span class="pre">MeshInterpolator</span></code> class</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/04-kspace-demo.html">Examples of the <code class="docutils literal notranslate"><span class="pre">KSpaceFilter</span></code> class</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/05-autograd-demo.html">Custom models with automatic differentiation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/06-splined-potential.html">Splined potentials</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/07-lode-demo.html">Computing LODE descriptors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/08-combined-potential.html">Optimizing a linear combination of potentials</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/09-atomistic-model.html">Atomistic model for molecular dynamics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/09-atomistic-model.html#a-comparison-between-calculators">A comparison between calculators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/10-tuning.html">Parameter tuning for range-separated models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/11-4-site-water.html">4-site water models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/basic-usage.html">Basic Usage</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../references/index.html">API reference</a><input aria-label="Toggle navigation of API reference" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../../references/potentials/index.html">Potentials</a><input aria-label="Toggle navigation of Potentials" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../references/potentials/combined.html">CombinedPotential</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../references/potentials/coulomb.html">CoulombPotential</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../references/potentials/inversepowerlaw.html">InversePowerLawPotential</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../references/potentials/potential.html">Potential</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../references/potentials/potential-dipole.html">PotentialDipole</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../references/potentials/spline.html">SplinePotential</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../../references/calculators/index.html">Calculators</a><input aria-label="Toggle navigation of Calculators" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../references/calculators/calculator.html">Calculator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../references/calculators/calculator-dipole.html">CalculatorDipole</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../references/calculators/ewald.html">EwaldCalculator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../references/calculators/p3m.html">P3MCalculator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../references/calculators/pme.html">PMECalculator</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../../references/tuning/index.html">Tuning</a><input aria-label="Toggle navigation of Tuning" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../references/tuning/base_classes.html">Base Classes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../references/tuning/tune_ewald.html">Tune Ewald</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../references/tuning/tune_p3m.html">Tune P3M</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../references/tuning/tune_pme.html">Tune PME</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../references/prefactors.html">Prefactors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../references/metatensor.html">Metatensor Bindings</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../../references/lib/index.html">Library Functions</a><input aria-label="Toggle navigation of Library Functions" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../references/lib/kspace_filter.html">Kspace filter</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../references/lib/kvectors.html">Kvectors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../references/lib/math.html">Math</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../references/lib/mesh_interpolator.html">Mesh Interpolator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../references/lib/splines.html">Splines</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../references/changelog.html">Changelog</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../contributing.html">Contributing</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
+            <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <h1>Source code for torchpme.lib.kspace_filter</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+
+<span class="c1"># from ..potentials import Potential</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.kvectors</span><span class="w"> </span><span class="kn">import</span> <span class="n">generate_kvectors_for_mesh</span>
+
+
+<div class="viewcode-block" id="KSpaceKernel">
+<a class="viewcode-back" href="../../../references/lib/kspace_filter.html#torchpme.lib.KSpaceKernel">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">KSpaceKernel</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Base class defining the interface for a reciprocal-space kernel helper.</span>
+
+<span class="sd">    Provides an interface to compute the reciprocal-space convolution kernel</span>
+<span class="sd">    that is used e.g. to compute potentials using Fourier transforms. Parameters</span>
+<span class="sd">    of the kernel in derived classes should be defined and stored in the</span>
+<span class="sd">    ``__init__`` method.</span>
+
+<span class="sd">    NB: we need this slightly convoluted way of implementing what often amounts</span>
+<span class="sd">    to a simple, pure function of :math:`|\mathbf{k}|^2` in order to be able to</span>
+<span class="sd">    provide a customizable filter class that can be jitted.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+
+<div class="viewcode-block" id="KSpaceKernel.kernel_from_k_sq">
+<a class="viewcode-back" href="../../../references/lib/kspace_filter.html#torchpme.lib.KSpaceKernel.kernel_from_k_sq">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">kernel_from_k_sq</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">kvectors</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Computes the reciprocal-space kernel on a grid of k points given a tensor</span>
+<span class="sd">        containing :math:`\mathbf{k}`.</span>
+
+<span class="sd">        :param kvectors: torch.tensor containing the k vector at which the</span>
+<span class="sd">            kernel is to be evaluated.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;kernel_from_k_sq is not implemented for &#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">&#39;&quot;</span>
+        <span class="p">)</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="KSpaceFilter">
+<a class="viewcode-back" href="../../../references/lib/kspace_filter.html#torchpme.lib.KSpaceFilter">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">KSpaceFilter</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Apply a reciprocal-space filter to a real-space mesh.</span>
+
+<span class="sd">    The class combines the costruction of a reciprocal-space grid</span>
+<span class="sd">    :math:`\{\mathbf{k}_n\}`</span>
+<span class="sd">    (that should be commensurate to the grid in real space, so the class takes</span>
+<span class="sd">    the same options as :class:`MeshInterpolator`), the calculation of</span>
+<span class="sd">    a scalar filter function :math:`\phi(|\mathbf{k}|^2)`, defined as a function of</span>
+<span class="sd">    the squared norm of the reciprocal space grid points, and the application</span>
+<span class="sd">    of the filter to a real-space function :math:`f(\mathbf{x})`,</span>
+<span class="sd">    defined on a mesh :math:`\{\mathbf{x}_n\}`.</span>
+
+<span class="sd">    In practice, the application of the filter amounts to</span>
+<span class="sd">    :math:`f\rightarrow \hat{f} \rightarrow \hat{\tilde{f}}=</span>
+<span class="sd">    \hat{f} \phi \rightarrow \tilde{f}`</span>
+
+<span class="sd">    See also the :ref:`example-kspace-demo` for a demonstration of the functionalities</span>
+<span class="sd">    of this class.</span>
+
+<span class="sd">    :param cell: torch.tensor of shape ``(3, 3)``, where ``cell[i]`` is the i-th basis</span>
+<span class="sd">        vector of the unit cell</span>
+<span class="sd">    :param ns_mesh: toch.tensor of shape ``(3,)``</span>
+<span class="sd">        Number of mesh points to use along each of the three axes</span>
+<span class="sd">    :param kernel: KSpaceKernel</span>
+<span class="sd">        A KSpaceKernel-derived class providing a ``from_k_sq`` method that</span>
+<span class="sd">        evaluates :math:`\psi` given the square modulus of</span>
+<span class="sd">        the k-space mesh points</span>
+<span class="sd">    :param fft_norm: str</span>
+<span class="sd">        The normalization applied to the forward FT. Can be</span>
+<span class="sd">        &quot;forward&quot;, &quot;backward&quot;, &quot;ortho&quot;. See :func:`torch:fft:rfftn`</span>
+<span class="sd">    :param ifft_norm: str</span>
+<span class="sd">        The normalization applied to the inverse FT. Can be</span>
+<span class="sd">        &quot;forward&quot;, &quot;backward&quot;, &quot;ortho&quot;. See :func:`torch:fft:irfftn`</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">cell</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+        <span class="n">ns_mesh</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+        <span class="n">kernel</span><span class="p">:</span> <span class="n">KSpaceKernel</span><span class="p">,</span>
+        <span class="n">fft_norm</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;ortho&quot;</span><span class="p">,</span>
+        <span class="n">ifft_norm</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;ortho&quot;</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_fft_norm</span> <span class="o">=</span> <span class="n">fft_norm</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_ifft_norm</span> <span class="o">=</span> <span class="n">ifft_norm</span>
+        <span class="k">if</span> <span class="n">fft_norm</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;ortho&quot;</span><span class="p">,</span> <span class="s2">&quot;forward&quot;</span><span class="p">,</span> <span class="s2">&quot;backward&quot;</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Invalid option &#39;</span><span class="si">{</span><span class="n">fft_norm</span><span class="si">}</span><span class="s2">&#39; for the `fft_norm` parameter.&quot;</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="n">ifft_norm</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;ortho&quot;</span><span class="p">,</span> <span class="s2">&quot;forward&quot;</span><span class="p">,</span> <span class="s2">&quot;backward&quot;</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Invalid option &#39;</span><span class="si">{</span><span class="n">ifft_norm</span><span class="si">}</span><span class="s2">&#39; for the `ifft_norm` parameter.&quot;</span>
+            <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">kernel</span> <span class="o">=</span> <span class="n">kernel</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">cell</span><span class="p">,</span> <span class="n">ns_mesh</span><span class="p">)</span>
+
+<div class="viewcode-block" id="KSpaceFilter.update">
+<a class="viewcode-back" href="../../../references/lib/kspace_filter.html#torchpme.lib.KSpaceFilter.update">[docs]</a>
+    <span class="nd">@torch</span><span class="o">.</span><span class="n">jit</span><span class="o">.</span><span class="n">export</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">update</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">cell</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">ns_mesh</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Update buffers and derived attributes of the instance.</span>
+
+<span class="sd">        If neither ``cell`` nor ``ns_mesh`` are passed, only the filter is updated,</span>
+<span class="sd">        typically following a change in the underlying potential. If ``cell`` and/or</span>
+<span class="sd">        ``ns_mesh`` are given, the instance&#39;s attributes required by these will also be</span>
+<span class="sd">        updated accordingly.</span>
+
+<span class="sd">        :param cell: torch.tensor of shape ``(3, 3)``, where ``cell[i]`` is the i-th</span>
+<span class="sd">            basis vector of the unit cell</span>
+<span class="sd">        :param ns_mesh: toch.tensor of shape ``(3,)``</span>
+<span class="sd">            Number of mesh points to use along each of the three axes</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_prep_kvectors</span><span class="p">(</span><span class="n">cell</span><span class="p">,</span> <span class="n">ns_mesh</span><span class="p">)</span>
+
+        <span class="c1"># always update the kfilter to reduce the risk it&#39;d go out of sync if the is an</span>
+        <span class="c1"># update in the underlaying potential</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_kfilter</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernel</span><span class="o">.</span><span class="n">kernel_from_k_sq</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_k_sq</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="KSpaceFilter.forward">
+<a class="viewcode-back" href="../../../references/lib/kspace_filter.html#torchpme.lib.KSpaceFilter.forward">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mesh_values</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Applies the k-space filter by Fourier transforming the given</span>
+<span class="sd">        ``mesh_values`` tensor, multiplying the result by the filter array</span>
+<span class="sd">        (that should have been previously computed with a call to</span>
+<span class="sd">        :func:`update`) and Fourier-transforming back</span>
+<span class="sd">        to real space.</span>
+
+<span class="sd">        If you update the ``cell``, the ``ns_mesh`` or anything inside the ``kernel``</span>
+<span class="sd">        object after you initlized the object, you have call :meth:`update` to update</span>
+<span class="sd">        the object calling this method.</span>
+
+<span class="sd">        .. code-block:: python</span>
+
+<span class="sd">            kernel_filter.update(cell)</span>
+<span class="sd">            kernel_filter.forward(mesh)</span>
+
+<span class="sd">        :param mesh_values: torch.tensor of shape ``(n_channels, nx, ny, nz)``</span>
+<span class="sd">            The values of the input function on a real-space mesh. Shape</span>
+<span class="sd">            should match the shape of the filter.</span>
+
+<span class="sd">        :returns: torch.tensor of shape ``(n_channels, nx, ny, nz)``</span>
+<span class="sd">            The real-space mesh containing the transformed function values.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">mesh_values</span><span class="o">.</span><span class="n">dim</span><span class="p">()</span> <span class="o">!=</span> <span class="mi">4</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;`mesh_values` needs to be a 4 dimensional tensor, got &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">mesh_values</span><span class="o">.</span><span class="n">dim</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">mesh_values</span><span class="o">.</span><span class="n">device</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_kfilter</span><span class="o">.</span><span class="n">device</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;`mesh_values` and the k-space filter are on different devices, got &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">mesh_values</span><span class="o">.</span><span class="n">device</span><span class="si">}</span><span class="s2"> and </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_kfilter</span><span class="o">.</span><span class="n">device</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+
+        <span class="c1"># Applying the Fourier filter involves the following substeps:</span>
+        <span class="c1"># 1. Fourier transform the input mesh</span>
+        <span class="c1"># 2. multiply by kernel in k-space</span>
+        <span class="c1"># 3. transform back</span>
+        <span class="c1"># For the Fourier transforms, we use the normalization conditions</span>
+        <span class="c1"># that do not introduce any extra factors of 1/n_mesh.</span>
+        <span class="c1"># This is why the forward transform (fft) is called with the</span>
+        <span class="c1"># normalization option &#39;backward&#39; (the convention in which 1/n_mesh</span>
+        <span class="c1"># is in the backward transformation) and vice versa for the</span>
+        <span class="c1"># inverse transform (irfft).</span>
+
+        <span class="n">dims</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>  <span class="c1"># dimensions along which to Fourier transform</span>
+        <span class="n">mesh_hat</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">rfftn</span><span class="p">(</span><span class="n">mesh_values</span><span class="p">,</span> <span class="n">norm</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_fft_norm</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="n">dims</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">mesh_hat</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">3</span><span class="p">:]</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_kfilter</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">3</span><span class="p">:]:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;The real-space mesh is inconsistent with the k-space grid.&quot;</span>
+            <span class="p">)</span>
+
+        <span class="n">filter_hat</span> <span class="o">=</span> <span class="n">mesh_hat</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_kfilter</span>
+
+        <span class="n">result</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">irfftn</span><span class="p">(</span>
+            <span class="n">filter_hat</span><span class="p">,</span>
+            <span class="n">norm</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_ifft_norm</span><span class="p">,</span>
+            <span class="n">dim</span><span class="o">=</span><span class="n">dims</span><span class="p">,</span>
+            <span class="c1"># NB: we must specify the size of the output</span>
+            <span class="c1"># as for certain mesh sizes the inverse FT is not</span>
+            <span class="c1"># well-defined</span>
+            <span class="n">s</span><span class="o">=</span><span class="n">mesh_values</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">3</span><span class="p">:],</span>
+        <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">result</span><span class="p">)</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;NaNs detected in the k-space filter result. This are probably caused &quot;</span>
+                <span class="s2">&quot;by an unsuitable `mesh_spacing`, resulting in a problematic grid of &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;shape: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">mesh_values</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span><span class="si">}</span><span class="s2">. Try adjsuting the grid by using a &quot;</span>
+                <span class="s2">&quot;different `mesh_spacing` value.&quot;</span>
+            <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">result</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_prep_kvectors</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">cell</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">],</span> <span class="n">ns_mesh</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span>
+    <span class="p">):</span>
+        <span class="k">if</span> <span class="n">cell</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">cell</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;cell of shape </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">cell</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span><span class="si">}</span><span class="s2"> should be of shape (3, 3)&quot;</span>
+                <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cell</span> <span class="o">=</span> <span class="n">cell</span>
+
+        <span class="k">if</span> <span class="n">ns_mesh</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">ns_mesh</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="p">(</span><span class="mi">3</span><span class="p">,):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;shape </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">ns_mesh</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span><span class="si">}</span><span class="s2"> of `ns_mesh` has to be (3,)&quot;</span>
+                <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ns_mesh</span> <span class="o">=</span> <span class="n">ns_mesh</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cell</span><span class="o">.</span><span class="n">device</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ns_mesh</span><span class="o">.</span><span class="n">device</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;`cell` and `ns_mesh` are on different devices, got &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">cell</span><span class="o">.</span><span class="n">device</span><span class="si">}</span><span class="s2"> and </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">ns_mesh</span><span class="o">.</span><span class="n">device</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">cell</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">ns_mesh</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_kvectors</span> <span class="o">=</span> <span class="n">generate_kvectors_for_mesh</span><span class="p">(</span><span class="n">ns</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ns_mesh</span><span class="p">,</span> <span class="n">cell</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">cell</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_k_sq</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_kvectors</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span></div>
+
+
+
+<div class="viewcode-block" id="P3MKSpaceFilter">
+<a class="viewcode-back" href="../../../references/lib/kspace_filter.html#torchpme.lib.P3MKSpaceFilter">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">P3MKSpaceFilter</span><span class="p">(</span><span class="n">KSpaceFilter</span><span class="p">):</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A specialized implementation of the k-space filter for the P3M method, with a</span>
+<span class="sd">    cell-dependent Green&#39;s function kernel. This class does almost the same thing as</span>
+<span class="sd">    :class:`KSpaceFilter`, but with a different, P3M-specialized filter. See `this paper</span>
+<span class="sd">    &lt;http://dx.doi.org/10.1063/1.477414&gt;`_ for your reference.</span>
+
+<span class="sd">    :param cell: torch.tensor of shape ``(3, 3)``, where ``cell[i]`` is the i-th basis</span>
+<span class="sd">        vector of the unit cell</span>
+<span class="sd">    :param ns_mesh: toch.tensor of shape ``(3,)`` Number of mesh points to use along</span>
+<span class="sd">        each of the three axes</span>
+<span class="sd">    :param interpolation_nodes: int The number ``n`` of nodes used in the interpolation</span>
+<span class="sd">        per coordinate axis. The total number of interpolation nodes in 3D will be</span>
+<span class="sd">        ``n^3``. In general, for ``n`` nodes, the interpolation will be performed by</span>
+<span class="sd">        piecewise polynomials of degree ``n - 1`` (e.g. ``n = 4`` for cubic</span>
+<span class="sd">        interpolation). Only the values ``1, 2, 3, 4, 5`` are supported.</span>
+<span class="sd">    :param kernel: KSpaceKernel A KSpaceKernel-derived class providing a ``from_k_sq``</span>
+<span class="sd">        method that evaluates :math:`\psi` given the square modulus of the k-space mesh</span>
+<span class="sd">        points</span>
+<span class="sd">    :param fft_norm: str The normalization applied to the forward FT. Can be &quot;forward&quot;,</span>
+<span class="sd">        &quot;backward&quot;, &quot;ortho&quot;. See :func:`torch:fft:rfftn`</span>
+<span class="sd">    :param ifft_norm: str The normalization applied to the inverse FT. Can be &quot;forward&quot;,</span>
+<span class="sd">        &quot;backward&quot;, &quot;ortho&quot;. See :func:`torch:fft:irfftn`</span>
+<span class="sd">    :param mode: int, 0 for the electrostatic potential, 1 for the electrostatic energy,</span>
+<span class="sd">        2 for the dipolar torques, and 3 for the dipolar forces. For more details, see</span>
+<span class="sd">        eq.30 of `that paper &lt;https://doi.org/10.1063/1.3000389&gt;`_.</span>
+<span class="sd">    :param diff_order: int, the order of the approximation of the difference operator.</span>
+<span class="sd">        Higher order is more accurate, but also more expensive. For more details, see</span>
+<span class="sd">        Appendix C of `this paper &lt;http://dx.doi.org/10.1063/1.477414&gt;`_. The values</span>
+<span class="sd">        ``1, 2, 3, 4, 5, 6`` are supported.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">cell</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+        <span class="n">ns_mesh</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+        <span class="n">interpolation_nodes</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">kernel</span><span class="p">:</span> <span class="n">KSpaceKernel</span><span class="p">,</span>
+        <span class="n">fft_norm</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;ortho&quot;</span><span class="p">,</span>
+        <span class="n">ifft_norm</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;ortho&quot;</span><span class="p">,</span>
+        <span class="n">mode</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="n">differential_order</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">interpolation_nodes</span> <span class="o">=</span> <span class="n">interpolation_nodes</span>
+        <span class="k">if</span> <span class="n">mode</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;`mode` should be one of [0, 1, 2, 3], but got </span><span class="si">{</span><span class="n">mode</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">=</span> <span class="n">mode</span>
+        <span class="k">if</span> <span class="n">differential_order</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;`differential_order` should be one between 1 and 6, but got </span><span class="si">{</span><span class="n">differential_order</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">differential_order</span> <span class="o">=</span> <span class="n">differential_order</span>
+
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">cell</span><span class="p">,</span> <span class="n">ns_mesh</span><span class="p">,</span> <span class="n">kernel</span><span class="p">,</span> <span class="n">fft_norm</span><span class="p">,</span> <span class="n">ifft_norm</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">register_buffer</span><span class="p">(</span>
+            <span class="s2">&quot;_diff_coeff&quot;</span><span class="p">,</span>
+            <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span>
+                <span class="p">[</span>  <span class="c1"># coefficients for the difference operator</span>
+                    <span class="p">[</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">4</span> <span class="o">/</span> <span class="mi">3</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span> <span class="o">/</span> <span class="mi">3</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">3</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">3</span> <span class="o">/</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">1</span> <span class="o">/</span> <span class="mi">10</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">8</span> <span class="o">/</span> <span class="mi">5</span><span class="p">,</span> <span class="o">-</span><span class="mi">4</span> <span class="o">/</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">8</span> <span class="o">/</span> <span class="mi">35</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span> <span class="o">/</span> <span class="mi">35</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">5</span> <span class="o">/</span> <span class="mi">3</span><span class="p">,</span> <span class="o">-</span><span class="mi">20</span> <span class="o">/</span> <span class="mi">21</span><span class="p">,</span> <span class="mi">5</span> <span class="o">/</span> <span class="mi">14</span><span class="p">,</span> <span class="o">-</span><span class="mi">5</span> <span class="o">/</span> <span class="mi">63</span><span class="p">,</span> <span class="mi">1</span> <span class="o">/</span> <span class="mi">126</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">],</span>
+                    <span class="p">[</span><span class="mi">12</span> <span class="o">/</span> <span class="mi">7</span><span class="p">,</span> <span class="o">-</span><span class="mi">15</span> <span class="o">/</span> <span class="mi">14</span><span class="p">,</span> <span class="mi">10</span> <span class="o">/</span> <span class="mi">21</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span> <span class="o">/</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">2</span> <span class="o">/</span> <span class="mi">77</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span> <span class="o">/</span> <span class="mi">465</span><span class="p">],</span>
+                <span class="p">]</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+
+<div class="viewcode-block" id="P3MKSpaceFilter.update">
+<a class="viewcode-back" href="../../../references/lib/kspace_filter.html#torchpme.lib.P3MKSpaceFilter.update">[docs]</a>
+    <span class="nd">@torch</span><span class="o">.</span><span class="n">jit</span><span class="o">.</span><span class="n">export</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">update</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">cell</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">ns_mesh</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># Cannot reuse code from `KSpaceFilter` by `super` because of `TorchScript`</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_prep_kvectors</span><span class="p">(</span><span class="n">cell</span><span class="p">,</span> <span class="n">ns_mesh</span><span class="p">)</span>
+
+        <span class="c1"># always update the kfilter to ensure sync with potential</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_kfilter</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_compute_influence</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_kvectors</span>
+        <span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernel</span><span class="o">.</span><span class="n">kernel_from_k_sq</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_k_sq</span><span class="p">)</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_compute_influence</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">kvectors</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+        <span class="n">cell_dimensions</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cell</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">actual_mesh_spacing</span> <span class="o">=</span> <span class="p">(</span><span class="n">cell_dimensions</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">ns_mesh</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+
+        <span class="n">kh</span> <span class="o">=</span> <span class="n">kvectors</span> <span class="o">*</span> <span class="n">actual_mesh_spacing</span>
+        <span class="n">U2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_charge_assignment</span><span class="p">(</span><span class="n">kh</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="c1"># special (much simpler) case for point-charge potentials</span>
+            <span class="n">masked</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">U2</span> <span class="o">==</span> <span class="mi">0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="n">U2</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">U2</span> <span class="o">==</span> <span class="mi">0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">reciprocal</span><span class="p">(</span><span class="n">masked</span><span class="p">))</span>
+
+        <span class="n">D</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_differential_operator</span><span class="p">(</span><span class="n">kh</span><span class="p">,</span> <span class="n">actual_mesh_spacing</span><span class="p">)</span>
+        <span class="n">D_to_4mode</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">D</span><span class="p">,</span> <span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span> <span class="o">**</span> <span class="p">(</span><span class="mi">4</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="p">)</span>
+
+        <span class="c1"># Calculate (part of) the kernel See eq.30 of this paper</span>
+        <span class="c1"># https://doi.org/10.1063/1.3000389 for your main reference, as well as the</span>
+        <span class="c1"># paragraph below eq.31. Be careful that the reference force part is calculated</span>
+        <span class="c1"># in the `KSpaceFilter` by calling `kernel_from_k_sq`.</span>
+        <span class="n">numerator</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">kvectors</span> <span class="o">*</span> <span class="n">D</span><span class="p">,</span> <span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span> <span class="o">**</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span>
+        <span class="n">denominator</span> <span class="o">=</span> <span class="n">U2</span> <span class="o">*</span> <span class="n">D_to_4mode</span>
+
+        <span class="n">masked</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">denominator</span> <span class="o">==</span> <span class="mi">0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="n">denominator</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">denominator</span> <span class="o">==</span> <span class="mi">0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="n">numerator</span> <span class="o">/</span> <span class="n">masked</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_differential_operator</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">kh</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">actual_mesh_spacing</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        The approximation to the differential operator ``ik``. The ``i`` is taken out</span>
+<span class="sd">        and cancels with the prefactor ``-i`` of the reference force function (in our</span>
+<span class="sd">        code, this is the kernel of `Potential`). See the Appendix C of this paper</span>
+<span class="sd">        http://dx.doi.org/10.1063/1.477414.</span>
+
+<span class="sd">        From shape (nx, ny, nz, 3) to shape (nx, ny, nz, 3)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">temp</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">kh</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">kh</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">kh</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">coef</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_diff_coeff</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">differential_order</span> <span class="o">-</span> <span class="mi">1</span><span class="p">][:</span> <span class="bp">self</span><span class="o">.</span><span class="n">differential_order</span><span class="p">]</span>
+        <span class="p">):</span>
+            <span class="n">temp</span> <span class="o">+=</span> <span class="p">(</span><span class="n">coef</span> <span class="o">/</span> <span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span> <span class="o">*</span> <span class="n">torch</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">kh</span> <span class="o">*</span> <span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">temp</span> <span class="o">/</span> <span class="p">(</span><span class="n">actual_mesh_spacing</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_charge_assignment</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">kh</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        The Fourier transformed charge assignment function divided by the volume of one</span>
+<span class="sd">        mesh cell, in a squared form. See eq.18 and the paragraph below eq.31 of this</span>
+<span class="sd">        paper http://dx.doi.org/10.1063/1.477414. Be aware that the volume cancels out</span>
+<span class="sd">        with the prefactor of the assignment function (see eq.18).</span>
+
+<span class="sd">        From shape (nx, ny, nz, 3) to shape (nx, ny, nz, nd)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span>
+            <span class="n">torch</span><span class="o">.</span><span class="n">sinc</span><span class="p">(</span><span class="n">kh</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">torch</span><span class="o">.</span><span class="n">pi</span><span class="p">)),</span>
+            <span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span>
+        <span class="p">)</span> <span class="o">**</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">interpolation_nodes</span> <span class="o">*</span> <span class="mi">2</span><span class="p">)</span>
+
+    <span class="n">update</span><span class="o">.</span><span class="vm">__doc__</span> <span class="o">=</span> <span class="n">KSpaceFilter</span><span class="o">.</span><span class="n">update</span><span class="o">.</span><span class="vm">__doc__</span></div>
+
+</pre></div>
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          
+          
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2025, torch-pme developers
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            <div class="icons">
+              <a class="muted-link fa-brands fa-github fa-2x" href="https://github.com/lab-cosmo/torch-pme" aria-label="GitHub"></a>
+              
+            </div>
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer no-toc">
+      
+      
+      
+    </aside>
+  </div>
+</div><script src="../../../_static/documentation_options.js?v=71d9d8e6"></script>
+    <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>
+    <script src="../../../_static/toggleprompt.js?v=5801b3bb"></script>
+    <script src="../../../_static/design-tabs.js?v=f930bc37"></script>
+    </body>
+</html>

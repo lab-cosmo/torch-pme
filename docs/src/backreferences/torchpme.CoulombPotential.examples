@@ -1,0 +1,63 @@
+
+
+Examples using ``torchpme.CoulombPotential``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+.. start-sphx-glr-thumbnails
+
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbnails">
+
+.. thumbnail-parent-div-open
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip=":Authors: Michele Ceriotti @ceriottm">
+
+.. only:: html
+
+  .. image:: /examples/images/thumb/sphx_glr_6-splined-potential_thumb.png
+    :alt:
+
+  :ref:`sphx_glr_examples_6-splined-potential.py`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">Splined potentials</div>
+    </div>
+
+
+.. only:: not html
+
+ * :ref:`sphx_glr_examples_6-splined-potential.py`
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="In this example, we demonstrate how to construct a metatensor atomistic model  based on the metatensor interface &lt;metatensor&gt; of torchpme. The model will be used to run a very short molecular dynamics (MD) simulation of a non-neutral hydroden plasma in a cubic box. The plasma consists of massive point particles which are interacting pairwise via a Coulomb force which we compute using the EwaldCalculator.">
+
+.. only:: html
+
+  .. image:: /examples/images/thumb/sphx_glr_9-atomistic-model_thumb.png
+    :alt:
+
+  :ref:`sphx_glr_examples_9-atomistic-model.py`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">Atomistic model for molecular dynamics</div>
+    </div>
+
+
+.. only:: not html
+
+ * :ref:`sphx_glr_examples_9-atomistic-model.py`
+
+.. thumbnail-parent-div-close
+
+.. raw:: html
+
+    </div>
+
