@@ -8,6 +8,7 @@ from torch.testing import assert_close
 from torchpme.lib import (
     generate_kvectors_for_ewald,
     generate_kvectors_for_mesh,
+    get_ns_ewald,
     get_ns_mesh,
 )
 
@@ -107,6 +108,42 @@ def test_lenghts_of_kvectors(cell, ns, kvec_type):
         norms_all = torch.linalg.norm(kvectors, dim=1).flatten()
 
     assert torch.all(norms_all < norm_bound)
+
+
+def _ewald_integer_coefficients(cell, lr_wavelength):
+    ns = get_ns_ewald(cell, lr_wavelength)
+    kvectors = generate_kvectors_for_ewald(cell=cell, ns=ns)
+    n = torch.round(kvectors @ cell.T / (2 * torch.pi)).long()
+    return {tuple(row) for row in n.tolist()}
+
+
+@pytest.mark.parametrize("cell", cells)
+def test_ewald_kvectors_cover_wavelength_sphere(cell):
+    """
+    All k with wavelength >= lr_wavelength, i.e. |k| <= 2 pi / lr_wavelength, are
+    generated, also for skewed cells.
+    """
+    lr_wavelength = float(torch.linalg.norm(cell, dim=1).max()) / 4
+    generated = _ewald_integer_coefficients(cell, lr_wavelength)
+
+    # brute force over a box that is guaranteed to contain the sphere
+    reciprocal_cell = 2 * torch.pi * cell.inverse().T
+    m = int(torch.linalg.norm(cell, dim=1).max() / lr_wavelength) + 2
+    r = torch.arange(-m, m + 1)
+    n = torch.cartesian_prod(r, r, r)
+    k_norm = torch.linalg.norm(n.to(cell.dtype) @ reciprocal_cell, dim=1)
+    inside = n[k_norm <= 2 * torch.pi / lr_wavelength]
+
+    missing = {tuple(row) for row in inside.tolist()} - generated
+    assert not missing
+
+
+@pytest.mark.parametrize("cell", cells)
+def test_ewald_kvectors_are_symmetric(cell):
+    """For every k also -k is generated, so no shell enters with half weight."""
+    lr_wavelength = float(torch.linalg.norm(cell, dim=1).min()) / 3
+    generated = _ewald_integer_coefficients(cell, lr_wavelength)
+    assert generated == {tuple(-x for x in n) for n in generated}
 
 
 # Tests that errors are raised when the inputs are of the wrong shape or have

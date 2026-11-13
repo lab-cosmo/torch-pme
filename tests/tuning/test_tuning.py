@@ -47,6 +47,24 @@ def test_TunerBase_init(device, dtype):
     )
 
 
+def test_estimate_smearing_accuracy_is_in_prefactor_units():
+    """``accuracy`` is an absolute force error in the units set by ``prefactor``."""
+    charges, cell, positions = system()
+
+    def smearing(accuracy, prefactor):
+        tuner = TunerBase(
+            charges,
+            cell,
+            positions,
+            DEFAULT_CUTOFF,
+            EwaldCalculator,
+            prefactor=prefactor,
+        )
+        return tuner.estimate_smearing(accuracy)
+
+    assert smearing(14.4e-3, 14.4) == pytest.approx(smearing(1e-3, 1.0))
+
+
 @pytest.mark.parametrize("device", DEVICES)
 @pytest.mark.parametrize("dtype", DTYPES)
 @pytest.mark.parametrize(

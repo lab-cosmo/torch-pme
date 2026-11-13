@@ -1,6 +1,6 @@
 import torch
 
-from ..lib import generate_kvectors_for_ewald
+from ..lib import generate_kvectors_for_ewald, get_ns_ewald
 from ..potentials import Potential
 from .calculator import Calculator
 
@@ -45,9 +45,7 @@ class EwaldCalculator(Calculator):
         most systems is to set it to ``1/5`` times the neighbor list cutoff.
     :param lr_wavelength: Spatial resolution used for the long-range (reciprocal space)
         part of the Ewald sum. More concretely, all Fourier space vectors with a
-        wavelength >= this value will be kept. If not set to a global value, it will be
-        set to half the smearing parameter to ensure convergence of the
-        long-range part to a relative precision of 1e-5.
+        wavelength >= this value will be kept.
     :param full_neighbor_list: If set to :obj:`True`, a "full" neighbor list is
         expected as input. This means that each atom pair appears twice. If set to
         :obj:`False`, a "half" neighbor list is expected.
@@ -82,17 +80,8 @@ class EwaldCalculator(Calculator):
         kvectors: torch.Tensor | None = None,
         node_mask: torch.Tensor | None = None,
     ) -> torch.Tensor:
-        # Define k-space cutoff from required real-space resolution
         if kvectors is None:
-            k_cutoff = 2 * torch.pi / self.lr_wavelength
-
-            # Compute number of times each basis vector of the reciprocal space can be
-            # scaled until the cutoff is reached
-            basis_norms = torch.linalg.norm(cell, dim=1)
-            ns_float = k_cutoff * basis_norms / 2 / torch.pi
-            ns = torch.ceil(ns_float).long()
-
-            # Generate k-vectors and evaluate
+            ns = get_ns_ewald(cell, self.lr_wavelength)
             kvectors = generate_kvectors_for_ewald(ns=ns, cell=cell)
 
         knorm_sq = torch.sum(kvectors**2, dim=-1)

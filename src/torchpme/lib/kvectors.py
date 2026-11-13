@@ -21,6 +21,28 @@ def get_ns_mesh(cell: torch.Tensor, mesh_spacing: float):
     return torch.pow(2, torch.ceil(torch.log2(ns_actual_approx)).long())
 
 
+def get_ns_ewald(cell: torch.Tensor, lr_wavelength: float) -> torch.Tensor:
+    r"""
+    Number of k-points per reciprocal direction for an Ewald sum that keeps all
+    reciprocal space vectors with a wavelength :math:`\geq` ``lr_wavelength``, i.e.
+    :math:`|\mathbf{k}| \leq 2\pi / \lambda`.
+
+    For :math:`\mathbf{k} = \sum_j n_j \mathbf{b}_j` the integer coefficients obey
+    :math:`|n_j| = |\mathbf{k} \cdot \mathbf{a}_j| / 2\pi \leq |\mathbf{a}_j| /
+    \lambda`, so keeping :math:`|n_j| \leq m_j = \lceil |\mathbf{a}_j| / \lambda
+    \rceil` covers the sphere for any cell shape. An odd ``ns = 2 m + 1`` makes
+    :func:`torch.fft.fftfreq` return the symmetric range :math:`-m, \dots, m`.
+
+    :param cell: torch.tensor of shape ``(3, 3)``, where ``cell[i]`` is the i-th basis
+        vector of the unit cell
+    :param lr_wavelength: smallest wavelength that is kept in the Fourier sum
+
+    :return: torch.tensor of length 3 containing the number of k-points
+    """
+    basis_norms = torch.linalg.norm(cell, dim=1)
+    return 2 * torch.ceil(basis_norms / lr_wavelength).long() + 1
+
+
 def _generate_kvectors(
     cell: torch.Tensor, ns: torch.Tensor, for_ewald: bool
 ) -> torch.Tensor:
@@ -145,19 +167,14 @@ def compute_batched_kvectors(
 
     :param lr_wavelength: Spatial resolution used for the long-range (reciprocal space)
         part of the Ewald sum. More concretely, all Fourier space vectors with a
-        wavelength >= this value will be kept. If not set to a global value, it will be
-        set to half the smearing parameter to ensure convergence of the
-        long-range part to a relative precision of 1e-5.
-    :param cell: torch.tensor of shape ``(B, 3, 3)``, where ``cell[i]`` is the i-th
+        wavelength >= this value will be kept.
+    :param cells: torch.tensor of shape ``(B, 3, 3)``, where ``cell[i]`` is the i-th
         basis vector of the unit cell for system i in the batch of size B.
 
     """
     all_kvectors = []
-    k_cutoff = 2 * torch.pi / lr_wavelength
     for cell in cells:
-        basis_norms = torch.linalg.norm(cell, dim=1)
-        ns_float = k_cutoff * basis_norms / 2 / torch.pi
-        ns = torch.ceil(ns_float).long()
+        ns = get_ns_ewald(cell, lr_wavelength)
         kvectors = generate_kvectors_for_ewald(ns=ns, cell=cell)
         all_kvectors.append(kvectors)
     # We do not return masks here; instead, we rely on the fact that for the Coulomb

@@ -2,6 +2,7 @@ Kvectors
 ########
 
 .. autofunction:: torchpme.lib.get_ns_mesh
+.. autofunction:: torchpme.lib.get_ns_ewald
 .. autofunction:: torchpme.lib.generate_kvectors_for_mesh
 .. autofunction:: torchpme.lib.generate_kvectors_for_ewald
 

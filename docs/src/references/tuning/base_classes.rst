@@ -6,7 +6,7 @@ space parameters like ``lr_wavelength``, ``mesh_spacing`` and ``interpolation_no
 For real space parameter ``cutoff``, it is treated as a hyperparameter here, which
 should be manually specified by the user. The parameter ``smearing`` is determined by
 the real space error formula and is set to achieve a real space error of
-``desired_accuracy / 4``.
+``desired_accuracy / 2``.
 
 The Fourier space parameters are all discrete, so it's convenient to do the grid-search.
 Default searching-ranges are provided for those parameters. For ``lr_wavelength``, the

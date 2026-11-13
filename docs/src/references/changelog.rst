@@ -28,12 +28,26 @@ Added
 #####
 
 * Support for Python 3.15.
+* ``torchpme.lib.get_ns_ewald`` computes the k-grid size for a given
+  ``lr_wavelength``.
 
 Fixed
 #####
 
 * ``InversePowerLawPotential`` can be compiled with TorchScript again with torch
   2.14 and later. ``exp1`` no longer uses a custom ``torch.autograd.Function``.
+* ``EwaldCalculator``, ``CalculatorDipole`` and ``compute_batched_kvectors`` now keep
+  all k-vectors with a wavelength >= ``lr_wavelength``, as documented. Before, only
+  about half of that k-range was used, so a given ``lr_wavelength`` now uses roughly
+  8x more k-vectors and gives more accurate but slower results. Parameters set by
+  hand SHOULD be re-tuned.
+* The Fourier space error bound of ``EwaldErrorBounds`` scaled with the square root
+  of the squared charges and assumed the documented k-range; it now follows Kolafa
+  and Perram and is linear in ``prefactor * sum(charges**2)`` (#215).
+* The error bounds and ``estimate_smearing`` of the tuners now include
+  ``prefactor``, so ``accuracy`` is an absolute RMS force error in the units it
+  sets, as in ESPResSo. Before, the actual error was ``prefactor`` times larger than
+  the requested ``accuracy``.
 
 `Version 0.5.0 <https://github.com/lab-cosmo/torch-pme/releases/tag/v0.5.0>`_ - 2026-06-30
 ------------------------------------------------------------------------------------------
