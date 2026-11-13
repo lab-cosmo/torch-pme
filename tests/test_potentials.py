@@ -90,8 +90,9 @@ def test_pbc_correction_physical_system(potential_cls, axis):
     double as the first dedicated tests for `pbc_correction`.
     """
     potential = potential_cls(
-        smearing=None, prefactor=1.0,
-        **( {"exponent": 1} if potential_cls is InversePowerLawPotential else {} )
+        smearing=None,
+        prefactor=1.0,
+        **({"exponent": 1} if potential_cls is InversePowerLawPotential else {}),
     ).to(dtype=dtype)
 
     def energy_force(cell, positions, charges):
