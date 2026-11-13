@@ -94,6 +94,8 @@ filterwarnings = [
     # Numpy deprecation warnings from ase
     "ignore:Setting the shape on a NumPy array has been deprecated in NumPy 2.5.:DeprecationWarning",
     "ignore:`torch.jit\\..+` is (deprecated|not supported in Python 3.14\\+)",
+    # GitHub macOS runner VMs lack Metal 2
+    "ignore:Skipping device .* that does not support Metal:UserWarning",
 ]
 
 [tool.ruff]
