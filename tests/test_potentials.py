@@ -59,6 +59,114 @@ SQRT2 = torch.sqrt(torch.tensor(2.0, dtype=dtype))
 PI = torch.tensor(torch.pi, dtype=dtype)
 
 
+@pytest.mark.parametrize("potential_cls", [CoulombPotential, InversePowerLawPotential])
+@pytest.mark.parametrize("axis", [0, 1, 2])
+def test_pbc_correction_physical_system(potential_cls, axis):
+    """Analytic slab-correction energy/forces for a single charge and a dipole.
+
+    The slab correction projects positions onto the normal of the two periodic
+    lattice vectors:
+
+        z_i = (positions_i @ normal) / area,  normal = cross(cell[a], cell[b])
+
+    and evaluates (with prefactor factored out)
+
+        corr_i = (4 pi / V) * (z_i * M_axis
+                               - 0.5 * (M_axis_sq + charge_tot * z_i**2)
+                               - charge_tot / 12 * basis_len**2),
+        energy = sum_i charges_i * corr_i / 2,
+
+    where M_axis = sum_i charges_i * z_i, M_axis_sq = sum_i charges_i * z_i**2,
+    charge_tot = sum_i charges_i, V = |det(cell)|, basis_len = V / area.
+
+    For a single charge q the z-dependent terms cancel, giving
+    energy = -pi q^2 V / (12 area^2) and zero force. For a neutral dipole
+    (+q at r1, -q at r2) with charge_tot = 0 and dipole separation d_z along
+    the normal, energy = 2 pi q^2 d_z^2 / V and the forces are equal and
+    opposite along the normal.
+
+    The cell is then scaled and rotated together with the positions: for a
+    neutral system the energy is invariant under rotation and scales as 1/s
+    under a uniform scale s, while forces rotate with the cell. These checks
+    double as the first dedicated tests for `pbc_correction`.
+    """
+    potential = potential_cls(
+        smearing=None,
+        prefactor=1.0,
+        **({"exponent": 1} if potential_cls is InversePowerLawPotential else {}),
+    ).to(dtype=dtype)
+
+    def energy_force(cell, positions, charges):
+        positions = positions.requires_grad_()
+        periodic = torch.arange(3) != axis
+        correction = potential.pbc_correction(
+            periodic=periodic, positions=positions, cell=cell, charges=charges
+        )
+        energy = (charges * correction).sum(dim=0) / 2
+        force = -torch.autograd.grad(energy.sum(), positions)[0]
+        return energy[0], force
+
+    # Skew (non-cubic) cell with the chosen axis as the nonperiodic direction.
+    cell = torch.tensor(
+        [[4.0, 0.0, 0.0], [0.5, 5.0, 0.0], [0.9, -0.4, 12.0]], dtype=dtype
+    )
+    periodic_axes = [i for i in range(3) if i != axis]
+    plane = torch.index_select(cell, 0, torch.tensor(periodic_axes, dtype=torch.long))
+    normal = torch.linalg.cross(plane[0], plane[1])
+    area = torch.linalg.vector_norm(normal)
+    volume = torch.abs(torch.linalg.det(cell))
+    basis_len = volume / area
+
+    q = torch.tensor(2.0, dtype=dtype)
+
+    # --- single charge: energy = -pi q^2 V / (6 area^2), force = 0 ---
+    r = torch.tensor([0.2, 0.3, 1.0], dtype=dtype)
+    energy_single = -(torch.pi * q**2 * volume) / (6 * area**2)
+    e, f = energy_force(cell, r.unsqueeze(0), q.unsqueeze(0))
+    assert_close(e, energy_single, rtol=1e-13, atol=1e-13)
+    assert_close(f, torch.zeros_like(f), rtol=1e-13, atol=1e-13)
+
+    # --- dipole: +q at r1, -q at r2 ---
+    d = torch.tensor([0.7, -0.4, 0.6], dtype=dtype)
+    r1 = torch.tensor([0.2, 0.3, 1.0], dtype=dtype)
+    r2 = r1 - d
+    dz = (d @ normal) / area
+    energy_dipole = 2 * torch.pi * q**2 * dz**2 / volume
+    charges = torch.tensor([[q], [-q]], dtype=dtype)
+    positions = torch.stack([r1, r2])
+    e, f = energy_force(cell, positions, charges)
+    assert_close(e, energy_dipole, rtol=1e-13, atol=1e-13)
+    # equal and opposite forces along the normal
+    normal_hat = normal / area
+    expected_f1 = -(4 * torch.pi * q**2 * dz / volume) * normal_hat
+    assert_close(f[0], expected_f1, rtol=1e-13, atol=1e-13)
+    assert_close(f[1], -expected_f1, rtol=1e-13, atol=1e-13)
+
+    # --- rotation invariance: energy unchanged, forces rotate ---
+    rotation = torch.tensor(
+        [[0.8, -0.6, 0.0], [0.48, 0.64, -0.6], [0.36, 0.48, 0.8]],
+        dtype=dtype,
+    )
+    cell_r = cell @ rotation.T
+    positions_r = positions @ rotation.T
+    e_r, f_r = energy_force(cell_r, positions_r, charges)
+    assert_close(e_r, e, rtol=1e-13, atol=1e-13)
+    assert_close(f_r, f @ rotation.T, rtol=1e-13, atol=1e-13)
+    # single charge under rotation
+    e_sr, f_sr = energy_force(cell_r, (r @ rotation.T).unsqueeze(0), q.unsqueeze(0))
+    assert_close(e_sr, energy_single, rtol=1e-13, atol=1e-13)
+    assert_close(f_sr, torch.zeros_like(f_sr), rtol=1e-13, atol=1e-13)
+
+    # --- uniform scale s (neutral dipole): energy scales as 1/s ---
+    s = torch.tensor(1.5, dtype=dtype)
+    cell_s = cell * s
+    positions_s = positions * s
+    e_s, f_s = energy_force(cell_s, positions_s, charges)
+    assert_close(e_s, e / s, rtol=1e-13, atol=1e-13)
+    # forces scale as 1/s^2 and keep their direction relative to the scaled cell
+    assert_close(f_s, f / s**2, rtol=1e-13, atol=1e-13)
+
+
 @pytest.mark.parametrize("smearing", smearinges)
 @pytest.mark.parametrize("exponent", ps)
 def test_sr_lr_split(exponent, smearing):
