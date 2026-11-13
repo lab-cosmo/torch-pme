@@ -19,6 +19,8 @@ jobs:
       - name: setup Python
         uses: actions/setup-python@v7
         with:
+          # TODO: move to 3.15 once metatensor-torch and metatomic-torch allow
+          # torch >= 2.15, the first release with Python 3.15 wheels.
           python-version: "3.14"
       - name: install dependencies
         run: python -m pip install tox
