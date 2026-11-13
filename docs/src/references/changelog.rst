@@ -36,6 +36,7 @@ Fixed
 
 * ``InversePowerLawPotential`` can be compiled with TorchScript again with torch
   2.14 and later. ``exp1`` no longer uses a custom ``torch.autograd.Function``.
+* ``CalculatorDipole`` can be compiled with TorchScript.
 * ``EwaldCalculator``, ``CalculatorDipole`` and ``compute_batched_kvectors`` now keep
   all k-vectors with a wavelength >= ``lr_wavelength``, as documented. Before, only
   about half of that k-range was used, so a given ``lr_wavelength`` now uses roughly

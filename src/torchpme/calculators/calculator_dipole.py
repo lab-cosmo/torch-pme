@@ -162,7 +162,7 @@ class CalculatorDipole(torch.nn.Module):
             cell=cell,
             positions=positions,
             neighbor_indices=neighbor_indices,
-            neighbor_distances=neighbor_vectors.norm(dim=-1),
+            neighbor_distances=torch.linalg.norm(neighbor_vectors, dim=-1),
         )
 
         # Compute short-range (SR) part using a real space sum

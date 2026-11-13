@@ -96,6 +96,17 @@ class TestDipoles:
         expected_result = sr_potential.to(dtype=dtype, device=device)
         torch.testing.assert_close(result, expected_result)
 
+    def test_magnetostatic_ewald_torch_script(self, device, dtype):
+        """The scripted calculator gives the same potential as the eager one."""
+        calculator = CalculatorDipole(
+            potential=PotentialDipole(smearing=0.7), lr_wavelength=1.0
+        )
+        calculator.to(device=device, dtype=dtype)
+        system = self.parallel_dipoles(device=device, dtype=dtype)
+        torch.testing.assert_close(
+            torch.jit.script(calculator)(*system), calculator(*system)
+        )
+
     def test_magnetostatic_ewald(self, device, dtype):
         alpha = 1.0
         smearing = (

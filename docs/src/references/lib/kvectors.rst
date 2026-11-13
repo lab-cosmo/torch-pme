@@ -13,6 +13,6 @@ Examples using Kvectors
 .. minigallery::
 
     torchpme.lib.get_ns_mesh
-    orchpme.lib.generate_kvectors_for_mesh
+    torchpme.lib.generate_kvectors_for_mesh
     torchpme.lib.generate_kvectors_for_ewald
 
