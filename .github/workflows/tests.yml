@@ -12,14 +12,14 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: ubuntu-22.04
+          - os: ubuntu-26.04
             python-version: "3.10"
-          - os: ubuntu-22.04
-            python-version: "3.14"
-          - os: macos-14
-            python-version: "3.14"
-          - os: windows-2022
-            python-version: "3.14"
+          - os: ubuntu-26.04
+            python-version: "3.15"
+          - os: macos-26
+            python-version: "3.15"
+          - os: windows-2025
+            python-version: "3.15"
 
     steps:
     - uses: actions/checkout@v7
@@ -41,13 +41,15 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: ubuntu-22.04
+          - os: ubuntu-26.04
             python-version: "3.10"
-          - os: ubuntu-22.04
+          # TODO: move to 3.15 once metatensor-torch and metatomic-torch allow
+          # torch >= 2.15, the first release with Python 3.15 wheels.
+          - os: ubuntu-26.04
             python-version: "3.14"
-          - os: macos-14
+          - os: macos-26
             python-version: "3.14"
-          - os: windows-2022
+          - os: windows-2025
             python-version: "3.14"
 
     steps:

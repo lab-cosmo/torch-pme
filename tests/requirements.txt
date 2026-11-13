@@ -5,4 +5,3 @@ pytest-cov
 pytest-doctestplus
 scipy
 vesin >= 0.3.0
-vesin[torch] >= 0.3.0

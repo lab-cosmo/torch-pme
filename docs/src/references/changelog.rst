@@ -24,9 +24,16 @@ changelog <https://keepachangelog.com/en/1.1.0/>`_ format. This project follows
 `Unreleased <https://github.com/lab-cosmo/torch-pme/>`_
 -------------------------------------------------------
 
+Added
+#####
+
+* Support for Python 3.15.
+
 Fixed
 #####
 
+* ``InversePowerLawPotential`` can be compiled with TorchScript again with torch
+  2.14 and later. ``exp1`` no longer uses a custom ``torch.autograd.Function``.
 * Slab electrostatic corrections now use the periodic plane's normal and
   perpendicular cell height, preserving energies and forces under rigid rotations
   and nonorthogonal cell choices.
