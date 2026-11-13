@@ -141,7 +141,7 @@ pair_mask = (
 # Initialize Ewald calculator
 calculator = torchpme.EwaldCalculator(
     torchpme.CoulombPotential(smearing=0.5),
-    lr_wavelength=4.0,
+    lr_wavelength=8.0,
 )
 calculator.to(dtype=dtype)
 

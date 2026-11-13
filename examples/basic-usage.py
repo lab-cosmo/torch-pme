@@ -117,7 +117,7 @@ box_length = cell[0, 0]
 rcut = float(box_length) / 2 - 1e-10
 smearing = rcut / 5
 # lambda which gives the reciprocal space cutoff kcut=2*pi/lambda
-lr_wavelength = smearing / 2
+lr_wavelength = smearing
 
 # %%
 #

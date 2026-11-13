@@ -16,7 +16,7 @@ from helpers import DEVICES, DTYPES
 mts_torch = pytest.importorskip("metatensor.torch")
 mta_torch = pytest.importorskip("metatomic.torch")
 
-SMEARING = 0.1
+SMEARING = 1.0
 LR_WAVELENGTH = SMEARING / 4
 MESH_SPACING = SMEARING / 4
 

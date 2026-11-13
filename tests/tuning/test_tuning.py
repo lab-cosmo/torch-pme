@@ -11,7 +11,7 @@ from torchpme import (
     PMECalculator,
 )
 from torchpme.tuning import tune_ewald, tune_p3m, tune_pme
-from torchpme.tuning.tuner import TunerBase
+from torchpme.tuning.tuner import TunerBase, TuningTimings
 
 sys.path.append(str(Path(__file__).parents[1]))
 from helpers import DEVICES, DTYPES, define_crystal, neighbor_list
@@ -78,12 +78,24 @@ def test_estimate_smearing_accuracy_is_in_prefactor_units():
 @pytest.mark.parametrize("accuracy", [1e-1, 1e-3, 1e-5])
 @pytest.mark.parametrize("full_neighbor_list", [True, False])
 def test_parameter_choose(
-    device, dtype, calculator, tune, param_length, accuracy, full_neighbor_list
+    device,
+    dtype,
+    calculator,
+    tune,
+    param_length,
+    accuracy,
+    full_neighbor_list,
+    monkeypatch,
 ):
     """
     Check that the Madelung constants obtained from the Ewald sum calculator matches
     the reference values and that all branches of the from_accuracy method are covered.
+
+    Benchmarking every candidate takes ~99% of the runtime but plays no role for the
+    accuracy. With equal timings the tuner deterministically returns the first, i.e.
+    coarsest, parameter set that meets the accuracy, which is the strictest case.
     """
+    monkeypatch.setattr(TuningTimings, "forward", lambda self, calculator: 1.0)
     # Get input parameters and adjust to account for scaling
     pos, charges, cell, madelung_ref, num_units = define_crystal(
         dtype=dtype, device=device
@@ -128,6 +140,25 @@ def test_parameter_choose(
     madelung = -torch.sum(energies) / num_units
 
     torch.testing.assert_close(madelung, madelung_ref, atol=0, rtol=accuracy)
+
+
+@pytest.mark.parametrize("tune", [tune_ewald, tune_pme, tune_p3m])
+def test_tune_returns_measured_timing(tune):
+    """The tuners time the calculators they pick from."""
+    pos, charges, cell, _, _ = define_crystal()
+    neighbor_indices, neighbor_distances = neighbor_list(
+        positions=pos, box=cell, cutoff=DEFAULT_CUTOFF
+    )
+    _, _, timing = tune(
+        charges,
+        cell,
+        pos,
+        DEFAULT_CUTOFF,
+        neighbor_indices=neighbor_indices,
+        neighbor_distances=neighbor_distances,
+        accuracy=1e-1,
+    )
+    assert 0.0 < timing < float("inf")
 
 
 @pytest.mark.parametrize("device", DEVICES)

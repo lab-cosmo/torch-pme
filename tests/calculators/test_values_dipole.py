@@ -115,7 +115,7 @@ class TestDipoles:
         calculator = CalculatorDipole(
             potential=PotentialDipole(smearing=smearing),
             full_neighbor_list=False,
-            lr_wavelength=0.1,  # this value is heuristic
+            lr_wavelength=0.2,  # this value is heuristic
         )
         calculator.to(device=device, dtype=dtype)
         pot = calculator(*self.parallel_dipoles(device=device, dtype=dtype))
@@ -139,7 +139,7 @@ class TestDipoles:
         calc = CalculatorDipole(
             potential=PotentialDipole(smearing=smearing, prefactor=eV_A),
             full_neighbor_list=False,
-            lr_wavelength=0.1,
+            lr_wavelength=0.2,
         )
         calc.to(device=device, dtype=dtype)
         positions = torch.tensor(frame.get_positions(), dtype=dtype, device=device)
