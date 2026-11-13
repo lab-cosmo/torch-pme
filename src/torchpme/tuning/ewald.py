@@ -172,7 +172,8 @@ class EwaldErrorBounds(TuningErrorBounds):
         :param lr_wavelength: see :class:`torchpme.EwaldCalculator` for details
         """
         return (
-            self.prefac**0.5
+            self.prefac
+            * 0.5
             / smearing
             / torch.pi
             / torch.sqrt(self.volume / lr_wavelength)
