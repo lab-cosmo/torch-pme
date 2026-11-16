@@ -62,7 +62,8 @@ PI = torch.tensor(torch.pi, dtype=dtype)
 @pytest.mark.parametrize("potential_cls", [CoulombPotential, InversePowerLawPotential])
 @pytest.mark.parametrize("axis", [0, 1, 2])
 def test_pbc_correction_physical_system(potential_cls, axis):
-    """Analytic slab-correction energy/forces for a single charge and a dipole.
+    """
+    Analytic slab-correction energy/forces for a single charge and a dipole.
 
     The slab correction projects positions onto the normal of the two periodic
     lattice vectors:
@@ -115,7 +116,6 @@ def test_pbc_correction_physical_system(potential_cls, axis):
     normal = torch.linalg.cross(plane[0], plane[1])
     area = torch.linalg.vector_norm(normal)
     volume = torch.abs(torch.linalg.det(cell))
-    basis_len = volume / area
 
     q = torch.tensor(2.0, dtype=dtype)
 
