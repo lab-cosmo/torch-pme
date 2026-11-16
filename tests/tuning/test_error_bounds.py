@@ -74,10 +74,7 @@ def test_error_bounds_scale_with_prefactor_times_charge_squared(
 
 
 def test_ewald_kspace_error_bounds_actual_force_error():
-    """
-    The Ewald k-space bound must be an upper bound of the actual RMS force error,
-    but not a uselessly loose one.
-    """
+    """The Ewald k-space bound lies within 30x above the actual RMS force error."""
     torch.manual_seed(0)
     n_atoms, box_length, smearing, cutoff = 64, 6.0, 0.6, 2.95
     cell = torch.eye(3, dtype=torch.float64) * box_length

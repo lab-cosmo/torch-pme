@@ -36,11 +36,10 @@ class CalculatorDipole(torch.nn.Module):
         self.potential = potential
         self.lr_wavelength = lr_wavelength
 
-        assert (
-            self.lr_wavelength is not None
-            and self.potential.smearing is not None
-            or (self.lr_wavelength is None and self.potential.smearing is None)
-        ), "Either both `lr_wavelength` and `smearing` must be set or both must be None"
+        if (lr_wavelength is None) != (potential.smearing is None):
+            raise ValueError(
+                "`lr_wavelength` and `smearing` must either both be set or both be None"
+            )
 
         self.full_neighbor_list = full_neighbor_list
 
@@ -90,9 +89,11 @@ class CalculatorDipole(torch.nn.Module):
         cell: torch.Tensor,
         positions: torch.Tensor,
     ) -> torch.Tensor:
-        # only reached with a smearing, which __init__ ties to a set lr_wavelength
-        assert self.lr_wavelength is not None
-        ns = get_ns_ewald(cell, self.lr_wavelength)
+        # __init__ ties a set smearing to a set lr_wavelength; the local variable lets
+        # TorchScript narrow the Optional type
+        lr_wavelength = self.lr_wavelength
+        assert lr_wavelength is not None
+        ns = get_ns_ewald(cell, lr_wavelength)
         kvectors = generate_kvectors_for_ewald(ns=ns, cell=cell)
         knorm_sq = torch.sum(kvectors**2, dim=1)
         # We remove the singularity at k=0 by explicitly setting its

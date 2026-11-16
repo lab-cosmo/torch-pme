@@ -23,9 +23,10 @@ def get_ns_mesh(cell: torch.Tensor, mesh_spacing: float):
 
 def get_ns_ewald(cell: torch.Tensor, lr_wavelength: float) -> torch.Tensor:
     r"""
-    Number of k-points per reciprocal direction for an Ewald sum that keeps all
-    reciprocal space vectors with a wavelength :math:`\geq` ``lr_wavelength``, i.e.
-    :math:`|\mathbf{k}| \leq 2\pi / \lambda`.
+    Compute the number of k-points per reciprocal direction for the Ewald sum.
+
+    The grid keeps all reciprocal space vectors with a wavelength :math:`\geq`
+    ``lr_wavelength``, i.e. :math:`|\mathbf{k}| \leq 2\pi / \lambda`.
 
     For :math:`\mathbf{k} = \sum_j n_j \mathbf{b}_j` the integer coefficients obey
     :math:`|n_j| = |\mathbf{k} \cdot \mathbf{a}_j| / 2\pi \leq |\mathbf{a}_j| /

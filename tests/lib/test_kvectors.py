@@ -119,10 +119,7 @@ def _ewald_integer_coefficients(cell, lr_wavelength):
 
 @pytest.mark.parametrize("cell", cells)
 def test_ewald_kvectors_cover_wavelength_sphere(cell):
-    """
-    All k with wavelength >= lr_wavelength, i.e. |k| <= 2 pi / lr_wavelength, are
-    generated, also for skewed cells.
-    """
+    """All k with |k| <= 2 pi / lr_wavelength are generated, also for skewed cells."""
     lr_wavelength = float(torch.linalg.norm(cell, dim=1).max()) / 4
     generated = _ewald_integer_coefficients(cell, lr_wavelength)
 

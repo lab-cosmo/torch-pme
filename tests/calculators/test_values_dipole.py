@@ -176,3 +176,16 @@ class TestDipoles:
         forces = -torch.autograd.grad(result, positions)[0]
         expected_forces = torch.tensor(force, dtype=dtype, device=device)
         torch.testing.assert_close(forces, expected_forces, atol=1e-5, rtol=1e-4)
+
+
+@pytest.mark.parametrize(
+    ("smearing", "lr_wavelength"),
+    [(1.0, None), (None, 1.0)],
+)
+def test_mismatched_smearing_and_lr_wavelength_raises(smearing, lr_wavelength):
+    """Range separation needs both ``smearing`` and ``lr_wavelength``."""
+    match = "`lr_wavelength` and `smearing` must either both be set or both be None"
+    with pytest.raises(ValueError, match=match):
+        CalculatorDipole(
+            potential=PotentialDipole(smearing=smearing), lr_wavelength=lr_wavelength
+        )

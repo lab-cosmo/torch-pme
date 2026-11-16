@@ -10,8 +10,8 @@ from torch.nn.utils.rnn import pad_sequence
 from torchpme import CoulombPotential, EwaldCalculator
 from torchpme.lib import compute_batched_kvectors
 
-# Same k-space cutoff as 4.0 had before `get_ns_ewald`; a finer one makes padding to
-# the largest k-set dominate the runtime and defeats the speed comparison below.
+# Coarse enough that padding every system to the largest k-set does not dominate the
+# runtime, which would defeat the speed comparison below.
 LR_WAVELENGTH = 8.0
 
 calc = EwaldCalculator(
