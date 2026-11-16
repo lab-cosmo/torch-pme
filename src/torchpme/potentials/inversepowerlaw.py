@@ -163,10 +163,17 @@ class InversePowerLawPotential(Potential):
         prefac /= (3 - self.exponent) * gamma(self.exponent / 2)
         return self.prefactor * prefac
 
-    def pbc_correction(self, periodic, positions, cell, charges):
+    def pbc_correction(
+        self,
+        periodic: torch.Tensor | None,
+        positions: torch.Tensor,
+        cell: torch.Tensor,
+        charges: torch.Tensor,
+    ) -> torch.Tensor:
         if self.exponent == 1:
             return self.prefactor * _pbc_correction(periodic, positions, cell, charges)
-        return super().pbc_correction(periodic, positions, cell, charges)
+        # same as `Potential.pbc_correction`; `super()` is not supported by TorchScript
+        return self.prefactor * torch.zeros_like(charges)
 
     self_contribution.__doc__ = Potential.self_contribution.__doc__
     background_correction.__doc__ = Potential.background_correction.__doc__
