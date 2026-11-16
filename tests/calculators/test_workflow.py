@@ -14,6 +14,7 @@ from torchpme import (
     Calculator,
     CoulombPotential,
     EwaldCalculator,
+    InversePowerLawPotential,
     P3MCalculator,
     PMECalculator,
 )
@@ -286,3 +287,44 @@ def test_kspace_filter_error_catch():
             neighbor_indices=neighbor_indices,
             neighbor_distances=neighbor_distances,
         )
+
+
+@pytest.mark.parametrize("exponent", [1, 2])
+@pytest.mark.parametrize(
+    ("CalculatorClass", "params"),
+    [
+        (EwaldCalculator, {"lr_wavelength": LR_WAVELENGTH}),
+        (PMECalculator, {"mesh_spacing": MESH_SPACING}),
+        (P3MCalculator, {"mesh_spacing": MESH_SPACING}),
+    ],
+)
+@pytest.mark.parametrize(
+    "periodic", [None, torch.tensor([True, True, False])], ids=["3d", "2d"]
+)
+def test_inverse_power_law_torch_script(CalculatorClass, params, exponent, periodic):
+    """
+    Calculators with an `InversePowerLawPotential` can be scripted, saved and loaded,
+    and give the same result as in eager mode.
+    """
+    calculator = CalculatorClass(
+        potential=InversePowerLawPotential(exponent=exponent, smearing=SMEARING),
+        **params,
+    )
+    calculator.to(dtype=torch.float64)
+
+    positions = torch.tensor([[0.1, 0.2, 0.3], [0.6, 0.4, 0.8]], dtype=torch.float64)
+    charges = torch.tensor([[1.0], [-1.0]], dtype=torch.float64)
+    cell = torch.eye(3, dtype=torch.float64)
+    neighbor_indices = torch.tensor([[0, 1]])
+    neighbor_distances = torch.linalg.norm(positions[1] - positions[0]).reshape(1)
+    inputs = (charges, cell, positions, neighbor_indices, neighbor_distances, periodic)
+
+    scripted = torch.jit.script(calculator)
+    with io.BytesIO() as buffer:
+        torch.jit.save(scripted, buffer)
+        buffer.seek(0)
+        loaded = torch.jit.load(buffer)
+
+    reference = calculator(*inputs)
+    torch.testing.assert_close(scripted(*inputs), reference)
+    torch.testing.assert_close(loaded(*inputs), reference)
