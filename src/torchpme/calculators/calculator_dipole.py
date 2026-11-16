@@ -2,7 +2,7 @@ import torch
 from torch import profiler
 
 from .._utils import _validate_parameters
-from ..lib import generate_kvectors_for_ewald
+from ..lib import generate_kvectors_for_ewald, get_ns_ewald
 from ..potentials import PotentialDipole
 
 
@@ -15,7 +15,9 @@ class CalculatorDipole(torch.nn.Module):
         well as the parameters that determine the behavior of the potential itself.
     :param full_neighbor_list: parameter indicating whether the neighbor information
         will come from a full (True) or half (False, default) neighbor list.
-    :param lr_wavelength: the wavelength of the long-range part of the potential.
+    :param lr_wavelength: Spatial resolution used for the long-range (reciprocal space)
+        part of the Ewald sum. All Fourier space vectors with a wavelength >= this
+        value will be kept.
     """
 
     def __init__(
@@ -34,11 +36,10 @@ class CalculatorDipole(torch.nn.Module):
         self.potential = potential
         self.lr_wavelength = lr_wavelength
 
-        assert (
-            self.lr_wavelength is not None
-            and self.potential.smearing is not None
-            or (self.lr_wavelength is None and self.potential.smearing is None)
-        ), "Either both `lr_wavelength` and `smearing` must be set or both must be None"
+        if (lr_wavelength is None) != (potential.smearing is None):
+            raise ValueError(
+                "`lr_wavelength` and `smearing` must either both be set or both be None"
+            )
 
         self.full_neighbor_list = full_neighbor_list
 
@@ -88,16 +89,11 @@ class CalculatorDipole(torch.nn.Module):
         cell: torch.Tensor,
         positions: torch.Tensor,
     ) -> torch.Tensor:
-        # Define k-space cutoff from required real-space resolution
-        k_cutoff = 2 * torch.pi / self.lr_wavelength
-
-        # Compute number of times each basis vector of the reciprocal space can be
-        # scaled until the cutoff is reached
-        basis_norms = torch.linalg.norm(cell, dim=1)
-        ns_float = k_cutoff * basis_norms / 2 / torch.pi
-        ns = torch.ceil(ns_float).long()
-
-        # Generate k-vectors and evaluate
+        # __init__ ties a set smearing to a set lr_wavelength; the local variable lets
+        # TorchScript narrow the Optional type
+        lr_wavelength = self.lr_wavelength
+        assert lr_wavelength is not None
+        ns = get_ns_ewald(cell, lr_wavelength)
         kvectors = generate_kvectors_for_ewald(ns=ns, cell=cell)
         knorm_sq = torch.sum(kvectors**2, dim=1)
         # We remove the singularity at k=0 by explicitly setting its
@@ -167,7 +163,7 @@ class CalculatorDipole(torch.nn.Module):
             cell=cell,
             positions=positions,
             neighbor_indices=neighbor_indices,
-            neighbor_distances=neighbor_vectors.norm(dim=-1),
+            neighbor_distances=torch.linalg.norm(neighbor_vectors, dim=-1),
         )
 
         # Compute short-range (SR) part using a real space sum

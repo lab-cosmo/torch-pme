@@ -96,6 +96,17 @@ class TestDipoles:
         expected_result = sr_potential.to(dtype=dtype, device=device)
         torch.testing.assert_close(result, expected_result)
 
+    def test_magnetostatic_ewald_torch_script(self, device, dtype):
+        """The scripted calculator gives the same potential as the eager one."""
+        calculator = CalculatorDipole(
+            potential=PotentialDipole(smearing=0.7), lr_wavelength=1.0
+        )
+        calculator.to(device=device, dtype=dtype)
+        system = self.parallel_dipoles(device=device, dtype=dtype)
+        torch.testing.assert_close(
+            torch.jit.script(calculator)(*system), calculator(*system)
+        )
+
     def test_magnetostatic_ewald(self, device, dtype):
         alpha = 1.0
         smearing = (
@@ -104,7 +115,7 @@ class TestDipoles:
         calculator = CalculatorDipole(
             potential=PotentialDipole(smearing=smearing),
             full_neighbor_list=False,
-            lr_wavelength=0.1,  # this value is heuristic
+            lr_wavelength=0.2,  # this value is heuristic
         )
         calculator.to(device=device, dtype=dtype)
         pot = calculator(*self.parallel_dipoles(device=device, dtype=dtype))
@@ -128,7 +139,7 @@ class TestDipoles:
         calc = CalculatorDipole(
             potential=PotentialDipole(smearing=smearing, prefactor=eV_A),
             full_neighbor_list=False,
-            lr_wavelength=0.1,
+            lr_wavelength=0.2,
         )
         calc.to(device=device, dtype=dtype)
         positions = torch.tensor(frame.get_positions(), dtype=dtype, device=device)
@@ -165,3 +176,16 @@ class TestDipoles:
         forces = -torch.autograd.grad(result, positions)[0]
         expected_forces = torch.tensor(force, dtype=dtype, device=device)
         torch.testing.assert_close(forces, expected_forces, atol=1e-5, rtol=1e-4)
+
+
+@pytest.mark.parametrize(
+    ("smearing", "lr_wavelength"),
+    [(1.0, None), (None, 1.0)],
+)
+def test_mismatched_smearing_and_lr_wavelength_raises(smearing, lr_wavelength):
+    """Range separation needs both ``smearing`` and ``lr_wavelength``."""
+    match = "`lr_wavelength` and `smearing` must either both be set or both be None"
+    with pytest.raises(ValueError, match=match):
+        CalculatorDipole(
+            potential=PotentialDipole(smearing=smearing), lr_wavelength=lr_wavelength
+        )
