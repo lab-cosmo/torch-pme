@@ -34,6 +34,9 @@ Fixed
 
 * ``InversePowerLawPotential`` can be compiled with TorchScript again with torch
   2.14 and later. ``exp1`` no longer uses a custom ``torch.autograd.Function``.
+* Calculators using an ``InversePowerLawPotential`` (also inside a
+  ``CombinedPotential``) can be compiled with TorchScript again;
+  ``InversePowerLawPotential.pbc_correction`` no longer calls ``super()``.
 
 `Version 0.5.0 <https://github.com/lab-cosmo/torch-pme/releases/tag/v0.5.0>`_ - 2026-06-30
 ------------------------------------------------------------------------------------------
