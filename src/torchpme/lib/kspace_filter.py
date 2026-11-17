@@ -309,7 +309,10 @@ class P3MKSpaceFilter(KSpaceFilter):
         actual_mesh_spacing = (cell_dimensions / self.ns_mesh).reshape(1, 1, 1, 3)
 
         kh = kvectors * actual_mesh_spacing
-        U2 = self._charge_assignment(kh)
+        # The assignment function acts along the lattice vectors, so it depends on the
+        # phase of k across one mesh cell along each of them, k·a_i / n_i. The Cartesian
+        # components of k only coincide with this for cells aligned with the axes.
+        U2 = self._charge_assignment(kvectors @ self.cell.T / self.ns_mesh)
         if self.mode == 0:
             # special (much simpler) case for point-charge potentials
             masked = torch.where(U2 == 0, 1.0, U2)
