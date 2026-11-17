@@ -249,14 +249,21 @@ class TestWorkflow:
             CalculatorClass(**params)
 
 
-def test_kspace_filter_error_catch():
-    interpolation_nodes = 5
-
-    calculator = P3MCalculator(
+def test_p3m_skewed_cell():
+    """
+    P3M used to return NaNs for this strongly skewed cell in float32 (see #182). The
+    result has to be finite and agree with Ewald.
+    """
+    p3m = P3MCalculator(
         potential=CoulombPotential(smearing=1, exclusion_radius=4.5),
-        interpolation_nodes=interpolation_nodes,
+        interpolation_nodes=5,
         full_neighbor_list=True,
         mesh_spacing=0.5,
+    )
+    ewald = EwaldCalculator(
+        potential=CoulombPotential(smearing=1, exclusion_radius=4.5),
+        full_neighbor_list=True,
+        lr_wavelength=0.25,
     )
 
     charges = torch.ones([4, 1])
@@ -272,17 +279,10 @@ def test_kspace_filter_error_catch():
     neighbor_indices = torch.zeros((0, 2), dtype=torch.int64)
     neighbor_distances = torch.zeros((0,))
 
-    match = (
-        "NaNs detected in the k-space filter result. This are probably caused "
-        "by an unsuitable `mesh_spacing`, resulting in a problematic grid of "
-        r"shape: \[1, 16, 16, 32\]. Try adjsuting the grid by using a "
-        "different `mesh_spacing` value."
-    )
-    with pytest.raises(ValueError, match=match):
-        calculator.forward(
-            charges=charges,
-            positions=positions,
-            cell=cell,
-            neighbor_indices=neighbor_indices,
-            neighbor_distances=neighbor_distances,
-        )
+    inputs = (charges, cell, positions, neighbor_indices, neighbor_distances)
+    potential = p3m.forward(*inputs)
+    reference = ewald.forward(*inputs)
+
+    assert torch.isfinite(potential).all()
+    error = (potential - reference).abs().max() / reference.abs().max()
+    assert error < 1e-5
