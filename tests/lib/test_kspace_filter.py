@@ -179,3 +179,15 @@ def test_fft_modes():
     match = "Invalid option 'faster' for the `ifft_norm` parameter."
     with pytest.raises(ValueError, match=match):
         KSpaceFilter(cell, ns, KSpaceKernel(), ifft_norm="faster")
+
+
+def test_nan_error():
+    class NanKernel(KSpaceKernel):
+        @torch.jit.export
+        def kernel_from_k_sq(self, k_sq: torch.Tensor) -> torch.Tensor:
+            return torch.full_like(k_sq, torch.nan)
+
+    kernel_filter = KSpaceFilter(torch.eye(3), torch.tensor([2, 2, 2]), NanKernel())
+    match = "NaNs detected in the k-space filter result"
+    with pytest.raises(ValueError, match=match):
+        kernel_filter.forward(torch.ones((1, 2, 2, 2)))

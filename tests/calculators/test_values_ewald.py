@@ -354,3 +354,71 @@ def test_random_structure(
     stress_target = torch.einsum("ab,aA,bB->AB", stress_target, ortho, ortho)
 
     torch.testing.assert_close(stress, stress_target, atol=0.0, rtol=5e-3)
+
+
+TRICLINIC_CELL = torch.tensor(
+    [[6.0, 0.0, 0.0], [2.0, 5.5, 0.0], [1.0, 1.5, 5.0]], dtype=DTYPE
+)
+
+
+def random_triclinic_system(seed):
+    generator = torch.Generator().manual_seed(seed)
+    charges = torch.randn((16, 1), dtype=DTYPE, generator=generator)
+    charges -= charges.mean()
+    positions = torch.rand((16, 3), dtype=DTYPE, generator=generator) @ TRICLINIC_CELL
+    return charges, positions
+
+
+def long_range_energy_and_forces(calc, charges, cell, positions):
+    # no neighbors: only the k-space part and its corrections contribute
+    positions = positions.clone().requires_grad_(True)
+    potentials = calc.forward(
+        charges=charges,
+        cell=cell,
+        positions=positions,
+        neighbor_indices=torch.zeros((0, 2), dtype=torch.int64),
+        neighbor_distances=torch.zeros((0,), dtype=DTYPE),
+    )
+    energy = torch.sum(charges * potentials)
+    forces = -torch.autograd.grad(energy, positions)[0]
+    return energy.detach(), forces
+
+
+@pytest.mark.parametrize("ortho", generate_orthogonal_transformations())
+@pytest.mark.parametrize("CalculatorClass", [PMECalculator, P3MCalculator])
+def test_mesh_rotation_invariance(CalculatorClass, ortho):
+    """Rigidly rotating a triclinic system rotates the forces and keeps the energy."""
+    charges, positions = random_triclinic_system(seed=0)
+    calc = CalculatorClass(CoulombPotential(smearing=1.0), mesh_spacing=0.75)
+    calc.to(dtype=DTYPE)
+
+    energy, forces = long_range_energy_and_forces(
+        calc, charges, TRICLINIC_CELL, positions
+    )
+    energy_rot, forces_rot = long_range_energy_and_forces(
+        calc, charges, TRICLINIC_CELL @ ortho, positions @ ortho
+    )
+
+    torch.testing.assert_close(energy_rot, energy, atol=0.0, rtol=1e-10)
+    torch.testing.assert_close(forces_rot, forces @ ortho, atol=1e-10, rtol=1e-8)
+
+
+@pytest.mark.parametrize("seed", [0, 1, 2])
+def test_p3m_triclinic(seed):
+    """P3M agrees with a converged Ewald sum in a triclinic cell."""
+    charges, positions = random_triclinic_system(seed)
+    ewald = EwaldCalculator(CoulombPotential(smearing=1.0), lr_wavelength=0.5)
+    p3m = P3MCalculator(CoulombPotential(smearing=1.0), mesh_spacing=0.375)
+    ewald.to(dtype=DTYPE)
+    p3m.to(dtype=DTYPE)
+
+    energy_ref, forces_ref = long_range_energy_and_forces(
+        ewald, charges, TRICLINIC_CELL, positions
+    )
+    energy, forces = long_range_energy_and_forces(
+        p3m, charges, TRICLINIC_CELL, positions
+    )
+
+    torch.testing.assert_close(energy, energy_ref, atol=0.0, rtol=1e-5)
+    forces_error = torch.linalg.norm(forces - forces_ref)
+    assert forces_error / torch.linalg.norm(forces_ref) < 3e-4

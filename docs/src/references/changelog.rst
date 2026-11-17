@@ -34,6 +34,9 @@ Fixed
 
 * ``InversePowerLawPotential`` can be compiled with TorchScript again with torch
   2.14 and later. ``exp1`` no longer uses a custom ``torch.autograd.Function``.
+* ``P3MCalculator`` is now accurate for non-orthogonal cells and invariant under
+  rotations of the system. The P3M influence function used the Cartesian components
+  of the k-vectors instead of their projections on the cell vectors.
 
 `Version 0.5.0 <https://github.com/lab-cosmo/torch-pme/releases/tag/v0.5.0>`_ - 2026-06-30
 ------------------------------------------------------------------------------------------
