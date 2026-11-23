@@ -49,6 +49,9 @@ Fixed
   ``prefactor * sum(charges**2)``, not square-root (#215).
 * The tuners include ``prefactor`` in their error bounds, so ``accuracy`` is an
   absolute RMS force error in the units set by ``prefactor``.
+* Slab electrostatic corrections now use the periodic plane's normal and
+  perpendicular cell height, preserving energies and forces under rigid rotations
+  and nonorthogonal cell choices.
 
 `Version 0.5.0 <https://github.com/lab-cosmo/torch-pme/releases/tag/v0.5.0>`_ - 2026-06-30
 ------------------------------------------------------------------------------------------
