@@ -21,6 +21,9 @@ class TuningErrorBounds(torch.nn.Module):
         vector of the unit cell
     :param positions: torch.tensor of shape ``(N, 3)`` containing the Cartesian
         coordinates of the ``N`` particles within the supercell.
+    :param prefactor: electrostatics prefactor; see :ref:`prefactors` for details and
+        common values. The error bounds are linear in ``prefactor``, so they are
+        absolute force errors in the units it sets.
     """
 
     def __init__(
@@ -28,11 +31,18 @@ class TuningErrorBounds(torch.nn.Module):
         charges: torch.Tensor,
         cell: torch.Tensor,
         positions: torch.Tensor,
+        prefactor: float = 1.0,
     ):
         super().__init__()
         self._charges = charges
         self._cell = cell
         self._positions = positions
+        self.prefactor = prefactor
+        self.sum_squared_charges = (charges**2).sum()
+        # common factor of the Kolafa-Perram RMS force error estimates
+        self.prefac = (
+            2 * prefactor * self.sum_squared_charges / math.sqrt(len(positions))
+        )
 
     def forward(self, *args, **kwargs):
         return self.error(*args, **kwargs)
@@ -114,7 +124,7 @@ class TunerBase:
         self.prefactor = prefactor
 
         self._smearing_esti_prefac = (
-            2 * float((charges**2).sum()) / math.sqrt(len(positions))
+            2 * prefactor * float((charges**2).sum()) / math.sqrt(len(positions))
         )
 
     def tune(self, accuracy: float = 1e-3):
@@ -126,9 +136,10 @@ class TunerBase:
     ) -> float:
         """
         Estimate the smearing based on the error formula of the real space. The
-        smearing is set as leading to a real space error of ``accuracy/4``.
+        smearing is set as leading to a real space error of ``accuracy/2``.
 
-        :param accuracy: a float, the desired accuracy
+        :param accuracy: a float, the desired absolute RMS force error in the units set
+            by ``prefactor``
         :return: a float, the estimated smearing
         """
         if not isinstance(accuracy, float):
@@ -248,7 +259,8 @@ class GridSearchTuner(TunerBase):
         which the error is smaller than the accuracy are timed, the others' timing is
         set to infinity.
 
-        :param accuracy: a float, the desired accuracy
+        :param accuracy: a float, the desired absolute RMS force error in the units set
+            by ``prefactor``
         :return: a list of errors and a list of timings
         """
         if not isinstance(accuracy, float):
