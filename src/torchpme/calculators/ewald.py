@@ -93,6 +93,9 @@ class EwaldCalculator(Calculator):
         # to the requirement that the net charge of the cell is zero.
         # G = 4 * torch.pi * torch.exp(-0.5 * smearing**2 * knorm_sq) / knorm_sq
         G = self.potential.lr_from_k_sq(knorm_sq)
+        # `kvectors` padded for batching contain extra zero vectors. Drop every k = 0
+        # term here and add it once below, so that padding does not change the result.
+        G = torch.where(knorm_sq == 0, 0.0, G)
 
         # Compute the energy using the explicit method that
         # follows directly from the Poisson summation formula.
@@ -106,6 +109,11 @@ class EwaldCalculator(Calculator):
         sc_summed_G = torch.einsum("fki,ic, k->fkc", sc, charges, G)
         energy = torch.einsum("fkc,fki->ic", sc_summed_G, sc)
         energy /= torch.abs(cell.det())
+
+        # k = 0 term: cos(0) = 1 for every atom, giving G(0) * sum(charges) / volume.
+        # G(0) is zero for the Coulomb potential, but not e.g. for exponents p > 3.
+        G0 = self.potential.lr_from_k_sq(torch.zeros_like(knorm_sq[:1]))
+        energy += G0 * torch.sum(charges, dim=0) / torch.abs(cell.det())
 
         # Remove the self-contribution: Using the Coulomb potential as an
         # example, this is the potential generated at the origin by the fictituous
