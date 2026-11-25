@@ -133,7 +133,7 @@ def test_batched_ewald_values(potential):
 
 @pytest.mark.parametrize("potential", POTENTIALS.values(), ids=POTENTIALS.keys())
 def test_batched_ewald_gradients(potential):
-    """Padded pairs have zero distance; they must not produce NaN gradients."""
+    """Backward through a padded batch gives finite gradients for every potential."""
     calc = EwaldCalculator(
         potential=potential,
         full_neighbor_list=True,
