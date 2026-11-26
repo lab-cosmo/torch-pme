@@ -1,0 +1,967 @@
+{
+ "D": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "D.reshape": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "builtin_function_or_method"
+  }
+ ],
+ "Labels": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "ScriptClass"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "metatensor.torch",
+   "module_short": "metatensor.torch",
+   "name": "Labels"
+  }
+ ],
+ "Labels.range": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "ScriptClassFunction"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "metatensor.torch.Labels",
+   "module_short": "metatensor.torch.Labels",
+   "name": "range"
+  }
+ ],
+ "PMECalculator": [
+  {
+   "is_class": false,
+   "is_explicit": true,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "PMECalculator"
+  },
+  {
+   "is_class": false,
+   "is_explicit": true,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "PMECalculator"
+  }
+ ],
+ "S": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "System": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "ScriptClass"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "metatensor.torch.atomistic",
+   "module_short": "metatensor.torch.atomistic",
+   "name": "System"
+  }
+ ],
+ "TensorBlock": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "ScriptClass"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "metatensor.torch",
+   "module_short": "metatensor.torch",
+   "name": "TensorBlock"
+  }
+ ],
+ "calculator": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.calculators.pme",
+   "module_short": "torchpme",
+   "name": "PMECalculator"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.calculators",
+   "module_short": "torchpme",
+   "name": "PMECalculator"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "PMECalculator"
+  }
+ ],
+ "calculator_metatensor": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.metatensor.pme",
+   "module_short": "torchpme.metatensor",
+   "name": "PMECalculator"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.metatensor",
+   "module_short": "torchpme.metatensor",
+   "name": "PMECalculator"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "PMECalculator"
+  }
+ ],
+ "calculator_metatensor.forward": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.metatensor.pme",
+   "module_short": "torchpme.metatensor",
+   "name": "PMECalculator.forward"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.metatensor",
+   "module_short": "torchpme.metatensor",
+   "name": "PMECalculator.forward"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "PMECalculator.forward"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.metatensor.calculator",
+   "module_short": "torchpme.metatensor",
+   "name": "Calculator.forward"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.metatensor",
+   "module_short": "torchpme.metatensor",
+   "name": "Calculator.forward"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "Calculator.forward"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn.modules.module",
+   "module_short": "torch.nn",
+   "name": "Module.forward"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn.modules",
+   "module_short": "torch.nn",
+   "name": "Module.forward"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn",
+   "module_short": "torch.nn",
+   "name": "Module.forward"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Module.forward"
+  }
+ ],
+ "cell": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "charge_Cl": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "float"
+  }
+ ],
+ "charge_Na": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "float"
+  }
+ ],
+ "charges": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "charges.T": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "charges.shape": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Size"
+  }
+ ],
+ "charges_one_hot": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "charges_one_hot.shape": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Size"
+  }
+ ],
+ "components": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "ScriptObject"
+  }
+ ],
+ "cutoff": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "float"
+  }
+ ],
+ "data": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "ScriptObject"
+  }
+ ],
+ "data_one_hot": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "ScriptObject"
+  }
+ ],
+ "i": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "j": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "metatensor.torch.Labels": [
+  {
+   "is_class": false,
+   "is_explicit": true,
+   "module": "metatensor.torch",
+   "module_short": "metatensor.torch",
+   "name": "Labels"
+  }
+ ],
+ "metatensor.torch.TensorBlock": [
+  {
+   "is_class": false,
+   "is_explicit": true,
+   "module": "metatensor.torch",
+   "module_short": "metatensor.torch",
+   "name": "TensorBlock"
+  },
+  {
+   "is_class": false,
+   "is_explicit": true,
+   "module": "metatensor.torch",
+   "module_short": "metatensor.torch",
+   "name": "TensorBlock"
+  }
+ ],
+ "metatensor.torch.TensorMap": [
+  {
+   "is_class": false,
+   "is_explicit": true,
+   "module": "metatensor.torch",
+   "module_short": "metatensor.torch",
+   "name": "TensorMap"
+  }
+ ],
+ "metatensor.torch.atomistic.System": [
+  {
+   "is_class": false,
+   "is_explicit": true,
+   "module": "metatensor.torch.atomistic",
+   "module_short": "metatensor.torch.atomistic",
+   "name": "System"
+  }
+ ],
+ "metatensor.torch.atomistic.System.add_data": [
+  {
+   "is_class": false,
+   "is_explicit": true,
+   "module": "metatensor.torch.atomistic.System",
+   "module_short": "metatensor.torch.atomistic.System",
+   "name": "add_data"
+  }
+ ],
+ "neighbor_distances": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "neighbor_indices": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "neighbors": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "ScriptObject"
+  }
+ ],
+ "nl": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "vesin.torch._neighbors",
+   "module_short": "vesin.torch",
+   "name": "NeighborList"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "vesin.torch",
+   "module_short": "vesin.torch",
+   "name": "NeighborList"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "vesin",
+   "module_short": "vesin",
+   "name": "NeighborList"
+  }
+ ],
+ "nl.compute": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "vesin.torch._neighbors",
+   "module_short": "vesin.torch",
+   "name": "NeighborList.compute"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "vesin.torch",
+   "module_short": "vesin.torch",
+   "name": "NeighborList.compute"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "vesin",
+   "module_short": "vesin",
+   "name": "NeighborList.compute"
+  }
+ ],
+ "pbc": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "pme_params": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "dict"
+  }
+ ],
+ "positions": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "potential": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "ScriptObject"
+  }
+ ],
+ "potential_metatensor": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "ScriptObject"
+  }
+ ],
+ "potential_one_hot": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "properties": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "ScriptObject"
+  }
+ ],
+ "sample_values": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "samples": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "ScriptObject"
+  }
+ ],
+ "smearing": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "float"
+  }
+ ],
+ "symbols": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "tuple"
+  }
+ ],
+ "system": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "ScriptObject"
+  }
+ ],
+ "system.add_data": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "ScriptMethod"
+  }
+ ],
+ "torch.eye": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "builtin_function_or_method"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "eye"
+  }
+ ],
+ "torch.float64": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "dtype"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "float64"
+  }
+ ],
+ "torch.hstack": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "builtin_function_or_method"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "hstack"
+  }
+ ],
+ "torch.stack": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "builtin_function_or_method"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "stack"
+  }
+ ],
+ "torch.tensor": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "builtin_function_or_method"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "tensor"
+  }
+ ],
+ "torchpme.CoulombPotential": [
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torchpme.potentials.coulomb",
+   "module_short": "torchpme",
+   "name": "CoulombPotential"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torchpme.potentials",
+   "module_short": "torchpme",
+   "name": "CoulombPotential"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "CoulombPotential"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torchpme.potentials.potential",
+   "module_short": "torchpme",
+   "name": "Potential"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torchpme.potentials",
+   "module_short": "torchpme",
+   "name": "Potential"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "Potential"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torch.nn.modules.module",
+   "module_short": "torch.nn",
+   "name": "Module"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torch.nn.modules",
+   "module_short": "torch.nn",
+   "name": "Module"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torch.nn",
+   "module_short": "torch.nn",
+   "name": "Module"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Module"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "CoulombPotential"
+  }
+ ],
+ "torchpme.PMECalculator": [
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torchpme.calculators.pme",
+   "module_short": "torchpme",
+   "name": "PMECalculator"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torchpme.calculators",
+   "module_short": "torchpme",
+   "name": "PMECalculator"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "PMECalculator"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torchpme.calculators.calculator",
+   "module_short": "torchpme",
+   "name": "Calculator"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torchpme.calculators",
+   "module_short": "torchpme",
+   "name": "Calculator"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "Calculator"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torch.nn.modules.module",
+   "module_short": "torch.nn",
+   "name": "Module"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torch.nn.modules",
+   "module_short": "torch.nn",
+   "name": "Module"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torch.nn",
+   "module_short": "torch.nn",
+   "name": "Module"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Module"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "PMECalculator"
+  }
+ ],
+ "torchpme.metatensor.PMECalculator": [
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torchpme.metatensor.pme",
+   "module_short": "torchpme.metatensor",
+   "name": "PMECalculator"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torchpme.metatensor",
+   "module_short": "torchpme.metatensor",
+   "name": "PMECalculator"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "PMECalculator"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torchpme.metatensor.calculator",
+   "module_short": "torchpme.metatensor",
+   "name": "Calculator"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torchpme.metatensor",
+   "module_short": "torchpme.metatensor",
+   "name": "Calculator"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torchpme",
+   "module_short": "torchpme",
+   "name": "Calculator"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torch.nn.modules.module",
+   "module_short": "torch.nn",
+   "name": "Module"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torch.nn.modules",
+   "module_short": "torch.nn",
+   "name": "Module"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torch.nn",
+   "module_short": "torch.nn",
+   "name": "Module"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Module"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.metatensor",
+   "module_short": "torchpme.metatensor",
+   "name": "PMECalculator"
+  }
+ ],
+ "torchpme.utils.tune_pme": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "function"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchpme.utils",
+   "module_short": "torchpme.utils",
+   "name": "tune_pme"
+  }
+ ],
+ "types": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch",
+   "module_short": "torch",
+   "name": "Tensor"
+  }
+ ],
+ "vesin.torch.NeighborList": [
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "vesin.torch._neighbors",
+   "module_short": "vesin.torch",
+   "name": "NeighborList"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "vesin.torch",
+   "module_short": "vesin.torch",
+   "name": "NeighborList"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "vesin",
+   "module_short": "vesin",
+   "name": "NeighborList"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "vesin.torch",
+   "module_short": "vesin.torch",
+   "name": "NeighborList"
+  }
+ ]
+}
