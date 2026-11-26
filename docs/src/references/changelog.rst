@@ -55,6 +55,12 @@ Fixed
 * Slab electrostatic corrections now use the periodic plane's normal and
   perpendicular cell height, preserving energies and forces under rigid rotations
   and nonorthogonal cell choices.
+* Batched Ewald evaluation with padded ``kvectors`` gives the same result as
+  evaluating each system separately for potentials with a non-zero k = 0 term
+  (``InversePowerLawPotential`` with exponent > 3, ``SplinePotential``). The zero
+  k-vectors used for padding added this term once per padding row.
+* Padded pairs (``pair_mask``) no longer produce NaNs in float32 for
+  ``InversePowerLawPotential`` with exponent >= 3.
 
 `Version 0.5.0 <https://github.com/lab-cosmo/torch-pme/releases/tag/v0.5.0>`_ - 2026-06-30
 ------------------------------------------------------------------------------------------

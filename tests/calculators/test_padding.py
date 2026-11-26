@@ -2,12 +2,18 @@ import os
 import time
 
 import numpy
+import pytest
 import torch
 from ase.io import read
 from ase.neighborlist import neighbor_list
 from torch.nn.utils.rnn import pad_sequence
 
-from torchpme import CoulombPotential, EwaldCalculator
+from torchpme import (
+    CoulombPotential,
+    EwaldCalculator,
+    InversePowerLawPotential,
+    SplinePotential,
+)
 from torchpme.lib import compute_batched_kvectors
 
 # Coarse enough that padding every system to the largest k-set does not dominate the
@@ -74,7 +80,30 @@ node_mask = (
 kvectors = compute_batched_kvectors(lr_wavelength=LR_WAVELENGTH, cells=cell_batch)
 
 
-def test_batched_ewald_values():
+R_GRID = torch.logspace(-2, 2, 200)
+# Potentials with a non-zero k = 0 term (exponent > 3 and splines) are sensitive to the
+# zero k-vectors used to pad the batch.
+POTENTIALS = {
+    "coulomb": CoulombPotential(smearing=1.0),
+    "inverse_power_law_2": InversePowerLawPotential(exponent=2, smearing=1.0),
+    "inverse_power_law_4": InversePowerLawPotential(exponent=4, smearing=1.0),
+    "inverse_power_law_6": InversePowerLawPotential(exponent=6, smearing=1.0),
+    "spline": SplinePotential(
+        r_grid=R_GRID,
+        y_grid=CoulombPotential(smearing=1.0).lr_from_dist(R_GRID),
+        reciprocal=True,
+        smearing=1.0,
+    ),
+}
+
+
+@pytest.mark.parametrize("potential", POTENTIALS.values(), ids=POTENTIALS.keys())
+def test_batched_ewald_values(potential):
+    calc = EwaldCalculator(
+        potential=potential,
+        full_neighbor_list=True,
+        lr_wavelength=LR_WAVELENGTH,
+    )
     values_vmap = torch.vmap(calc.forward)(
         charges_batch.unsqueeze(-1),
         cell_batch,
@@ -99,7 +128,31 @@ def test_batched_ewald_values():
             )
         )
     values_loop = pad_sequence(values_loop, batch_first=True)
-    assert torch.allclose(values_vmap, values_loop, atol=1e-5)
+    torch.testing.assert_close(values_vmap, values_loop, atol=1e-5, rtol=1e-5)
+
+
+@pytest.mark.parametrize("potential", POTENTIALS.values(), ids=POTENTIALS.keys())
+def test_batched_ewald_gradients(potential):
+    """Backward through a padded batch gives finite gradients for every potential."""
+    calc = EwaldCalculator(
+        potential=potential,
+        full_neighbor_list=True,
+        lr_wavelength=LR_WAVELENGTH,
+    )
+    distances = d_batch.clone().requires_grad_(True)
+    values_vmap = torch.vmap(calc.forward)(
+        charges_batch.unsqueeze(-1),
+        cell_batch,
+        pos_batch,
+        torch.stack((i_batch, j_batch), dim=-1),
+        distances,
+        periodic_batch,
+        node_mask,
+        pair_mask,
+        kvectors,
+    )
+    values_vmap.sum().backward()
+    assert torch.isfinite(distances.grad).all()
 
 
 def test_batched_ewald_speed():
