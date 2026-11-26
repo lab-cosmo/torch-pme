@@ -14,6 +14,7 @@ from torchpme import (
     Calculator,
     CoulombPotential,
     EwaldCalculator,
+    InversePowerLawPotential,
     P3MCalculator,
     PMECalculator,
 )
@@ -286,3 +287,94 @@ def test_kspace_filter_error_catch():
             neighbor_indices=neighbor_indices,
             neighbor_distances=neighbor_distances,
         )
+
+
+@pytest.mark.parametrize("device", DEVICES)
+@pytest.mark.parametrize("dtype", DTYPES)
+@pytest.mark.parametrize(
+    ("CalculatorClass", "params"),
+    [
+        (
+            EwaldCalculator,
+            {
+                "potential": InversePowerLawPotential(exponent=1, smearing=SMEARING),
+                "lr_wavelength": LR_WAVELENGTH,
+            },
+        ),
+        (
+            EwaldCalculator,
+            {
+                "potential": InversePowerLawPotential(exponent=2, smearing=SMEARING),
+                "lr_wavelength": LR_WAVELENGTH,
+            },
+        ),
+        (
+            PMECalculator,
+            {
+                "potential": InversePowerLawPotential(exponent=1, smearing=SMEARING),
+                "mesh_spacing": MESH_SPACING,
+            },
+        ),
+        (
+            PMECalculator,
+            {
+                "potential": InversePowerLawPotential(exponent=2, smearing=SMEARING),
+                "mesh_spacing": MESH_SPACING,
+            },
+        ),
+        (
+            P3MCalculator,
+            {
+                "potential": InversePowerLawPotential(exponent=1, smearing=SMEARING),
+                "mesh_spacing": MESH_SPACING,
+            },
+        ),
+        (
+            P3MCalculator,
+            {
+                "potential": InversePowerLawPotential(exponent=2, smearing=SMEARING),
+                "mesh_spacing": MESH_SPACING,
+            },
+        ),
+    ],
+)
+class TestInversePowerLawWorkflow:
+    """TorchScript workflow for calculators using an `InversePowerLawPotential`."""
+
+    def system(self, device=None, dtype=None):
+        positions = torch.tensor(
+            [[0.1, 0.2, 0.3], [0.6, 0.4, 0.8]], dtype=dtype, device=device
+        )
+        charges = torch.tensor([[1.0], [-1.0]], dtype=dtype, device=device)
+        cell = torch.eye(3, dtype=dtype, device=device)
+        neighbor_indices = torch.tensor([[0, 1]], device=device)
+        neighbor_distances = torch.linalg.norm(positions[1] - positions[0]).reshape(1)
+
+        return charges, cell, positions, neighbor_indices, neighbor_distances
+
+    def check_operation(self, calculator, reference, device, dtype):
+        """Compare against the eager `reference`, with 3D and 2D periodicity."""
+        system = self.system(device=device, dtype=dtype)
+        for periodic in [None, torch.tensor([True, True, False], device=device)]:
+            torch.testing.assert_close(
+                calculator.forward(*system, periodic=periodic),
+                reference.forward(*system, periodic=periodic),
+            )
+
+    def test_operation_as_torch_script(self, CalculatorClass, params, device, dtype):
+        """Run `check_operation` as a compiled torch script module."""
+        calculator = CalculatorClass(**params)
+        calculator.to(device=device, dtype=dtype)
+        scripted = torch.jit.script(calculator)
+        self.check_operation(scripted, calculator, device=device, dtype=dtype)
+
+    def test_save_load(self, CalculatorClass, params, device, dtype):
+        """Run `check_operation` on a saved and loaded torch script module."""
+        calculator = CalculatorClass(**params)
+        calculator.to(device=device, dtype=dtype)
+        scripted = torch.jit.script(calculator)
+        with io.BytesIO() as buffer:
+            torch.jit.save(scripted, buffer)
+            buffer.seek(0)
+            loaded = torch.jit.load(buffer)
+        self.check_operation(loaded, calculator, device=device, dtype=dtype)

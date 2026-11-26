@@ -715,7 +715,9 @@ def test_combined_potentials_jit(smearing):
         r_grid=x_grid, y_grid=y_grid, reciprocal=True, smearing=1.0
     )
     spline.to(dtype=dtype)
-    combo = CombinedPotential(potentials=[spline, coulomb], smearing=1.0)
+    ipl = InversePowerLawPotential(exponent=2, smearing=1.0)
+    ipl.to(dtype=dtype)
+    combo = CombinedPotential(potentials=[spline, coulomb, ipl], smearing=1.0)
     combo.to(dtype=dtype)
     mypme = PMECalculator(combo, mesh_spacing=1.0)
     _ = torch.jit.script(mypme)
