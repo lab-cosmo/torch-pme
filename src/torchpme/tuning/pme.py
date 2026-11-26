@@ -1,4 +1,3 @@
-import math
 from itertools import product
 from typing import Any
 from warnings import warn
@@ -59,8 +58,10 @@ def tune_pme(
         :math:`2^{mesh_lo}`
     :param mesh_hi: Controls the maximum number of mesh points along the shortest axis,
         :math:`2^{mesh_hi}`
-    :param accuracy: Recomended values for a balance between the accuracy and speed is
-        :math:`10^{-3}`. For more accurate results, use :math:`10^{-6}`.
+    :param accuracy: Target RMS force error per particle, in the energy/length units
+        set by ``prefactor`` (e.g. eV/Å for :data:`torchpme.prefactors.eV_A`).
+        :math:`10^{-3}` is a reasonable balance between accuracy and speed; use
+        :math:`10^{-6}` for more accurate results.
 
     :return: Tuple containing a float of the optimal smearing for the :class:
         `CoulombPotential`, a dictionary with the parameters for :class:`PMECalculator`
@@ -117,7 +118,9 @@ def tune_pme(
         full_neighbor_list=full_neighbor_list,
         prefactor=prefactor,
         calculator=PMECalculator,
-        error_bounds=PMEErrorBounds(charges=charges, cell=cell, positions=positions),
+        error_bounds=PMEErrorBounds(
+            charges=charges, cell=cell, positions=positions, prefactor=prefactor
+        ),
         params=params,
     )
     smearing = tuner.estimate_smearing(accuracy)
@@ -159,6 +162,8 @@ class PMEErrorBounds(TuningErrorBounds):
         vector of the unit cell
     :param positions: torch.tensor of shape ``(N, 3)`` containing the Cartesian
         coordinates of the ``N`` particles within the supercell.
+    :param prefactor: electrostatics prefactor; see :ref:`prefactors` for details and
+        common values.
 
     Example
     -------
@@ -179,13 +184,15 @@ class PMEErrorBounds(TuningErrorBounds):
     """
 
     def __init__(
-        self, charges: torch.Tensor, cell: torch.Tensor, positions: torch.Tensor
+        self,
+        charges: torch.Tensor,
+        cell: torch.Tensor,
+        positions: torch.Tensor,
+        prefactor: float = 1.0,
     ):
-        super().__init__(charges, cell, positions)
+        super().__init__(charges, cell, positions, prefactor)
 
         self.volume = torch.abs(torch.det(cell))
-        self.sum_squared_charges = (charges**2).sum()
-        self.prefac = 2 * self.sum_squared_charges / math.sqrt(len(positions))
         self.cell_dimensions = torch.linalg.norm(cell, dim=1)
 
     def err_kspace(

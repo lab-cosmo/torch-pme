@@ -56,8 +56,10 @@ def tune_ewald(
         common values.
     :param ns_lo: Minimum number of spatial resolution along each axis
     :param ns_hi: Maximum number of spatial resolution along each axis
-    :param accuracy: Recomended values for a balance between the accuracy and speed is
-        :math:`10^{-3}`. For more accurate results, use :math:`10^{-6}`.
+    :param accuracy: Target RMS force error per particle, in the energy/length units
+        set by ``prefactor`` (e.g. eV/Å for :data:`torchpme.prefactors.eV_A`).
+        :math:`10^{-3}` is a reasonable balance between accuracy and speed; use
+        :math:`10^{-6}` for more accurate results.
 
     :return: Tuple containing a float of the optimal smearing for the :class:
         `CoulombPotential`, and a dictionary with the parameters for
@@ -101,7 +103,9 @@ def tune_ewald(
         full_neighbor_list=full_neighbor_list,
         prefactor=prefactor,
         calculator=EwaldCalculator,
-        error_bounds=EwaldErrorBounds(charges=charges, cell=cell, positions=positions),
+        error_bounds=EwaldErrorBounds(
+            charges=charges, cell=cell, positions=positions, prefactor=prefactor
+        ),
         params=params,
     )
     smearing = tuner.estimate_smearing(accuracy)
@@ -135,6 +139,8 @@ class EwaldErrorBounds(TuningErrorBounds):
         vector of the unit cell
     :param positions: torch.tensor of shape ``(N, 3)`` containing the Cartesian
         coordinates of the ``N`` particles within the supercell.
+    :param prefactor: electrostatics prefactor; see :ref:`prefactors` for details and
+        common values.
 
     Example
     -------
@@ -153,12 +159,11 @@ class EwaldErrorBounds(TuningErrorBounds):
         charges: torch.Tensor,
         cell: torch.Tensor,
         positions: torch.Tensor,
+        prefactor: float = 1.0,
     ):
-        super().__init__(charges, cell, positions)
+        super().__init__(charges, cell, positions, prefactor)
 
         self.volume = torch.abs(torch.det(cell))
-        self.sum_squared_charges = (charges**2).sum()
-        self.prefac = 2 * self.sum_squared_charges / math.sqrt(len(positions))
         self.cell = cell
         self.positions = positions
 
@@ -171,11 +176,13 @@ class EwaldErrorBounds(TuningErrorBounds):
         :param smearing: see :class:`torchpme.EwaldCalculator` for details
         :param lr_wavelength: see :class:`torchpme.EwaldCalculator` for details
         """
+        # Kolafa & Perram, Mol. Simul. 9, 351 (1992), with alpha = 1 / (sqrt(2) *
+        # smearing) and k_max = 2 pi / lr_wavelength (see `get_ns_ewald`)
         return (
-            self.prefac**0.5
+            self.prefac
             / smearing
-            / torch.pi
-            / torch.sqrt(self.volume / lr_wavelength)
+            / math.sqrt(2 * torch.pi)
+            * torch.sqrt(lr_wavelength / self.volume)
             * torch.exp(-2 * (torch.pi * smearing / lr_wavelength) ** 2)
         )
 

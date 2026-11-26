@@ -28,6 +28,13 @@ Added
 #####
 
 * Support for Python 3.15.
+* ``torchpme.lib.get_ns_ewald`` returns the k-grid size for an ``lr_wavelength``.
+
+Changed
+#######
+
+* ``CalculatorDipole`` raises ``ValueError`` instead of ``AssertionError`` if only
+  one of ``smearing`` and ``lr_wavelength`` is set.
 
 Fixed
 #####
@@ -37,6 +44,17 @@ Fixed
 * Calculators using an ``InversePowerLawPotential`` (also inside a
   ``CombinedPotential``) can be compiled with TorchScript again;
   ``InversePowerLawPotential.pbc_correction`` no longer calls ``super()``.
+* ``CalculatorDipole`` can be compiled with TorchScript.
+* Ewald calculators keep all k-vectors with a wavelength >= ``lr_wavelength``, as
+  documented, instead of about half of them. The same ``lr_wavelength`` now uses
+  about 8x more k-vectors which will reduce the performance.
+* The k-space error of ``EwaldErrorBounds`` is linear in
+  ``prefactor * sum(charges**2)``, not square-root (#215).
+* The tuners include ``prefactor`` in their error bounds, so ``accuracy`` is an
+  absolute RMS force error in the units set by ``prefactor``.
+* Slab electrostatic corrections now use the periodic plane's normal and
+  perpendicular cell height, preserving energies and forces under rigid rotations
+  and nonorthogonal cell choices.
 
 `Version 0.5.0 <https://github.com/lab-cosmo/torch-pme/releases/tag/v0.5.0>`_ - 2026-06-30
 ------------------------------------------------------------------------------------------
