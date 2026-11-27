@@ -5,6 +5,7 @@ from torch.special import erf, erfc
 from torch.testing import assert_close
 
 from torchpme import (
+    Calculator,
     CombinedPotential,
     CoulombPotential,
     EwaldCalculator,
@@ -486,6 +487,51 @@ def test_spline_potential_cases():
 
     assert_close(spline.background_correction(), torch.tensor([0.0]))
     assert_close(spline.self_contribution(), spline.lr_from_dist(torch.tensor([0.0])))
+
+
+@pytest.mark.parametrize("reciprocal", [False, True])
+def test_spline_potential_prefactor(reciprocal):
+    prefactor = 3.5
+    r_grid = torch.linspace(0.5, 10.0, 50, dtype=dtype)
+    y_grid = torch.exp(-0.5 * r_grid)
+
+    unit_spline = SplinePotential(
+        r_grid=r_grid, y_grid=y_grid, reciprocal=reciprocal, prefactor=1.0
+    ).to(dtype=dtype)
+    scaled_spline = SplinePotential(
+        r_grid=r_grid, y_grid=y_grid, reciprocal=reciprocal, prefactor=prefactor
+    ).to(dtype=dtype)
+
+    eval_dists = torch.tensor([0.5, 1.5, 4.0], dtype=dtype)
+    assert_close(
+        scaled_spline.from_dist(eval_dists),
+        prefactor * unit_spline.from_dist(eval_dists),
+    )
+    assert_close(
+        scaled_spline.from_dist(eval_dists),
+        scaled_spline.lr_from_dist(eval_dists) + scaled_spline.sr_from_dist(eval_dists),
+    )
+    assert_close(
+        scaled_spline.lr_from_k_sq(ks_sq[:10]),
+        prefactor * unit_spline.lr_from_k_sq(ks_sq[:10]),
+    )
+    assert_close(
+        scaled_spline.self_contribution(),
+        prefactor * unit_spline.self_contribution(),
+    )
+
+    positions = torch.tensor([[0.0, 0.0, 0.0], [1.5, 0.0, 0.0]], dtype=dtype)
+    charges = torch.tensor([[1.0], [-0.5]], dtype=dtype)
+    cell = torch.eye(3, dtype=dtype) * 10.0
+    neighbor_indices = torch.tensor([[0, 1]])
+    neighbor_distances = torch.tensor([1.5], dtype=dtype)
+    v_unit = Calculator(unit_spline)(
+        charges, cell, positions, neighbor_indices, neighbor_distances
+    )
+    v_scaled = Calculator(scaled_spline)(
+        charges, cell, positions, neighbor_indices, neighbor_distances
+    )
+    assert_close(v_scaled, prefactor * v_unit)
 
 
 def test_spline_potential_vs_coulomb():
