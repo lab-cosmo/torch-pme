@@ -133,9 +133,7 @@ class SplinePotential(Potential):
         self, dist: torch.Tensor, pair_mask: torch.Tensor | None = None
     ) -> torch.Tensor:
         # if the full spline is not given, falls back on the lr part
-        return self.prefactor * (
-            self.lr_from_dist(dist, pair_mask) + self.sr_from_dist(dist, pair_mask)
-        )
+        return self.lr_from_dist(dist, pair_mask) + self.sr_from_dist(dist, pair_mask)
 
     def sr_from_dist(
         self, dist: torch.Tensor, pair_mask: torch.Tensor | None = None
